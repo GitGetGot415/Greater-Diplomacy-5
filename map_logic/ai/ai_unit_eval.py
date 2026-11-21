@@ -38,6 +38,7 @@ import math
 from types import SimpleNamespace
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 
 from data.runtime_rules import ActiveLibrary
@@ -151,7 +152,7 @@ def spending_budget(econ, stockpile, prices):
         income = float(econ.get("total_inc", {}).get(res, 0))
         upkeep = float(econ.get("upkeep", {}).get(res, 0))
         spare = max(0.0, income * c.AI_UPKEEP_TARGETS[res] - upkeep)
-        total += prices[res] * (float(stockpile.get(res, 0)) + spare * c.AI_UPKEEP_HORIZON)
+        total += prices[res] * (float(stockpile.get(res, 0)) + spare * ai_tuning.AI_UPKEEP_HORIZON)
     return total
 
 
@@ -211,7 +212,7 @@ def resource_prices(econ, stockpile):
         buffer = min(10.0, max(0.0, float(stockpile.get(res, 0))) / max(1.0, income)) / 10.0
 
         slack = 0.5 * headroom + 0.5 * buffer
-        prices[res] = 1.0 / max(c.AI_MIN_RESOURCE_SLACK, slack)
+        prices[res] = 1.0 / max(ai_tuning.AI_MIN_RESOURCE_SLACK, slack)
     return prices
 
 
@@ -219,7 +220,7 @@ def unit_pain(stats, prices):
     """What buying and then keeping this unit costs, in scarcity-weighted terms."""
     upkeep = queries.get_unit_upkeep(stats)
     build = sum(prices[res] * stats.get(f"cost_{res}", 0) for res in RESOURCES)
-    running = sum(prices[res] * upkeep.get(res, 0) for res in RESOURCES) * c.AI_UPKEEP_HORIZON
+    running = sum(prices[res] * upkeep.get(res, 0) for res in RESOURCES) * ai_tuning.AI_UPKEEP_HORIZON
     return build + running
 
 
@@ -330,7 +331,7 @@ def evaluate(names, unit_library, ctx):
         # apply_group_damage: each defender eats max(0, volley/N - defense).
         # The floor keeps a unit whose defense exceeds its share from scoring
         # infinitely -- strong returns on defense, not unbounded ones.
-        bite = max(share * c.AI_MIN_DAMAGE_FRACTION, share - defense)
+        bite = max(share * ai_tuning.AI_MIN_DAMAGE_FRACTION, share - defense)
         durability = health / bite if bite > 0 else 0.0
 
         raw[name] = (stats, attack, durability, health, defense)
@@ -343,7 +344,7 @@ def evaluate(names, unit_library, ctx):
 
     values = {}
     for name, (stats, attack, durability, health, defense) in raw.items():
-        offense = c.AI_W_OFFENSE * (attack / mean_attack)
+        offense = attack / mean_attack
 
         # An extra body is worth what it actually absorbs, which is its DEFENSE.
         # apply_group_damage deals sum(max(0, volley/N - defense_i)), so with
@@ -356,19 +357,19 @@ def evaluate(names, unit_library, ctx):
         # count health twice, since durability above already has it; scaled by
         # what a body soaks, it does the one thing it should.
         soak_share = min(defense, share) / share if share > 0 else 0.0
-        combat = (offense + c.AI_W_DURABILITY * (durability / mean_durability)
-                  + c.AI_W_SOAK * soak_share)
+        combat = (offense + durability / mean_durability
+                  + ai_tuning.AI_W_SOAK * soak_share)
 
         if stats.get("air_transport_capacity", 0) > 0:
             # Transport utility comes from capacity and reach, not combat stats.
-            combat = c.AI_W_TRANSPORT * stats["air_transport_capacity"] * math.log1p(stats.get("air_range_px", 0))
+            combat = ai_tuning.AI_W_TRANSPORT * stats["air_transport_capacity"] * math.log1p(stats.get("air_range_px", 0))
         elif stats.get("air_role"):
             # Interception bonuses apply before defense, only against aircraft.
             air_bonus = queries.unit_target_damage_multiplier(
                 {"type": name}, {"type": name}, air_to_air=True, unit_library=unit_library)
             air_ctx = ctx._replace(enemy_def=ctx.air_enemy_def, enemy_stack=ctx.air_enemy_stack)
             interception = effective_attack(float(stats.get("attack", 0)) * air_bonus, air_ctx)
-            combat += c.AI_W_OFFENSE * ctx.air_pressure * (interception - attack) / mean_attack
+            combat += ctx.air_pressure * (interception - attack) / mean_attack
 
         bomb_range = bombard_range(name, stats)
         if bomb_range:
@@ -376,7 +377,7 @@ def evaluate(names, unit_library, ctx):
             # fire, so it is added on top rather than replacing the melee value.
             bombard_attack = effective_attack(
                 float(stats.get("bombard_attack", stats.get("attack", 0))), ctx)
-            combat += c.AI_W_BOMBARD * (bombard_attack / mean_attack) * bomb_range
+            combat += ai_tuning.AI_W_BOMBARD * (bombard_attack / mean_attack) * bomb_range
 
         naval = bool(stats.get("naval_unit", False))
         if stats.get("air_transport_capacity", 0) > 0:
@@ -387,14 +388,14 @@ def evaluate(names, unit_library, ctx):
             role = ROLE_BOMBARD
         elif naval:
             role = ROLE_NAVAL
-        elif combat > 0 and (offense / combat) >= c.AI_ASSAULT_OFFENSE_SHARE:
+        elif combat > 0 and (offense / combat) >= ai_tuning.AI_ASSAULT_OFFENSE_SHARE:
             role = ROLE_ASSAULT
         else:
             role = ROLE_LINE
 
         # A division that lands after the front has collapsed is worth less than
         # two that land now.
-        timed = combat / max(1.0, float(stats.get("production_time", 1))) ** c.AI_TIME_EXPONENT
+        timed = combat / max(1.0, float(stats.get("production_time", 1))) ** ai_tuning.AI_TIME_EXPONENT
         pain = unit_pain(stats, ctx.prices)
         score = timed / pain if pain > 0 else 0.0
 
@@ -429,7 +430,7 @@ def _apply_slot_quality(values):
             out[name] = value
             continue
         relative = max(0.0, value.combat) / mean
-        quality = relative ** c.AI_SLOT_QUALITY_EXPONENT
+        quality = relative ** ai_tuning.AI_SLOT_QUALITY_EXPONENT
         out[name] = value._replace(score=value.score * quality, quality=quality, weight=relative)
     return out
 
@@ -462,7 +463,7 @@ def reprice(values, prices):
     for name, value in values.items():
         pain = unit_pain(value.stats, prices)
         timed = value.combat / max(
-            1.0, float(value.stats.get("production_time", 1))) ** c.AI_TIME_EXPONENT
+            1.0, float(value.stats.get("production_time", 1))) ** ai_tuning.AI_TIME_EXPONENT
         out[name] = value._replace(
             pain=pain, score=(timed / pain * value.quality if pain > 0 else 0.0))
     return out
@@ -495,39 +496,39 @@ def role_targets(ctx, naval_need, values=None):
     exists; without one it falls back to plain counts.
     """
     frontline = max(1.0, float(ctx.frontline))
-    width_cap = max(c.AI_MIN_ROLE_TARGET, c.LANE_SLOTS_TYPICAL * frontline)
-    depth_cap = max(c.AI_MIN_ROLE_TARGET, width_cap * (c.AI_RESERVE_DEPTH - 1.0))
+    width_cap = max(ai_tuning.AI_MIN_ROLE_TARGET, c.LANE_SLOTS_TYPICAL * frontline)
+    depth_cap = max(ai_tuning.AI_MIN_ROLE_TARGET, width_cap * (c.AI_RESERVE_DEPTH - 1.0))
 
     if not values or ctx.budget <= 0:
         return {
             ROLE_ASSAULT: width_cap,
             ROLE_LINE: min(depth_cap,
-                           max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_LINE_SPEND_RATIO)),
-            ROLE_BOMBARD: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_BOMBARD_SPEND_RATIO),
+                           max(ai_tuning.AI_MIN_ROLE_TARGET, width_cap * ai_tuning.AI_LINE_SPEND_RATIO)),
+            ROLE_BOMBARD: max(ai_tuning.AI_MIN_ROLE_TARGET, width_cap * ai_tuning.AI_BOMBARD_SPEND_RATIO),
             ROLE_NAVAL: max(0.0, naval_need),
-            ROLE_AIR: max(c.AI_MIN_ROLE_TARGET, width_cap * c.AI_AIR_SPEND_RATIO),
-            ROLE_TRANSPORT: max(c.AI_MIN_ROLE_TARGET, frontline * c.AI_TRANSPORT_SPEND_RATIO),
+            ROLE_AIR: max(ai_tuning.AI_MIN_ROLE_TARGET, width_cap * ai_tuning.AI_AIR_SPEND_RATIO),
+            ROLE_TRANSPORT: max(ai_tuning.AI_MIN_ROLE_TARGET, frontline * ai_tuning.AI_TRANSPORT_SPEND_RATIO),
         }
 
     shares = {
         ROLE_ASSAULT: 1.0,
-        ROLE_LINE: c.AI_LINE_SPEND_RATIO,
-        ROLE_BOMBARD: c.AI_BOMBARD_SPEND_RATIO,
-        ROLE_AIR: c.AI_AIR_SPEND_RATIO,
+        ROLE_LINE: ai_tuning.AI_LINE_SPEND_RATIO,
+        ROLE_BOMBARD: ai_tuning.AI_BOMBARD_SPEND_RATIO,
+        ROLE_AIR: ai_tuning.AI_AIR_SPEND_RATIO,
     }
     total_share = sum(shares.values())
     if any(value.role == ROLE_TRANSPORT for value in values.values()):
-        shares[ROLE_TRANSPORT] = c.AI_TRANSPORT_SPEND_RATIO
+        shares[ROLE_TRANSPORT] = ai_tuning.AI_TRANSPORT_SPEND_RATIO
         total_share = sum(shares.values())
 
     targets = {}
     for role, share in shares.items():
         pain = _cheapest_pain(values, role)
         if pain <= 0:
-            targets[role] = c.AI_MIN_ROLE_TARGET
+            targets[role] = ai_tuning.AI_MIN_ROLE_TARGET
             continue
         count = (ctx.budget * share / total_share) / pain
-        targets[role] = max(c.AI_MIN_ROLE_TARGET, count)
+        targets[role] = max(ai_tuning.AI_MIN_ROLE_TARGET, count)
 
     targets[ROLE_ASSAULT] = min(targets[ROLE_ASSAULT], width_cap)
     targets[ROLE_LINE] = min(targets[ROLE_LINE], depth_cap)
@@ -547,7 +548,7 @@ def marginal_score(value, have, targets):
     if target <= 0:
         return 0.0
     saturation = have.get(value.role, 0) / target
-    return value.score * (c.AI_ROLE_DIMINISH ** saturation)
+    return value.score * (ai_tuning.AI_ROLE_DIMINISH ** saturation)
 
 
 def pick_next(values, have, targets, affordable=None):
@@ -614,5 +615,5 @@ def threat_profile(world, nation, unit_library, candidates):
     peers = [unit_library[n] for n in candidates if n in unit_library]
     mean_attack = _mean(float(s.get("attack", 0)) for s in peers)
     mean_defense = _mean(float(s.get("defense", 0)) for s in peers)
-    volley = max(1.0, mean_attack * c.LANE_SLOTS_TYPICAL * c.AI_PEACETIME_THREAT_MULTIPLIER)
+    volley = max(1.0, mean_attack * c.LANE_SLOTS_TYPICAL * ai_tuning.AI_PEACETIME_THREAT_MULTIPLIER)
     return volley, mean_defense, float(c.LANE_SLOTS_TYPICAL)

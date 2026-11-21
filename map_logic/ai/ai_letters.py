@@ -24,6 +24,7 @@ from data.state_access import world_for, session_for
 import json
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from data.platform import IS_WEB
 from map_logic.ai import (ai_evaluation, ai_handler, ai_llm_runner, ai_personality,
@@ -127,7 +128,7 @@ def correspondents(nation_data, nation, alive, limit=None):
     counts whether it wrote or was written to. A player who writes to an AI
     counts too. `limit` defaults to AI_CORRESPONDENTS_MAX.
     """
-    limit = c.AI_CORRESPONDENTS_MAX if limit is None else limit
+    limit = ai_tuning.AI_CORRESPONDENTS_MAX if limit is None else limit
     found = []
     for msg in (nation_data.get(nation) or {}).get("inbox") or []:
         if not _is_correspondence(msg):
@@ -155,7 +156,7 @@ def _thread(nation_data, nation, other, skip_ids):
         else:
             continue
         shown.append((speaker, msg))
-    return shown[-c.AI_LETTER_THREAD_SHOWN:]
+    return shown[-ai_tuning.AI_LETTER_THREAD_SHOWN:]
 
 
 def _earlier_letters(nation_data, nation, mail, alive):
@@ -193,12 +194,12 @@ SYSTEM_PROMPT = (
     "alliance: its members are already bound to defend each other.\n"
     "A letter commits nobody to anything. Your government makes formal proposals separately "
     "each turn, guided by your notebook, so plan in your notebook what you want to happen.\n"
-    f"Write at most {c.AI_LETTERS_PER_CALL} letters, one per country, and only to countries "
+    f"Write at most {ai_tuning.AI_LETTERS_PER_CALL} letters, one per country, and only to countries "
     "listed under WHO READS LETTERS. Answer the letters waiting for you when they deserve "
     "an answer.\n"
     f"For each letter waiting for you, give an integer from -{c.AI_OPINION_CHANGE_MAX} to "
     f"{c.AI_OPINION_CHANGE_MAX}: how much it improved or worsened your opinion of its author.\n"
-    f"Then rewrite your notebook in full, in under {c.AI_NOTEBOOK_LENGTH} characters: what you "
+    f"Then rewrite your notebook in full, in under {ai_tuning.AI_NOTEBOOK_LENGTH} characters: what you "
     "think of the countries that matter to you, in words and never as the opinion scores from "
     "your briefing, what you want, what you have promised and been "
     "promised, and what you are waiting to hear. Nobody else ever reads it.\n"
@@ -267,7 +268,7 @@ def reply_schema(recipients, authors):
     letter = {"type": "object", "additionalProperties": False, "required": ["to", "text"],
               "properties": {"to": {"type": "string", "enum": list(recipients)},
                              "text": {"type": "string"}}}
-    letters = ({"type": "array", "maxItems": c.AI_LETTERS_PER_CALL, "items": letter}
+    letters = ({"type": "array", "maxItems": ai_tuning.AI_LETTERS_PER_CALL, "items": letter}
                if recipients else {"type": "array", "maxItems": 0})
     opinion = {"type": "integer", "minimum": -c.AI_OPINION_CHANGE_MAX,
                "maximum": c.AI_OPINION_CHANGE_MAX}
@@ -326,7 +327,7 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
     letters = []
     raw_letters = reply.get("letters")
     for raw in raw_letters if isinstance(raw_letters, list) else ():
-        if len(letters) >= c.AI_LETTERS_PER_CALL:
+        if len(letters) >= ai_tuning.AI_LETTERS_PER_CALL:
             break
         if not isinstance(raw, dict):
             continue
@@ -334,7 +335,7 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
         text = raw.get("text")
         if not to or any(to == sent for sent, _ in letters) or not isinstance(text, str):
             continue
-        text = text.strip()[:c.AI_LETTER_LENGTH]
+        text = text.strip()[:ai_tuning.AI_LETTER_LENGTH]
         if (not text or ai_prompts.unusable_message(text, nation, nation_data, recipient=to)
                 or ai_prompts.repeats_shown(text, shown)):
             continue
@@ -348,7 +349,7 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
             opinions[author] = amount
 
     written = reply.get("notebook")
-    written = written.strip()[:c.AI_NOTEBOOK_LENGTH] if isinstance(written, str) else None
+    written = written.strip()[:ai_tuning.AI_NOTEBOOK_LENGTH] if isinstance(written, str) else None
     return letters, opinions, written
 
 
@@ -360,7 +361,7 @@ def first_sitting(nation_data, writers, limit=None):
     longest first, as the director does, so a short budget does not hand the
     desk to the same country every turn.
     """
-    limit = c.AI_LETTER_WRITERS_PER_TURN if limit is None else limit
+    limit = ai_tuning.AI_LETTER_WRITERS_PER_TURN if limit is None else limit
 
     def waited(nation):
         stamp = (nation_data.get(nation) or {}).get(LAST_SAT)

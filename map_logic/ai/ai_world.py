@@ -40,6 +40,7 @@ import random
 from types import SimpleNamespace
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_personality
 from map_logic.diplomacy import deal as deal_mod
@@ -373,7 +374,7 @@ class AIWorld:
         ones assume the best, by AI_PERCEPTION_SKEW per unit of difference.
         """
         person = ai_personality.get(self.nation_data, viewer, self.scenario_settings)
-        return max(0.0, 1.0 + c.AI_PERCEPTION_SKEW
+        return max(0.0, 1.0 + ai_tuning.AI_PERCEPTION_SKEW
                    * (person.get("caution", 0.5) - person.get("aggression", 0.5)))
 
     def _hidden_land_share(self, viewer, nation):
@@ -561,12 +562,12 @@ class AIWorld:
                       if n not in c.UNPLAYABLE_NATIONS
                       and isinstance(self.nation_data.get(n), dict)]
 
-            count = int(len(living) * c.AI_MAJOR_POWER_FRACTION) + 1
-            count = max(c.AI_MAJOR_POWER_MIN, min(c.AI_MAJOR_POWER_MAX, count))
+            count = int(len(living) * ai_tuning.AI_MAJOR_POWER_FRACTION) + 1
+            count = max(ai_tuning.AI_MAJOR_POWER_MIN, min(ai_tuning.AI_MAJOR_POWER_MAX, count))
 
             ranked = sorted(living, key=lambda n: (
                 -(self.military(n) + self.econ_power(n) / 100.0
-                  + len(self.provs_by_owner.get(n, ())) * c.AI_MAJOR_POWER_PROVINCE_WEIGHT), n))
+                  + len(self.provs_by_owner.get(n, ())) * ai_tuning.AI_MAJOR_POWER_PROVINCE_WEIGHT), n))
 
             notable = set(ranked[:count])
             for name in living:

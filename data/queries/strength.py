@@ -8,6 +8,14 @@ from data.queries.combat_state import get_unit_combat_owner
 from data.queries.air import air_unit_can_move_on_ground
 from data import queries
 
+# Used in data/queries/strength.py to estimate a nation's total economic power
+ECONOMY_WEIGHT_MANPOWER = 1
+ECONOMY_WEIGHT_MATERIALS = 10
+ECONOMY_WEIGHT_FUEL = 20
+
+# Used in data/queries/strength.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
+MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
+
 
 def rank_combat_nations_by_health(units):
     """Rank combat nations by the same cascade used for land capture.
@@ -65,9 +73,9 @@ def get_combined_enemy_strength(target_nation, map_data, nation_data):
 def get_economic_power(nation, nation_data):
     """Estimates a nation's economic power based on its resource stockpiles."""
     data = nation_data.get(nation, {})
-    manpower_val = data.get("manpower", 0) * c.ECONOMY_WEIGHT_MANPOWER
-    materials_val = data.get("materials", 0) * c.ECONOMY_WEIGHT_MATERIALS
-    fuel_val = data.get("fuel", 0) * c.ECONOMY_WEIGHT_FUEL
+    manpower_val = data.get("manpower", 0) * ECONOMY_WEIGHT_MANPOWER
+    materials_val = data.get("materials", 0) * ECONOMY_WEIGHT_MATERIALS
+    fuel_val = data.get("fuel", 0) * ECONOMY_WEIGHT_FUEL
     return manpower_val + materials_val + fuel_val
 
 
@@ -154,7 +162,7 @@ def get_border_strength(nation_a, nation_b, map_data, id_to_province, nation_dat
 
 def calculate_unit_strength(unit):
     """Unified heuristic for a unit's military power."""
-    return unit.get("attack", 0) + unit.get("defense", 0) + (unit.get("health", 0) / c.MILITARY_STRENGTH_HEALTH_DIVISOR)
+    return unit.get("attack", 0) + unit.get("defense", 0) + (unit.get("health", 0) / MILITARY_STRENGTH_HEALTH_DIVISOR)
 
 
 def format_health_percent(unit):

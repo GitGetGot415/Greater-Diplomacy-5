@@ -14,6 +14,7 @@ from unittest.mock import patch
 import pygame
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_opinion
 from map_logic.diplomacy import deal as deal_mod
@@ -448,7 +449,7 @@ class VerdictTests(DealScreenTestCase):
         send. Five steps, and a sentence saying which term is deciding it."""
         screen = self.greedy()
         filled, total = screen.verdict_dots
-        self.assertEqual(total, len(c.AI_VERDICT_BANDS))
+        self.assertEqual(total, len(ai_tuning.AI_VERDICT_BANDS))
         self.assertTrue(1 <= filled <= total)
 
     def test_the_verdict_says_why(self):

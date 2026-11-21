@@ -49,7 +49,7 @@ class CategoryTests(unittest.TestCase):
         """Otherwise a whole class of message silently reads DIPLOMACY again."""
         for action in list(c.BILATERAL_ACTIONS) + list(c.UNILATERAL_ACTIONS):
             with self.subTest(action=action):
-                self.assertIn(action, c.MESSAGE_CATEGORIES)
+                self.assertIn(action, dm.MESSAGE_CATEGORIES)
 
     def test_joining_a_war_does_not_read_as_declaring_one(self):
         """The one confusion in this column a reader cannot afford: "WAR" from

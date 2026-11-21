@@ -11,6 +11,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import (ai_candidates as ac, ai_diplomacy, ai_director, ai_handler,
                           ai_letters, ai_llm_runner, ai_settings)
@@ -148,7 +149,7 @@ class DeliveryTests(LetterTestCase):
         self.run_letters()
         letters = schemas["B"]["properties"]["letters"]
         self.assertEqual(letters["items"]["properties"]["to"]["enum"], ["A", "C"])
-        self.assertEqual(letters["maxItems"], c.AI_LETTERS_PER_CALL)
+        self.assertEqual(letters["maxItems"], ai_tuning.AI_LETTERS_PER_CALL)
         self.assertEqual(schemas["B"]["properties"]["opinions"]["required"], ["A"])
 
     def test_the_schema_allows_no_letter_when_nobody_reads(self):
@@ -211,7 +212,7 @@ class PlayerMessageTests(LetterTestCase):
         self.assertEqual([(t["sender"], t["target"]) for t in self.custom_tasks()], [("P", "B")])
 
     def test_an_ai_that_writes_no_letters_still_gets_the_response_phase_reply(self):
-        self.game.nation_data["B"]["llm_tier"] = c.AI_TIER_NEVER
+        self.game.nation_data["B"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.await_answer("P", "B", "Will you stand with us?")
         self.stub({})
         self.run_letters()
@@ -231,7 +232,7 @@ class PlayerMessageTests(LetterTestCase):
 
 class ValidationTests(LetterTestCase):
     def test_recipients_must_be_countries_that_read_letters(self):
-        self.game.nation_data["C"]["llm_tier"] = c.AI_TIER_NEVER
+        self.game.nation_data["C"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.stub({"A": {"letters": [{"to": "C", "text": "Nobody reads this."},
                                      {"to": "A", "text": "Talking to ourselves."},
                                      {"to": "Atlantis", "text": "Lost at sea."}]}})
@@ -247,7 +248,7 @@ class ValidationTests(LetterTestCase):
                                      {"to": "E", "text": "Five."}]}})
         self.run_letters()
         sent = [m for m in self.game.nation_data["A"]["inbox"] if m["sender"].startswith("To: ")]
-        self.assertEqual(len(sent), c.AI_LETTERS_PER_CALL)
+        self.assertEqual(len(sent), ai_tuning.AI_LETTERS_PER_CALL)
         self.assertEqual([m["content"] for m in self.letters_to("B")], ["One."])
 
     def test_a_display_name_finds_its_country(self):
@@ -285,9 +286,9 @@ class ValidationTests(LetterTestCase):
         self.assertEqual([m["content"] for m in self.letters_to("B")], ["Surrender."])
 
     def test_a_letter_is_cut_to_its_length(self):
-        self.stub({"A": {"letters": [{"to": "B", "text": "w" * (c.AI_LETTER_LENGTH + 50)}]}})
+        self.stub({"A": {"letters": [{"to": "B", "text": "w" * (ai_tuning.AI_LETTER_LENGTH + 50)}]}})
         self.run_letters()
-        self.assertEqual(len(self.letters_to("B")[0]["content"]), c.AI_LETTER_LENGTH)
+        self.assertEqual(len(self.letters_to("B")[0]["content"]), ai_tuning.AI_LETTER_LENGTH)
 
 
 class OpinionTests(LetterTestCase):
@@ -321,9 +322,9 @@ class OpinionTests(LetterTestCase):
 
 class NotebookTests(LetterTestCase):
     def test_the_notebook_is_kept_and_cut_to_length(self):
-        self.stub({"A": {"letters": [], "notebook": "n" * (c.AI_NOTEBOOK_LENGTH + 10)}})
+        self.stub({"A": {"letters": [], "notebook": "n" * (ai_tuning.AI_NOTEBOOK_LENGTH + 10)}})
         self.run_letters()
-        self.assertEqual(len(ai_letters.notebook(self.game.nation_data, "A")), c.AI_NOTEBOOK_LENGTH)
+        self.assertEqual(len(ai_letters.notebook(self.game.nation_data, "A")), ai_tuning.AI_NOTEBOOK_LENGTH)
 
     def test_a_reply_without_a_notebook_keeps_the_old_one(self):
         self.game.nation_data["A"][ai_letters.NOTEBOOK] = "Trust nobody."

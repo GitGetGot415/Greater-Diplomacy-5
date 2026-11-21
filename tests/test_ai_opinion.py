@@ -10,7 +10,7 @@ remembered a decade later.
 import unittest
 
 
-import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_opinion, ai_personality, ai_world
 from map_logic.diplomacy import deal
@@ -310,7 +310,7 @@ class PeaceTests(unittest.TestCase):
         # went stale the day MIN_TURNS_FOR_CEASEFIRE went from 2 to 6, at which
         # point it was testing the flat refusal in front of the arithmetic
         # instead of the arithmetic.
-        self.nation_data["Avaria"]["war_durations"] = {"Borland": c.MIN_TURNS_FOR_CEASEFIRE}
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": ai_tuning.MIN_TURNS_FOR_CEASEFIRE}
         self.rebuild()
         self.assertTrue(ai_opinion.accepts_peace(
             self.world, "Avaria", "Borland", deal.ceasefire_deal("Borland", "Avaria")))

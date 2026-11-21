@@ -82,6 +82,7 @@ AI means artificial intelligence. UI means user interface.
 | Area | Responsibility |
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
+| `map_logic/ai/ai_tuning.py` | AI weights, thresholds, and limits that only `map_logic/ai/` reads. |
 | `data/queries/` | Shared state queries, rule helpers, caches, and the save-dictionary builder. One module per topic. |
 | `calculate_all_economies` in `data/queries/economy.py` | Every recurring per-turn income and cost, each as an `INCOME_BREAKDOWN_ENTRIES` entry. `process_economy` applies the totals. Economy sliders, previews, the AI, and the economy screen read this result. |
 | `data/migrations/` | All conversion of older GD5 data: identifiers, conversion rules, load repairs, and the snapshot move reader. One file per concern. |

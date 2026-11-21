@@ -2,6 +2,7 @@ from data.state_access import world_for, session_for
 from map_logic.actions import production_actions
 import random
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
@@ -61,7 +62,7 @@ def _short_of_runway(deficits, upkeep, income, stockpiles):
         drain = upkeep.get(res, 0) - income.get(res, 0)
         if drain <= 0:
             continue
-        if stockpiles.get(res, 0) / drain < c.AI_DISBAND_RUNWAY_TURNS:
+        if stockpiles.get(res, 0) / drain < ai_tuning.AI_DISBAND_RUNWAY_TURNS:
             short.append(stat)
     return short
 
@@ -118,7 +119,7 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     so the AI doesn't bankrupt itself on units that haven't spawned yet) and
     which resources are in deficit."""
     at_war = len(data.get("at_war_with", [])) > 0
-    war_mult = c.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
+    war_mult = ai_tuning.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
 
     target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
     target_mat = c.AI_UPKEEP_TARGETS["materials"] * war_mult
@@ -181,6 +182,26 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     }
 
 
+_RATIO_KEYS = {"manpower": "man", "materials": "mat", "fuel": "fuel"}
+
+
+def _conversion_pressure(data, state, conversion):
+    """Whether an economy conversion is wanted: None, "short", or "emergency".
+
+    `conversion` names an AI_RESOURCE_CONVERSIONS entry. "short" means the product's
+    upkeep ratio is over target while the source's is under, with a source stock to spare.
+    """
+    rule = ai_tuning.AI_RESOURCE_CONVERSIONS[conversion]
+    source, product = _RATIO_KEYS[rule["source"]], _RATIO_KEYS[rule["product"]]
+    stock = data.get(rule["source"], 0)
+    if (state["ratio_" + product] > state["target_" + product] and state["ratio_" + source] < state["target_" + source]
+            and stock > rule["min"]):
+        return "short"
+    if (stock > rule["panic"] and data.get(rule["product"], 0) < rule["panic_product"]) or stock > rule["emergency"]:
+        return "emergency"
+    return None
+
+
 def _update_conscription_slider(data, state):
     """If AI has excess manpower but needs materials, convert manpower to
     materials. 1.0 = keep all, 0.0 = convert all.
@@ -190,12 +211,10 @@ def _update_conscription_slider(data, state):
     and stops when it stops being worth it -- so the slider keys purely off the
     upkeep ratios, which is what the remaining branches always did.
     """
-    ratio_mat, target_mat = state["ratio_mat"], state["target_mat"]
-    ratio_man, target_man = state["ratio_man"], state["target_man"]
-
-    if ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
+    pressure = _conversion_pressure(data, state, "conscription")
+    if pressure == "short":
         slider = 0.5 # Convert 50%
-    elif (data.get("manpower", 0) > c.AI_CONSCRIPTION_PANIC_MANPOWER and data.get("materials", 0) < c.AI_CONSCRIPTION_PANIC_MATERIALS) or data.get("manpower", 0) > c.AI_CONSCRIPTION_EMERGENCY_MANPOWER:
+    elif pressure == "emergency":
         slider = 0.25 # Emergency: Convert 75%
     else:
         slider = 1.0 # Normal (keep 100%)
@@ -222,22 +241,14 @@ def _update_fuel_conversion_slider(data, state):
     into fuel makes fuel cheaper, which makes fuel-burning units score better
     on the next pass without either side knowing about the other.
     """
-    ratio_fuel, target_fuel = state["ratio_fuel"], state["target_fuel"]
-    ratio_mat, target_mat = state["ratio_mat"], state["target_mat"]
-
     max_conversion = queries.get_max_fuel_conversion(data)
 
-    if max_conversion > 0:
-        if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > c.AI_CONVERSION_MIN_MATERIALS:
-            # Short of fuel with materials to spare: use all of the legal
-            # conversion. Half of it left armies fuel-starved while materials
-            # piled up (saves/runv3: Germany at 0.07 of 0.14, materials upkeep
-            # at 40% of a 90% target, and no tank affordable).
-            data["mat_to_fuel_slider"] = max_conversion
-        elif (data.get("materials", 0) > c.AI_CONVERSION_PANIC_MATERIALS and data.get("fuel", 0) < c.AI_CONVERSION_PANIC_FUEL) or data.get("materials", 0) > c.AI_CONVERSION_EMERGENCY_MATERIALS:
-            data["mat_to_fuel_slider"] = max_conversion # Emergency: Maximize production safely
-        else:
-            data["mat_to_fuel_slider"] = 0.0
+    # Short of fuel with materials to spare, or in an emergency: use all of the
+    # legal conversion. Half of it left armies fuel-starved while materials
+    # piled up (saves/runv3: Germany at 0.07 of 0.14, materials upkeep
+    # at 40% of a 90% target, and no tank affordable).
+    if max_conversion > 0 and _conversion_pressure(data, state, "fuel"):
+        data["mat_to_fuel_slider"] = max_conversion
     else:
         data["mat_to_fuel_slider"] = 0.0
 
@@ -531,7 +542,7 @@ def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library
     }
 
 
-def _naval_need(land_border_count, sea_border_count):
+def naval_need(land_border_count, sea_border_count):
     """How many warships this nation's coastline justifies.
 
     A count, where this used to be a percentage of the whole army. The
@@ -546,9 +557,9 @@ def _naval_need(land_border_count, sea_border_count):
     """
     if sea_border_count <= 0:
         return 0.0
-    if sea_border_count < c.AI_MIN_COAST_FOR_NAVY and land_border_count > 0:
+    if sea_border_count < ai_tuning.AI_MIN_COAST_FOR_NAVY and land_border_count > 0:
         return 0.0
-    return float(sea_border_count) * c.AI_NAVY_PER_COAST_TILE
+    return float(sea_border_count) * ai_tuning.AI_NAVY_PER_COAST_TILE
 
 
 def _recruit_sites(context, ai_name, my_provs):
@@ -634,7 +645,7 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
         return
 
     best_overall = max((v.score for v in values.values()), default=0.0)
-    floor = best_overall * c.AI_MARGINAL_FLOOR
+    floor = best_overall * ai_tuning.AI_MARGINAL_FLOOR
 
     sites = _recruit_sites(context, ai_name, my_provs)
     deployable = {name: _sites_for(sites, name) for name in values}
@@ -689,8 +700,8 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
                    if not (out_of_fuel and v.stats.get("cost_fuel", 0) > 0)}
         best_any, best_any_marginal = ai_unit_eval.pick_next(savable, have, targets)
         if (best_any and best_any_marginal >= floor
-                and (not pick or marginal < best_any_marginal * c.AI_SAVE_UP_THRESHOLD)
-                and _affordable_within(best_any.stats, data, state["econ"], c.AI_SAVE_UP_TURNS)):
+                and (not pick or marginal < best_any_marginal * ai_tuning.AI_SAVE_UP_THRESHOLD)
+                and _affordable_within(best_any.stats, data, state["econ"], ai_tuning.AI_SAVE_UP_TURNS)):
             break
 
         if not pick or marginal < floor:
@@ -729,7 +740,7 @@ def _apply_coring_priority(context, ai_name, data, my_provs):
     world_state = world_for(context)
     # Nothing to core when cores are disabled -- every tile already counts
     # as cored, so skip straight past this without spending resources.
-    surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
+    surplus_manpower = ai_tuning.AI_SURPLUS_MANPOWER_FOR_CORING
     if not queries.is_administrative_action_enabled("CORE", world_state.scenario_settings) or data.get("manpower", 0) <= surplus_manpower:
         return
 
@@ -759,7 +770,7 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
     of materials, invests it back into the next industry or recruitment
     building tier it has available and a free build slot for, one per turn."""
     world_state = world_for(context)
-    if data.get("materials", 0) <= c.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
+    if data.get("materials", 0) <= ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
         return
 
     res_levels = data.get("research", {})
@@ -930,7 +941,7 @@ def process_ai_economy_decisions(context, *, countries=None):
         state["unit_context"] = unit_ctx
         state["role_targets"] = ai_unit_eval.role_targets(
             unit_ctx,
-            naval_need=_naval_need(force_tally["land_border_count"],
+            naval_need=naval_need(force_tally["land_border_count"],
                                    force_tally["sea_border_count"]),
             values=buildable_values)
 

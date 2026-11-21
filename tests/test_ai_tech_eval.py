@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_tech_eval as te, ai_unit_eval as ue
 
@@ -46,7 +47,7 @@ def building_library():
     for level in range(1, 26):
         library[f"Factory Lvl {level}"] = {
             "prod_materials": level * 1000,
-            "cost_materials": c.AI_BUILDING_PAYBACK_TURNS * (2000 if level == 1 else 200),
+            "cost_materials": ai_tuning.AI_BUILDING_PAYBACK_TURNS * (2000 if level == 1 else 200),
             "req": "Basic Factory" if level == 1 else f"Factory Lvl {level - 1}"}
     library["Recruitment Building Lvl 2"] = {"prod_manpower": 100}
     return library
@@ -116,7 +117,7 @@ class EconomyValueTests(unittest.TestCase):
         base = float(c.BASIC_FACTORY_BASE_COST_X)
         yield_per_turn = cheap["materials"] * self.blib["Basic Factory"]["prod_materials"]
         real_cost = cheap["materials"] * base * 2 + cheap["manpower"] * base
-        self.assertAlmostEqual(value, yield_per_turn - real_cost / c.AI_BUILDING_PAYBACK_TURNS)
+        self.assertAlmostEqual(value, yield_per_turn - real_cost / ai_tuning.AI_BUILDING_PAYBACK_TURNS)
         self.assertGreater(value, 0.0)
 
     def test_the_basic_factory_is_not_scored_as_free(self):
@@ -138,7 +139,7 @@ class EconomyValueTests(unittest.TestCase):
 
     def test_unequal_fixture_upgrades_use_their_own_yields_and_costs(self):
         self.blib["Factory Lvl 3"].update(prod_materials=4500,
-                                        cost_materials=300 * c.AI_BUILDING_PAYBACK_TURNS)
+                                        cost_materials=300 * ai_tuning.AI_BUILDING_PAYBACK_TURNS)
         value = te.economy_gain("factory", 3, prices(), self.blib, self.income)
         self.assertAlmostEqual(value, 4500 - 2000 - 300)
         self.assertNotEqual(value, te.economy_gain("factory", 2, prices(), self.blib, self.income))
@@ -151,7 +152,7 @@ class EconomyValueTests(unittest.TestCase):
         lvl8 = self.blib["Factory Lvl 8"]
         lvl7 = self.blib["Factory Lvl 7"]
         gain = (te._yield_value(lvl8, cheap_build) - te._yield_value(lvl7, cheap_build))
-        cost = te._build_cost("Factory Lvl 8", lvl8, cheap_build) / c.AI_BUILDING_PAYBACK_TURNS
+        cost = te._build_cost("Factory Lvl 8", lvl8, cheap_build) / ai_tuning.AI_BUILDING_PAYBACK_TURNS
         self.assertAlmostEqual(value, gain - cost)
         self.assertLess(value, te._yield_value(lvl8, cheap_build),
                         "must not be the absolute output")
@@ -340,7 +341,7 @@ class CatchUpTests(unittest.TestCase):
 
     def test_the_pull_is_capped_so_one_ancient_tech_cannot_drown_the_board(self):
         self.assertEqual(te.schedule_pressure(2010, 1900),
-                         te.schedule_pressure(2010, 2010 - c.AI_TECH_OVERDUE_CAP))
+                         te.schedule_pressure(2010, 2010 - ai_tuning.AI_TECH_OVERDUE_CAP))
 
     def test_a_tie_goes_to_whatever_we_are_furthest_behind_on(self):
         """Whole families score exactly zero -- level 1 unlocks nothing better

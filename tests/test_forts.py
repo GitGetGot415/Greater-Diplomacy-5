@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_construction
 from map_logic.system32 import combat_processor
@@ -133,7 +134,7 @@ class FortTests(unittest.TestCase):
         prov = Screen.map_data["1"]
         prov.update({"owner": "A", "cores": ["A"], "buildings": [],
                      "building_queue": []})
-        data = {"materials": c.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 1,
+        data = {"materials": ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 1,
                 "research": {}}
         building_library = {
             "Fort Lvl 1": {"group": "fortification"},

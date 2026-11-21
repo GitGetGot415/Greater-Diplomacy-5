@@ -2,9 +2,12 @@ from data.state_access import world_for, session_for, replace_mapping
 import pygame
 import random
 import numpy as np
-import data.constants as c
 
 from data import queries
+
+PROCEDURAL_MAP_WIDTH = 1200
+PROCEDURAL_MAP_HEIGHT = 400
+PROCEDURAL_PROVINCE_COUNT = 600
 
 
 # vectorized loops make generating maps faster!
@@ -13,9 +16,9 @@ def generate_new_world(context):
     """Generates the geometric map surfaces and data structures from scratch."""
     
     # 1. Gather variables from settings or constants
-    width = c.PROCEDURAL_MAP_WIDTH
-    height = c.PROCEDURAL_MAP_HEIGHT
-    num_provinces = c.PROCEDURAL_PROVINCE_COUNT
+    width = PROCEDURAL_MAP_WIDTH
+    height = PROCEDURAL_MAP_HEIGHT
+    num_provinces = PROCEDURAL_PROVINCE_COUNT
     
     proc_type = (context.random_settings or {}).get("procedural_type", "Grid")
 

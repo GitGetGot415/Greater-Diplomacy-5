@@ -22,7 +22,7 @@ could not reach Switzerland.
 import unittest
 
 
-import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_diplomacy
 from map_logic.diplomacy import deal, ratification, war_actions
 from tests.stub_map_screen import StubMapScreen
@@ -72,7 +72,7 @@ class VictorsTermsTests(unittest.TestCase):
     def test_a_narrow_winner_asks_for_a_share_rather_than_nothing(self):
         """Below AI_PEACE_DEMAND_LEVERAGE this used to fall through to a bare
         white peace, which now hands the whole occupation back."""
-        agreement = self.terms(c.AI_PEACE_DEMAND_LEVERAGE / 2.0)
+        agreement = self.terms(ai_tuning.AI_PEACE_DEMAND_LEVERAGE / 2.0)
         wanted = self.demanded(agreement)
 
         self.assertFalse(deal.is_white_peace(agreement))
@@ -80,7 +80,7 @@ class VictorsTermsTests(unittest.TestCase):
         self.assertLess(len(wanted), len(self.taken))
 
     def test_a_partial_demand_takes_the_valuable_ground_first(self):
-        agreement = self.terms(c.AI_PEACE_DEMAND_LEVERAGE / 2.0)
+        agreement = self.terms(ai_tuning.AI_PEACE_DEMAND_LEVERAGE / 2.0)
         wanted = self.demanded(agreement)
 
         best = max(self.taken, key=deal.tile_value)

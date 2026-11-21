@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from data.runtime_rules import ActiveLibrary, RuntimeRules
 from data.state_access import BackendState
@@ -319,7 +320,7 @@ class OutputBonusTests(unittest.TestCase):
         self.assertEqual(queries.get_tech_level_gate_unlocks("gate", 1), [("factory", 2)])
         self.assertTrue(queries.get_tech_unlocks("gate", 1))
         self.assertEqual(ai_tech_eval.economy_gain("gate", 1, prices, self.library, {}, research={}), 0)
-        with patch.object(c, "AI_MAX_BUILDING_RESEARCH_LEAD", 1):
+        with patch.object(ai_tuning, "AI_MAX_BUILDING_RESEARCH_LEAD", 1):
             self.assertEqual(ai_tech_eval.economy_gain("gate", 1, prices, self.library, {},
                                                      built={"factory": 0}, research=research), 0)
         self.tree["factory"]["req"] = {"other": 1}

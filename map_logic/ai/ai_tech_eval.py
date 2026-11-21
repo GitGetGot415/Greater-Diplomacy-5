@@ -26,6 +26,7 @@ strings like "+100 Base Fuel/Turn" for the research screen.
 import collections
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_unit_eval
 
@@ -267,7 +268,7 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
     # research running away from construction -- the USA in the save that
     # prompted this held factory level 8 with nothing above Lvl 1 on the map,
     # seven twelve-turn upgrades away from being able to use any of it.
-    if built is not None and level > built.get(tech_key, 0) + c.AI_MAX_BUILDING_RESEARCH_LEAD:
+    if built is not None and level > built.get(tech_key, 0) + ai_tuning.AI_MAX_BUILDING_RESEARCH_LEAD:
         return 0.0
 
     best = 0.0
@@ -286,7 +287,7 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
         # Net of what it costs to put up, spread over the period a building is
         # given to earn that back -- it keeps producing long after the twenty
         # turns a division is costed against.
-        best = max(best, gain - _build_cost(name, stats, prices) / c.AI_BUILDING_PAYBACK_TURNS)
+        best = max(best, gain - _build_cost(name, stats, prices) / ai_tuning.AI_BUILDING_PAYBACK_TURNS)
 
     # A gate has value when it enables the next reachable building research.
     tree = queries.get_tech_tree(context)
@@ -326,8 +327,8 @@ def schedule_pressure(current_year, target_year):
     """
     if target_year > current_year:
         return queries.get_research_multiplier(current_year, target_year)
-    overdue = min(current_year - target_year, c.AI_TECH_OVERDUE_CAP)
-    return 1.0 + c.AI_TECH_OVERDUE_WEIGHT * overdue
+    overdue = min(current_year - target_year, ai_tuning.AI_TECH_OVERDUE_CAP)
+    return 1.0 + ai_tuning.AI_TECH_OVERDUE_WEIGHT * overdue
 
 
 def rank_available(available, research, unit_library, building_library, ctx,
@@ -360,7 +361,7 @@ def rank_available(available, research, unit_library, building_library, ctx,
     # side always win. Without this the economy side was larger by ~10^7 and no
     # military tech was ever researched by anyone.
     buy_rate = gains.best_score()          # combat per unit of resource pain
-    horizon = float(c.AI_TECH_ECONOMY_HORIZON)
+    horizon = float(ai_tuning.AI_TECH_ECONOMY_HORIZON)
 
     def priority(entry):
         tech_key, target_year, cost, _is_new = entry
@@ -370,7 +371,7 @@ def rank_available(available, research, unit_library, building_library, ctx,
         military = gains.gain(tech_key) * max(1.0, ctx.budget)
         economic = (economy_gain(tech_key, level, ctx.prices, building_library, income, built,
                                  research=research, provinces=provinces, context=building_library, factory_multiplier=factory_multiplier)
-                    * buy_rate * horizon * c.AI_TECH_ECONOMY_WEIGHT)
+                    * buy_rate * horizon * ai_tuning.AI_TECH_ECONOMY_WEIGHT)
 
         pace = schedule_pressure(current_year, target_year)
         worth = (military + economic) * pace / max(1.0, float(cost))
@@ -378,7 +379,7 @@ def rank_available(available, research, unit_library, building_library, ctx,
         # that is actually reachable, however the arithmetic came out. It is
         # still ranked rather than dropped, so a nation with nothing else on
         # offer picks it -- see AI_TECH_EARLY_HORIZON.
-        reachable = 0 if target_year - current_year > c.AI_TECH_EARLY_HORIZON else 1
+        reachable = 0 if target_year - current_year > ai_tuning.AI_TECH_EARLY_HORIZON else 1
         # Whole families evaluate at exactly zero at any given moment, because
         # level 1 of a line unlocks a unit no better than what we already field
         # -- the marginal read is right about today and blind to the fact that

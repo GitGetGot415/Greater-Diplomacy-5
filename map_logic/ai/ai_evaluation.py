@@ -14,6 +14,7 @@ import collections
 import re
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_opinion, ai_settings, ai_world
 from data import queries
 from map_logic.ai import ai_prompts
@@ -104,10 +105,10 @@ def llm_enabled_for(nation, world=None):
         return None
 
     nation_data = getattr(world, "nation_data", None) or {}
-    tier = (nation_data.get(nation) or {}).get("llm_tier", c.AI_TIER_AUTO)
-    if tier == c.AI_TIER_ALWAYS:
+    tier = (nation_data.get(nation) or {}).get("llm_tier", ai_tuning.AI_TIER_AUTO)
+    if tier == ai_tuning.AI_TIER_ALWAYS:
         return True
-    if tier == c.AI_TIER_NEVER:
+    if tier == ai_tuning.AI_TIER_NEVER:
         return False
 
     immersion = ai_settings.get_ai_immersion_level()
@@ -589,7 +590,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         # has asked this since it was written.
         if queries.are_at_war(ai_nation, sender_nation, nation_data):
             accepted = False
-        elif relation_score >= c.AI_RELATION_FACTION_THRESHOLD or share_enemies:
+        elif relation_score >= ai_tuning.AI_RELATION_FACTION_THRESHOLD or share_enemies:
             accepted = True
 
     # 3. Evaluate peace deals dynamically using the centralized query
@@ -709,7 +710,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     # A marginal judgement is exactly where a leader's own view should be allowed
     # to differ from the staff's. A hard rule -- an integrated puppet cannot
     # trade, we are already in a faction -- is not a judgement, and stays settled.
-    allow_override = verdict.confidence < c.AI_VERDICT_OVERRIDE_MAX_CONFIDENCE
+    allow_override = verdict.confidence < ai_tuning.AI_VERDICT_OVERRIDE_MAX_CONFIDENCE
 
     # --- Split logic between Proposals and Unilateral Declarations ---
     if action_type in c.UNILATERAL_ACTIONS:

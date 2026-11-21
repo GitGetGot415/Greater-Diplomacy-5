@@ -448,7 +448,7 @@ class RejectionAndCooldownTests(unittest.TestCase):
         copies = [game.nation_data[country]["inbox"][0] for country in ("A", "B")]
         self.assertTrue(all(diplomacy_messages.is_system_notice(msg) for msg in copies))
         self.assertEqual(copies[0]["message_id"], copies[1]["message_id"])
-        self.assertEqual(diplomacy_messages.message_category(copies[0]), c.MESSAGE_CATEGORIES["JOIN_FACTION_REQ"])
+        self.assertEqual(diplomacy_messages.message_category(copies[0]), diplomacy_messages.MESSAGE_CATEGORIES["JOIN_FACTION_REQ"])
         self.assertEqual(game.pending_action("B", "A"), "")
 
     def test_undo_clears_a_queued_answer(self):

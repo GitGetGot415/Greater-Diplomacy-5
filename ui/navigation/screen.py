@@ -15,6 +15,15 @@ from ui.widgets.ui_elements import Button, make_back_button
 from ui.sound_effects import play_ui_sound
 from ui.rendering.font_manager import fonts
 
+# Keybind actions which synthesize the matching physical mouse-button event.
+# The keybind screen owns their player-facing labels and layout; this mapping
+# is shared input behavior, so it belongs with the other global constants.
+KEYBIND_MOUSE_BUTTONS = {
+    "MOUSE_LEFT_CLICK": 1,
+    "MOUSE_MIDDLE_CLICK": 2,
+    "MOUSE_RIGHT_CLICK": 3,
+}
+
 DEFAULT_BG_COLOR = c.DEFAULT_BG_COLOR
 
 
@@ -52,7 +61,7 @@ def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True, r
     if keybinds is None:
         keybinds = {
             action: queries.get_keybind(action, None)
-            for action in c.KEYBIND_MOUSE_BUTTONS
+            for action in KEYBIND_MOUSE_BUTTONS
         }
 
     cursor_pos = pygame.mouse.get_pos()
@@ -63,7 +72,7 @@ def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True, r
         if event.type == pygame.KEYDOWN and allow_keydown and event.key not in reserved_keys:
             if event.key in _MOUSE_KEYBIND_PRESSES:
                 continue
-            buttons = tuple(button for action, button in c.KEYBIND_MOUSE_BUTTONS.items()
+            buttons = tuple(button for action, button in KEYBIND_MOUSE_BUTTONS.items()
                             if keybinds.get(action) == event.key)
             if buttons:
                 _MOUSE_KEYBIND_PRESSES[event.key] = buttons

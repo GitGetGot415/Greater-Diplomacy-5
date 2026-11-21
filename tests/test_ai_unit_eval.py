@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_unit_eval as ue
 
 
@@ -85,7 +86,7 @@ class PricingTests(unittest.TestCase):
 
     def test_a_resource_with_no_income_and_no_stock_hits_the_cap(self):
         prices = ue.resource_prices(econ(fuel=0), stock(fuel=0))
-        self.assertAlmostEqual(prices["fuel"], 1.0 / c.AI_MIN_RESOURCE_SLACK)
+        self.assertAlmostEqual(prices["fuel"], 1.0 / ai_tuning.AI_MIN_RESOURCE_SLACK)
 
     def test_a_plentiful_resource_is_cheap(self):
         prices = ue.resource_prices(econ(), stock())
@@ -153,7 +154,8 @@ class ValuationTests(unittest.TestCase):
         """
         values = ue.evaluate(list(SOAK_PAIR), SOAK_PAIR, context(volley=2000.0, stack=5.0))
         paper = values["Paper"]
-        self.assertAlmostEqual(paper.combat - paper.offense - c.AI_W_DURABILITY, 0.0)
+        # Durability counts once against the mean of the units on offer.
+        self.assertAlmostEqual(paper.combat - paper.offense - 1.0, 0.0)
 
     def test_defense_still_earns_dilution_credit(self):
         """The term is scaled, not deleted: armour that actually absorbs a hit
@@ -163,7 +165,7 @@ class ValuationTests(unittest.TestCase):
         # so the whole gap between them is the dilution term -- and Plated's
         # defense covers the entire incoming share, so it earns the full weight.
         gap = values["Plated"].combat - values["Paper"].combat
-        self.assertAlmostEqual(gap, c.AI_W_SOAK)
+        self.assertAlmostEqual(gap, ai_tuning.AI_W_SOAK)
 
     def test_a_cheap_body_does_not_beat_a_better_one_of_the_same_role(self):
         """The militia case, in miniature: same manpower, a third of the
@@ -336,7 +338,7 @@ class CompositionTests(unittest.TestCase):
         empty = ue.marginal_score(values["Tanks"], {}, targets)
         full = ue.marginal_score(values["Tanks"], {ue.ROLE_ASSAULT: targets[ue.ROLE_ASSAULT]}, targets)
         self.assertLess(full, empty)
-        self.assertAlmostEqual(full, empty * c.AI_ROLE_DIMINISH)
+        self.assertAlmostEqual(full, empty * ai_tuning.AI_ROLE_DIMINISH)
 
     def test_picking_repeatedly_produces_a_mixed_army(self):
         """The old loop bought one tank per infantry by arithmetic. This one has
@@ -544,8 +546,8 @@ class SlotQualityTests(unittest.TestCase):
 
     def values(self, exponent=None):
         from unittest.mock import patch
-        exponent = c.AI_SLOT_QUALITY_EXPONENT if exponent is None else exponent
-        with patch.object(c, "AI_SLOT_QUALITY_EXPONENT", exponent):
+        exponent = ai_tuning.AI_SLOT_QUALITY_EXPONENT if exponent is None else exponent
+        with patch.object(ai_tuning, "AI_SLOT_QUALITY_EXPONENT", exponent):
             return scores(library=self.LIBRARY)
 
     def test_the_fixture_is_two_assault_units_of_equal_value_per_cost(self):

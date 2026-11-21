@@ -18,6 +18,7 @@ from unittest import mock
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.diplomacy import (deal, diplomacy_messages, diplomacy_processor, peace_scope, player_diplomacy_actions, ratification, treaty_effects)
 from tests.stub_map_screen import StubMapScreen
@@ -55,7 +56,7 @@ def old_enough_to_settle(game):
     for data in game.nation_data.values():
         if not isinstance(data, dict):
             continue
-        data["war_durations"] = {enemy: c.MIN_TURNS_FOR_CEASEFIRE
+        data["war_durations"] = {enemy: ai_tuning.MIN_TURNS_FOR_CEASEFIRE
                                  for enemy in data.get("at_war_with", [])}
 
 

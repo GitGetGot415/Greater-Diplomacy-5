@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from data.map import load_map
 from data.state_access import BackendState
@@ -180,19 +181,19 @@ class ResearchFundingTests(unittest.TestCase):
     def test_ai_funds_from_surplus_with_a_reserve_and_preserves_human_choices(self):
         country = {"materials": 10, "research_queue": [project(str(i), 300) for i in range(c.RESEARCH_SLOTS)]}
         game = map_double(player_country="A", nation_data={"A": country})
-        ai_cost = queries.get_research_funding_cost(c.AI_RESEARCH_FUNDING_RATE, 100)
+        ai_cost = queries.get_research_funding_cost(ai_tuning.AI_RESEARCH_FUNDING_RATE, 100)
         with patch.object(queries, "get_active_ai_nations", return_value=["A"]), \
                 patch.object(queries, "get_tech_tree", return_value={"fixture": {"max_lvl": 1}}), \
                 patch.object(queries, "calculate_all_economies", return_value={"A": economy(100, 10)}) as calculate, \
                 patch.object(ai_research.ai_world, "for_screen", return_value=None):
             ai_research.process_ai_research(game)
-            self.assertEqual(country["research_funding_slider"], c.AI_RESEARCH_FUNDING_RATE)
+            self.assertEqual(country["research_funding_slider"], ai_tuning.AI_RESEARCH_FUNDING_RATE)
             # Last turn's funding does not count against the surplus, so the rate holds steady.
             country["materials"] = 1_000
-            calculate.return_value = {"A": economy(100, 100 - ai_cost - 1, c.AI_RESEARCH_FUNDING_RATE)}
+            calculate.return_value = {"A": economy(100, 100 - ai_cost - 1, ai_tuning.AI_RESEARCH_FUNDING_RATE)}
             ai_research.process_ai_research(game)
-            self.assertEqual(country["research_funding_slider"], c.AI_RESEARCH_FUNDING_RATE)
-            calculate.return_value = {"A": economy(100, 100 - ai_cost, c.AI_RESEARCH_FUNDING_RATE)}
+            self.assertEqual(country["research_funding_slider"], ai_tuning.AI_RESEARCH_FUNDING_RATE)
+            calculate.return_value = {"A": economy(100, 100 - ai_cost, ai_tuning.AI_RESEARCH_FUNDING_RATE)}
             ai_research.process_ai_research(game)
             self.assertEqual(country["research_funding_slider"], 0)
             calculate.return_value = {"A": economy(100, 10)}

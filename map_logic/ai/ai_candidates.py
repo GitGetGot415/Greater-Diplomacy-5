@@ -20,7 +20,7 @@ Stdlib and `data` only.
 import collections
 import hashlib
 
-import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from data.state_access import world_for
 
@@ -64,7 +64,7 @@ def mirrors_waiting_proposal(nation_data, nation, target, action):
     access in one turn, and the Reich accepted Italy's offer to join its wars
     while calling Italy to arms.
     """
-    mirrors = c.AI_MIRRORED_PROPOSALS.get(action)
+    mirrors = ai_tuning.AI_MIRRORED_PROPOSALS.get(action)
     if not mirrors:
         return False
     request = ((nation_data.get(target) or {}).get("pending_diplomacy") or {}).get(nation)
@@ -164,18 +164,18 @@ INITIATIVE_NOTE = "your own initiative, not a staff proposal"
 
 
 def effect(candidate):
-    """What the option does, in a few words (c.AI_ACTION_EFFECTS), or ""."""
-    text = c.AI_ACTION_EFFECTS.get(candidate.action, "")
+    """What the option does, in a few words (ai_tuning.AI_ACTION_EFFECTS), or ""."""
+    text = ai_tuning.AI_ACTION_EFFECTS.get(candidate.action, "")
     if "{enemy}" in text:
         enemy = (candidate.payload.get("context_target")
-                 or c.AI_ACTION_EFFECT_ENEMY.get(candidate.action, "your enemies"))
+                 or ai_tuning.AI_ACTION_EFFECT_ENEMY.get(candidate.action, "your enemies"))
         text = text.replace("{enemy}", enemy)
     return text
 
 
 def describe(candidate):
     """One line for a prompt or a log entry."""
-    verb = c.AI_ACTION_PHRASES.get(candidate.action, candidate.action.replace("_", " ").lower())
+    verb = ai_tuning.AI_ACTION_PHRASES.get(candidate.action, candidate.action.replace("_", " ").lower())
     does = effect(candidate)
     head = f"{verb} {candidate.target}" + (f" ({does})" if does else "")
     if is_initiative(candidate):
@@ -183,7 +183,7 @@ def describe(candidate):
     return f"{head} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
 
 
-def _haggle(nation, partner, turn, spread=c.AI_TRADE_JITTER):
+def _haggle(nation, partner, turn, spread=ai_tuning.AI_TRADE_JITTER):
     """A stable per-pair, per-turn wobble in 1±spread.
 
     Not `random`: the same save re-run has to make the same offers, and
@@ -213,7 +213,7 @@ def _negotiators_number(amount, ceiling=None):
     """
     if amount <= 0:
         return 0
-    for step in c.AI_TRADE_ROUNDING_LADDER:
+    for step in ai_tuning.AI_TRADE_ROUNDING_LADDER:
         if amount >= step * 4:
             rounded = int(round(amount / float(step)) * step)
             if ceiling is not None and rounded > ceiling:
@@ -253,7 +253,7 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     def surplus(econ, stock, resource):
         income = float(econ.get("total_inc", {}).get(resource, 0))
         upkeep = float(econ.get("upkeep", {}).get(resource, 0))
-        return (income - upkeep) + float(stock.get(resource, 0)) / c.AI_TRADE_STOCK_TURNS
+        return (income - upkeep) + float(stock.get(resource, 0)) / ai_tuning.AI_TRADE_STOCK_TURNS
 
     tradeable = ("materials", "fuel")
     mine = {r: surplus(econ_a, stock_a, r) for r in tradeable}
@@ -276,15 +276,15 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     # is genuinely short asks harder. None of that existed: a warm neighbour and
     # a cold one made you the same offer, in the same words, every time.
     goodwill = max(-1.0, min(1.0, world.relation(nation, partner) / 200.0))
-    share = (c.AI_TRADE_ASK_BASE_SHARE
-             + c.AI_TRADE_ASK_AMBITION * (person.get("ambition", 0.5) - 0.5)
-             - c.AI_TRADE_ASK_GOODWILL * goodwill)
+    share = (ai_tuning.AI_TRADE_ASK_BASE_SHARE
+             + ai_tuning.AI_TRADE_ASK_SWING * (person.get("ambition", 0.5) - 0.5)
+             - ai_tuning.AI_TRADE_ASK_SWING * goodwill)
 
     need = min(1.0, max(0.0, -mine[take]) / theirs[take]) if theirs[take] else 0.0
-    share += c.AI_TRADE_ASK_NEED * need
+    share += ai_tuning.AI_TRADE_ASK_SWING * need
 
-    share = max(c.AI_TRADE_ASK_MIN_SHARE,
-                min(c.AI_TRADE_MAX_SHARE, share * _haggle(nation, partner, turn)))
+    share = max(ai_tuning.AI_TRADE_ASK_MIN_SHARE,
+                min(ai_tuning.AI_TRADE_MAX_SHARE, share * _haggle(nation, partner, turn)))
 
     take_amount = _negotiators_number(theirs[take] * share)
     if take_amount <= 0:
@@ -301,19 +301,20 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     # help at all: trade_appetite only ever runs on the receiving side, so an
     # absurdly generous offer was generated and then trivially accepted.
     prices = ai_unit_eval.resource_prices(econ_a, stock_a)
-    exchange = min(c.AI_TRADE_MAX_GENEROSITY,
-                   (c.AI_TRADE_EXCHANGE_BASE + c.AI_TRADE_EXCHANGE_NEED * need)
+    max_generosity = ai_tuning.AI_TRADE_EXCHANGE_BASE + ai_tuning.AI_TRADE_EXCHANGE_NEED
+    exchange = min(max_generosity,
+                   (ai_tuning.AI_TRADE_EXCHANGE_BASE + ai_tuning.AI_TRADE_EXCHANGE_NEED * need)
                    * _haggle(partner, nation, turn))
 
     take_price = prices.get(take, 1.0)
     give_price = max(prices.get(give, 1.0), 1e-6)
     asked_for = take_price * take_amount
     give_amount = _negotiators_number(asked_for * exchange / give_price,
-                                      ceiling=asked_for * c.AI_TRADE_MAX_GENEROSITY / give_price)
+                                      ceiling=asked_for * max_generosity / give_price)
 
     # And never more than we can actually spare. Scaling the ask to match keeps
     # the exchange rate we just settled on rather than quietly overpaying.
-    spare = mine[give] * c.AI_TRADE_OFFER_FRACTION
+    spare = mine[give] * ai_tuning.AI_TRADE_OFFER_FRACTION
     if give_amount > spare > 0:
         take_amount = _negotiators_number(take_amount * spare / give_amount,
                                           ceiling=take_amount)
@@ -330,7 +331,7 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     # The floor is a value, not a count: 250 fuel and 250 materials are nothing
     # like the same offer, and the old unit floor quietly barred fuel-rich
     # nations from trading at all.
-    floor = c.AI_TRADE_MIN_AMOUNT * prices.get("materials", 1.0)
+    floor = ai_tuning.AI_TRADE_MIN_AMOUNT * prices.get("materials", 1.0)
     if give_amount * give_price < floor or take_amount <= 0:
         return None
 

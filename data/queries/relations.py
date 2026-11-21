@@ -14,6 +14,12 @@ from data.queries.strength import (
 from data import queries
 from map_logic import politics
 
+COLOR_REL_MAX_POS = (100, 100, 200) # Light blue at 200
+COLOR_REL_POS = (0, 255, 0)         # Green at 100
+COLOR_REL_NEU = (255, 255, 255)     # White at 0
+COLOR_REL_NEG = (255, 0, 0)         # Red at -100
+COLOR_REL_MAX_NEG = (150, 0, 0)     # Very dark red at -200
+
 
 _POLITICAL_AFFINITY_PER_AXIS = 10
 
@@ -211,15 +217,15 @@ def get_relation_color(score):
     score = max(-200, min(200, score))
 
     if score > 100:
-        return lerp_color(c.COLOR_REL_POS, c.COLOR_REL_MAX_POS, (score - 100) / 100.0)
+        return lerp_color(COLOR_REL_POS, COLOR_REL_MAX_POS, (score - 100) / 100.0)
     elif score > 0:
-        return lerp_color(c.COLOR_REL_NEU, c.COLOR_REL_POS, score / 100.0)
+        return lerp_color(COLOR_REL_NEU, COLOR_REL_POS, score / 100.0)
     elif score < -100:
-        return lerp_color(c.COLOR_REL_NEG, c.COLOR_REL_MAX_NEG, (-score - 100) / 100.0)
+        return lerp_color(COLOR_REL_NEG, COLOR_REL_MAX_NEG, (-score - 100) / 100.0)
     elif score < 0:
-        return lerp_color(c.COLOR_REL_NEU, c.COLOR_REL_NEG, -score / 100.0)
+        return lerp_color(COLOR_REL_NEU, COLOR_REL_NEG, -score / 100.0)
         
-    return c.COLOR_REL_NEU
+    return COLOR_REL_NEU
 
 
 def build_national_border_graph(map_data, id_to_province):

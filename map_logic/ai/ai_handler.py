@@ -23,6 +23,19 @@ import socket
 import weakref
 from data.platform import IS_WEB
 
+# OpenAI-compatible chat completion endpoints for the hosted providers that
+# don't need a user-editable URL (unlike Ollama, which stores its URL in the
+# "api_key" field because it has no key of its own).
+CHATGPT_API_URL = "https://api.openai.com/v1/chat/completions"
+DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+# Moonshot AI is the company; Kimi is the model line they ship under that API host.
+KIMI_API_URL = "https://api.moonshot.ai/v1/chat/completions"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+# Anthropic's Messages API, used for Claude -- different auth/shape than the
+# OpenAI-compatible providers above, so it gets its own caller.
+CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
+CLAUDE_API_VERSION = "2023-06-01"
+
 if not IS_WEB:
     # Networked LLM AI opponents are desktop-only (see Phase 4 of the web-export
     # plan): raw sockets/requests/google-genai have no browser-safe path, and
@@ -339,10 +352,10 @@ def _request_json(url, payload, headers, extract, turn_id=None):
 #: These providers share the OpenAI-style chat completions API.
 #: Each entry supplies the endpoint, API-key getter, and model getter.
 OPENAI_COMPATIBLE_PROVIDERS = {
-    "CHATGPT": (lambda: c.CHATGPT_API_URL, get_chatgpt_api_key, get_chatgpt_model),
-    "DEEPSEEK": (lambda: c.DEEPSEEK_API_URL, get_deepseek_api_key, get_deepseek_model),
-    "KIMI": (lambda: c.KIMI_API_URL, get_kimi_api_key, get_kimi_model),
-    "OPENROUTER": (lambda: c.OPENROUTER_API_URL, get_openrouter_api_key, get_openrouter_model),
+    "CHATGPT": (lambda: CHATGPT_API_URL, get_chatgpt_api_key, get_chatgpt_model),
+    "DEEPSEEK": (lambda: DEEPSEEK_API_URL, get_deepseek_api_key, get_deepseek_model),
+    "KIMI": (lambda: KIMI_API_URL, get_kimi_api_key, get_kimi_model),
+    "OPENROUTER": (lambda: OPENROUTER_API_URL, get_openrouter_api_key, get_openrouter_model),
 }
 
 #: Room for a Claude reply. Newer models think before they answer, and that
@@ -425,10 +438,10 @@ def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
     headers = {
         "Content-Type": "application/json",
         "x-api-key": api_key,
-        "anthropic-version": c.CLAUDE_API_VERSION,
+        "anthropic-version": CLAUDE_API_VERSION,
     }
 
-    return _request_json(c.CLAUDE_API_URL, payload, headers, _claude_text, turn_id)
+    return _request_json(CLAUDE_API_URL, payload, headers, _claude_text, turn_id)
 
 
 def call_gemini(system_prompt, user_prompt, turn_id=None):

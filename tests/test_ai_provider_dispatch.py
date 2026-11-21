@@ -17,6 +17,7 @@ from unittest import mock
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_evaluation, ai_handler, ai_prompts
 
@@ -139,7 +140,7 @@ class OpenRouterProviderTests(NoNetworkTestCase):
                     result = ai_handler._dispatch("OPENROUTER", "system", "world", None)
                 self.assertEqual(result, {"message": "We agree.", "accepted": True})
                 args, kwargs = session.post.call_args
-                self.assertEqual(args, (c.OPENROUTER_API_URL,))
+                self.assertEqual(args, (ai_handler.OPENROUTER_API_URL,))
                 self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
                 self.assertEqual(kwargs["json"]["model"], model)
                 self.assertEqual(kwargs["json"]["messages"], [
@@ -153,7 +154,7 @@ class OpenRouterProviderTests(NoNetworkTestCase):
                     mock.patch.object(ai_handler, "call_openai_compatible") as call:
                 self.assertEqual(ai_settings.get_ai_mode(), "OPENROUTER")
                 ai_handler._dispatch(mode, "system", "world", None)
-                call.assert_called_once_with(c.OPENROUTER_API_URL, "old-key", "vendor/old-model",
+                call.assert_called_once_with(ai_handler.OPENROUTER_API_URL, "old-key", "vendor/old-model",
                                              "system", "world", None)
 
     def test_current_provider_keys_win_over_legacy_values(self):
@@ -162,7 +163,7 @@ class OpenRouterProviderTests(NoNetworkTestCase):
                 "openrouter_api_key": "", "openrouter_model": "vendor/current-model"}), \
                 mock.patch.object(ai_handler, "call_openai_compatible") as call:
             ai_handler._dispatch("OPENROUTER", "s", "u", None)
-        call.assert_called_once_with(c.OPENROUTER_API_URL, "", "vendor/current-model", "s", "u", None)
+        call.assert_called_once_with(ai_handler.OPENROUTER_API_URL, "", "vendor/current-model", "s", "u", None)
 
     def test_ollama_reads_legacy_url_and_respects_current_empty_url(self):
         from map_logic.ai import ai_settings
@@ -176,7 +177,7 @@ class OpenRouterProviderTests(NoNetworkTestCase):
         with mock.patch.object(queries, "get_settings", return_value={}), \
                 mock.patch.object(ai_handler, "call_openai_compatible") as call:
             ai_handler._dispatch("OPENROUTER", "system", "world", None)
-        call.assert_called_once_with(c.OPENROUTER_API_URL, "", c.DEFAULT_OPENROUTER_MODEL,
+        call.assert_called_once_with(ai_handler.OPENROUTER_API_URL, "", c.DEFAULT_OPENROUTER_MODEL,
                                      "system", "world", None)
 
     def test_legacy_local_ling_url_cannot_redirect_hosted_requests(self):
@@ -184,7 +185,7 @@ class OpenRouterProviderTests(NoNetworkTestCase):
                 "ling_base_url": "http://localhost:11434/v1", "openrouter_api_key": "test-key"}), \
                 mock.patch.object(ai_handler, "call_openai_compatible") as call:
             ai_handler._dispatch("OPENROUTER", "s", "u", None)
-        call.assert_called_once_with(c.OPENROUTER_API_URL, "test-key", c.DEFAULT_OPENROUTER_MODEL, "s", "u", None)
+        call.assert_called_once_with(ai_handler.OPENROUTER_API_URL, "test-key", c.DEFAULT_OPENROUTER_MODEL, "s", "u", None)
 
     def test_skip_and_stale_turn_prevent_openrouter_requests(self):
         self.assertIsNone(ai_handler._dispatch("OPENROUTER", "s", "u", ai_handler.CURRENT_TURN_ID - 1))
@@ -444,7 +445,7 @@ class OllamaTests(NoNetworkTestCase):
     def test_the_cap_has_room_for_the_longest_reply(self):
         """A letter sitting: two letters and a notebook, at roughly four
         characters to a token."""
-        longest = c.AI_LETTERS_PER_CALL * c.AI_LETTER_LENGTH + c.AI_NOTEBOOK_LENGTH
+        longest = ai_tuning.AI_LETTERS_PER_CALL * ai_tuning.AI_LETTER_LENGTH + ai_tuning.AI_NOTEBOOK_LENGTH
         self.assertGreater(ai_handler.OLLAMA_MAX_REPLY_TOKENS, longest / 4 * 1.25)
 
     def test_every_request_keeps_the_model_loaded(self):

@@ -241,14 +241,14 @@ class LabelTests(unittest.TestCase):
     def test_the_two_directions_no_longer_share_a_label(self):
         """They did, so a puppet offering to join arrived under the same word as
         an ally demanding help, and only opening it told you which."""
-        self.assertNotEqual(c.MESSAGE_CATEGORIES["CALL_TO_ARMS"],
-                            c.MESSAGE_CATEGORIES["JOIN_WARS"])
+        self.assertNotEqual(diplomacy_messages.MESSAGE_CATEGORIES["CALL_TO_ARMS"],
+                            diplomacy_messages.MESSAGE_CATEGORIES["JOIN_WARS"])
 
     def test_neither_of_them_reads_as_a_declaration_of_war(self):
         for action in ("CALL_TO_ARMS", "JOIN_WARS"):
             with self.subTest(action=action):
-                self.assertNotEqual(c.MESSAGE_CATEGORIES[action],
-                                    c.MESSAGE_CATEGORIES["WAR_DECLARATION"])
+                self.assertNotEqual(diplomacy_messages.MESSAGE_CATEGORIES[action],
+                                    diplomacy_messages.MESSAGE_CATEGORIES["WAR_DECLARATION"])
 
 
 if __name__ == "__main__":

@@ -675,3 +675,86 @@ def load_backend_state(load_path, *, is_scenario=False, scenario_settings=None, 
     load_map_assets(context, load_path, scenario_settings, load_presentation=False)
     economy_processor.initialize_income(context, skip=skip_initial_income)
     return context
+
+
+def apply_authoritative_snapshot(context, snapshot):
+    """Replace mutable game state on a map with a player's filtered snapshot.
+
+    Real-time clients apply each server broadcast with this, and a tournament
+    player's loaded map applies its own projection. See queries.player_snapshot_projection.
+    """
+    world_state = world_for(context)
+    if not isinstance(snapshot, dict):
+        return
+    world_state.scenario_metadata = queries.normalized_scenario_metadata(snapshot.get("scenario_metadata", {}))
+    settings = snapshot.get("scenario_settings")
+    if isinstance(settings, dict):
+        world_state.scenario_settings = copy.deepcopy(settings)
+        rebuild(context)
+    # Badges are local preferences. Server broadcasts must not mark them unread again.
+    local_event_reads = unit_events.saved_reads(context) if hasattr(context, "time_manager") else {}
+    clear_selection = getattr(context, "clear_map_unit_selection", None)
+    if clear_selection:
+        clear_selection()
+    # Message read and popup flags are local UI state, not game-state changes.
+    # The server deliberately keeps inbound messages unread so a reconnecting
+    # player can still discover them.  Retain a matching local message's flags
+    # while replacing the authoritative diplomatic/game data, otherwise every
+    # state broadcast makes an already handled offer look new again.
+    local_message_state = {}
+    player_country = context.player_country
+    current_player = context.nation_data.get(player_country, {})
+    for message in current_player.get("inbox", []) if isinstance(current_player, dict) else []:
+        if not isinstance(message, dict):
+            continue
+        message_id = message.get("message_id")
+        if message_id:
+            local_message_state[message_id] = {
+                key: message[key] for key in ("read", "popup_shown", "spectator_read")
+                if key in message
+            }
+
+    nation_data = copy.deepcopy(snapshot.get("nation_data", world_state.nation_data))
+    if "nation_data" in snapshot:
+        research_snapshot = {"nation_data": nation_data}
+        if "research_years" in snapshot:
+            research_snapshot["research_years"] = snapshot["research_years"]
+        migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(context))
+    diplomacy_lifecycle.normalize_diplomatic_records(nation_data)
+    incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
+    for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
+        if not isinstance(message, dict):
+            continue
+        saved_state = local_message_state.get(message.get("message_id"))
+        if saved_state:
+            message.update(saved_state)
+    replace_mapping(world_for(context), "nation_data", nation_data)
+    # Older snapshot fixtures use flat contexts without a declared faction mapping.
+    if not hasattr(world_state, "factions"):
+        world_state.factions = {}
+    faction_records.restore(context, snapshot.get("factions"))
+    context.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
+    by_json_key = {province.get("json_key"): province for province in world_state.map_data.values()}
+    for json_key, update in snapshot.get("provinces", {}).items():
+        province = by_json_key.get(json_key)
+        if not province or not isinstance(update, dict):
+            continue
+        for key in ("owner", "cores", "units", "building_queue", "unit_queue", "orders", "resources", "buildings"):
+            if key in update:
+                province[key] = copy.deepcopy(update[key])
+    date = snapshot.get("date", {})
+    if isinstance(date, dict) and hasattr(context, "time_manager"):
+        world_state.time_manager.day = date.get("day", world_state.time_manager.day)
+        world_state.time_manager.month_index = date.get("month", world_state.time_manager.month_index)
+        world_state.time_manager.year = date.get("year", world_state.time_manager.year)
+        world_state.time_manager.total_turns = date.get("total_turns", world_state.time_manager.total_turns)
+    if hasattr(context, "time_manager"):
+        unit_events.restore(context, snapshot | {"unit_event_read_turns": local_event_reads})
+    # These are local intent buffers.  The processed server snapshot has now
+    # either applied or rejected them. Start the next turn with fresh drafts.
+    if context.realtime_multiplayer:
+        context.pending_faction_rename = None
+        context.pending_subject_appearances = {}
+        context.realtime_volunteer_drafts = {}
+    if context.presentation_enabled:
+        context.refresh_all_maps()

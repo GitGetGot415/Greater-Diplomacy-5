@@ -12,6 +12,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from tests.stub_map_screen import fill_state_defaults
 from map_logic.ai import ai_movement
 
@@ -342,7 +343,7 @@ class WoundedUnitsDoNotChargeTests(unittest.TestCase):
     def test_a_wounded_unit_does_not_charge_a_target_it_would_survive(self):
         screen = self.screen(self.defender(attack=1, health=1000))
         hurt = self.attacker(attack=100, health=100)
-        hurt["health"] = int(hurt["max_health"] * c.AI_REPAIR_HEALTH_FRACTION) - 1
+        hurt["health"] = int(hurt["max_health"] * ai_tuning.AI_REPAIR_HEALTH_FRACTION) - 1
         screen.map_data["home"]["units"] = [hurt]
 
         ai_movement._assign_unit_orders(
@@ -416,7 +417,7 @@ class ForecastRetreatTests(unittest.TestCase):
         """The old check read one exchange: a stack that would die over a few
         turns was never 'lost', so it bled out a unit at a time."""
         enemy_attack = 100
-        health = enemy_attack * (c.AI_RETREAT_FORECAST_TURNS - 0.5)
+        health = enemy_attack * (ai_tuning.AI_RETREAT_FORECAST_TURNS - 0.5)
         screen, prov = self.tile([fixture_unit(attack=1, health=health)],
                                  [fixture_unit("Bruland", attack=enemy_attack, health=100000)])
         self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
