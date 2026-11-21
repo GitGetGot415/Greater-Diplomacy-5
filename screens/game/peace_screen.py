@@ -32,30 +32,31 @@ from ui.widgets.ui_elements import make_back_button
 from ui.rendering import overlay_renderer
 
 
+_LOOK_UP_OFFER = object()
+
+
 class View_Peace_Treaty_Screen(MapOverlayScreen):
     overlay_alpha = 0
     #: The terms box places itself top-left, beside the map it is about.
     CENTER_PANEL = False
 
-    def __init__(self, map_screen, proposer, kind=deal_mod.KIND_PEACE):
+    def __init__(self, map_screen, proposer, kind=deal_mod.KIND_PEACE, *, params=_LOOK_UP_OFFER):
         super().__init__(map_screen)
         self.proposer = proposer
         self.target = map_screen.player_country
         self.kind = kind
 
-        # Two ways a peace treaty can be sitting in front of you: they proposed
-        # it, or your own faction leader signed it on your behalf and you are
-        # being asked to ratify. The second lives in its own channel -- see
-        # map_logic/diplomacy/ratification.py -- so both are looked for here.
-        # A trade is bilateral, so it simply reads its pending offer below.
-        asked = ratification.pending_for(map_screen.nation_data, self.target)
-        if (kind == deal_mod.KIND_PEACE and asked.get("signatory") == proposer
-                and deal_mod.is_deal(asked.get("deal"))):
-            params = asked["deal"]
-        else:
-            pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
-            fallback = c.PEACE_WHITE_PEACE if kind == deal_mod.KIND_PEACE else {}
-            params = pending.get("parameters", pending.get("message", fallback))
+        if params is _LOOK_UP_OFFER:
+            # Callers that only supply a country retain the original lookup.
+            # Messages passes the terms from the specific offer button.
+            asked = ratification.pending_for(map_screen.nation_data, self.target)
+            if (kind == deal_mod.KIND_PEACE and asked.get("signatory") == proposer
+                    and deal_mod.is_deal(asked.get("deal"))):
+                params = asked["deal"]
+            else:
+                pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
+                fallback = c.PEACE_WHITE_PEACE if kind == deal_mod.KIND_PEACE else {}
+                params = pending.get("parameters", pending.get("message", fallback))
 
         self.deal = deal_mod.coerce(params, proposer, self.target, kind=kind)
         self.transfers = deal_mod.tile_transfers(self.deal, map_screen.map_data,
@@ -65,6 +66,9 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
         # when what it actually restores is the pre-war border.
         self.baseline = deal_mod.baseline_owners(self.deal, map_screen.map_data,
                                                  map_screen.nation_data)
+        # The modal pauses map updates. Camera movement draws the same surface
+        # from a different position, and reopening reads the current offer and map.
+        self.preview = refresh_map.build_deal_preview_map(map_screen, deal_mod.parties(self.deal), self.transfers, self.baseline)
         self.terms = deal_mod.describe(self.deal, viewer=self.target,
                                        nation_data=map_screen.nation_data)
 
@@ -89,8 +93,7 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
     PAD = 15
 
     def draw_content(self, surface):
-        draw_projected_deal_map(surface, self.map_screen, self.transfers,
-                                deal_mod.parties(self.deal), self.baseline)
+        refresh_map.draw_deal_preview_map(surface, self.map_screen, self.preview)
         document = "Trade Deal" if self.kind == deal_mod.KIND_TRADE else "Treaty"
         ui_bars.draw_centered_title(
             surface, f"Projected Map: {document} from " + queries.get_country_display_name(
@@ -154,7 +157,7 @@ def draw_projected_deal_map(surface, map_screen, transfers, parties=(), baseline
     if parties:
         preview = refresh_map.build_deal_preview_map(map_screen, parties, transfers,
                                                      baseline)
-        _draw_swapped_in(surface, map_screen, preview)
+        refresh_map.draw_deal_preview_map(surface, map_screen, preview)
         return
 
 
@@ -167,36 +170,16 @@ def draw_projected_deal_map(surface, map_screen, transfers, parties=(), baseline
                                             base_radius=10)
 
 
-def _draw_swapped_in(surface, map_screen, preview):
-    """Draws one alternative map surface and puts the real one back.
-
-    The renderer reads exactly one attribute -- map_screen.active_map -- so a
-    screen shows a different map by swapping it around its own draw call. Same
-    move Faction_Territories_Screen makes; the restore is in a finally because
-    leaving the player's map pointed at a treaty preview would outlive the
-    screen that wanted it.
-    """
-    previous_layer = map_screen.base_layer
-    previous_map = map_screen.active_map
-    try:
-        map_screen.base_layer = "POLITICAL"
-        map_screen.active_map = preview
-        map_screen.draw_clean_map_background(surface)
-    finally:
-        map_screen.base_layer = previous_layer
-        map_screen.active_map = previous_map
-
-
-def open_view_peace_treaty_menu(map_screen, proposer):
-    _run_pygame_sub_screen(map_screen, View_Peace_Treaty_Screen(map_screen, proposer))
+def open_view_peace_treaty_menu(map_screen, proposer, *, params=_LOOK_UP_OFFER):
+    _run_pygame_sub_screen(map_screen, View_Peace_Treaty_Screen(map_screen, proposer, params=params))
 
 
 class View_Trade_Deal_Screen(View_Peace_Treaty_Screen):
     """Read an offered trade on the map before accepting its territory terms."""
 
-    def __init__(self, map_screen, proposer):
-        super().__init__(map_screen, proposer, kind=deal_mod.KIND_TRADE)
+    def __init__(self, map_screen, proposer, *, params=_LOOK_UP_OFFER):
+        super().__init__(map_screen, proposer, kind=deal_mod.KIND_TRADE, params=params)
 
 
-def open_view_trade_deal_menu(map_screen, proposer):
-    _run_pygame_sub_screen(map_screen, View_Trade_Deal_Screen(map_screen, proposer))
+def open_view_trade_deal_menu(map_screen, proposer, *, params=_LOOK_UP_OFFER):
+    _run_pygame_sub_screen(map_screen, View_Trade_Deal_Screen(map_screen, proposer, params=params))

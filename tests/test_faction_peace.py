@@ -148,6 +148,22 @@ class RatificationTests(unittest.TestCase):
         self.assertFalse(at_war(self.game, "S", "G"))
         self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
 
+    def test_custom_acceptance_only_announces_peace_after_ratification(self):
+        self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
+        self.game.run_turn()
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY", "We accepted your terms.")
+        self.game.run_turn()
+
+        def announcements():
+            return [entry for entry in self.game.nation_data.get("GLOBAL_EVENTS", {}).get("log", [])
+                    if entry.startswith(("PEACE:", "Diplomatic agreement reached"))]
+
+        self.assertTrue(ratification.pending_for(self.game.nation_data, "S"))
+        self.assertEqual(announcements(), [])
+        ratification.answer(self.game.nation_data, "S", ratification.RATIFY)
+        self.game.run_turn()
+        self.assertEqual([entry.split(":", 1)[0] for entry in announcements()], ["PEACE"])
+
     def test_refusing_costs_the_faction_and_keeps_the_war(self):
         self.reach_acceptance()
         ratification.answer(self.game.nation_data, "S", ratification.REFUSE)

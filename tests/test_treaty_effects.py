@@ -12,7 +12,7 @@ import unittest
 from tests.stub_map_screen import StubMapScreen
 
 from map_logic.ai import ai_prompts
-from map_logic.diplomacy import diplomacy_processor, treaty_effects
+from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, treaty_effects
 
 
 class TreatyEffectTests(unittest.TestCase):
@@ -79,6 +79,36 @@ class TreatyEffectTests(unittest.TestCase):
         log = host.nation_data.get("GLOBAL_EVENTS", {}).get("log", [])
         self.assertTrue(any("faction" in entry.lower() for entry in log),
                         "founding a faction logged no global event")
+        self.assertFalse(any("Diplomatic agreement reached" in entry for entry in log))
+
+    def test_trade_announcement_matches_for_queued_and_direct_ai_acceptance(self):
+        for message in ("We accepted.", "The terms suit us."):
+            with self.subTest(message=message):
+                human = StubMapScreen(("A", "B"), human_players=("B",))
+                human.propose("A", "B", "TRADE", parameters={"give_materials": 1})
+                human.answer("B", "A", diplomacy_messages.RESPONSE_ACCEPT, "TRADE", message)
+                diplomacy_processor._process_queued_responses(human)
+
+                ai = self.world("A", "B")
+                ai.propose("A", "B", "TRADE", parameters={"give_materials": 1})
+                results = {("A", "B", "TRADE"): {"accepted": True, "message": message}}
+                diplomacy_processor._resolve_ai_answer(ai, results, ["A", "B"], [], "A", "B", "TRADE", ai.pending("A", "B"))
+
+                for host in (human, ai):
+                    self.assertEqual(host.nation_data["GLOBAL_EVENTS"]["log"], ["Diplomatic agreement reached between B and A."])
+                    self.assertEqual(host.inbound("A", "B"), [message])
+
+    def test_peace_blocked_at_resolution_does_not_announce_an_agreement(self):
+        host = self.world()
+        host.set_war("A", "B")
+        host.propose("A", "B", "PEACE_TREATY")
+        host.answer("B", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY", "We accepted.")
+        host.nation_data["A"]["at_war_with"].clear()
+        host.nation_data["B"]["at_war_with"].clear()
+        diplomacy_processor._process_queued_responses(host)
+
+        self.assertEqual(host.inbound("A", "B"), [ai_prompts.AI_FALLBACK_RESPONSES["NO_WAR_TO_SETTLE"]])
+        self.assertFalse(host.nation_data.get("GLOBAL_EVENTS", {}).get("log"))
 
     # -- role symmetry ---------------------------------------------------
 

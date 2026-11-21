@@ -19,7 +19,7 @@ accepted rather than which pass is running, so the two can no longer disagree.
 The processor calls this shared implementation for both player and AI acceptance.
 """
 
-from collections import namedtuple
+from typing import NamedTuple
 
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import deal as deal_mod
@@ -33,14 +33,13 @@ from map_logic.diplomacy.faction_actions import finalize_create_faction, finaliz
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
 
-#: blocked  -- set when the agreement turned out not to be possible after all,
-#:             so the reply has to say so whatever either side wanted to write.
-#: canned   -- the stock acceptance line for this action, for callers that have
-#:             no prose of their own. An AI that just wrote its own reply
-#:             ignores it.
-TreatyOutcome = namedtuple("TreatyOutcome", "blocked canned")
+class TreatyOutcome(NamedTuple):
+    status: str
+    blocked: str | None = None  # Replaces the reply when the agreement fails.
+    canned: str | None = None  # Default reply when the responder supplied no text.
 
-_NOTHING = TreatyOutcome(None, None)
+
+_APPLIED = TreatyOutcome("applied")
 
 
 def _fallback(key, default=""):
@@ -48,11 +47,11 @@ def _fallback(key, default=""):
 
 
 def _blocked(key):
-    return TreatyOutcome(_fallback(key), None)
+    return TreatyOutcome("blocked", blocked=_fallback(key))
 
 
 def _canned(key):
-    return TreatyOutcome(None, _fallback(key))
+    return TreatyOutcome("applied", canned=_fallback(key))
 
 
 _AWAITING_RATIFICATION = ("Terms agreed. They now go to our partners for "
@@ -114,9 +113,9 @@ def _accept_faction_invite(host, action, proposer, accepter, params, escrow):
         return _blocked("ACCEPT_FACTION_ALREADY_IN")
     leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
     if leadership_error:
-        return TreatyOutcome(leadership_error, None)
+        return TreatyOutcome("blocked", blocked=leadership_error)
     finalize_faction_join(host.map_data, nation_data, proposer, accepter)
-    return _NOTHING
+    return _APPLIED
 
 
 def _accept_join_request(host, action, proposer, accepter, params, escrow):
@@ -128,9 +127,9 @@ def _accept_join_request(host, action, proposer, accepter, params, escrow):
         return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
     leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
     if leadership_error:
-        return TreatyOutcome(leadership_error, None)
+        return TreatyOutcome("blocked", blocked=leadership_error)
     finalize_faction_join(host.map_data, nation_data, accepter, proposer)
-    return _NOTHING
+    return _APPLIED
 
 
 def _accept_create_faction(host, action, proposer, accepter, params, escrow):
@@ -141,7 +140,7 @@ def _accept_create_faction(host, action, proposer, accepter, params, escrow):
     finalize_faction_join(host.map_data, nation_data, proposer, accepter)
     log_global_event(nation_data,
                      f"{proposer} and {accepter} have formed a new global faction!")
-    return _NOTHING
+    return _APPLIED
 
 
 def _accept_peace(host, action, proposer, accepter, params, escrow):
@@ -168,8 +167,8 @@ def _accept_peace(host, action, proposer, accepter, params, escrow):
     # this settles now and the extra turn only appears when a human is asked.
     if ratification.open_round(host, proposer, accepter, agreement,
                                escrow=escrow):
-        return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _NOTHING
-    return TreatyOutcome(None, _AWAITING_RATIFICATION)
+        return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _APPLIED
+    return TreatyOutcome("awaiting_ratification", canned=_AWAITING_RATIFICATION)
 
 
 def _accept_trade(host, action, proposer, accepter, params, escrow):
@@ -199,7 +198,7 @@ def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
     join_faction_wars(host.map_data, nation_data, accepter, proposer)
     log_global_event(nation_data,
                      f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
-    return _NOTHING
+    return _APPLIED
 
 
 def _accept_join_wars(host, action, proposer, accepter, params, escrow):
@@ -209,7 +208,7 @@ def _accept_join_wars(host, action, proposer, accepter, params, escrow):
     join_faction_wars(host.map_data, nation_data, proposer, accepter)
     log_global_event(nation_data,
                      f"ESCALATION: {proposer} has joined the wars of {accepter}!")
-    return _NOTHING
+    return _APPLIED
 
 
 def _accept_military_access(host, action, proposer, accepter, params, escrow):
@@ -234,20 +233,21 @@ def _accept_military_attache(host, action, proposer, accepter, params, escrow):
     nation_data = host.nation_data
     sent, reason = military_attaches.send(proposer, accepter, nation_data)
     if not sent:
-        return TreatyOutcome(reason, None)
+        return TreatyOutcome("blocked", blocked=reason)
     log_global_event(nation_data,
                      f"{proposer} has sent a military attaché to {accepter}.")
-    return TreatyOutcome(None, "Military attaché accepted.")
+    return TreatyOutcome("applied", canned="Military attaché accepted.")
 
 
 def _accept_volunteers(host, action, proposer, accepter, params, escrow):
     accepted, reason = volunteers.accept_offer(host, proposer, accepter)
     if not accepted:
-        return _blocked(reason)
+        return TreatyOutcome("blocked", blocked=reason)
     return _canned("ACCEPT_GENERIC")
 
 
 _ACCEPTANCE_EFFECTS = handlers_for("acceptance_effect", globals())
+_ACCEPTANCES_WITH_OWN_EVENTS = {"CEASEFIRE", "PEACE_TREATY", "CREATE_FACTION", "CALL_TO_ARMS", "JOIN_WARS", "SEND_MILITARY_ATTACHE"}
 
 
 def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False):
@@ -265,7 +265,7 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     """
     effect = _ACCEPTANCE_EFFECTS.get(action)
     if effect is None:
-        return _NOTHING
+        return TreatyOutcome("ignored")
     # The send phase already refused forbidden offers, but factions and wars can
     # change while an offer waits for its answer.
     choice = global_rules.Choice(global_rules.is_ai_controlled(host, accepter), accepting=True, scripted=scripted)
@@ -273,5 +273,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     if forbidden:
         if escrow:
             deal_effects.release_escrow(host.nation_data, escrow, proposer)
-        return TreatyOutcome(_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden), None)
-    return effect(host, action, proposer, accepter, params, escrow)
+        return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
+    outcome = effect(host, action, proposer, accepter, params, escrow)
+    if outcome.status == "applied" and action not in _ACCEPTANCES_WITH_OWN_EVENTS:
+        log_global_event(host.nation_data, f"Diplomatic agreement reached between {accepter} and {proposer}.")
+    return outcome

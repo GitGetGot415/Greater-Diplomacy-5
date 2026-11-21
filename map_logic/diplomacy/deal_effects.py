@@ -392,9 +392,7 @@ def _clear_wargoals(nation_data, a, b):
 def announce(context, deal, dropped=()):
     """Files a settlement in the global log, so the world hears about it.
 
-    Wars only. An ordinary trade is between the two of them and already produces
-    a "diplomatic agreement reached" line in diplomacy_processor; announcing
-    every exchange of fuel as world news would bury the wars that end.
+    Wars only. The acceptance dispatcher records other bilateral agreements.
     """
     world_state = world_for(context)
     if not deal_mod.ends_war(deal):

@@ -9,6 +9,7 @@ it, and pump the events it keys off.
 """
 
 import unittest
+from unittest.mock import patch
 
 import pygame
 
@@ -509,9 +510,11 @@ class ProjectedMapTests(DealScreenTestCase):
     def test_the_preview_paints_and_restores_the_players_own_map(self):
         screen, _wanted = self.treaty_screen()
         before = self.map.active_map
+        before_layer = self.map.base_layer
         screen.draw(self.surface)
         self.assertIs(self.map.active_map, before,
                       "the preview outlived the screen that wanted it")
+        self.assertEqual(self.map.base_layer, before_layer)
 
     def test_a_transferred_province_is_painted_for_its_new_owner(self):
         from ui.rendering import refresh_map
@@ -524,12 +527,11 @@ class ProjectedMapTests(DealScreenTestCase):
                 painted[prov["id"]] = get_data(prov)
             return original(map_screen, get_data)
 
-        refresh_map._build_map_surface = spy
-        try:
+        with patch.object(refresh_map, "_build_map_surface", side_effect=spy) as build:
             screen, wanted = self.treaty_screen()
             screen.draw(self.surface)
-        finally:
-            refresh_map._build_map_surface = original
+            screen.draw(self.surface)
+            self.assertEqual(build.call_count, 1)
 
         # The preview must project the transfer without changing live ownership.
         self.assertEqual(self.map.id_to_province[wanted].get("owner"), self.player,
@@ -551,6 +553,25 @@ class ProjectedMapTests(DealScreenTestCase):
         self.assertEqual(screen.transfers, {wanted: self.enemy})
         self.assertTrue(any("you cede 1 province" in line for line in screen.terms))
         screen.draw(self.surface)
+
+    def test_each_treaty_button_reviews_its_own_offer_from_the_same_sender(self):
+        from screens.game.messages import Messages_Screen
+
+        _screen, wanted = self.treaty_screen()
+        ratified_province = self.their_province()["id"]
+        ratified_deal = deal_mod.new(deal_mod.KIND_PEACE, [self.enemy], [self.player], [
+            deal_mod.white_peace(), deal_mod.tiles_clause(self.enemy, self.player, [ratified_province])])
+        data = self.map.nation_data[self.player]
+        with patch.dict(data, pending_ratification={"signatory": self.enemy, "deal": ratified_deal}):
+            messages = Messages_Screen()
+            messages.start_messages(self.map)
+            messages.select_recipient(self.enemy)
+            buttons = {button.text: button for button in messages.offer_buttons}
+            with patch("screens.game.peace_screen._run_pygame_sub_screen") as open_review:
+                buttons["View Treaty"].callback()
+                self.assertEqual(open_review.call_args.args[1].transfers, {ratified_province: self.player})
+                buttons["View Peace Treaty"].callback()
+                self.assertEqual(open_review.call_args.args[1].transfers, {wanted: self.enemy})
 
 
 class IncomingTradeButtonTests(DealScreenTestCase):

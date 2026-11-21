@@ -258,14 +258,14 @@ class Messages_Screen(Screen):
         self.compose_text = ""
         self.refresh_ui()
 
-    def view_peace_treaty(self, target):
+    def view_peace_treaty(self, target, params):
         self.save_current_draft()
-        open_view_peace_treaty_menu(self.map_screen, target)
+        open_view_peace_treaty_menu(self.map_screen, target, params=params)
         self.refresh_ui()
 
-    def view_trade_deal(self, target):
+    def view_trade_deal(self, target, params):
         self.save_current_draft()
-        open_view_trade_deal_menu(self.map_screen, target)
+        open_view_trade_deal_menu(self.map_screen, target, params=params)
         self.refresh_ui()
 
     def save_current_draft(self):
@@ -859,7 +859,7 @@ class Messages_Screen(Screen):
                     self._offer_button("red", "Refused (undo)" if refused else "Refuse & Leave Faction",
                                        self.clear_ratification if refused else lambda: self.answer_ratification(False),
                                        editable and not ratified),
-                    self._offer_button("yellow", "View Treaty", lambda: self.view_peace_treaty(target)),
+                    self._offer_button("yellow", "View Treaty", lambda: self.view_peace_treaty(target, asked.get("deal"))),
                 ]})
 
         action, turns = queries.get_diplomatic_status(target, player, nation_data)
@@ -874,6 +874,8 @@ class Messages_Screen(Screen):
             view_label = "View Peace Treaty" if is_peace else "View Trade Deal" if is_trade else "View Offer"
             view = self.view_peace_treaty if is_peace else self.view_trade_deal
             request = diplomacy_messages.get_pending(nation_data, target, player)
+            fallback = c.PEACE_WHITE_PEACE if is_peace else {}
+            params = request.get("parameters", request.get("message", fallback))
             # A trade can arrive after a war broke out while it waited; the
             # send rule then refuses it, so accepting it is unavailable too.
             acceptable = not is_trade or availability(nation_data, target, player, action).allowed
@@ -887,7 +889,7 @@ class Messages_Screen(Screen):
                                        editable and not declined and (accepted or acceptable)),
                     self._offer_button("red", "Undo Decline" if declined else f"Decline {name}",
                                        lambda: self.reject_proposal(target), editable and not accepted),
-                    self._offer_button("yellow", view_label, lambda: view(target), is_peace or is_trade),
+                    self._offer_button("yellow", view_label, lambda: view(target, params), is_peace or is_trade),
                 ]})
         return offers
 

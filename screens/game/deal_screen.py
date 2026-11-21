@@ -1090,18 +1090,8 @@ class Deal_Screen(MapOverlayScreen):
         demand nothing.
         """
         preview = self.preview_map()
-        if preview is None:
-            return
-
-        previous_layer = self.map_screen.base_layer
-        previous_map = self.map_screen.active_map
-        try:
-            self.map_screen.base_layer = "POLITICAL"
-            self.map_screen.active_map = preview
-            self.map_screen.draw_clean_map_background(surface)
-        finally:
-            self.map_screen.base_layer = previous_layer
-            self.map_screen.active_map = previous_map
+        if preview is not None:
+            refresh_map.draw_deal_preview_map(surface, self.map_screen, preview)
 
     def _draw_picked_provinces(self, surface):
         for picks, color in ((self.take_ids, _HIGHLIGHT_TAKE),

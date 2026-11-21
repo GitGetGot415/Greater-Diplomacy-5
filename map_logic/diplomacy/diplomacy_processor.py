@@ -938,10 +938,6 @@ def _process_queued_responses(context):
 
                 send_message(context, country_name, sender, msg_text, "DIPLOMACY",
                              extra=answered, llm=wrote_it)
-
-                if msg_text == custom_msg or "accepted" in msg_text.lower():
-                    log_global_event(world_state.nation_data, f"Diplomatic agreement reached between {country_name} and {sender}.")
-
             else:
                 fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
                 msg_text = custom_msg if custom_msg else fallback_msg

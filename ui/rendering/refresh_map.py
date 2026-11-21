@@ -553,6 +553,19 @@ def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
     return _build_map_surface(map_screen, get_data)
 
 
+def draw_deal_preview_map(surface, map_screen, preview):
+    """Draw a deal's political preview with the live map camera and restore the map."""
+    previous_layer = map_screen.base_layer
+    previous_map = map_screen.active_map
+    try:
+        map_screen.base_layer = "POLITICAL"
+        map_screen.active_map = preview
+        map_screen.draw_clean_map_background(surface)
+    finally:
+        map_screen.base_layer = previous_layer
+        map_screen.active_map = previous_map
+
+
 def refresh_fog_map(map_screen):
     """Builds a semi-transparent fog surface to darken unseen provinces."""
     timer = pygame.time.get_ticks()
