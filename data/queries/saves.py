@@ -6,7 +6,7 @@ from data.io import standalone_music
 from types import SimpleNamespace
 from data.state_access import session_for, world_for
 from map_logic import politics
-from map_logic.diplomacy import faction_records, diplomacy_lifecycle
+from map_logic.diplomacy import faction_records, diplomacy_lifecycle, peace_scope
 from data.queries.content import get_research_years
 from data.queries.nation_summary import get_shared_country_economy_summaries
 from data import queries
@@ -382,7 +382,7 @@ def player_snapshot_projection(context, snapshot, country_id):
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
         country_id, world_state.map_data, world_state.nation_data, context=context)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
-        "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
+        "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists", "peace_choices",
         "queued_ai_actions", "ai_notebook", "orders", "armies", "automation", "materials",
         "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool", politics.ECONOMIC_DRIFT_KEY,
         "research_funding_slider")
@@ -393,8 +393,14 @@ def player_snapshot_projection(context, snapshot, country_id):
         for identity, record in result.get("factions", {}).items()}
     for cid, country in result.get("nation_data", {}).items():
         if cid != country_id and isinstance(country, dict):
+            peace = country.get("pending_diplomacy", {}).get(country_id, {})
             for field in private_fields:
                 country.pop(field, None)
+            # A recipient needs the delivered offer and its identity to answer it.
+            # Keep drafts, escrow, and messages addressed to anybody else private.
+            if isinstance(peace, dict) and peace.get("action") in peace_scope.PEACE_ACTIONS and peace.get("turns", 0) > 0:
+                country["pending_diplomacy"] = {country_id: {key: peace[key] for key in (
+                    "action", "turns", "request_id", "parameters", "message", "delivered_turn") if key in peace}}
     by_key = {p["json_key"]: p for p in world_state.map_data.values()}
     for key, province in result.get("provinces", {}).items():
         original = by_key.get(key)

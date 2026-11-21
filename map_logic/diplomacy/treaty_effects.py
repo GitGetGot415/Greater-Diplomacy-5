@@ -88,12 +88,36 @@ def expire_obsolete_peace(nation_data):
     for sender, country in nation_data.items():
         if not isinstance(country, dict):
             continue
+        choices = country.get("peace_choices", {})
+        if not isinstance(choices, dict):
+            country.pop("peace_choices", None)
+            choices = {}
+        for target, round_ in list(choices.items()):
+            offers = round_.get("offers") if isinstance(round_, dict) else None
+            if (not isinstance(offers, dict) or set(offers) != {sender, target}
+                    or not isinstance(round_.get("round_id"), str)
+                    or not all(isinstance(offer, dict) and offer.get("action") in peace_scope.PEACE_ACTIONS
+                               and deal_mod.is_deal(offer.get("deal")) for offer in offers.values())
+                    or not any(peace_scope.live_war_pairs(offer["deal"], nation_data) for offer in offers.values())):
+                close_peace_choice(nation_data, sender, target)
+            elif not isinstance(round_.get("selected"), str) or round_["selected"] not in offers:
+                round_.pop("selected", None)
         for target, request in list(country.get("pending_diplomacy", {}).items()):
             if (not isinstance(request, dict) or request.get("action") not in peace_scope.PEACE_ACTIONS
                     or request.get("turns", 0) <= 0):
                 continue
             if not peace_scope.offer_wars(sender, target, request, nation_data):
                 withdraw_peace_offer(nation_data, sender, target, request)
+
+
+def close_peace_choice(nation_data, country, opponent):
+    data = nation_data.get(country, {})
+    rounds = data.get("peace_choices", {})
+    round_ = rounds.pop(opponent, {})
+    if not rounds:
+        data.pop("peace_choices", None)
+    if isinstance(round_, dict) and isinstance(round_.get("escrow"), dict):
+        deal_effects.release_escrow(nation_data, round_["escrow"], country)
 
 
 def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
@@ -160,7 +184,7 @@ def _accept_create_faction(host, action, proposer, accepter, params, escrow):
     return _APPLIED
 
 
-def _accept_peace(host, action, proposer, accepter, params, escrow):
+def _accept_peace(host, action, proposer, accepter, params, escrow, *, chosen_deal=None):
     nation_data = host.nation_data
     # A puppet's wars are its master's business. This is the one place all
     # thirteen paths that can settle a war converge, so the backstop lives
@@ -175,7 +199,7 @@ def _accept_peace(host, action, proposer, accepter, params, escrow):
     # carry an itemized deal, an old peace sentence from a save made before
     # the rework, or -- the AI's habit until now -- nothing at all, which
     # coerce reads as the white peace it always silently executed as.
-    agreement = peace_scope.offered_peace(proposer, accepter, action, params, nation_data)
+    agreement = chosen_deal if chosen_deal is not None else peace_scope.offered_peace(proposer, accepter, action, params, nation_data)
     blocked = peace_scope.settlement_block(peace_scope.live_war_pairs(agreement, nation_data), nation_data)
     if blocked:
         return _blocked(blocked)
@@ -269,7 +293,7 @@ _ACCEPTANCE_EFFECTS = handlers_for("acceptance_effect", globals())
 _ACCEPTANCES_WITH_OWN_EVENTS = {"CEASEFIRE", "PEACE_TREATY", "CREATE_FACTION", "CALL_TO_ARMS", "JOIN_WARS", "SEND_MILITARY_ATTACHE"}
 
 
-def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False):
+def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False, chosen_deal=None):
     """Applies an accepted proposal and returns a TreatyOutcome.
 
     `proposer` offered the deal and `accepter` agreed to it, whichever side is
@@ -293,7 +317,10 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         if escrow:
             deal_effects.release_escrow(host.nation_data, escrow, proposer)
         return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
-    outcome = effect(host, action, proposer, accepter, params, escrow)
+    if chosen_deal is not None:
+        outcome = effect(host, action, proposer, accepter, params, escrow, chosen_deal=chosen_deal)
+    else:
+        outcome = effect(host, action, proposer, accepter, params, escrow)
     if escrow and action in peace_scope.PEACE_ACTIONS and outcome.status == "blocked":
         deal_effects.release_escrow(host.nation_data, escrow, proposer)
     if outcome.status == "applied" and action not in _ACCEPTANCES_WITH_OWN_EVENTS:

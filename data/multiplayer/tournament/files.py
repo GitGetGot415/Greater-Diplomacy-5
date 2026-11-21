@@ -187,6 +187,7 @@ def strip_sensitive_data_for_tournament_spectator(context):
         country["inbox"] = []
         country["pending_diplomacy"] = {}
         country["diplo_responses"] = {}
+        country.pop("peace_choices", None)
         country.pop("ai_notebook", None)
         country.pop(politics.ECONOMIC_DRIFT_KEY, None)
         country.pop("research_funding_slider", None)
@@ -232,6 +233,7 @@ def build_tournament_spectator_save(save_dict):
             country["inbox"] = []
             country["pending_diplomacy"] = {}
             country["diplo_responses"] = {}
+            country.pop("peace_choices", None)
             country.pop("ai_notebook", None)
             country.pop(politics.ECONOMIC_DRIFT_KEY, None)
             country.pop("research_funding_slider", None)
@@ -337,6 +339,14 @@ def export_tournament(context, file_path, master_key, keys_dict):
     queries.scrub_default_images(world_state.nation_data)
     queries.ensure_unit_ids(world_state.map_data)
     save_dict = queries.build_save_dict(context)
+    # The main snapshot is shared with all player keys. Keep ballots in the
+    # host key payload and attach only each participant's own view to their key.
+    peace_choices = {}
+    for cid, country in save_dict["nation_data"].items():
+        if country.get("peace_choices"):
+            projected = dict(country)
+            peace_choices[cid] = projected.pop("peace_choices")
+            save_dict["nation_data"][cid] = projected
     
     # Embed the raw geometry so the tournament file is self-contained
     if hasattr(context, 'raw_json_data'):
@@ -388,7 +398,7 @@ def export_tournament(context, file_path, master_key, keys_dict):
     verification_table = {
         m_hash: {
             "role": "HOST",
-            "enc_session": encrypt_dict({"sk": session_key, "keys_dict": keys_dict}, master_key)
+            "enc_session": encrypt_dict({"sk": session_key, "keys_dict": keys_dict, "peace_choices": peace_choices}, master_key)
         },
         hash_key(c.TOURNAMENT_SPECTATOR_KEY): {
             "role": c.TOURNAMENT_SPECTATOR_ROLE,
@@ -424,6 +434,11 @@ def export_tournament(context, file_path, master_key, keys_dict):
 
         run_with_progress(tasks_to_encrypt, _encrypt_player,
                           "Encrypting Player Keys...", _record)
+
+    for entry in verification_table.values():
+        cid = entry.get("country_id")
+        if cid in peace_choices:
+            entry["enc_peace_choices"] = encrypt_dict(peace_choices[cid], keys_dict[cid])
 
     context.multiplayer_player_enc_cache = player_enc_cache
             
@@ -515,6 +530,21 @@ def load_tournament(file_path, key):
     keys_dict = decrypted_session.get("keys_dict", {})
     if not isinstance(keys_dict, dict):
         return False, None, None, None, None, "Invalid key payload"
+    country_data = game_data.get("nation_data", {})
+    if not isinstance(country_data, dict):
+        return False, None, None, None, None, "Invalid tournament country data"
+    if role == "HOST":
+        host_choices = decrypted_session.get("peace_choices", {})
+        if not isinstance(host_choices, dict):
+            return False, None, None, None, None, "Invalid tournament peace choices"
+        for country_id, choices in host_choices.items():
+            if isinstance(country_data.get(country_id), dict):
+                country_data[country_id]["peace_choices"] = choices
+    elif role == "PLAYER" and "enc_peace_choices" in entry:
+        choices = decrypt_dict(entry["enc_peace_choices"], key)
+        if not isinstance(choices, dict) or not isinstance(country_data.get(cid), dict):
+            return False, None, None, None, None, "Invalid tournament peace choices"
+        country_data[cid]["peace_choices"] = choices
     try:
         # An older game cannot read a newer tournament. Older tournaments upgrade on load.
         migrations.check_version(game_data.get("version"), "This tournament")

@@ -21,9 +21,10 @@ from unittest.mock import patch
 # so put the root back before importing anything from the game.
 
 from tests.stub_map_screen import StubMapScreen
+from data import queries
 
-from map_logic.actions.player_actions import PlayerActions, PlayerActionError
-from map_logic.diplomacy import deal, diplomacy_lifecycle, diplomacy_messages, diplomacy_processor, treaty_effects
+from map_logic.actions.player_actions import PlayerActions, PlayerActionError, collect_map_commands
+from map_logic.diplomacy import deal, diplomacy_lifecycle, diplomacy_messages, diplomacy_processor, peace_scope, treaty_effects
 from map_logic.diplomacy.war_actions import finalize_neutral
 from map_logic.diplomacy import player_diplomacy_actions
 import data.constants as c
@@ -258,48 +259,108 @@ class PeaceCounterofferTests(unittest.TestCase):
         self.assertFalse(game.pending("B", "A"))
         self.assertEqual(game.nation_data["B"]["restrictions"]["demilitarized"], 6)
 
-    def test_crossed_offers_use_delivery_turn_then_coin_flip(self):
-        for older in (True, False):
-            with self.subTest(older=older):
-                game = self.world()
-                game.propose("A", "B", "PEACE_TREATY", parameters=self.terms("A", "B"))
-                game.propose("B", "A", "PEACE_TREATY", parameters=self.terms("B", "A"))
-                game.run_turn()
-                a, b = game.pending("A", "B"), game.pending("B", "A")
-                self.assertEqual(a["delivered_turn"], b["delivered_turn"])
-                if older:
-                    a["delivered_turn"] -= 1
-                losing_country = "B" if older else "A"
-                losing_offer = b if older else a
-                stock = game.nation_data[losing_country].get("materials", 0)
-                losing_offer["escrow"] = {"materials": 20}
-                game.answer("A", "B", ACCEPT, "PEACE_TREATY")
-                game.answer("B", "A", ACCEPT, "PEACE_TREATY")
-
-                with patch.object(diplomacy_processor, "choice", side_effect=lambda offers: offers[1]) as coin:
-                    game.run_turn()
-                self.assertEqual(coin.call_count, 0 if older else 1)
-                self.assertFalse(game.pending("A", "B"))
-                self.assertFalse(game.pending("B", "A"))
-                self.assertEqual(game.nation_data[losing_country]["restrictions"]["demilitarized"], 6)
-                self.assertNotIn("demilitarized", game.nation_data["A" if older else "B"].get("restrictions", {}))
-                self.assertEqual(game.nation_data[losing_country]["materials"], stock + 20)
-
-    def test_crossed_acceptances_choose_the_older_offer_even_if_accepted_by_ai(self):
-        game = self.world(players=("A",))
+    def crossed_offers(self, players=("A", "B")):
+        game = self.world(players=players)
         game.propose("A", "B", "PEACE_TREATY", parameters=self.terms("A", "B"))
         game.propose("B", "A", "PEACE_TREATY", parameters=self.terms("B", "A"))
         game.run_turn()
-        game.pending("A", "B")["delivered_turn"] -= 1
+        return game
+
+    def test_opposite_puppet_treaties_open_a_choice_and_only_the_chosen_treaty_applies(self):
+        for proposer in ("A", "B"):
+            with self.subTest(proposer=proposer):
+                game = self.crossed_offers()
+                for a, b in (("A", "B"), ("B", "A")):
+                    game.pending(a, b)["parameters"] = deal.new(deal.KIND_PEACE, [a], [b], [
+                        {"type": deal.VASSALIZE, "master": a, "subject": b}])
+                    game.answer(b, a, ACCEPT, "PEACE_TREATY")
+                game.run_turn()
+
+                n = game.nation_data
+                choice = peace_scope.pending_choice(n, "A", "B")
+                self.assertTrue(choice)
+                self.assertTrue(queries.has_unanswered_request("A", "B", n))
+                self.assertFalse(game.pending("A", "B"))
+                self.assertIn("B", n["A"]["at_war_with"])
+                self.assertFalse(n["A"].get("master"))
+                self.assertFalse(n["B"].get("master"))
+
+                self.assertTrue(peace_scope.choose_offer(n, "A", "B", choice["round_id"], "A"))
+                self.assertTrue(peace_scope.choose_offer(n, "A", "B", choice["round_id"], proposer))
+                self.assertTrue(peace_scope.choose_offer(n, "B", "A", choice["round_id"], proposer))
+                game.run_turn()
+                subject = "A" if proposer == "B" else "B"
+                self.assertEqual(n[subject]["master"], proposer)
+                self.assertFalse(n[proposer].get("master"))
+                self.assertNotIn("B", n["A"]["at_war_with"])
+                self.assertFalse(peace_scope.pending_choice(n, "A", "B"))
+
+    def test_a_split_or_missing_choice_expires_both_offers_and_refunds_escrow(self):
+        for choose_b in (False, True):
+            with self.subTest(choose_b=choose_b):
+                game = self.crossed_offers()
+                n = game.nation_data
+                stock = n["A"].get("materials", 0)
+                game.pending("A", "B")["escrow"] = {"materials": 20}
+                for a, b in (("A", "B"), ("B", "A")):
+                    game.answer(b, a, ACCEPT, "PEACE_TREATY")
+                game.run_turn()
+                choice = peace_scope.pending_choice(n, "A", "B")
+                self.assertEqual(n["A"].get("materials", 0), stock)
+                peace_scope.choose_offer(n, "A", "B", choice["round_id"], "A")
+                if choose_b:
+                    peace_scope.choose_offer(n, "B", "A", choice["round_id"], "B")
+                game.run_turn()
+                self.assertFalse(peace_scope.pending_choice(n, "A", "B"))
+                self.assertFalse(peace_scope.pending_choice(n, "B", "A"))
+                self.assertIn("B", n["A"]["at_war_with"])
+                self.assertEqual(n["A"]["materials"], stock + 20)
+
+    def test_ai_acceptance_can_open_a_choice_and_ai_chooses_its_preferred_terms(self):
+        game = self.crossed_offers(players=("A",))
         game.answer("A", "B", ACCEPT, "PEACE_TREATY")
         ai_replies = {("A", "B", "PEACE_TREATY"): {"accepted": True, "message": "We accept."}}
         with patch.object(diplomacy_processor, "_execute_ai_tasks", return_value=ai_replies):
             game.run_turn()
 
+        choice = peace_scope.pending_choice(game.nation_data, "A", "B")
+        self.assertTrue(choice)
+        peace_scope.choose_offer(game.nation_data, "A", "B", choice["round_id"], "A")
+        with patch.object(diplomacy_processor.ai_opinion, "peace_verdict",
+                          side_effect=lambda _world, _nation, proposer, *_: SimpleNamespace(accepted=True, slack=int(proposer == "A"))):
+            game.run_turn()
         self.assertEqual(game.nation_data["B"]["restrictions"]["demilitarized"], 6)
-        self.assertNotIn("demilitarized", game.nation_data["A"].get("restrictions", {}))
-        self.assertFalse(game.pending("A", "B"))
-        self.assertFalse(game.pending("B", "A"))
+        self.assertFalse(peace_scope.pending_choice(game.nation_data, "A", "B"))
+
+    def test_accepting_the_same_terms_in_both_directions_needs_no_choice(self):
+        game = self.crossed_offers()
+        game.pending("B", "A")["parameters"]["clauses"] = game.pending("A", "B")["parameters"]["clauses"]
+        for accepter, proposer in (("A", "B"), ("B", "A")):
+            game.answer(accepter, proposer, ACCEPT, "PEACE_TREATY")
+        game.run_turn()
+        self.assertFalse(peace_scope.pending_choice(game.nation_data, "A", "B"))
+        self.assertNotIn("B", game.nation_data["A"]["at_war_with"])
+        self.assertEqual(game.nation_data["B"]["restrictions"]["demilitarized"], 6)
+
+    def test_only_participants_can_submit_choices_for_the_current_round(self):
+        game = self.crossed_offers()
+        for a, b in (("A", "B"), ("B", "A")):
+            game.answer(a, b, ACCEPT, "PEACE_TREATY")
+        game.run_turn()
+        n = game.nation_data
+        choice = peace_scope.pending_choice(n, "A", "B")
+        service = PlayerActions(game)
+        selection = {"round_id": choice["round_id"], "proposer": "B"}
+        command = {"type": "peace_choices", "selections": {"B": selection}}
+        service.apply_drafts({"A": [command]})
+        self.assertEqual(choice["selected"], "B")
+        self.assertIn(command, collect_map_commands(game, "A"))
+        self.assertIsNone(peace_scope.pending_choice(n, "B", "A").get("selected"))
+        with self.assertRaises(PlayerActionError):
+            service.validate_draft("B", [command])
+        selection["round_id"] = "expired"
+        with self.assertRaises(PlayerActionError):
+            service.validate_draft("A", [command])
 
     def test_ending_the_war_withdraws_only_stale_peace_and_keeps_the_message(self):
         game = self.world()

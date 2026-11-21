@@ -149,6 +149,10 @@ def has_unanswered_request(nation, other_nation, nation_data):
     badge and the per-contact badge in the messages screen both read it, so they
     can never disagree about what is outstanding.
     """
+    country = nation_data.get(nation, {})
+    choice = country.get("peace_choices", {}).get(other_nation, {})
+    if choice and not choice.get("selected"):
+        return True
     req = nation_data.get(other_nation, {}).get("pending_diplomacy", {}).get(nation)
     if not isinstance(req, dict):
         return False
@@ -156,7 +160,7 @@ def has_unanswered_request(nation, other_nation, nation_data):
         return False
 
     # Already answered this turn -- the reply just hasn't been processed yet.
-    my_response = nation_data.get(nation, {}).get("diplo_responses", {}).get(other_nation)
+    my_response = country.get("diplo_responses", {}).get(other_nation)
     if isinstance(my_response, dict) and my_response.get("verdict"):
         return False
     return True
@@ -201,6 +205,7 @@ def get_unread_message_count(nation, nation_data):
                 inbox = n_data.get("inbox", [])
                 total_unread += sum(1 for msg in inbox if not msg.get("spectator_read", False))
                 total_unread += pending_counts.get(n_name, 0)
+                total_unread += sum(not choice.get("selected") for choice in tuple(n_data.get("peace_choices", {}).values()))
         return total_unread
 
     # Standard logic for normal players

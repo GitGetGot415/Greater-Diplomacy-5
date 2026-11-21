@@ -38,6 +38,8 @@ from data import queries
 from map_logic.diplomacy import deal as deal_mod, diplomacy_lifecycle as lifecycle
 
 PEACE_ACTIONS = frozenset(("PEACE_TREATY", "CEASEFIRE"))
+CHOICE_ACTION = "PEACE_CHOICE"
+CHOICE_PROMPT = "You both accepted different peace terms. Choose one treaty to put into effect."
 
 #: This nation speaks for its whole bloc; the deal binds every member.
 BLOC_LEADER = "BLOC_LEADER"
@@ -271,7 +273,21 @@ def settlement_block(wars, nation_data):
     return ""
 
 
+def pending_choice(nation_data, country, opponent):
+    return nation_data.get(country, {}).get("peace_choices", {}).get(opponent, {})
+
+
+def choose_offer(nation_data, country, opponent, round_id, proposer):
+    choice = pending_choice(nation_data, country, opponent)
+    if not choice or choice["round_id"] != round_id or proposer not in choice["offers"]:
+        return False
+    choice["selected"] = proposer
+    return True
+
+
 def offer_block_reason(sender, target, nation_data, *, responses=None, send_turn=None):
+    if pending_choice(nation_data, sender, target):
+        return "Choose between the accepted peace offers first."
     reverse = nation_data[target].get("pending_diplomacy", {}).get(sender, {})
     if (isinstance(reverse, dict) and reverse.get("action") in PEACE_ACTIONS
             and reverse.get("turns", 0) > 0

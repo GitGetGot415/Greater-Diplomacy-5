@@ -250,7 +250,7 @@ def normalize_diplomacy_channels(nation_data):
 def reset_editor_setup(context):
     """Remove live diplomatic setup and refund held offers. Preserve historical records."""
     # These effect owners import lifecycle helpers. Load them after module initialization.
-    from map_logic.diplomacy import deal_effects, faction_records, volunteers
+    from map_logic.diplomacy import deal_effects, faction_records, treaty_effects, volunteers
 
     world = world_for(context)
     volunteers.end_all_missions(context)
@@ -268,6 +268,8 @@ def reset_editor_setup(context):
             deal_effects.release_escrow(world.nation_data, request.get("escrow"), country)
         treaty = data.get("pending_treaty", {})
         deal_effects.release_escrow(world.nation_data, treaty.get("escrow"), country)
+        for opponent in list(data.get("peace_choices", {})):
+            treaty_effects.close_peace_choice(world.nation_data, country, opponent)
         for field in list_fields:
             if field in data:
                 data[field] = []

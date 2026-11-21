@@ -160,6 +160,24 @@ class RatificationTests(unittest.TestCase):
         self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["treaty_id"], original["treaty_id"])
         self.assertTrue(at_war(self.game, "S", "G"))
 
+    def test_both_countries_choosing_the_same_treaty_opens_its_ratification_only(self):
+        self.game.active_players = ["A", "G", "S"]
+        self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
+        mine, theirs = peace_scope.deal_sides("G", "A", self.game.nation_data)
+        self.game.propose("G", "A", "PEACE_TREATY", parameters=deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()]))
+        self.game.run_turn()
+        for accepter, proposer in (("G", "A"), ("A", "G")):
+            self.game.answer(accepter, proposer, diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.run_turn()
+        data = self.game.nation_data
+        round_id = peace_scope.pending_choice(data, "A", "G")["round_id"]
+        self.assertFalse(ratification.pending_for(data, "S"))
+        self.assertTrue(peace_scope.choose_offer(data, "A", "G", round_id, "A"))
+        self.assertTrue(peace_scope.choose_offer(data, "G", "A", round_id, "A"))
+        self.game.run_turn()
+        self.assertEqual(ratification.pending_for(data, "S")["deal"], self.deal)
+        self.assertTrue(at_war(self.game, "S", "G"))
+
     def test_custom_acceptance_only_announces_peace_after_ratification(self):
         self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
         self.game.run_turn()

@@ -593,6 +593,31 @@ class IncomingTradeButtonTests(DealScreenTestCase):
         labels = [button.text for button in messages.offer_buttons]
         self.assertIn("View Trade Deal", labels)
 
+    def test_peace_choice_shows_both_reviews_and_records_the_latest_selection(self):
+        from map_logic.diplomacy import peace_scope
+        from screens.game.messages import Messages_Screen
+
+        player, enemy = self.player, self.enemy
+        offers = {proposer: {"action": "PEACE_TREATY", "deal": deal_mod.new(deal_mod.KIND_PEACE, [proposer], [subject], [
+            {"type": deal_mod.VASSALIZE, "master": proposer, "subject": subject}])}
+            for proposer, subject in ((player, enemy), (enemy, player))}
+        round_ = {"round_id": "peace-round", "offers": offers}
+        with patch.dict(self.map.nation_data[player], peace_choices={enemy: round_}):
+            messages = Messages_Screen()
+            messages.start_messages(self.map)
+            messages.select_recipient(enemy)
+            self.assertTrue(any(row["msg_data"]["content"] == peace_scope.CHOICE_PROMPT for row in messages.processed_messages))
+            buttons = {button.text: button for button in messages.offer_buttons}
+            with patch("screens.game.peace_screen._run_pygame_sub_screen") as review:
+                buttons["View Your Terms"].callback()
+                self.assertEqual(review.call_args.args[1].deal, offers[player]["deal"])
+                buttons["View Their Terms"].callback()
+                self.assertEqual(review.call_args.args[1].deal, offers[enemy]["deal"])
+            buttons["Choose Your Terms"].callback()
+            self.assertEqual(round_["selected"], player)
+            next(button for button in messages.offer_buttons if button.text == "Choose Their Terms").callback()
+            self.assertEqual(round_["selected"], enemy)
+
 
 class OccupiedLandTests(DealScreenTestCase):
     """Land you are standing on: pickable one at a time, and worth something.

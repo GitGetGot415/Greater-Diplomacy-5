@@ -844,6 +844,22 @@ class Messages_Screen(Screen):
         editable = not self.map_screen.tactical_mode
         offers = []
 
+        choice = peace_scope.pending_choice(nation_data, player, target)
+        if choice:
+            rows = []
+            for proposer, label in ((player, "Your Terms"), (target, "Their Terms")):
+                deal = choice["offers"][proposer]["deal"]
+                selected = choice.get("selected") == proposer
+                rows.append([
+                    self._offer_button("yellow", f"View {label}", lambda p=proposer, d=deal: self.view_peace_treaty(p, d)),
+                    self._offer_button("green", f"{label} Selected" if selected else f"Choose {label}",
+                                       lambda p=proposer: self.choose_peace_offer(target, choice["round_id"], p),
+                                       editable and not selected),
+                ])
+            offers.append({"action": peace_scope.CHOICE_ACTION, "request_id": choice["round_id"],
+                           "fallback": peace_scope.CHOICE_PROMPT, "rows": rows,
+                           "buttons": [button for row in rows for button in row]})
+
         asked = ratification.pending_for(nation_data, player)
         if asked and asked.get("signatory") == target:
             verdict = asked.get("verdict")
@@ -895,6 +911,12 @@ class Messages_Screen(Screen):
                     self._offer_button("yellow", view_label, lambda: view(target, params), is_peace or is_trade),
                 ]})
         return offers
+
+    def choose_peace_offer(self, opponent, round_id, proposer):
+        if self.map_screen.tactical_mode or not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
+            return
+        peace_scope.choose_offer(self.map_screen.nation_data, self.map_screen.player_country, opponent, round_id, proposer)
+        self.refresh_ui()
 
     @staticmethod
     def _made_offer(offer, msg):
@@ -1149,7 +1171,7 @@ class Messages_Screen(Screen):
             forward = None
             if msg["forward_source"] and not self.map_screen.tactical_mode:
                 forward = Button(0, 0, MSG_FORWARD_BUTTON_SIZE, "grey", "Forward", lambda: None, font_preset="tiny")
-            offer_rows = [offer["buttons"] for offer in msg.get("offers", ())]
+            offer_rows = [row for offer in msg.get("offers", ()) for row in offer.get("rows", (offer["buttons"],))]
             box_height = height + len(offer_rows) * MSG_OFFER_ROW_H
             self.processed_messages.append({"msg_data": msg, "surface": cached, "anim_start": msg["anim_start"],
                                             "box_height": box_height, "box_width": width,

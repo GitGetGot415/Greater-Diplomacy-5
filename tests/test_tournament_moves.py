@@ -1109,6 +1109,30 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertFalse(malformed[0])
         self.assertEqual(malformed[-1], "Invalid key")
 
+    def test_tournament_archive_uses_each_players_key_for_their_peace_choice(self):
+        host = Host()
+        host.nation_data["Leader"]["peace_choices"] = {"Member": {"round_id": "round", "selected": "Leader"}}
+        host.nation_data["Member"]["peace_choices"] = {"Leader": {"round_id": "round", "selected": "Member"}}
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(tournament_files.c, "TOURNAMENT_SAVES_DIR", directory), \
+                mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
+            path = os.path.join(directory, "choices.gd5tour")
+            tournament_files.export_tournament(host, path, "host-key", self.keys)
+
+            def load_countries(key):
+                loaded = tournament_files.load_tournament(path, key)
+                self.assertTrue(loaded[0], loaded)
+                with open(os.path.join(loaded[3], "meta.json"), encoding="utf-8") as file:
+                    return json.load(file)["nation_data"]
+
+            shared = load_countries(self.keys["Leader"])
+            self.assertEqual(shared["Leader"]["peace_choices"]["Member"]["selected"], "Leader")
+            self.assertNotIn("peace_choices", shared["Member"])
+            both = load_countries("host-key")
+            self.assertEqual(both["Leader"]["peace_choices"]["Member"]["selected"], "Leader")
+            self.assertEqual(both["Member"]["peace_choices"]["Leader"]["selected"], "Member")
+            self.assertIn("peace_choices", host.nation_data["Leader"])
+
     def test_public_spectator_key_loads_as_a_distinct_fog_limited_role(self):
         host = Host()
         host.player_country = "Leader"

@@ -203,6 +203,9 @@ def retire_landless_nation(context, nation, *, force=False):
         # test run and reappeared on a roster it had just been taken off.
         data["pending_diplomacy"] = {}
         data["diplo_responses"] = {}
+        for opponent in list(data.get("peace_choices", {})):
+            treaty_effects.close_peace_choice(world_state.nation_data, nation, opponent)
+            treaty_effects.close_peace_choice(world_state.nation_data, opponent, nation)
 
         master = data.get("master", "")
         if master and master in world_state.nation_data:

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from random import choice
 from data.state_access import world_for, session_for
 from map_logic.ai import ai_evaluation, ai_letters, ai_llm_runner, ai_prompts
 import data.constants as c
@@ -28,7 +27,7 @@ from map_logic.diplomacy.faction_actions import (
 )
 
 from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, WAR_CANCELLED_ACTIONS, availability, handlers_for
-from map_logic.ai import ai_handler, ai_world
+from map_logic.ai import ai_handler, ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod, deal_effects
 from map_logic.territory import ownership
 from map_logic.diplomacy.puppet_actions import finalize_create_puppet
@@ -1499,13 +1498,10 @@ def _accepts_delivered_peace(nation_data, active_players, ai_results, sender, ta
             and ai_results.get((sender, target, request["action"]), {}).get("accepted", False))
 
 
-def _resolve_crossed_peace_acceptances(context, ai_results, active_nations, delayed_responses):
-    """Resolve competing accepted offers before the normal human and AI reply passes."""
-    world = world_for(context)
-    nation_data = world.nation_data
+def _open_peace_choices(context, ai_results):
+    """Turn two acceptances of different terms into one planning turn of choice."""
+    nation_data = world_for(context).nation_data
     players = session_for(context).active_players
-    turn = world.time_manager.total_turns
-
     for sender, country in list(nation_data.items()):
         if not isinstance(country, dict):
             continue
@@ -1517,28 +1513,75 @@ def _resolve_crossed_peace_acceptances(context, ai_results, active_nations, dela
                     and _accepts_delivered_peace(nation_data, players, ai_results, target, sender, reverse)):
                 continue
 
-            if not peace_scope.offer_wars(sender, target, request, nation_data) & peace_scope.offer_wars(target, sender, reverse, nation_data):
+            first = peace_scope.offered_peace(sender, target, request["action"], request.get("parameters"), nation_data)
+            second = peace_scope.offered_peace(target, sender, reverse["action"], reverse.get("parameters"), nation_data)
+            wars = peace_scope.live_war_pairs(first, nation_data) & peace_scope.live_war_pairs(second, nation_data)
+            if not wars or peace_scope.ratification_covers(wars, nation_data):
                 continue
+            offers = {
+                sender: {"action": request["action"], "deal": treaty_effects.with_separate_peace_cost(first, sender, target, nation_data)},
+                target: {"action": reverse["action"], "deal": treaty_effects.with_separate_peace_cost(second, target, sender, nation_data)},
+            }
+            if _same_peace_terms(*(offer["deal"] for offer in offers.values())):
+                # Both accepted the same terms. The existing reply pass settles
+                # the first acceptance and the live-war rule prevents a second.
+                continue
+            round_id = request["request_id"]
+            for proposer, accepter, offer in ((sender, target, request), (target, sender, reverse)):
+                reply = get_response(nation_data, accepter, proposer)
+                nation_data[proposer].setdefault("peace_choices", {})[accepter] = {
+                    "round_id": round_id, "offers": offers, "escrow": offer.pop("escrow", None),
+                    "scripted": lifecycle.response_matches_request(reply, offer) and reply.get("scripted", False),
+                }
+                lifecycle.remove_request(nation_data[proposer]["pending_diplomacy"], accepter, request_id=offer["request_id"])
+                lifecycle.remove_response(get_response_map(nation_data, accepter), proposer)
 
-            # Older saves counted travel turns and did not record a delivery turn.
-            a_turn = request.get("delivered_turn", turn - request["turns"])
-            b_turn = reverse.get("delivered_turn", turn - reverse["turns"])
-            first = (sender, target, request, reverse)
-            second = (target, sender, reverse, request)
-            if a_turn == b_turn:
-                winner = choice((first, second))
+
+def _same_peace_terms(first, second):
+    first_sides = {frozenset(side) for side in first["sides"].values()}
+    second_sides = {frozenset(side) for side in second["sides"].values()}
+    return first["clauses"] == second["clauses"] and first_sides == second_sides
+
+
+def _ai_peace_choice(context, country, offers):
+    def score(proposer):
+        verdict = ai_opinion.peace_verdict(world, country, proposer, offers[proposer]["deal"], settings)
+        return verdict.accepted, verdict.slack
+
+    world = context.ai_world or ai_world.for_screen(context)
+    settings = world_for(context).scenario_settings
+    return max(sorted(offers), key=score)
+
+
+def _resolve_peace_choices(context):
+    """Resolve the choices collected in the preceding planning turn."""
+    nation_data = world_for(context).nation_data
+    players = session_for(context).active_players
+    for country, data in list(nation_data.items()):
+        if not isinstance(data, dict):
+            continue
+        for opponent, round_ in list(data.get("peace_choices", {}).items()):
+            other = peace_scope.pending_choice(nation_data, opponent, country)
+            if not other or other.get("round_id") != round_["round_id"] or other.get("offers") != round_["offers"]:
+                treaty_effects.close_peace_choice(nation_data, country, opponent)
+                continue
+            offers = round_["offers"]
+            selected = round_.get("selected") if country in players else _ai_peace_choice(context, country, offers)
+            other_selected = other.get("selected") if opponent in players else _ai_peace_choice(context, opponent, offers)
+            if selected in offers and selected == other_selected:
+                accepter = opponent if selected == country else country
+                winner = round_ if selected == country else other
+                offer = offers[selected]
+                outcome = treaty_effects.apply_treaty_effect(
+                    context, offer["action"], selected, accepter, chosen_deal=offer["deal"],
+                    escrow=winner.pop("escrow", None), scripted=winner.get("scripted", False))
+                text = outcome.blocked or outcome.canned or ai_prompts.AI_FALLBACK_RESPONSES["PEACE_CHOICE_AGREED"]
+                send_message(context, accepter, selected, text, "DIPLOMACY", extra={"action": peace_scope.CHOICE_ACTION})
             else:
-                winner = first if a_turn < b_turn else second
-            proposer, accepter, offer, other_offer = winner
-            response = get_response(nation_data, accepter, proposer)
-            if lifecycle.response_matches_request(response, offer):
-                outcome = _resolve_queued_response(context, accepter, proposer, response)
-            else:
-                outcome = _resolve_ai_answer(context, ai_results, active_nations, delayed_responses, proposer, accepter, offer["action"], offer)
-                pending = nation_data.get(proposer, {}).get("pending_diplomacy", {})
-                lifecycle.remove_request(pending, accepter, request_id=offer.get("request_id"))
-            if outcome and outcome.status in ("applied", "awaiting_ratification"):
-                treaty_effects.withdraw_peace_offer(nation_data, accepter, proposer, other_offer)
+                text = ai_prompts.AI_FALLBACK_RESPONSES["PEACE_CHOICE_EXPIRED"]
+                send_message(context, country, opponent, text, "DIPLOMACY", extra={"action": peace_scope.CHOICE_ACTION})
+            treaty_effects.close_peace_choice(nation_data, country, opponent)
+            treaty_effects.close_peace_choice(nation_data, opponent, country)
 
 
 def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info):
@@ -1782,7 +1825,8 @@ def process_diplomacy_turn(context):
     ratification.process_ratifications(context)
 
     treaty_effects.expire_obsolete_peace(world_state.nation_data)
-    _resolve_crossed_peace_acceptances(context, ai_results, active_nations_list, delayed_responses)
+    _resolve_peace_choices(context)
+    _open_peace_choices(context, ai_results)
     _process_queued_responses(context)
     treaty_effects.expire_obsolete_peace(world_state.nation_data)
     sent_followups = _process_pass1_immediate_actions(context)

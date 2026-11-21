@@ -1,7 +1,9 @@
 """Regression coverage for real-time lobby-to-map visibility initialization."""
 
 import unittest
+from unittest.mock import patch
 
+from data import queries
 from tests import app_harness
 
 
@@ -31,6 +33,21 @@ class RealtimeFogTests(unittest.TestCase):
         finally:
             game_map.selection_mode = original_selection_mode
             game_map.refresh_map_layers("fog")
+
+    def test_snapshot_keeps_my_choice_and_only_the_peace_offer_delivered_to_me(self):
+        game = self.map
+        owner = game.player_country
+        enemy = next(country for country in game.nation_data if country != owner and queries.is_playable(country, game.nation_data))
+        country = game.nation_data[enemy]
+        offer = {"action": "PEACE_TREATY", "turns": 1, "request_id": "visible-offer", "escrow": {"materials": 20}}
+        pending = {owner: offer, "Private": {"action": "PEACE_TREATY", "turns": 0}}
+        with patch.dict(country, pending_diplomacy=pending, peace_choices={owner: {"selected": enemy}}), \
+                patch.dict(game.nation_data[owner], peace_choices={enemy: {"selected": owner}}):
+            snapshot = queries.player_snapshot_projection(game, queries.build_save_dict(game), owner)
+        self.assertEqual(snapshot["nation_data"][owner]["peace_choices"][enemy]["selected"], owner)
+        self.assertNotIn("peace_choices", snapshot["nation_data"][enemy])
+        self.assertEqual(snapshot["nation_data"][enemy]["pending_diplomacy"], {
+            owner: {"action": "PEACE_TREATY", "turns": 1, "request_id": "visible-offer"}})
 
 
 if __name__ == "__main__":

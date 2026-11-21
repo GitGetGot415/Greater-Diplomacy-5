@@ -14,7 +14,7 @@ from map_logic import politics
 from data.game_state import WorldState
 from data.state_access import BackendState
 from data import queries
-from map_logic.diplomacy import volunteers, faction_actions, diplomacy_messages, diplomacy_lifecycle as lifecycle
+from map_logic.diplomacy import volunteers, faction_actions, diplomacy_messages, peace_scope, diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
 from map_logic.diplomacy.action_definitions import availability
 from map_logic.actions import unit_actions, production_actions
@@ -584,6 +584,33 @@ class PlayerActions:
             raise PlayerActionError("That ratification refers to an expired treaty.")
         return {"verdict": verdict, "treaty_id": reference}
 
+    def _collect_peace_choices(self, country_id):
+        rounds = self._country(country_id).get("peace_choices", {})
+        selections = {opponent: {"round_id": round_["round_id"], "proposer": round_["selected"]}
+                      for opponent, round_ in rounds.items() if round_.get("selected")}
+        return {"selections": selections} if selections else None
+
+    def _validate_peace_choices(self, country_id, command):
+        selections = command.get("selections")
+        if not isinstance(selections, dict) or len(selections) > len(self._country(country_id).get("peace_choices", {})):
+            raise PlayerActionError("Invalid peace treaty choices.")
+        result = {}
+        for opponent, selection in selections.items():
+            if not isinstance(opponent, str) or not isinstance(selection, dict):
+                raise PlayerActionError("Invalid peace treaty choice.")
+            round_ = peace_scope.pending_choice(self.world.nation_data, country_id, opponent)
+            round_id, proposer = selection.get("round_id"), selection.get("proposer")
+            if not round_ or round_id != round_["round_id"]:
+                raise PlayerActionError("That peace treaty choice has expired.")
+            if not isinstance(proposer, str) or proposer not in round_["offers"]:
+                raise PlayerActionError("That peace treaty is unavailable.")
+            result[opponent] = {"round_id": round_id, "proposer": proposer}
+        return {"selections": result}
+
+    def _apply_peace_choices(self, country_id, command):
+        for opponent, selection in command["selections"].items():
+            peace_scope.choose_offer(self.world.nation_data, country_id, opponent, selection["round_id"], selection["proposer"])
+
     def _apply_volunteer_draft(self, country_id, command):
         country_data = self.world.nation_data[country_id]
         pending = country_data.get("pending_diplomacy", {}).get(command["target"], {})
@@ -977,6 +1004,7 @@ _COUNTRY_COMMANDS = {
     "puppet_draft": _CountryCommand(PlayerActions._collect_puppet_draft, PlayerActions._validate_puppet_draft, PlayerActions._apply_puppet_draft),
     "faction_rename": _CountryCommand(PlayerActions._collect_faction_rename, PlayerActions._validate_faction_rename, PlayerActions._apply_faction_rename),
     "ratification_response": _CountryCommand(PlayerActions._collect_ratification_response, PlayerActions._validate_ratification_response, PlayerActions._apply_ratification_response),
+    "peace_choices": _CountryCommand(PlayerActions._collect_peace_choices, PlayerActions._validate_peace_choices, PlayerActions._apply_peace_choices),
 }
 
 
