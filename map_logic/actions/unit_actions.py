@@ -177,7 +177,7 @@ def repair_costs(context, unit, unit_library=None):
             or queries.is_tactical_player_unit(context, unit)):
         return dict.fromkeys(COST_KEYS, 0)
     library = queries.get_unit_library(context) if unit_library is None else unit_library
-    stats = library.get(unit.get("original_type", unit.get("type", "")), {})
+    stats = library.get(queries.get_base_unit_type(unit), {})
     maximum = unit.get("max_health", 1)
     missing = (maximum - unit.get("health", 0)) / max(1, maximum)
     return {key: int(stats.get(key, 0) * missing) for key in COST_KEYS}

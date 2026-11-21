@@ -120,3 +120,21 @@ class UnitMetadataTests(unittest.TestCase):
         library["custom"]["metadata"] = dict(fixture_metadata(), tier_order=-1)
         with self.assertRaisesRegex(ValueError, "Unit custom: metadata"):
             queries.get_unit_metadata("custom", library)
+
+    def test_transport_mode_and_base_unit_queries(self):
+        plain_unit = {"type": "Infantry III", "owner": "A", "health": 100, "max_health": 100}
+        self.assertFalse(queries.is_in_transport(plain_unit))
+        self.assertIsNone(queries.get_transport_mode(plain_unit))
+        self.assertEqual(queries.get_base_unit_type(plain_unit), "Infantry III")
+
+        queries.load_transport(plain_unit, "Convoy")
+        self.assertTrue(queries.is_in_transport(plain_unit))
+        self.assertEqual(queries.get_transport_mode(plain_unit), "convoy")
+        self.assertEqual(queries.get_base_unit_type(plain_unit), "Infantry III")
+        self.assertEqual(plain_unit.get("transport_mode"), "convoy")
+
+        queries.revert_transport(plain_unit)
+        self.assertFalse(queries.is_in_transport(plain_unit))
+        self.assertIsNone(queries.get_transport_mode(plain_unit))
+        self.assertEqual(plain_unit["type"], "Infantry III")
+        self.assertNotIn("transport_mode", plain_unit)

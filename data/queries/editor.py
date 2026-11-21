@@ -230,7 +230,7 @@ def set_editor_units(context, mode, value):
     skipped = 0
     for province in world_for(context).map_data.values():
         for unit in units_with_air_cargo(province.get("units", [])):
-            current = unit.get("original_type", unit.get("type"))
+            current = queries.get_base_unit_type(unit)
             if current not in library:
                 skipped += 1
                 continue
@@ -243,8 +243,9 @@ def set_editor_units(context, mode, value):
     if changes:
         save_editor_state(context)
         for unit, target in changes:
-            if "original_type" in unit:
-                transport = unit["type"].split(" (", 1)[0]
+            if queries.is_in_transport(unit):
+                mode = queries.get_transport_mode(unit) or "convoy"
+                transport = "Convoy" if mode == "convoy" else "Truck"
                 unit["original_type"] = target
                 unit["type"] = f"{transport} ({target})"
             else:

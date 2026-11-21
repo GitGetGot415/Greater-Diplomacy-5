@@ -96,8 +96,8 @@ def expense_table_rows(units, unit_library):
     individual = []
     grouped = {}
     for unit, prov in units:
-        # Use original_type to properly account for converted units like Convoys and Trucks.
-        u_type = unit.get("original_type", unit.get("type"))
+        # Use base unit type to properly account for converted units like Convoys and Trucks.
+        u_type = queries.get_base_unit_type(unit)
         upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}))
         unit_name = unit.get("type")
         label = queries.get_unit_display_name(unit_name, unit_library)
