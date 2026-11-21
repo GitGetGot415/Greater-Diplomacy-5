@@ -83,18 +83,18 @@ def war_desire(world, nation, target, scenario_settings=None):
     # with decent odds came out at 1.0 whatever it thought of the target -- and
     # in a full run that produced almost twice as many wars as the old boolean
     # it was supposed to be a more considered version of.
-    odds = (c.AI_W_BORDER * _sigmoid(border_ratio,
-                                     c.AI_WAR_STRENGTH_THRESHOLD * (0.7 + 0.6 * caution),
-                                     c.AI_ODDS_STEEPNESS)
-            + c.AI_W_GLOBAL * _sigmoid(global_ratio,
-                                       c.AI_GLOBAL_STRENGTH_THRESHOLD * (0.7 + 0.6 * caution),
-                                       c.AI_ODDS_STEEPNESS))
+    odds = (c.AI_WAR_BORDER_SHARE * _sigmoid(border_ratio,
+                                             c.AI_WAR_STRENGTH_THRESHOLD * (0.7 + 0.6 * caution),
+                                             c.AI_ODDS_STEEPNESS)
+            + (1.0 - c.AI_WAR_BORDER_SHARE) * _sigmoid(global_ratio,
+                                                      c.AI_GLOBAL_STRENGTH_THRESHOLD * (0.7 + 0.6 * caution),
+                                                      c.AI_ODDS_STEEPNESS))
 
     appetite = (c.AI_W_CLAIM * target_value(world, nation, target)
                 + c.AI_W_AGGRO * person.get("aggression", 0.5)
                 + c.AI_W_AMBITION * person.get("ambition", 0.5))
 
-    core = c.AI_W_ODDS * odds + c.AI_W_APPETITE * appetite
+    core = c.AI_WAR_ODDS_SHARE * odds + (1.0 - c.AI_WAR_ODDS_SHARE) * appetite
 
     # Relations now suppress war, which they have never done. Measured from
     # neutral upward only: being disliked does not by itself make a nation
@@ -145,8 +145,8 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     occupied = war_score.between(_host(world), nation, enemy, world)["their_parts"]["occupation"]
     losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(c.AI_W_PEACE_OCCUPIED * occupied))
 
-    return clamp01(c.AI_W_PEACE_LOSING * losing
-                    + c.AI_W_PEACE_CAUTION * person.get("caution", 0.5))
+    return clamp01(c.AI_PEACE_LOSING_SHARE * losing
+                    + (1.0 - c.AI_PEACE_LOSING_SHARE) * person.get("caution", 0.5))
 
 
 #: What peace_verdict answers with. `slack` is how far past the line the offer

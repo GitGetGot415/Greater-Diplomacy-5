@@ -1155,12 +1155,10 @@ AI_NEARBY_SEA_TILES = 3 # Longest water crossing considered nearby for AI claims
 # perfect odds and maximum appetite sits at 2.0 before restraint pulls it back.
 
 # How the two halves of the decision trade off. They are averaged rather than
-# added -- see the note in war_desire -- so these sum to 1.0.
-AI_W_ODDS = 0.55            # can we win
-AI_W_APPETITE = 0.45        # do we want to
+# added -- see the note in war_desire -- so odds take this share and appetite the rest.
+AI_WAR_ODDS_SHARE = 0.55    # can we win, against do we want to
 
-AI_W_BORDER = 0.6           # local superiority on the shared front
-AI_W_GLOBAL = 0.4           # overall alliance and economic weight
+AI_WAR_BORDER_SHARE = 0.6   # local superiority on the shared front; overall alliance and economic weight takes the rest
 AI_ODDS_STEEPNESS = 6.0     # how sharply confidence turns over around the crossover
 
 AI_W_CLAIM = 0.45           # how much of their land we already claim
@@ -1193,8 +1191,7 @@ AI_WAR_LOAD_SATURATION = 3.0    # wars at which a nation counts as fully committ
 # so a nation overrunning its enemy would sue for peace on the strength of the
 # calendar. Its weight is redistributed rather than replaced: a nation wants out
 # of a war because it is losing one, not because it is bored of it.
-AI_W_PEACE_LOSING = 0.8
-AI_W_PEACE_CAUTION = 0.2
+AI_PEACE_LOSING_SHARE = 0.8  # losing takes this share of peace appetite; caution takes the rest
 # How strongly losing its homeland pushes a nation toward peace, on top of
 # losing the military balance. The two combine as independent pressures --
 # losing = 1 - (1 - military) * (1 - AI_W_PEACE_OCCUPIED * occupied) -- so a
