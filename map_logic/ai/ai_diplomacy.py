@@ -9,6 +9,7 @@ from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
 from data import queries
 import data.constants as c
+from map_logic.ai import ai_tuning
 
 from map_logic.diplomacy import (
     peace_scope,
@@ -116,14 +117,14 @@ def start_proactive_llm_tasks(context):
         if plans:
             note += f"Your private notebook, which only you read:\n{plans}\n"
         system, user = ai_director.build_prompt(
-            world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note,
+            world, nation, choice["candidates"], ai_tuning.AI_MAX_ACTIONS_PER_TURN, note,
             nation_data=world_state.nation_data)
         world_context = ai_evaluation.get_world_context(
             world_state.nation_data, active_nations, nation, current_date=current_date,
             world=world)
         choice["_prompt"] = (system, f"{world_context}\n{user}")
         choice["_schema"] = ai_director.reply_schema(choice["candidates"],
-                                                     c.AI_MAX_ACTIONS_PER_TURN)
+                                                     ai_tuning.AI_MAX_ACTIONS_PER_TURN)
 
     def call(choice):
         system, user = choice["_prompt"]
@@ -139,7 +140,7 @@ def start_proactive_llm_tasks(context):
         if not reply or reply.get("error"):
             return
         chosen, messages = ai_director.parse(reply, choice["candidates"],
-                                             c.AI_MAX_ACTIONS_PER_TURN,
+                                             ai_tuning.AI_MAX_ACTIONS_PER_TURN,
                                              choice["nation"], world_state.nation_data)
         choice["chosen"] = chosen
         choice["messages"] = messages
@@ -488,7 +489,7 @@ def _victors_clauses(context, ai_name, enemy, leverage):
     if not holdings:
         return []
 
-    share = min(1.0, max(0.0, leverage) / c.AI_PEACE_DEMAND_LEVERAGE)
+    share = min(1.0, max(0.0, leverage) / ai_tuning.AI_PEACE_DEMAND_LEVERAGE)
     # Ahead on the war and standing on their soil: whatever the arithmetic says,
     # at least one province is asked for. Handing the lot back is not a position.
     floor = 1 if leverage > 0.5 else 0
@@ -540,7 +541,7 @@ def _seek_ceasefire_if_unreachable(bag, context, ai_name, my_enemies, active_nat
             if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "CEASEFIRE"):
                 leverage = war_score.between(context, ai_name, enemy, world, viewer=ai_name)["mine"]
                 bag.add(ai_candidates.make(
-                    "CEASEFIRE", enemy, c.AI_SCORE_CEASEFIRE_UNREACHABLE,
+                    "CEASEFIRE", enemy, ai_tuning.AI_SCORE_CEASEFIRE_UNREACHABLE,
                     "we cannot reach them to fight them, and the war costs us anyway",
                     parameters=_victors_terms(context, ai_name, enemy, leverage)))
 
@@ -562,8 +563,8 @@ def _concession_terms(context, ai_name, enemy, appetite, leverage):
     world_state = world_for(context)
     mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
 
-    span = max(1e-9, 1.0 - c.AI_PEACE_OFFER_THRESHOLD)
-    share = min(1.0, max(0.0, (appetite - c.AI_PEACE_OFFER_THRESHOLD) / span))
+    span = max(1e-9, 1.0 - ai_tuning.AI_PEACE_OFFER_THRESHOLD)
+    share = min(1.0, max(0.0, (appetite - ai_tuning.AI_PEACE_OFFER_THRESHOLD) / span))
 
     lost = [(was, holder, prov)
             for (was, holder), provs in _held_provinces(context, theirs, mine).items()
@@ -612,11 +613,11 @@ def _offer_peace_when_losing(bag, context, ai_name, my_enemies, active_nations, 
         # of a war since MIN_TURNS_FOR_CEASEFIRE was introduced; the offering
         # side never knew, and spent those turns proposing into a wall.
         duration = world_state.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
+        if duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
             continue
 
         appetite = ai_opinion.peace_appetite(world, ai_name, enemy, world_state.scenario_settings)
-        if appetite < c.AI_PEACE_OFFER_THRESHOLD:
+        if appetite < ai_tuning.AI_PEACE_OFFER_THRESHOLD:
             continue
 
         # What the offer costs *us* -- land, and for a faction member suing
@@ -650,17 +651,17 @@ def _offer_terms_when_winning(bag, context, ai_name, my_enemies, active_nations,
         if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "PEACE_TREATY"):
             continue
         duration = world_state.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
-        if duration < c.MIN_TURNS_FOR_CEASEFIRE:
+        if duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
             continue
         leverage = war_score.between(context, ai_name, enemy, world, viewer=ai_name)["mine"]
         if leverage <= 0.5:
             continue
-        if ai_opinion.peace_appetite(world, ai_name, enemy, settings) >= c.AI_PEACE_OFFER_THRESHOLD:
+        if ai_opinion.peace_appetite(world, ai_name, enemy, settings) >= ai_tuning.AI_PEACE_OFFER_THRESHOLD:
             continue
         terms = _victors_terms(context, ai_name, enemy, leverage)
         if _offer_is_viable(context, ai_name, enemy, terms, world):
             bag.add(ai_candidates.make(
-                "PEACE_TREATY", enemy, c.AI_PEACE_OFFER_THRESHOLD,
+                "PEACE_TREATY", enemy, ai_tuning.AI_PEACE_OFFER_THRESHOLD,
                 f"we are winning the war with {enemy} and these terms secure it",
                 parameters=terms))
 
@@ -719,7 +720,7 @@ def _seek_defensive_faction(bag, context, ai_name, pending, my_enemies, active_n
                                                   target_leader, "JOIN_FACTION_REQ")):
             bag.add(ai_candidates.make(
                 "JOIN_FACTION_REQ", target_leader,
-                max(c.AI_SCORE_DEFENSIVE_FACTION,
+                max(ai_tuning.AI_SCORE_DEFENSIVE_FACTION,
                     ai_opinion.alliance_appetite(world, ai_name, target_leader,
                                                  world_state.scenario_settings)),
                 "we are at war and alone, and they already fight our enemies"))
@@ -745,7 +746,7 @@ def _seek_defensive_faction(bag, context, ai_name, pending, my_enemies, active_n
         if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target_partner, "CREATE_FACTION"):
             bag.add(ai_candidates.make(
                 "CREATE_FACTION", target_partner,
-                max(c.AI_SCORE_DEFENSIVE_FACTION,
+                max(ai_tuning.AI_SCORE_DEFENSIVE_FACTION,
                     ai_opinion.alliance_appetite(world, ai_name, target_partner,
                                                  world_state.scenario_settings)),
                 "neither of us has allies and we fight the same enemy"))
@@ -775,7 +776,7 @@ def _call_faction_to_arms(bag, context, ai_name, my_faction, my_enemies, active_
                                                     world_state.scenario_settings)
                 bag.add(ai_candidates.make(
                     "CALL_TO_ARMS", member,
-                    c.AI_SCORE_CALL_TO_ARMS + (1.0 - c.AI_SCORE_CALL_TO_ARMS) * urgency,
+                    ai_tuning.AI_SCORE_CALL_TO_ARMS + (1.0 - ai_tuning.AI_SCORE_CALL_TO_ARMS) * urgency,
                     f"they are sworn to our faction and we are fighting {unshared_wars[0]} alone",
                     context_target=unshared_wars[0]))
 
@@ -800,7 +801,7 @@ def _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, acti
         if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, co, "REQ_MILITARY_ACCESS"):
             continue
         bag.add(ai_candidates.make(
-            "REQ_MILITARY_ACCESS", co, c.AI_SCORE_MILITARY_ACCESS,
+            "REQ_MILITARY_ACCESS", co, ai_tuning.AI_SCORE_MILITARY_ACCESS,
             "we fight the same enemy and our fronts cannot link up without passage",
             context_target=enemy))
 
@@ -829,7 +830,7 @@ def _join_faction_wars_proactively(bag, context, ai_name, my_faction, my_enemies
                 # A faithless nation lets its allies fight alone; a loyal one
                 # turns up. Nothing used to distinguish them.
                 bag.add(ai_candidates.make(
-                    "JOIN_WARS", member, c.AI_SCORE_JOIN_WARS * (0.4 + 1.2 * loyalty),
+                    "JOIN_WARS", member, ai_tuning.AI_SCORE_JOIN_WARS * (0.4 + 1.2 * loyalty),
                     f"our faction-mate is fighting {target_enemy} without us",
                     context_target=target_enemy))
 
@@ -884,7 +885,7 @@ def _declare_war_for_cores_and_claims(bag, context, ai_name, my_enemies, my_mast
         # we are already losing all count now -- and an aggressive nation will
         # gamble on odds a cautious one turns down.
         desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
-        if desire >= c.AI_WAR_DESIRE_THRESHOLD:
+        if desire >= ai_tuning.AI_WAR_DESIRE_THRESHOLD:
 
             # Random chance to actually declare war
             war_chance = float(world_state.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
@@ -913,7 +914,7 @@ def _declare_war_for_cores_and_claims(bag, context, ai_name, my_enemies, my_mast
                                 if cid not in claims and not any(q["prov_id"] == cid for q in queue):
                                     queue.append({"prov_id": cid, "turns_left": c.CLAIM_TURN_CORE})
 
-                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", world_state.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                            queries.set_ai_diplo_cooldown(ai_name, target, "MAKE_CLAIM", world_state.nation_data, duration=ai_tuning.AI_CLAIM_COOLDOWN)
                             break
 
 
@@ -945,7 +946,7 @@ def _drain_llm_requests(bag, context, ai_name, data, my_enemies, active_nations,
         action = request.get("action")
         if action != "WAR_DECLARATION" or target not in active_nations or target == ai_name:
             continue
-        if current_turn - request.get("turn", 0) > c.AI_REQUEST_LIFETIME:
+        if current_turn - request.get("turn", 0) > ai_tuning.AI_REQUEST_LIFETIME:
             continue
 
         legal = (current_turn >= turns_to_wait
@@ -964,7 +965,7 @@ def _drain_llm_requests(bag, context, ai_name, data, my_enemies, active_nations,
 
         desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
         bag.add(ai_candidates.make(
-            "WAR_DECLARATION", target, min(1.0, desire + c.AI_LLM_REQUEST_BONUS),
+            "WAR_DECLARATION", target, min(1.0, desire + ai_tuning.AI_LLM_REQUEST_BONUS),
             f"our own government has pressed for this war since {request.get('reason') or 'last season'}",
             context_target=target))
 
@@ -996,7 +997,7 @@ def _invite_friends_to_faction(bag, context, ai_name, data, active_nations, worl
 
         appetite = ai_opinion.alliance_appetite(world, ai_name, other,
                                                 world_state.scenario_settings)
-        if appetite >= c.AI_ALLIANCE_DESIRE_THRESHOLD:
+        if appetite >= ai_tuning.AI_ALLIANCE_DESIRE_THRESHOLD:
             bag.add(ai_candidates.make(
                 "FACTION_INVITE", other, appetite,
                 "they are unaligned, we are on good terms, and they would strengthen the bloc"))
@@ -1029,7 +1030,7 @@ def _offer_trades(bag, context, ai_name, active_nations, world):
             continue
 
         bag.add(ai_candidates.make(
-            "TRADE", other, c.AI_SCORE_TRADE,
+            "TRADE", other, ai_tuning.AI_SCORE_TRADE,
             "our spare resources for what we lack",
             parameters=offer))
 
@@ -1050,11 +1051,11 @@ def _claim_faction_leadership(bag, context, ai_name, world, scenario_settings=No
         return
 
     person = ai_personality.get(world_state.nation_data, ai_name, scenario_settings)
-    if person.get("ambition", 0.5) < c.AI_CLAIM_LEADERSHIP_AMBITION:
+    if person.get("ambition", 0.5) < ai_tuning.AI_CLAIM_LEADERSHIP_AMBITION:
         return
 
     bag.add(ai_candidates.make(
-        "CLAIM_FACTION_LEADERSHIP", ai_name, c.AI_SCORE_CLAIM_LEADERSHIP,
+        "CLAIM_FACTION_LEADERSHIP", ai_name, ai_tuning.AI_SCORE_CLAIM_LEADERSHIP,
         "we have outweighed the leader of this faction for six turns running"))
 
 
@@ -1116,7 +1117,7 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
 
         duration = nation_data.get(ai_name, {}).get("war_durations", {}).get(other, 0)
         if (queries.are_at_war(ai_name, other, nation_data) and _may_settle(nation_data, ai_name, other)
-                and duration >= c.MIN_TURNS_FOR_CEASEFIRE):
+                and duration >= ai_tuning.MIN_TURNS_FOR_CEASEFIRE):
             leverage = war_score.between(context, ai_name, other, world, viewer=ai_name)["mine"]
             appetite = ai_opinion.peace_appetite(world, ai_name, other, settings)
             offers.append(("PEACE_TREATY", appetite,
@@ -1165,7 +1166,7 @@ def _fabricate_claims_during_war(context, ai_name, data, my_enemies, active_nati
     if chosen_target:
         target_enemy, target_prov = chosen_target
         data.setdefault("claim_queue", []).append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
-        queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", world_state.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+        queries.set_ai_diplo_cooldown(ai_name, target_enemy, "FABRICATE_CLAIM", world_state.nation_data, duration=ai_tuning.AI_CLAIM_COOLDOWN)
 
 
 def _fabricate_claims_on_weaker_neighbors(context, ai_name, data, my_master, my_enemies, active_nations, world):
@@ -1205,7 +1206,7 @@ def _fabricate_claims_on_weaker_neighbors(context, ai_name, data, my_master, my_
             if (world.is_weaker_neighbor(ai_name, neighbor)
                     and ai_opinion.war_desire(world, ai_name, neighbor,
                                               world_state.scenario_settings)
-                    >= c.AI_CLAIM_DESIRE_THRESHOLD):
+                    >= ai_tuning.AI_CLAIM_DESIRE_THRESHOLD):
                 if not queries.is_ai_diplo_on_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", world_state.nation_data):
 
                     valid_targets = queries.get_valid_claim_targets(ai_name, neighbor, world_state.map_data)
@@ -1219,7 +1220,7 @@ def _fabricate_claims_on_weaker_neighbors(context, ai_name, data, my_master, my_
                         # Ensure it's not already in the queue
                         if not any(q["prov_id"] == target_prov["id"] for q in queue):
                             queue.append({"prov_id": target_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE})
-                            queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", world_state.nation_data, duration=c.AI_CLAIM_COOLDOWN)
+                            queries.set_ai_diplo_cooldown(ai_name, neighbor, "FABRICATE_CLAIM", world_state.nation_data, duration=ai_tuning.AI_CLAIM_COOLDOWN)
                             break  # Limit to queueing one claim per cycle
 
 
@@ -1324,7 +1325,7 @@ def _run_basic_proactive_ai(context):
                 "nation": ai_name,
                 "pending": pending,
                 "candidates": ranked,
-                "chosen": ai_director.top_scored(ranked, c.AI_MAX_ACTIONS_PER_TURN),
+                "chosen": ai_director.top_scored(ranked, ai_tuning.AI_MAX_ACTIONS_PER_TURN),
                 "messages": {},
             })
 

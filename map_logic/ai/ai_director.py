@@ -23,6 +23,7 @@ import json
 import re
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 
 from map_logic.ai import ai_candidates, ai_prompts
 from map_logic.diplomacy import diplomacy_messages
@@ -149,7 +150,7 @@ def build_prompt(world, nation, candidates, limit, personality_note="", nation_d
     for cand in candidates:
         lines.append(f"  [{cand.cid}] {ai_candidates.describe(cand)}"
                      f"{_terms(cand, nation, nation_data)}")
-    lines.append(f"  [{c.AI_DIRECTOR_NONE_CID}] do nothing this turn")
+    lines.append(f"  [{ai_tuning.AI_DIRECTOR_NONE_CID}] do nothing this turn")
 
     system = (
         f"You are the leader of a nation in a grand strategy game, named below. "
@@ -195,7 +196,7 @@ def reply_schema(candidates, limit):
         "type": "object",
         "properties": {
             "picks": {"type": "array", "minItems": 1, "maxItems": limit,
-                      "items": {"type": "string", "enum": cids + [c.AI_DIRECTOR_NONE_CID]}},
+                      "items": {"type": "string", "enum": cids + [ai_tuning.AI_DIRECTOR_NONE_CID]}},
             "reason": {"type": "string"},
             "messages": {"type": "object", "additionalProperties": False,
                          "properties": {cid: {"type": "string"} for cid in cids}},
@@ -240,7 +241,7 @@ def validate(reply, candidates, limit):
 
 
 def _declined(picks):
-    return any(str(raw).strip() == c.AI_DIRECTOR_NONE_CID for raw in picks)
+    return any(str(raw).strip() == ai_tuning.AI_DIRECTOR_NONE_CID for raw in picks)
 
 
 def messages_from(reply, nation=None, nation_data=None, candidates=()):

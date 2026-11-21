@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 from data import queries
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.system32 import air_processor, combat_rules, movement_processor
@@ -201,7 +202,7 @@ class AirMissionPlanningTests(unittest.TestCase):
 
     def test_a_wounded_aircraft_on_a_safe_factory_repairs(self):
         self.base["buildings"] = ["Basic Factory"]
-        self.support["health"] = self.support["max_health"] * c.AI_REPAIR_HEALTH_FRACTION / 2
+        self.support["health"] = self.support["max_health"] * ai_tuning.AI_REPAIR_HEALTH_FRACTION / 2
         for resource in ("materials", "manpower", "fuel"):
             self.game.nation_data["A"][resource] = 10 ** 6
         self.strike_only(self.support)
@@ -210,7 +211,7 @@ class AirMissionPlanningTests(unittest.TestCase):
     def test_a_wounded_aircraft_elsewhere_flies_to_a_factory_base(self):
         factory = tile(self.game, 3, 16)
         factory["buildings"] = ["Basic Factory"]
-        self.support["health"] = self.support["max_health"] * c.AI_REPAIR_HEALTH_FRACTION / 2
+        self.support["health"] = self.support["max_health"] * ai_tuning.AI_REPAIR_HEALTH_FRACTION / 2
         self.strike_only(self.support)
         self.assertEqual(self.support["order"]["type"], "AIR_REPOSITION")
         self.assertEqual(self.support["order"]["target_id"], factory["id"])

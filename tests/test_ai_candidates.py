@@ -11,6 +11,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_candidates as ac, ai_diplomacy, ai_world
 from tests.stub_map_screen import StubMapScreen
 
@@ -247,7 +248,7 @@ class LegalityTests(unittest.TestCase):
                 continue
             fresh = [i for i in (data.get("pending_diplomacy") or {}).values()
                      if isinstance(i, dict) and i.get("turns", 0) == 0]
-            self.assertLessEqual(len(fresh), c.AI_MAX_ACTIONS_PER_TURN, name)
+            self.assertLessEqual(len(fresh), ai_tuning.AI_MAX_ACTIONS_PER_TURN, name)
 
     def test_every_queued_action_is_one_the_pass_knows_how_to_send(self):
         game = StubMapScreen(["A", "B", "C"], human_players=[])

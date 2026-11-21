@@ -6,6 +6,7 @@ from unittest import mock
 
 from data import queries
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai.ai_construction import _apply_coring_priority
 from tests.stub_map_screen import map_double, sample_map_screen
@@ -19,7 +20,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
                          "is_coastal": True, "building_queue": [], "units": []}
         self.world = map_double(scenario_settings=self.settings,
                                      map_data={1: self.province},
-                                     nation_data={"A": {"manpower": c.AI_SURPLUS_MANPOWER_FOR_CORING * 100}},
+                                     nation_data={"A": {"manpower": ai_tuning.AI_SURPLUS_MANPOWER_FOR_CORING * 100}},
                                      id_to_province={1: self.province})
 
     def test_defaults_and_malformed_override(self):

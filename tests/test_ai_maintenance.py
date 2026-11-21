@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from tests.stub_map_screen import fill_state_defaults
 from map_logic.ai import ai_movement
 
@@ -123,7 +124,7 @@ class RepairOnTheSpotTests(unittest.TestCase):
 
     def test_the_on_site_bar_is_looser_than_the_one_for_marching(self):
         """Sitting on the factory already, the turn is the whole cost."""
-        health = int(1000 * (c.AI_REPAIR_HEALTH_FRACTION + c.AI_REPAIR_ON_SITE_FRACTION) / 2)
+        health = int(1000 * (ai_tuning.AI_REPAIR_HEALTH_FRACTION + ai_tuning.AI_REPAIR_ON_SITE_FRACTION) / 2)
         self.assertEqual(self.repair(health)["order"]["type"], "REPAIR")
 
     def test_a_nearly_healthy_unit_is_left_alone(self):
@@ -156,7 +157,7 @@ class TheWalkHomeTests(unittest.TestCase):
 
     def test_a_unit_only_mildly_hurt_does_not(self):
         """The march costs turns, so it takes the harder of the two bars."""
-        hurt, provs = self.setup(health=int(1000 * c.AI_REPAIR_HEALTH_FRACTION) + 50)
+        hurt, provs = self.setup(health=int(1000 * ai_tuning.AI_REPAIR_HEALTH_FRACTION) + 50)
         run(Screen(provs), provs, [(hurt, provs[0])])
         self.assertIsNone(hurt.get("repair_trip"))
 
@@ -254,7 +255,7 @@ class NotAtTheCostOfTheFrontTests(unittest.TestCase):
                  province(3, neighbors=[2], industry=True)]
         run(Screen(provs), provs, [(u, front) for u in hurt])
         walking = [u for u in hurt if u.get("repair_trip") is not None]
-        self.assertEqual(len(walking), max(1, int(len(hurt) * c.AI_MAX_REPAIR_TRIP_SHARE)))
+        self.assertEqual(len(walking), max(1, int(len(hurt) * ai_tuning.AI_MAX_REPAIR_TRIP_SHARE)))
 
     def test_a_convoy_does_not_start_a_trip(self):
         """A convoy is a land unit mid-crossing; it finishes the crossing first."""

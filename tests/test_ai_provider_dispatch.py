@@ -17,6 +17,7 @@ from unittest import mock
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_evaluation, ai_handler, ai_prompts
 
@@ -444,7 +445,7 @@ class OllamaTests(NoNetworkTestCase):
     def test_the_cap_has_room_for_the_longest_reply(self):
         """A letter sitting: two letters and a notebook, at roughly four
         characters to a token."""
-        longest = c.AI_LETTERS_PER_CALL * c.AI_LETTER_LENGTH + c.AI_NOTEBOOK_LENGTH
+        longest = ai_tuning.AI_LETTERS_PER_CALL * ai_tuning.AI_LETTER_LENGTH + ai_tuning.AI_NOTEBOOK_LENGTH
         self.assertGreater(ai_handler.OLLAMA_MAX_REPLY_TOKENS, longest / 4 * 1.25)
 
     def test_every_request_keeps_the_model_loaded(self):

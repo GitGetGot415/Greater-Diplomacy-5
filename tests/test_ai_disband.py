@@ -15,6 +15,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from tests.stub_map_screen import fill_state_defaults
 from map_logic.ai import ai_construction, ai_unit_eval
 
@@ -423,7 +424,7 @@ class RunwayTests(unittest.TestCase):
 
     def test_an_empty_warehouse_still_is(self):
         drain = 100
-        stock = drain * (c.AI_DISBAND_RUNWAY_TURNS - 1)
+        stock = drain * (ai_tuning.AI_DISBAND_RUNWAY_TURNS - 1)
         self.assertEqual(sorted(self.short(stock)), sorted(self.DEFICITS))
 
     def test_a_resource_that_is_not_draining_has_all_the_runway_there_is(self):

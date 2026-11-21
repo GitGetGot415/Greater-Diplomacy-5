@@ -19,6 +19,7 @@ Stdlib and `data` only, so it imports under Pyodide.
 import hashlib
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data.number_utils import clamp_float
 
 #: All 0.0-1.0. Kept deliberately few: each one has to earn its keep by being
@@ -142,8 +143,8 @@ def describe(nation_data, nation_name, scenario_settings=None):
                             ("loyalty", "faithless", "loyal"),
                             ("trust", "suspicious", "trusting")):
         value = clamp_float(traits.get(name, _DEFAULT), 0.0, 1.0, _DEFAULT)
-        if value >= c.AI_TRAIT_NOTABLE_HIGH:
+        if value >= ai_tuning.AI_TRAIT_NOTABLE_HIGH:
             words.append(high)
-        elif value <= c.AI_TRAIT_NOTABLE_LOW:
+        elif value <= ai_tuning.AI_TRAIT_NOTABLE_LOW:
             words.append(low)
     return ", ".join(words) if words else "unremarkable"

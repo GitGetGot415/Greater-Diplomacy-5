@@ -71,10 +71,10 @@ class BilateralResponseIndicatorTests(unittest.TestCase):
             self.screen, "Target", "FACTION_INVITE"), "YES")
 
     def test_legal_join_request_keeps_the_ai_acceptance_prediction(self):
-        import data.constants as c
+        from map_logic.ai import ai_tuning
         self.screen.nation_data["Target"].update(
             faction="Pact", is_faction_leader=True,
-            temp_modifiers={"Sender": {"general": c.AI_RELATION_FACTION_THRESHOLD}})
+            temp_modifiers={"Sender": {"general": ai_tuning.AI_RELATION_FACTION_THRESHOLD}})
         self.assertEqual(bilateral_response_indicator(
             self.screen, "Target", "JOIN_FACTION_REQ"), "YES")
 

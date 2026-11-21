@@ -13,7 +13,7 @@ import threading
 import unittest
 
 
-import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import (ai_candidates as ac, ai_diplomacy, ai_director,
                           ai_evaluation, ai_handler, ai_settings, ai_world)
 from tests.stub_map_screen import StubMapScreen
@@ -93,7 +93,7 @@ class ValidationTests(NoNetworkTestCase):
 
     def test_declining_to_act_is_a_real_answer(self):
         """Otherwise the fallback overrides it and a leader can never sit still."""
-        self.assertEqual(self.choose({"picks": [c.AI_DIRECTOR_NONE_CID]}), [])
+        self.assertEqual(self.choose({"picks": [ai_tuning.AI_DIRECTOR_NONE_CID]}), [])
 
     def test_a_json_string_reply_is_parsed(self):
         chosen, messages = ai_director.parse('{"picks": [1], "messages": {"1": "hello"}}',
@@ -215,7 +215,7 @@ class ValidationTests(NoNetworkTestCase):
 
     def test_what_an_option_does_has_no_pronoun_for_its_recipient(self):
         """The model copied "cross their territory" into a message to France."""
-        for action, text in c.AI_ACTION_EFFECTS.items():
+        for action, text in ai_tuning.AI_ACTION_EFFECTS.items():
             for pronoun in ("them", "their", "they"):
                 self.assertNotRegex(text, rf"\b{pronoun}\b", action)
 
@@ -261,7 +261,7 @@ class ValidationTests(NoNetworkTestCase):
         _system, user = ai_director.build_prompt(None, "A", self.cands, 2)
         for cand in self.cands:
             self.assertIn(f"[{cand.cid}]", user)
-        self.assertIn(c.AI_DIRECTOR_NONE_CID, user)
+        self.assertIn(ai_tuning.AI_DIRECTOR_NONE_CID, user)
 
     def test_the_schema_allows_only_the_menu(self):
         """Ollama enforces this schema, so a pick outside the menu cannot be written."""
@@ -269,7 +269,7 @@ class ValidationTests(NoNetworkTestCase):
         schema = ai_director.reply_schema(self.cands, 2)
         picks = schema["properties"]["picks"]
         self.assertEqual(picks["items"]["enum"],
-                         [cand.cid for cand in self.cands] + [c.AI_DIRECTOR_NONE_CID])
+                         [cand.cid for cand in self.cands] + [ai_tuning.AI_DIRECTOR_NONE_CID])
         for cid in picks["items"]["enum"]:
             self.assertIn(f"[{cid}]", user)
         self.assertEqual(picks["maxItems"], 2)
@@ -339,7 +339,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             prompts.append(user)
-            return {"picks": [c.AI_DIRECTOR_NONE_CID]}
+            return {"picks": [ai_tuning.AI_DIRECTOR_NONE_CID]}
 
         self.patch(ai_handler, "_run_provider", fake)
         game = self.make_game()
@@ -357,7 +357,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             asked.append((user, schema))
-            return {"picks": [c.AI_DIRECTOR_NONE_CID]}
+            return {"picks": [ai_tuning.AI_DIRECTOR_NONE_CID]}
 
         self.patch(ai_handler, "_run_provider", fake)
         game = self.make_game()
@@ -366,7 +366,7 @@ class EndToEndTests(NoNetworkTestCase):
         self.assertTrue(asked, "the director never consulted the model")
         for user, schema in asked:
             enum = schema["properties"]["picks"]["items"]["enum"]
-            self.assertEqual(enum[-1], c.AI_DIRECTOR_NONE_CID)
+            self.assertEqual(enum[-1], ai_tuning.AI_DIRECTOR_NONE_CID)
             for cid in enum:
                 self.assertIn(f"[{cid}]", user)
 
@@ -376,7 +376,7 @@ class EndToEndTests(NoNetworkTestCase):
         change mid-read, so every prompt is built on the turn's own thread."""
         self.set_mode("CLAUDE", "ABSOLUTE")
         self.patch(ai_handler, "_run_provider",
-                   lambda *a, **k: {"picks": [c.AI_DIRECTOR_NONE_CID]})
+                   lambda *a, **k: {"picks": [ai_tuning.AI_DIRECTOR_NONE_CID]})
         threads = []
         build = ai_evaluation.get_world_context
 
@@ -418,15 +418,15 @@ class TierTests(NoNetworkTestCase):
     def test_a_per_country_setting_beats_the_global_one(self):
         world, game = self.world_for(["A", "B"])
         self.patch(ai_settings, "get_ai_immersion_level", lambda: "LITE")
-        game.nation_data["A"]["llm_tier"] = c.AI_TIER_ALWAYS
-        game.nation_data["B"]["llm_tier"] = c.AI_TIER_NEVER
+        game.nation_data["A"]["llm_tier"] = ai_tuning.AI_TIER_ALWAYS
+        game.nation_data["B"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.assertTrue(ai_evaluation.llm_enabled_for("A", world))
         self.assertFalse(ai_evaluation.llm_enabled_for("B", world))
 
     def test_never_wins_even_in_absolute(self):
         world, game = self.world_for(["A", "B"])
         self.patch(ai_settings, "get_ai_immersion_level", lambda: "ABSOLUTE")
-        game.nation_data["A"]["llm_tier"] = c.AI_TIER_NEVER
+        game.nation_data["A"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.assertFalse(ai_evaluation.llm_enabled_for("A", world))
 
     def test_absolute_covers_everyone(self):
@@ -443,7 +443,7 @@ class TierTests(NoNetworkTestCase):
         world, _game = self.world_for([f"N{i}" for i in range(30)])
         self.patch(ai_settings, "get_ai_immersion_level", lambda: "MAJOR")
         covered = [n for n in world.provs_by_owner if ai_evaluation.llm_enabled_for(n, world)]
-        self.assertLessEqual(len(covered), c.AI_MAJOR_POWER_MAX)
+        self.assertLessEqual(len(covered), ai_tuning.AI_MAJOR_POWER_MAX)
         self.assertGreaterEqual(len(covered), 1)
 
     def test_major_always_includes_whoever_the_player_is_fighting(self):

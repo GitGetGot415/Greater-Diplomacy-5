@@ -19,7 +19,7 @@ ai_opinion.peace_verdict itself (tests/test_ai_opinion.py covers that).
 import unittest
 from unittest.mock import patch
 
-import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_candidates, ai_diplomacy, ai_opinion, ai_world
 from map_logic.diplomacy import deal, deal_effects, war_actions
 from tests.stub_map_screen import StubMapScreen
@@ -44,7 +44,7 @@ class Overrun:
             war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
         self.game.set_war("AV", "FOE")
         for a, b in (("AV", "FOE"), ("FOE", "AV")):
-            self.game.nation_data[a]["war_durations"] = {b: c.MIN_TURNS_FOR_CEASEFIRE}
+            self.game.nation_data[a]["war_durations"] = {b: ai_tuning.MIN_TURNS_FOR_CEASEFIRE}
         for prov in self.taken:
             prov["owner"] = "FOE"
         self.world = ai_world.AIWorld(self.game.map_data, self.game.nation_data,
@@ -89,17 +89,17 @@ class ConcessionTests(Overrun, unittest.TestCase):
     """The more a loser wants out, the more of its lost land it gives up."""
 
     def test_just_past_the_threshold_it_concedes_nothing(self):
-        self.assertEqual(self.conceded(c.AI_PEACE_OFFER_THRESHOLD), set())
+        self.assertEqual(self.conceded(ai_tuning.AI_PEACE_OFFER_THRESHOLD), set())
 
     def test_at_full_desperation_it_concedes_everything_occupied(self):
         self.assertEqual(self.conceded(1.0), self.ids(self.taken))
 
     def test_in_between_it_gives_up_the_least_valuable_land_first(self):
-        halfway = (c.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
+        halfway = (ai_tuning.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
         self.assertEqual(self.conceded(halfway), self.ids(self.taken[:2]))
 
     def test_the_concession_never_shrinks_as_desperation_grows(self):
-        steps = [c.AI_PEACE_OFFER_THRESHOLD + (1.0 - c.AI_PEACE_OFFER_THRESHOLD) * k / 8
+        steps = [ai_tuning.AI_PEACE_OFFER_THRESHOLD + (1.0 - ai_tuning.AI_PEACE_OFFER_THRESHOLD) * k / 8
                  for k in range(9)]
         sizes = [len(self.conceded(appetite)) for appetite in steps]
         self.assertEqual(sizes, sorted(sizes))
@@ -110,7 +110,7 @@ class ConcessionTests(Overrun, unittest.TestCase):
     def test_signed_terms_leave_the_conceded_land_with_its_holder(self):
         """Through the same execution path a signed treaty takes. The rest of
         the occupied land goes home, as a white peace sends it."""
-        halfway = (c.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
+        halfway = (ai_tuning.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
         deal_effects.execute(self.game, ai_diplomacy._concession_terms(
             self.game, "AV", "FOE", halfway, 0.2))
         self.assertEqual([p["owner"] for p in self.taken], ["FOE", "FOE", "AV", "AV"])
@@ -133,7 +133,7 @@ class OwnJudgementTests(Overrun, unittest.TestCase):
 
     def test_a_loser_below_the_threshold_sends_nothing(self):
         with self.judge(lambda nation, terms: True):
-            self.assertEqual(self.losing_offers(appetite=c.AI_PEACE_OFFER_THRESHOLD - 0.01), [])
+            self.assertEqual(self.losing_offers(appetite=ai_tuning.AI_PEACE_OFFER_THRESHOLD - 0.01), [])
 
     def test_a_winner_offers_to_keep_what_it_holds(self):
         with self.judge(lambda nation, terms: True):

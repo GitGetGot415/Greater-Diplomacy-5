@@ -26,6 +26,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import deal_effects, war_actions
@@ -300,7 +301,7 @@ class RebalanceTests(unittest.TestCase):
         self.assertGreater(per_province, 10000)
 
     def test_cash_cannot_buy_off_most_of_a_territorial_demand(self):
-        self.assertLessEqual(c.AI_PEACE_CASH_OFFSET_CAP, 0.15)
+        self.assertLessEqual(ai_tuning.AI_PEACE_CASH_OFFSET_CAP, 0.15)
 
     def test_fuel_is_still_worth_more_than_materials(self):
         prices = c.DEAL_VALUE_RESOURCE_PRICES

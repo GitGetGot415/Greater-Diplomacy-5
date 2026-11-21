@@ -2,6 +2,7 @@
 from data.state_access import world_for, session_for
 import heapq
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
@@ -14,7 +15,7 @@ def _health_fraction(unit):
 
 def _is_wounded(unit):
     """Hurt badly enough to be sent to repair rather than into a fight."""
-    return _health_fraction(unit) < c.AI_REPAIR_HEALTH_FRACTION
+    return _health_fraction(unit) < ai_tuning.AI_REPAIR_HEALTH_FRACTION
 
 
 def _order_move(context, ai_name, prov, unit, path):
@@ -209,7 +210,7 @@ def _aircraft_repair_order(context, country, unit, base, threatened, candidates)
     can reach this turn. Returns the order, or None to fly missions instead.
     """
     world_state = world_for(context)
-    if _health_fraction(unit) >= c.AI_REPAIR_ON_SITE_FRACTION:
+    if _health_fraction(unit) >= ai_tuning.AI_REPAIR_ON_SITE_FRACTION:
         return None
     nation = world_state.nation_data[country]
     if (base.get("owner") == country and queries.has_industry(base)
@@ -362,7 +363,7 @@ def _assign_air_orders(context, country, units_info):
         # A wounded aircraft is not upgraded: an upgrade keeps the health
         # percentage, so it would spend the turn and still be wounded.
         if (base["id"] not in threatened and queries.has_industry(base)
-                and _health_fraction(unit) >= c.AI_REPAIR_ON_SITE_FRACTION):
+                and _health_fraction(unit) >= ai_tuning.AI_REPAIR_ON_SITE_FRACTION):
             target = queries.get_upgrade_target(unit["type"], research, unit_library, tech_tree)
             if target:
                 unit_actions.apply_action(context, country, base, unit, queries.canonical_unit_order(context, country, base, unit,
@@ -614,7 +615,7 @@ def _search_target_paths(start_id, target_ids, allowed_prov_ids, id_to_province,
     # Costs and the depth limit only depend on the unit, so resolve them once.
     speed = max(1.0, float(unit_speed))
     land_step = 1.0 if is_ship else 1.0 / speed
-    sea_step = 1.0 * c.AI_SEA_PATH_PENALTY_MULTIPLIER
+    sea_step = 1.0 * ai_tuning.AI_SEA_PATH_PENALTY_MULTIPLIER
     # DEPTH OF 10 SO AI CAN SEE FAR (Scaled by speed)
     depth_slack = 10.0 / speed
 
@@ -900,7 +901,7 @@ def _threatened_coasts(context, ai_name, prov_ids, enemies, friendly_nations):
         if not (enemy_shore or enemy_units):
             continue
         ours = warship_strength(friendly_units)
-        if ours > 0 and ours >= c.AI_COAST_SUPREMACY_RATIO * warship_strength(enemy_units):
+        if ours > 0 and ours >= ai_tuning.AI_COAST_SUPREMACY_RATIO * warship_strength(enemy_units):
             continue
         threatened.add(prov_id)
     return threatened
@@ -1039,7 +1040,7 @@ def _tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements=()):
     def loses(side):
         outcome = combat_forecast.estimated_combat_outcome(
             [side, theirs], nation_data, province=prov,
-            max_turns=c.AI_RETREAT_FORECAST_TURNS)
+            max_turns=ai_tuning.AI_RETREAT_FORECAST_TURNS)
         return outcome["winner_side"] == 1
 
     if not loses(ours):
@@ -1273,13 +1274,13 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
     # Apply massive negative weights so warships heavily prioritize covering active convoys
     for c_id in friendly_convoys:
         if c_id in naval_assignments:
-            naval_assignments[c_id] -= c.AI_CONVOY_ESCORT_WEIGHT
+            naval_assignments[c_id] -= ai_tuning.AI_CONVOY_ESCORT_WEIGHT
             if c_id in convoy_in_combat:
-                naval_assignments[c_id] -= c.AI_CONVOY_COMBAT_WEIGHT
+                naval_assignments[c_id] -= ai_tuning.AI_CONVOY_COMBAT_WEIGHT
             elif c_id in convoy_near_ship:
-                naval_assignments[c_id] -= c.AI_CONVOY_DANGER_SHIP_WEIGHT
+                naval_assignments[c_id] -= ai_tuning.AI_CONVOY_DANGER_SHIP_WEIGHT
             elif c_id in convoy_near_coast:
-                naval_assignments[c_id] -= c.AI_CONVOY_DANGER_COAST_WEIGHT
+                naval_assignments[c_id] -= ai_tuning.AI_CONVOY_DANGER_COAST_WEIGHT
 
     # How many units are really on each target, kept clear of the weights
     # below so _tile_pressure can ask whether a tile is full of fighters rather
@@ -1311,7 +1312,7 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
         if b_id in target_assignments:
             depth = _tile_depth(capacity, b_id)
             room = max(0, depth - target_stacks.get(b_id, 0)) / depth
-            target_assignments[b_id] -= c.AI_REINFORCE_COMBAT_WEIGHT * room
+            target_assignments[b_id] -= ai_tuning.AI_REINFORCE_COMBAT_WEIGHT * room
 
     # --- STRATEGIC WEIGHTING FIX ---
     # 1. Coasts are low priority. Inflate their count so units prefer land borders.
@@ -1325,15 +1326,15 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
     if at_war or unclaimed_targets:
         for p_id in peace_borders:
             if target_assignments.get(p_id, 0) >= 1:
-                target_assignments[p_id] += c.AI_REAR_GUARD_PENALTY
+                target_assignments[p_id] += ai_tuning.AI_REAR_GUARD_PENALTY
         for c_id in coastal_borders:
             if target_assignments.get(c_id, 0) >= 1:
-                target_assignments[c_id] += c.AI_REAR_GUARD_PENALTY
+                target_assignments[c_id] += ai_tuning.AI_REAR_GUARD_PENALTY
 
     # 3. Penalize expedition targets so the AI defends its homeland fronts FIRST.
     for e_id in expedition_targets:
         if e_id in target_assignments and e_id not in enemy_targets and e_id not in war_borders:
-            target_assignments[e_id] += c.AI_EXPEDITION_WEIGHT
+            target_assignments[e_id] += ai_tuning.AI_EXPEDITION_WEIGHT
 
     return {
         "target_destinations": target_destinations,
@@ -1636,7 +1637,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
         # carrying the rear-guard penalty, and anything already holding a full
         # front and relief, since neither has anything to gain from one more body.
         priority_targets = [t for t in targets
-                            if assignments.get(t, 0) < c.AI_REAR_GUARD_PENALTY
+                            if assignments.get(t, 0) < ai_tuning.AI_REAR_GUARD_PENALTY
                             and stacks.get(t, 0) < _tile_depth(target_capacity, t)]
         search_targets = priority_targets if priority_targets else targets
 
@@ -1809,11 +1810,11 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     Mirrors what a human player would click in the orders panel. Four triggers:
 
     - Wounded, and already standing somewhere it can be fixed: below
-      c.AI_REPAIR_ON_SITE_FRACTION health, on a haven (see _repair_havens). A
+      ai_tuning.AI_REPAIR_ON_SITE_FRACTION health, on a haven (see _repair_havens). A
       unit this hurt deals reduced damage now (see
       combat_rules.health_damage_multiplier), so it is worth less in the next
       fight than the same unit at full health -- fixing it is worth the turn.
-    - Wounded, and not: below the harder c.AI_REPAIR_HEALTH_FRACTION line it is
+    - Wounded, and not: below the harder ai_tuning.AI_REPAIR_HEALTH_FRACTION line it is
       worth the trip as well, so it is sent home. Land units march overland;
       warships sail to a friendly port with a factory (_port_havens).
     - Wounded, in a battle the rest of the stack can hold: it steps out to its
@@ -1885,7 +1886,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     # Units already on a trip count against the cap, so a nation cannot send
     # its whole army back one turn at a time. The cap scales with the army.
     trips = sum(1 for unit, _prov in units_info if unit.get("repair_trip") is not None)
-    trip_cap = max(1, int(len(units_info) * c.AI_MAX_REPAIR_TRIP_SHARE))
+    trip_cap = max(1, int(len(units_info) * ai_tuning.AI_MAX_REPAIR_TRIP_SHARE))
 
     remaining = []
     for unit, prov in units_info:
@@ -1901,7 +1902,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         # --- a trip already under way ---------------------------------------
         trip = unit.get("repair_trip")
         if trip is not None:
-            if _health_fraction(unit) >= c.AI_REPAIR_ON_SITE_FRACTION or trip not in havens:
+            if _health_fraction(unit) >= ai_tuning.AI_REPAIR_ON_SITE_FRACTION or trip not in havens:
                 # Healed on the way, or the destination was taken, overrun, or
                 # lost its industry while the unit was still walking to it.
                 unit.pop("repair_trip", None)
@@ -1935,7 +1936,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         # --- repair, here or at home -----------------------------------------
         wants_repair = False
         if curr_id in havens:
-            if _health_fraction(unit) < c.AI_REPAIR_ON_SITE_FRACTION:
+            if _health_fraction(unit) < ai_tuning.AI_REPAIR_ON_SITE_FRACTION:
                 wants_repair = True
                 if start_repair(unit):
                     continue

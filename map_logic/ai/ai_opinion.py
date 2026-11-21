@@ -20,6 +20,7 @@ import collections
 import math
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data.number_utils import clamp01
 from data import queries
 from map_logic.ai import ai_personality
@@ -52,7 +53,7 @@ def war_load(world, nation):
                if e in world.nation_data]
     if not enemies:
         return 0.0
-    return clamp01(len(enemies) / float(c.AI_WAR_LOAD_SATURATION))
+    return clamp01(len(enemies) / float(ai_tuning.AI_WAR_LOAD_SATURATION))
 
 
 def target_value(world, nation, target):
@@ -83,26 +84,26 @@ def war_desire(world, nation, target, scenario_settings=None):
     # with decent odds came out at 1.0 whatever it thought of the target -- and
     # in a full run that produced almost twice as many wars as the old boolean
     # it was supposed to be a more considered version of.
-    odds = (c.AI_WAR_BORDER_SHARE * _sigmoid(border_ratio,
+    odds = (ai_tuning.AI_WAR_BORDER_SHARE * _sigmoid(border_ratio,
                                              c.AI_WAR_STRENGTH_THRESHOLD * (0.7 + 0.6 * caution),
-                                             c.AI_ODDS_STEEPNESS)
-            + (1.0 - c.AI_WAR_BORDER_SHARE) * _sigmoid(global_ratio,
+                                             ai_tuning.AI_ODDS_STEEPNESS)
+            + (1.0 - ai_tuning.AI_WAR_BORDER_SHARE) * _sigmoid(global_ratio,
                                                       c.AI_GLOBAL_STRENGTH_THRESHOLD * (0.7 + 0.6 * caution),
-                                                      c.AI_ODDS_STEEPNESS))
+                                                      ai_tuning.AI_ODDS_STEEPNESS))
 
-    appetite = (c.AI_W_CLAIM * target_value(world, nation, target)
-                + c.AI_W_AGGRO * person.get("aggression", 0.5)
-                + c.AI_W_AMBITION * person.get("ambition", 0.5))
+    appetite = (ai_tuning.AI_W_CLAIM * target_value(world, nation, target)
+                + ai_tuning.AI_W_AGGRO * person.get("aggression", 0.5)
+                + ai_tuning.AI_W_AMBITION * person.get("ambition", 0.5))
 
-    core = c.AI_WAR_ODDS_SHARE * odds + (1.0 - c.AI_WAR_ODDS_SHARE) * appetite
+    core = ai_tuning.AI_WAR_ODDS_SHARE * odds + (1.0 - ai_tuning.AI_WAR_ODDS_SHARE) * appetite
 
     # Relations now suppress war, which they have never done. Measured from
     # neutral upward only: being disliked does not by itself make a nation
     # attack you, that is what aggression is for, but being genuinely friendly
     # holds it back.
     goodwill = clamp01(max(0.0, world.relation(nation, target)) / 200.0)
-    restraint = (c.AI_W_RELATION * goodwill
-                 + c.AI_W_OVEREXTENSION * war_load(world, nation))
+    restraint = (ai_tuning.AI_W_RELATION * goodwill
+                 + ai_tuning.AI_W_OVEREXTENSION * war_load(world, nation))
 
     # Declaring on a guaranteed country also declares on every guarantor. The
     # strongest promised response is enough to deter a weak attacker, while a
@@ -113,8 +114,8 @@ def war_desire(world, nation, target, scenario_settings=None):
         strongest_response = min(world.power_ratio(nation, guarantor)[1]
                                  for guarantor in guarantors)
         guarantee_risk = 1.0 - _sigmoid(strongest_response, 1.0,
-                                         c.AI_ODDS_STEEPNESS)
-        restraint += c.AI_GUARANTEE_RESTRAINT * (0.45 + 0.55 * guarantee_risk)
+                                         ai_tuning.AI_ODDS_STEEPNESS)
+        restraint += ai_tuning.AI_GUARANTEE_RESTRAINT * (0.45 + 0.55 * guarantee_risk)
 
     return clamp01(core - restraint)
 
@@ -141,12 +142,12 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     """
     person = traits(world, nation, scenario_settings)
     border_ratio, global_ratio = world.perceived_power_ratio(nation, enemy)
-    outgunned = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS)
+    outgunned = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, ai_tuning.AI_ODDS_STEEPNESS)
     occupied = war_score.between(_host(world), nation, enemy, world)["their_parts"]["occupation"]
-    losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(c.AI_W_PEACE_OCCUPIED * occupied))
+    losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(ai_tuning.AI_W_PEACE_OCCUPIED * occupied))
 
-    return clamp01(c.AI_PEACE_LOSING_SHARE * losing
-                    + (1.0 - c.AI_PEACE_LOSING_SHARE) * person.get("caution", 0.5))
+    return clamp01(ai_tuning.AI_PEACE_LOSING_SHARE * losing
+                    + (1.0 - ai_tuning.AI_PEACE_LOSING_SHARE) * person.get("caution", 0.5))
 
 
 #: What peace_verdict answers with. `slack` is how far past the line the offer
@@ -236,7 +237,7 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     # Stopping a war we have barely started is its own decision. This used to be
     # waived for anyone offering us something, which is precisely how a war two
     # turns old was settled for a single material.
-    if duration < c.MIN_TURNS_FOR_CEASEFIRE:
+    if duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
         return _verdict(False, _REFUSED_FLAT,
                         f"{{we}} have been at war {duration} "
                         f"{'turn' if duration == 1 else 'turns'}; "
@@ -255,7 +256,7 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     sweetener = book["got_land"] / worth
     cash = book["got_other"] / worth
     # Goods may soften a territorial demand but never buy one outright.
-    sweetener += min(cash, demand * c.AI_PEACE_CASH_OFFSET_CAP) if demand > 0 else cash
+    sweetener += min(cash, demand * ai_tuning.AI_PEACE_CASH_OFFSET_CAP) if demand > 0 else cash
 
     # The coalition's own demand here, not `demand` -- that is the worse of two
     # figures on two different scales, and pairing it with the coalition's
@@ -277,12 +278,12 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     scores = war_score.between(_host(world), nation, proposer, world, viewer=nation)
     occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
     appetite = peace_appetite(world, nation, proposer, scenario_settings)
-    willingness = (c.AI_PEACE_LEVERAGE_W * scores["theirs"]
-                   + c.AI_PEACE_APPETITE_W * appetite)
-    war_prize = c.AI_PEACE_PRIZE_W * scores["mine"]
+    willingness = (ai_tuning.AI_PEACE_LEVERAGE_W * scores["theirs"]
+                   + ai_tuning.AI_PEACE_APPETITE_W * appetite)
+    war_prize = ai_tuning.AI_PEACE_PRIZE_W * scores["mine"]
 
     caution = traits(world, nation, scenario_settings).get("caution", 0.5)
-    margin = c.AI_PEACE_MARGIN_BASE + c.AI_PEACE_MARGIN_CAUTION * caution
+    margin = ai_tuning.AI_PEACE_MARGIN_BASE + ai_tuning.AI_PEACE_MARGIN_CAUTION * caution
 
     slack = (willingness + sweetener) - (demand + war_prize + margin)
     return _verdict(slack >= 0, slack,
@@ -336,8 +337,8 @@ def _land_cap_breach(deal, nation, map_data, nation_data, net_demand):
     def over(subject, asked, whole_side):
         occupied = deal_mod.occupied_fraction(deal, subject, map_data, nation_data,
                                               whole_side=whole_side)
-        allowance = max(c.AI_PEACE_MIN_ALLOWANCE,
-                        min(1.0, occupied * c.AI_PEACE_LAND_ALLOWANCE))
+        allowance = max(ai_tuning.AI_PEACE_MIN_ALLOWANCE,
+                        min(1.0, occupied * ai_tuning.AI_PEACE_LAND_ALLOWANCE))
         return (asked, occupied) if asked > allowance else None
 
     worst = None
@@ -384,11 +385,11 @@ def accepts_peace(world, nation, proposer, agreement, scenario_settings=None):
 
 def verdict_band(slack):
     """(filled dots, out of, sentence) for a slack figure. See AI_VERDICT_BANDS."""
-    total = len(c.AI_VERDICT_BANDS)
-    for threshold, dots, text in c.AI_VERDICT_BANDS:
+    total = len(ai_tuning.AI_VERDICT_BANDS)
+    for threshold, dots, text in ai_tuning.AI_VERDICT_BANDS:
         if slack >= threshold:
             return dots, total, text
-    _threshold, dots, text = c.AI_VERDICT_BANDS[-1]
+    _threshold, dots, text = ai_tuning.AI_VERDICT_BANDS[-1]
     return dots, total, text
 
 
@@ -422,7 +423,7 @@ def ratifies(world, member, deal, map_data, scenario_settings=None):
     appetite = max((peace_appetite(world, member, enemy, scenario_settings)
                     for enemy in enemies), default=0.0)
 
-    return appetite >= loss * c.AI_RATIFY_STRICTNESS
+    return appetite >= loss * ai_tuning.AI_RATIFY_STRICTNESS
 
 
 def _goods_flow(world, nation, sender, receive, give, prices, scenario_settings=None):
@@ -439,7 +440,7 @@ def _goods_flow(world, nation, sender, receive, give, prices, scenario_settings=
     lost = sum(prices.get(res, 1.0) * float(amount) for res, amount in give.items())
 
     goodwill = (world.relation(nation, sender) / 200.0) * person.get("trust", 0.5)
-    return gained, lost * (1.0 - c.AI_TRADE_GOODWILL_DISCOUNT * goodwill)
+    return gained, lost * (1.0 - ai_tuning.AI_TRADE_GOODWILL_DISCOUNT * goodwill)
 
 
 def trade_appetite(world, nation, sender, receive, give, prices, scenario_settings=None):
@@ -595,7 +596,7 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
 
     # Scaled against the size of the exchange, so "a hundred materials to the
     # good" reads as decisive on a small trade and marginal on a huge one.
-    scale = max(1.0, abs(net) + prices.get("materials", 1.0) * c.AI_TRADE_MIN_AMOUNT)
+    scale = max(1.0, abs(net) + prices.get("materials", 1.0) * ai_tuning.AI_TRADE_MIN_AMOUNT)
     slack = max(-1.0, min(1.0, net / scale))
 
     return _verdict(net > 0, slack, _trade_reason(gained, lost, home_ground))
@@ -610,7 +611,7 @@ def alliance_appetite(world, nation, other, scenario_settings=None):
     theirs = set(queries.get_enemies(other, world.nation_data))
     shared = 1.0 if (mine & theirs) else 0.0
 
-    return clamp01(c.AI_W_ALLY_RELATION * relation * (0.5 + person.get("trust", 0.5))
-                    + c.AI_W_ALLY_SHARED_ENEMY * shared
-                    + c.AI_W_ALLY_WEAKNESS * (1.0 - clamp01(
+    return clamp01(ai_tuning.AI_W_ALLY_RELATION * relation * (0.5 + person.get("trust", 0.5))
+                    + ai_tuning.AI_W_ALLY_SHARED_ENEMY * shared
+                    + ai_tuning.AI_W_ALLY_WEAKNESS * (1.0 - clamp01(
                         world.power_ratio(nation, other)[1])))

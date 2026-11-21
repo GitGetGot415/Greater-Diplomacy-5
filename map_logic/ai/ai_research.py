@@ -1,5 +1,6 @@
 from data.state_access import world_for, session_for
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_tech_eval, ai_unit_eval, ai_world
 
@@ -33,8 +34,8 @@ def process_ai_research(context, *, countries=None):
             # Judge the AI rate against income before this turn's funding, so the
             # current rate cannot switch funding off and back on every other turn.
             unfunded = queries.get_net_materials_income(econ) + queries.get_research_funding_spent(econ["breakdown"])
-            has_surplus = unfunded - queries.get_research_funding_cost(c.AI_RESEARCH_FUNDING_RATE, econ["gross_materials"]) > 0
-            data["research_funding_slider"] = c.AI_RESEARCH_FUNDING_RATE if has_reserve and has_surplus else c.DEFAULT_RESEARCH_FUNDING_RATE
+            has_surplus = unfunded - queries.get_research_funding_cost(ai_tuning.AI_RESEARCH_FUNDING_RATE, econ["gross_materials"]) > 0
+            data["research_funding_slider"] = ai_tuning.AI_RESEARCH_FUNDING_RATE if has_reserve and has_surplus else c.DEFAULT_RESEARCH_FUNDING_RATE
 
         queue = data.setdefault("research_queue", [])
         
@@ -102,7 +103,7 @@ def _fill_queue(queue, ranked, research, unit_library, tech_tree, *, research_in
     grows. Which military tech that is still comes from the valuation, so a
     nation facing armour and a nation facing militia make different choices.
     """
-    reserved = c.AI_RESEARCH_MILITARY_SLOTS
+    reserved = ai_tuning.AI_RESEARCH_MILITARY_SLOTS
     index = (queries.get_unit_research_index(unit_library)
              if research_index is None else research_index)
     military_taken = any(

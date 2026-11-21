@@ -23,6 +23,7 @@ from unittest.mock import Mock, patch
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 import pygame
 from data import queries
 from map_logic import politics
@@ -930,7 +931,7 @@ class AIPoliticsTests(unittest.TestCase):
         self.assertEqual(politics.drift(world.nation_data, "A"), 1)
 
         # A factory cannot help the remaining fuel deficit in this economy.
-        world.nation_data["A"]["materials"] = 20 * c.AI_DISBAND_RUNWAY_TURNS
+        world.nation_data["A"]["materials"] = 20 * ai_tuning.AI_DISBAND_RUNWAY_TURNS
         self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), 1)
         self.assertEqual(politics.economic_drift(world.nation_data, "A"), 1)
 

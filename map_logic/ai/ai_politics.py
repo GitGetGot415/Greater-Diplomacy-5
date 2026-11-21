@@ -25,6 +25,7 @@ Stdlib, `data` and the sibling ai modules only, so it imports under Pyodide.
 """
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from data.number_utils import clamp01
 from map_logic import politics
@@ -43,10 +44,10 @@ def _danger(world, nation, enemies):
     for enemy in enemies:
         border_ratio, global_ratio = world.power_ratio(nation, enemy)
         losing = max(losing, 1.0 - ai_opinion._sigmoid(
-            (border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS))
+            (border_ratio + global_ratio) / 2.0, 1.0, ai_tuning.AI_ODDS_STEEPNESS))
 
-    return clamp01(c.POLITICS_AI_W_LOSING * losing
-                   + c.POLITICS_AI_W_LOAD * ai_opinion.war_load(world, nation))
+    return clamp01(ai_tuning.POLITICS_AI_W_LOSING * losing
+                   + ai_tuning.POLITICS_AI_W_LOAD * ai_opinion.war_load(world, nation))
 
 
 def _menace(world, nation, enemies):
@@ -64,7 +65,7 @@ def _menace(world, nation, enemies):
         if other not in world.nation_data or other in c.UNPLAYABLE_NATIONS:
             continue
         _, global_ratio = world.power_ratio(nation, other)
-        worst = max(worst, 1.0 - ai_opinion._sigmoid(global_ratio, 1.0, c.AI_ODDS_STEEPNESS))
+        worst = max(worst, 1.0 - ai_opinion._sigmoid(global_ratio, 1.0, ai_tuning.AI_ODDS_STEEPNESS))
     return clamp01(worst)
 
 
@@ -74,17 +75,17 @@ def desired_value(world, nation, scenario_settings=None):
                   if e in world.nation_data)
 
     if enemies:
-        base = c.POLITICS_AI_WAR_BASE + c.POLITICS_AI_WAR_DANGER * _danger(world, nation, enemies)
+        base = ai_tuning.POLITICS_AI_WAR_BASE + ai_tuning.POLITICS_AI_WAR_DANGER * _danger(world, nation, enemies)
     else:
         safety = 1.0 - _menace(world, nation, enemies)
-        base = c.POLITICS_AI_PEACE_BASE - c.POLITICS_AI_PEACE_SAFETY * safety
+        base = ai_tuning.POLITICS_AI_PEACE_BASE - ai_tuning.POLITICS_AI_PEACE_SAFETY * safety
 
     # Temperament, centred so an average nation contributes nothing. A cautious
     # country reaches for the emergency powers sooner; so does a belligerent
     # one, for the opposite reason.
     person = ai_personality.get(world.nation_data, nation, scenario_settings)
-    base += c.POLITICS_AI_W_CAUTION * (person.get("caution", 0.5) - 0.5)
-    base += c.POLITICS_AI_W_AGGRO * (person.get("aggression", 0.5) - 0.5)
+    base += ai_tuning.POLITICS_AI_W_CAUTION * (person.get("caution", 0.5) - 0.5)
+    base += ai_tuning.POLITICS_AI_W_AGGRO * (person.get("aggression", 0.5) - 0.5)
 
     return politics.clamp((2.0 * clamp01(base) - 1.0) * c.POLITICS_MAX)
 
@@ -115,7 +116,7 @@ def desired_economic_value(world, nation):
     for resource in ("materials", "fuel"):
         drain = economy["upkeep"][resource] - economy["total_inc"][resource]
         if (economy["breakdown"][resource]["buildings"] > 0 and drain > 0
-                and country.get(resource, 0) < drain * c.AI_DISBAND_RUNWAY_TURNS):
+                and country.get(resource, 0) < drain * ai_tuning.AI_DISBAND_RUNWAY_TURNS):
             # Leave one step of research progress during a supply emergency.
             return c.POLITICS_MIN + c.POLITICS_STEP
     return c.POLITICS_MAX

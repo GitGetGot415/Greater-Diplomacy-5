@@ -20,6 +20,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import deal
@@ -147,7 +148,7 @@ class FactionLeaderTests(VerdictTestCase):
 
     def test_good_relations_get_you_in(self):
         self.nation_data["Avaria"]["temp_modifiers"] = {
-            "Borland": {"general": c.AI_RELATION_FACTION_THRESHOLD}}
+            "Borland": {"general": ai_tuning.AI_RELATION_FACTION_THRESHOLD}}
         self.assertTrue(self.accepts("JOIN_FACTION_REQ"))
 
     def test_poor_relations_do_not(self):
@@ -164,7 +165,7 @@ class FactionLeaderTests(VerdictTestCase):
     def test_the_threshold_is_exactly_inclusive(self):
         for offset, expected in ((0, True), (-1, False)):
             self.nation_data["Avaria"]["temp_modifiers"] = {
-                "Borland": {"general": c.AI_RELATION_FACTION_THRESHOLD + offset}}
+                "Borland": {"general": ai_tuning.AI_RELATION_FACTION_THRESHOLD + offset}}
             self.assertEqual(self.accepts("JOIN_FACTION_REQ"), expected, offset)
 
     def test_a_nation_that_is_not_the_leader_does_not_decide(self):
@@ -177,7 +178,7 @@ class FactionLeaderTests(VerdictTestCase):
         that the tooltip counts against the relationship are invisible to the one
         decision relations feed. Phase 3 routes this through AIWorld instead."""
         self.nation_data["Avaria"]["temp_modifiers"] = {
-            "Borland": {"general": c.AI_RELATION_FACTION_THRESHOLD}}
+            "Borland": {"general": ai_tuning.AI_RELATION_FACTION_THRESHOLD}}
         self.map_data["2"]["cores"].append("Avaria")     # Avaria claims Borland's tile
         id_to_province = {p["id"]: p for p in self.map_data.values()}
 
@@ -306,7 +307,7 @@ class PeaceTests(PeaceTestCase):
         self.assertFalse(self.accepts("CEASEFIRE", custom_msg=c.PEACE_WHITE_PEACE))
 
     def test_a_ceasefire_is_taken_once_the_war_has_run_and_it_cannot_win(self):
-        self.nation_data["Avaria"]["war_durations"] = {"Borland": c.MIN_TURNS_FOR_CEASEFIRE + 1}
+        self.nation_data["Avaria"]["war_durations"] = {"Borland": ai_tuning.MIN_TURNS_FOR_CEASEFIRE + 1}
         self.assertTrue(self.accepts("CEASEFIRE", custom_msg=c.PEACE_WHITE_PEACE))
 
     def test_prose_no_longer_changes_the_verdict(self):

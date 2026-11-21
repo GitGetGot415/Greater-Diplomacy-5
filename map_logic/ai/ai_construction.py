@@ -2,6 +2,7 @@ from data.state_access import world_for, session_for
 from map_logic.actions import production_actions
 import random
 import data.constants as c
+from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
 from map_logic.ai import ai_unit_eval, ai_world
@@ -61,7 +62,7 @@ def _short_of_runway(deficits, upkeep, income, stockpiles):
         drain = upkeep.get(res, 0) - income.get(res, 0)
         if drain <= 0:
             continue
-        if stockpiles.get(res, 0) / drain < c.AI_DISBAND_RUNWAY_TURNS:
+        if stockpiles.get(res, 0) / drain < ai_tuning.AI_DISBAND_RUNWAY_TURNS:
             short.append(stat)
     return short
 
@@ -118,7 +119,7 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     so the AI doesn't bankrupt itself on units that haven't spawned yet) and
     which resources are in deficit."""
     at_war = len(data.get("at_war_with", [])) > 0
-    war_mult = c.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
+    war_mult = ai_tuning.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
 
     target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
     target_mat = c.AI_UPKEEP_TARGETS["materials"] * war_mult
@@ -190,7 +191,7 @@ def _conversion_pressure(data, state, conversion):
     `conversion` names an AI_RESOURCE_CONVERSIONS entry. "short" means the product's
     upkeep ratio is over target while the source's is under, with a source stock to spare.
     """
-    rule = c.AI_RESOURCE_CONVERSIONS[conversion]
+    rule = ai_tuning.AI_RESOURCE_CONVERSIONS[conversion]
     source, product = _RATIO_KEYS[rule["source"]], _RATIO_KEYS[rule["product"]]
     stock = data.get(rule["source"], 0)
     if (state["ratio_" + product] > state["target_" + product] and state["ratio_" + source] < state["target_" + source]
@@ -556,9 +557,9 @@ def naval_need(land_border_count, sea_border_count):
     """
     if sea_border_count <= 0:
         return 0.0
-    if sea_border_count < c.AI_MIN_COAST_FOR_NAVY and land_border_count > 0:
+    if sea_border_count < ai_tuning.AI_MIN_COAST_FOR_NAVY and land_border_count > 0:
         return 0.0
-    return float(sea_border_count) * c.AI_NAVY_PER_COAST_TILE
+    return float(sea_border_count) * ai_tuning.AI_NAVY_PER_COAST_TILE
 
 
 def _recruit_sites(context, ai_name, my_provs):
@@ -644,7 +645,7 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
         return
 
     best_overall = max((v.score for v in values.values()), default=0.0)
-    floor = best_overall * c.AI_MARGINAL_FLOOR
+    floor = best_overall * ai_tuning.AI_MARGINAL_FLOOR
 
     sites = _recruit_sites(context, ai_name, my_provs)
     deployable = {name: _sites_for(sites, name) for name in values}
@@ -699,8 +700,8 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
                    if not (out_of_fuel and v.stats.get("cost_fuel", 0) > 0)}
         best_any, best_any_marginal = ai_unit_eval.pick_next(savable, have, targets)
         if (best_any and best_any_marginal >= floor
-                and (not pick or marginal < best_any_marginal * c.AI_SAVE_UP_THRESHOLD)
-                and _affordable_within(best_any.stats, data, state["econ"], c.AI_SAVE_UP_TURNS)):
+                and (not pick or marginal < best_any_marginal * ai_tuning.AI_SAVE_UP_THRESHOLD)
+                and _affordable_within(best_any.stats, data, state["econ"], ai_tuning.AI_SAVE_UP_TURNS)):
             break
 
         if not pick or marginal < floor:
@@ -739,7 +740,7 @@ def _apply_coring_priority(context, ai_name, data, my_provs):
     world_state = world_for(context)
     # Nothing to core when cores are disabled -- every tile already counts
     # as cored, so skip straight past this without spending resources.
-    surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
+    surplus_manpower = ai_tuning.AI_SURPLUS_MANPOWER_FOR_CORING
     if not queries.is_administrative_action_enabled("CORE", world_state.scenario_settings) or data.get("manpower", 0) <= surplus_manpower:
         return
 
@@ -769,7 +770,7 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
     of materials, invests it back into the next industry or recruitment
     building tier it has available and a free build slot for, one per turn."""
     world_state = world_for(context)
-    if data.get("materials", 0) <= c.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
+    if data.get("materials", 0) <= ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
         return
 
     res_levels = data.get("research", {})

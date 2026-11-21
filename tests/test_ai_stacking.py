@@ -22,6 +22,7 @@ import unittest
 
 
 import data.constants as c
+from map_logic.ai import ai_tuning
 from map_logic.ai import ai_movement
 
 
@@ -53,7 +54,7 @@ class TilePressureTests(WidthTestCase):
         reach a slot before the tile resolves, and absorbs nothing waiting."""
         cap = {1: 5, 2: 5}
         full_battle = ai_movement._tile_pressure(
-            {1: -c.AI_REINFORCE_COMBAT_WEIGHT}, {1: self.saturates_at(5)}, 1, cap)
+            {1: -ai_tuning.AI_REINFORCE_COMBAT_WEIGHT}, {1: self.saturates_at(5)}, 1, cap)
         empty_border = ai_movement._tile_pressure({2: 0}, {2: 0}, 2, cap)
         self.assertLess(empty_border, full_battle)
 
@@ -61,7 +62,7 @@ class TilePressureTests(WidthTestCase):
         """The saturation tier is added in front of the old ordering, not
         instead of it, so a battle still outranks a quiet border."""
         cap = {1: 5, 2: 5}
-        battle = ai_movement._tile_pressure({1: -c.AI_REINFORCE_COMBAT_WEIGHT}, {1: 3}, 1, cap)
+        battle = ai_movement._tile_pressure({1: -ai_tuning.AI_REINFORCE_COMBAT_WEIGHT}, {1: 3}, 1, cap)
         border = ai_movement._tile_pressure({2: 0}, {2: 0}, 2, cap)
         self.assertLess(battle, border)
 
@@ -106,7 +107,7 @@ class BuilderTests(WidthTestCase):
         prov = {"id": 1}
         built = self.build([({}, prov)], peace_borders={1}, coastal_borders=set())
         self.assertEqual(built["target_stacks"][1], 1)
-        self.assertGreaterEqual(built["target_assignments"][1], c.AI_REAR_GUARD_PENALTY)
+        self.assertGreaterEqual(built["target_assignments"][1], ai_tuning.AI_REAR_GUARD_PENALTY)
 
     def pull_on_battle(self, units_present, slots):
         """How badly a battle tile holding `units_present` wants one more."""
@@ -117,7 +118,7 @@ class BuilderTests(WidthTestCase):
 
     def test_an_empty_front_pulls_as_hard_as_it_ever_did(self):
         """The scaling changes how the pull fades, not how strong it starts."""
-        self.assertAlmostEqual(self.pull_on_battle(0, 5), -c.AI_REINFORCE_COMBAT_WEIGHT)
+        self.assertAlmostEqual(self.pull_on_battle(0, 5), -ai_tuning.AI_REINFORCE_COMBAT_WEIGHT)
 
     def test_the_pull_fades_as_the_front_fills(self):
         self.assertLess(self.pull_on_battle(1, 5), self.pull_on_battle(4, 5))
@@ -371,7 +372,7 @@ class NavalTests(WidthTestCase):
         blind count."""
         cap = {1: 3, 2: 3}
         full = ai_movement._tile_pressure(
-            {1: -c.AI_CONVOY_ESCORT_WEIGHT}, {1: self.saturates_at(3)}, 1, cap)
+            {1: -ai_tuning.AI_CONVOY_ESCORT_WEIGHT}, {1: self.saturates_at(3)}, 1, cap)
         empty = ai_movement._tile_pressure({2: 0}, {2: 0}, 2, cap)
         self.assertLess(empty, full)
 
