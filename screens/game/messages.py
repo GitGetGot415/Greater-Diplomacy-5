@@ -930,7 +930,7 @@ class Messages_Screen(Screen):
         if offer["action"] == peace_scope.CHOICE_ACTION:
             return 0  # The active choice has its own prompt. Archived outcomes share the action.
         if (msg.get("type") != "DIPLOMACY" or msg.get("action") != offer["action"]
-                or diplomacy_messages.is_forwarded(msg)):
+                or diplomacy_messages.is_forwarded(msg) or diplomacy_messages.is_system_notice(msg)):
             return 0
         if not offer["request_id"]:
             return 1

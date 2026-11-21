@@ -271,8 +271,24 @@ def legacy_shared_outcome(msg):
 
 def is_system_notice(msg):
     """Recognize neutral outcomes independently of whose conversation stores them."""
-    return not is_forwarded(msg) and (msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION)
-                                     or bool(legacy_shared_outcome(msg)))
+    if is_forwarded(msg):
+        return False
+    if msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION) or legacy_shared_outcome(msg):
+        return True
+    # Older automatic declines used the original offer action for both copies.
+    return _is_legacy_auto_decline(msg)
+
+
+def _is_legacy_auto_decline(msg):
+    content = msg.get("content")
+    if (msg.get("type") != "DIPLOMACY" or msg.get("action") not in c.BILATERAL_ACTIONS
+            or msg.get("llm") or not isinstance(content, str)):
+        return False
+    if content == _LEGACY_AUTO_DECLINE_TEXT:
+        return True
+    offer, separator, reason = content.rpartition(" was automatically declined because ")
+    recipient = reason.removesuffix(" didn't reply.")
+    return bool(separator and recipient and recipient != reason and offer.endswith(f"'s proposal to {recipient}"))
 
 
 def system_notice_identity(msg, viewer):
@@ -452,12 +468,14 @@ def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None
     return incoming
 
 
-def send_system_notice(context, first, second, content, action):
+def send_system_notice(context, first, second, content, action, *, related_action=None):
     """Put a shared outcome in both inboxes with the counterpart as the thread key."""
     world = world_for(context)
     entry = {"content": content, "type": "DIPLOMACY", "action": action, "system_notice": True,
              "read": False, "spectator_read": False, "date": world.time_manager.get_date_string(),
              "message_id": uuid.uuid4().hex}
+    if related_action is not None:
+        entry["related_action"] = related_action
     _deliver(world.nation_data, first, dict(entry, sender=second))
     _deliver(world.nation_data, second, dict(entry, sender=first))
 
@@ -574,6 +592,8 @@ def message_category(msg):
     if not isinstance(msg, dict):
         return ""
     action = msg.get("action")
+    if action == SHARED_OUTCOME_ACTION:
+        action = msg.get("related_action", action)
     if action:
         return c.MESSAGE_CATEGORIES.get(action, "DIPLOMACY")
     return msg.get("type", "TEXT")

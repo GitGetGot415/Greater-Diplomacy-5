@@ -1407,7 +1407,7 @@ def _withdraw_offer(context, sender, target, action, info):
 def _auto_decline(context, sender, target, action, info):
     _withdraw_offer(context, sender, target, action, info)
     text = automatic_decline_text(sender, target, world_for(context).nation_data)
-    send_message(context, target, sender, text, "DIPLOMACY", extra={"action": action})
+    send_system_notice(context, sender, target, text, SHARED_OUTCOME_ACTION, related_action=action)
     _decline_cooldown(context, sender, target, action)
 
 

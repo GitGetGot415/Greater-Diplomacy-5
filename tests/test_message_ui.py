@@ -524,15 +524,26 @@ class ConversationInteractionTests(unittest.TestCase):
         screen.select_recipient("A")
 
         notices = [row for row in screen.processed_messages if row["msg_data"].get("is_system")]
-        self.assertEqual(len(notices), 1)
-        self.assertIsNone(notices[0]["forward_button"])
+        self.assertEqual(len(notices), 2)
+        self.assertTrue(all(row["forward_button"] is None for row in notices))
         pending = dm.queue_forwarded_message(screen.map_screen.nation_data, "P", "B", "P", old_notice)
         self.assertEqual(pending, "This message cannot be forwarded.")
         with self.assertRaises(ValueError):
             dm.canonical_forward_fields(screen.map_screen.nation_data, "P", {"forwarded_message": old_notice})
         text = dm.automatic_decline_text("A", "P", screen.map_screen.nation_data)
-        self.assertTrue(any(row["msg_data"]["content"] == text and not row["msg_data"].get("is_system")
-                            for row in screen.processed_messages))
+        self.assertTrue(any(row["msg_data"]["content"] == text for row in notices))
+
+    def test_older_named_auto_decline_does_not_get_the_current_offer_controls(self):
+        screen = self.make_screen()
+        data = screen.map_screen.nation_data
+        text = dm.automatic_decline_text("P", "A", data)
+        data["P"]["inbox"].append({"sender": "A", "type": "DIPLOMACY", "action": "TRADE", "content": text})
+        dm.set_pending(data, "A", "P", "TRADE", turns=1)
+        screen.select_recipient("A")
+        notice = next(row for row in screen.processed_messages if row["msg_data"]["content"] == text)
+        self.assertTrue(notice["msg_data"]["is_system"])
+        self.assertFalse(notice["offer_rows"])
+        self.assertTrue(screen.offer_buttons)
 
     def test_deselect_keeps_only_cached_bubbles_and_disables_their_actions_until_exit_finishes(self):
         import copy
