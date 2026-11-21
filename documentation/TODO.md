@@ -2,7 +2,8 @@
 
 ## Uncategorized
 
-- rework how mods work so it's less... weird `(consider https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51)`
+- check how pypeople lets you choose an llm to run and see if it might be useful `https://github.com/GitGetGot415/pypeople`
+- rework how mods work so it's less... weird `consider -> https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51`
 - make it so that in tactical mode you can get other units to make simmilar movement orders to you to coordinate attacks n such
 - you can bring allies when declaring independence
 - bring back in artillery to land battles `(using artillery shells obviously, same stuff naval ships use)`
