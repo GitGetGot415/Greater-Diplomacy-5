@@ -234,6 +234,7 @@ def open_spectator_messages(map_screen):
 
 
     all_msgs = []
+    seen_notices = set()
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     month_pattern = re.compile(r"\b(?:" + "|".join(months) + r")\b")
 
@@ -248,6 +249,12 @@ def open_spectator_messages(map_screen):
                 sender = msg.get("sender", "")
 
                 if not sender.startswith("To: "):
+                    is_system = diplomacy_messages.is_system_notice(msg)
+                    key = diplomacy_messages.system_notice_identity(msg, c_name) if is_system else None
+                    if key:
+                        if key in seen_notices:
+                            continue
+                        seen_notices.add(key)
                     date_str = msg.get("date", "Unknown")
                     sort_val = 0
                     try:
@@ -261,18 +268,24 @@ def open_spectator_messages(map_screen):
                     except ValueError:
                         pass
 
+                    sender_name = queries.get_country_display_name(sender, map_screen.nation_data)
+                    receiver_name = queries.get_country_display_name(c_name, map_screen.nation_data)
+                    if is_system:
+                        receiver_name = ", ".join(sorted((sender_name, receiver_name)))
+                        sender_name = diplomacy_messages.SYSTEM_NOTICE_AUTHOR
                     all_msgs.append({
                         "date": date_str,
                         "date_sort": sort_val,
-                        "sender": queries.get_country_display_name(sender, map_screen.nation_data),
+                        "sender": sender_name,
                         "sender_id": sender,
-                        "receiver": queries.get_country_display_name(c_name, map_screen.nation_data),
+                        "receiver": receiver_name,
                         "receiver_id": c_name,
                         # What kind of act it was, not merely that it was
                         # diplomatic -- which is all this column could say
                         # before the action was recorded on the message.
                         "type": diplomacy_messages.message_category(msg),
-                        "message": msg.get("content", ""),
+                        "message": diplomacy_messages.conversation_message_text(msg, c_name, map_screen.nation_data),
+                        "system_notice": is_system,
                         "parameters": msg.get("parameters"),
                         "llm": bool(msg.get("llm")),
                         "forwarded": diplomacy_messages.is_forwarded(msg),
@@ -316,7 +329,8 @@ def open_spectator_messages(map_screen):
             body = f"{body}\n\nTerms:\n" + "\n".join(terms)
 
         marks = [row.get("date", ""), row.get("type", "")]
-        marks.append("written by the model" if row.get("llm") else "standard response")
+        if not row.get("system_notice"):
+            marks.append("written by the model" if row.get("llm") else "standard response")
         if row.get("forwarded"):
             body = (
                 ">> AUTHENTIC FORWARDED MESSAGE\n"

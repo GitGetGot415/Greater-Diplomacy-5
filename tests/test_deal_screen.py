@@ -602,11 +602,14 @@ class IncomingTradeButtonTests(DealScreenTestCase):
             {"type": deal_mod.VASSALIZE, "master": proposer, "subject": subject}])}
             for proposer, subject in ((player, enemy), (enemy, player))}
         round_ = {"round_id": "peace-round", "offers": offers}
-        with patch.dict(self.map.nation_data[player], peace_choices={enemy: round_}):
+        past_outcome = {"sender": enemy, "action": peace_scope.CHOICE_ACTION, "type": "DIPLOMACY",
+                        "content": "A previous treaty resolved.", "date": "Yesterday"}
+        with patch.dict(self.map.nation_data[player], peace_choices={enemy: round_}, inbox=[past_outcome]):
             messages = Messages_Screen()
             messages.start_messages(self.map)
             messages.select_recipient(enemy)
-            self.assertTrue(any(row["msg_data"]["content"] == peace_scope.CHOICE_PROMPT for row in messages.processed_messages))
+            prompt = next(row for row in messages.processed_messages if row["msg_data"]["content"] == peace_scope.CHOICE_PROMPT)
+            self.assertEqual(len(prompt["offer_rows"]), 2)
             buttons = {button.text: button for button in messages.offer_buttons}
             with patch("screens.game.peace_screen._run_pygame_sub_screen") as review:
                 buttons["View Your Terms"].callback()

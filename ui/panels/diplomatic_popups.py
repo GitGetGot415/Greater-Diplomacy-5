@@ -137,9 +137,10 @@ def spawn_popups_for_player(map_screen):
             # Don't show popups for messages the player sent themselves
             if not msg.get("sender", "").startswith("To: "):
                 idx = len(map_screen.diplomatic_popups)
-                content = msg.get("content", "")
+                is_system = diplomacy_messages.is_system_notice(msg)
+                content = diplomacy_messages.conversation_message_text(msg, map_screen.player_country, map_screen.nation_data)
                 sender_id = msg.get("sender", "Unknown")
-                sender = queries.get_country_display_name(sender_id, map_screen.nation_data)
+                sender = diplomacy_messages.SYSTEM_NOTICE_AUTHOR if is_system else queries.get_country_display_name(sender_id, map_screen.nation_data)
 
                 forwarded = diplomacy_messages.forwarded_details(msg)
                 if forwarded:
@@ -158,7 +159,7 @@ def spawn_popups_for_player(map_screen):
                 # Dynamically append instructions if action requires a bilateral response
                 incoming_action, incoming_turns = queries.get_diplomatic_status(
                     sender_id, map_screen.player_country, map_screen.nation_data)
-                if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
+                if not is_system and incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
                     content += "\n(See Messages to accept or decline)"
 
                 popup = DiplomaticPopup(sender, content, idx, message=msg)
@@ -184,7 +185,7 @@ def is_spent(map_screen, popup):
         return True
 
     sender = msg.get("sender", "")
-    if not sender or sender.startswith("To: "):
+    if not sender or sender.startswith("To: ") or diplomacy_messages.is_system_notice(msg):
         return False
 
     # Was this announcing a request, and has that request been dealt with?

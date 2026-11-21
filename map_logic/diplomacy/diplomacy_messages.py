@@ -11,6 +11,14 @@ from map_logic.diplomacy import deal as deal_mod, peace_scope
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 
+SYSTEM_NOTICE_AUTHOR = "Game"
+SHARED_OUTCOME_ACTION = "SHARED_DIPLOMATIC_OUTCOME"
+_LEGACY_AUTO_DECLINE_TEXT = "Your proposal was ignored and automatically declined."
+_LEGACY_SHARED_OUTCOMES = {
+    "Our requests crossed paths. We are now united!": "CROSS_FACTION_JOIN",
+    "Mutual ceasefire agreements signed.": "CROSS_CEASEFIRE",
+    "Our diplomats crossed paths. We stand together in all our wars!": "CROSS_CALL_TO_ARMS",
+}
 
 # ==========================================
 # PENDING DIPLOMACY ACCESS
@@ -255,10 +263,48 @@ def is_forwarded(msg):
     return isinstance(msg, dict) and msg.get("forwarded") is True
 
 
+def legacy_shared_outcome(msg):
+    if msg.get("system_notice") is True and not msg.get("action"):
+        return _LEGACY_SHARED_OUTCOMES.get(msg.get("content"))
+    return None
+
+
 def is_system_notice(msg):
-    """Identify game notices, including older records with dedicated action identities."""
-    return not is_forwarded(msg) and (msg.get("system_notice") is True
-                                     or msg.get("action") in (peace_scope.CHOICE_ACTION, "RATIFY_TREATY"))
+    """Recognize neutral outcomes independently of whose conversation stores them."""
+    return not is_forwarded(msg) and (msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION)
+                                     or bool(legacy_shared_outcome(msg)))
+
+
+def system_notice_identity(msg, viewer):
+    """Identify a shared notice across inboxes, including older paired copies."""
+    if not is_system_notice(msg):
+        return None
+    legacy_outcome = legacy_shared_outcome(msg)
+    if legacy_outcome:
+        counterpart = msg.get("sender", "").removeprefix("To: ")
+        return (legacy_outcome, msg.get("date"), frozenset((viewer, counterpart)))
+    return msg.get("message_id")
+
+
+def automatic_decline_text(proposer, recipient, nation_data):
+    return ai_prompts.AI_FALLBACK_RESPONSES["AUTOMATIC_DECLINE"].format(
+        proposer=queries.get_country_display_name(proposer, nation_data),
+        recipient=queries.get_country_display_name(recipient, nation_data))
+
+
+def conversation_message_text(msg, viewer, nation_data):
+    """Present older automatic replies from either side's point of view."""
+    content = msg.get("content", "")
+    if is_forwarded(msg):
+        return content
+    legacy_outcome = legacy_shared_outcome(msg)
+    if legacy_outcome:
+        return ai_prompts.AI_FALLBACK_RESPONSES[legacy_outcome]
+    if msg.get("type") == "DIPLOMACY" and msg.get("action") in c.BILATERAL_ACTIONS and content == _LEGACY_AUTO_DECLINE_TEXT:
+        sender = msg.get("sender", "")
+        proposer, recipient = (sender[4:], viewer) if sender.startswith("To: ") else (viewer, sender)
+        return automatic_decline_text(proposer, recipient, nation_data)
+    return content
 
 
 def forwarded_details(msg):
@@ -291,7 +337,7 @@ def queue_forwarded_message(nation_data, player_name, target_name, source_owner,
         return "Cannot forward messages as this entity."
     if target_name not in nation_data or target_name == player_name:
         return "That country cannot receive this forwarded message."
-    if not isinstance(original_message, dict) or not original_message.get("content", ""):
+    if not isinstance(original_message, dict) or not original_message.get("content", "") or is_system_notice(original_message):
         return "This message cannot be forwarded."
 
     pending = get_pending_map(nation_data, player_name, writable=True)
@@ -330,7 +376,7 @@ def canonical_forward_fields(nation_data, player_name, request):
         raise ValueError("A forwarded message must reference a received message.")
     for message in nation_data[player_name].get("inbox", []):
         if (message.get("message_id") == message_id
-                and not message.get("sender", "").startswith("To: ")):
+                and not message.get("sender", "").startswith("To: ") and not is_system_notice(message)):
             return {"forwarded_message": copy.deepcopy(message), "forwarded_source": player_name}
     raise ValueError("That message is not in the sender's inbox. Reload the current turn.")
 
@@ -353,7 +399,7 @@ def _deliver(nation_data, owner, entry):
 
 
 def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None,
-                 llm=False, *, system_notice=False):
+                 llm=False):
     """Delivers one message to the receiver and files a sent copy for the sender.
 
     `extra` is stamped onto both copies. It exists for the terms of a trade: the
@@ -383,8 +429,6 @@ def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None
              if key not in protected}
     if llm:
         stamp["llm"] = True
-    if system_notice:
-        stamp["system_notice"] = True
 
     message_id = uuid.uuid4().hex
 
@@ -408,6 +452,16 @@ def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None
     return incoming
 
 
+def send_system_notice(context, first, second, content, action):
+    """Put a shared outcome in both inboxes with the counterpart as the thread key."""
+    world = world_for(context)
+    entry = {"content": content, "type": "DIPLOMACY", "action": action, "system_notice": True,
+             "read": False, "spectator_read": False, "date": world.time_manager.get_date_string(),
+             "message_id": uuid.uuid4().hex}
+    _deliver(world.nation_data, first, dict(entry, sender=second))
+    _deliver(world.nation_data, second, dict(entry, sender=first))
+
+
 def forward_message(context, sender, receiver, original_message, source_owner=None):
     """Delivers a forwarded copy with immutable, visible provenance metadata.
 
@@ -417,7 +471,7 @@ def forward_message(context, sender, receiver, original_message, source_owner=No
     readable to the next country.
     """
     world_state = world_for(context)
-    if not isinstance(original_message, dict):
+    if not isinstance(original_message, dict) or is_system_notice(original_message):
         return None
     content = original_message.get("content", "")
     if not content:

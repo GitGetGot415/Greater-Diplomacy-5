@@ -13,7 +13,8 @@ from map_logic.diplomacy import (
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending, get_pending_action, send_message, send_treaty_message, forward_message,
     get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
-    FORWARD_ACTION, has_queued_forward, cancel_queued_forward
+    FORWARD_ACTION, has_queued_forward, cancel_queued_forward, automatic_decline_text,
+    send_system_notice, SHARED_OUTCOME_ACTION
 )
 from map_logic.diplomacy.war_actions import finalize_war, finalize_neutral
 from map_logic.diplomacy.puppet_actions import finalize_annexation, finalize_release, finalize_take_puppets
@@ -245,8 +246,7 @@ def _flush_queued_ai_actions(context):
 def _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, msg_key):
     """Helper to cleanly resolve contradictory simultaneous requests and strip them from the queue."""
     msg = ai_prompts.AI_FALLBACK_RESPONSES[msg_key]
-    send_message(context, nation_a, nation_b, msg, "DIPLOMACY", system_notice=True)
-    send_message(context, nation_b, nation_a, msg, "DIPLOMACY", system_notice=True)
+    send_system_notice(context, nation_a, nation_b, msg, SHARED_OUTCOME_ACTION)
     if a_data and nation_b in a_data: lifecycle.remove_request(a_data, nation_b)
     if b_data and nation_a in b_data: lifecycle.remove_request(b_data, nation_a)
 
@@ -267,7 +267,7 @@ def _war_cancels_response(context, declarer, victim):
         return
     action_name = resp.get("action", "").split('_')[0].lower()
     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-    send_message(context, declarer, victim, msg, "DIPLOMACY", system_notice=True)
+    send_message(context, declarer, victim, msg, "DIPLOMACY")
     clear_response(world_state.nation_data, victim, declarer)
 
 
@@ -338,13 +338,13 @@ def _resolve_simultaneous_clashes(context):
             elif a_action == "WAR_DECLARATION" and b_action in WAR_CANCELLED_ACTIONS:
                 action_name = b_action.split('_')[0].lower()
                 msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                send_message(context, nation_a, nation_b, msg, "DIPLOMACY", system_notice=True)
+                send_message(context, nation_a, nation_b, msg, "DIPLOMACY")
                 lifecycle.remove_request(b_data, nation_a)
 
             elif b_action == "WAR_DECLARATION" and a_action in WAR_CANCELLED_ACTIONS:
                 action_name = a_action.split('_')[0].lower()
                 msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                send_message(context, nation_b, nation_a, msg, "DIPLOMACY", system_notice=True)
+                send_message(context, nation_b, nation_a, msg, "DIPLOMACY")
                 lifecycle.remove_request(a_data, nation_b)
 
             elif (a_action == "CEASEFIRE" and b_action == "CEASEFIRE"
@@ -951,7 +951,7 @@ def _resolve_queued_response(context, country_name, sender, resp):
             msg_text = outcome.canned
 
         send_message(context, country_name, sender, msg_text, "DIPLOMACY",
-                     extra=answered, llm=wrote_it, system_notice=bool(outcome.blocked))
+                     extra=answered, llm=wrote_it)
     else:
         fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
         msg_text = custom_msg if custom_msg else fallback_msg
@@ -1062,7 +1062,7 @@ def _send_join_wars(send):
         return False
     send_message(send.context, send.country, send.target,
                  ai_prompts.AI_FALLBACK_RESPONSES["REJECT_JOIN_WAR_NO_ALLIANCE"],
-                 "DIPLOMACY", extra={"action": send.action}, system_notice=True)
+                 "DIPLOMACY", extra={"action": send.action})
     return True
 
 
@@ -1406,8 +1406,8 @@ def _withdraw_offer(context, sender, target, action, info):
 
 def _auto_decline(context, sender, target, action, info):
     _withdraw_offer(context, sender, target, action, info)
-    send_message(context, target, sender, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
-                 extra={"action": action}, system_notice=True)
+    text = automatic_decline_text(sender, target, world_for(context).nation_data)
+    send_message(context, target, sender, text, "DIPLOMACY", extra={"action": action})
     _decline_cooldown(context, sender, target, action)
 
 
@@ -1484,7 +1484,7 @@ def _resolve_ai_answer(context, ai_results, active_nations_list, delayed_respons
         _decline_cooldown(context, sender, target, action)
 
     send_message(context, target, sender, message, "DIPLOMACY",
-                 extra={"action": action}, llm=wrote_it, system_notice=bool(outcome and outcome.blocked))
+                 extra={"action": action}, llm=wrote_it)
     return outcome
 
 
@@ -1575,11 +1575,14 @@ def _resolve_peace_choices(context):
                 outcome = treaty_effects.apply_treaty_effect(
                     context, offer["action"], selected, accepter, chosen_deal=offer["deal"],
                     escrow=winner.pop("escrow", None), scripted=winner.get("scripted", False))
-                text = outcome.blocked or outcome.canned or ai_prompts.AI_FALLBACK_RESPONSES["PEACE_CHOICE_AGREED"]
-                send_message(context, accepter, selected, text, "DIPLOMACY", extra={"action": peace_scope.CHOICE_ACTION}, system_notice=True)
+                if outcome.blocked:
+                    send_message(context, accepter, selected, outcome.blocked, "DIPLOMACY", extra={"action": offer["action"]})
+                else:
+                    key = "PEACE_CHOICE_RATIFICATION" if outcome.status == "awaiting_ratification" else "PEACE_CHOICE_AGREED"
+                    send_system_notice(context, country, opponent, ai_prompts.AI_FALLBACK_RESPONSES[key], peace_scope.CHOICE_ACTION)
             else:
                 text = ai_prompts.AI_FALLBACK_RESPONSES["PEACE_CHOICE_EXPIRED"]
-                send_message(context, country, opponent, text, "DIPLOMACY", extra={"action": peace_scope.CHOICE_ACTION}, system_notice=True)
+                send_system_notice(context, country, opponent, text, peace_scope.CHOICE_ACTION)
             treaty_effects.close_peace_choice(nation_data, country, opponent)
             treaty_effects.close_peace_choice(nation_data, opponent, country)
 

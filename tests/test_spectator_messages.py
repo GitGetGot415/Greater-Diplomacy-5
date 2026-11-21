@@ -612,6 +612,21 @@ class OverviewTests(unittest.TestCase):
         dm.send_treaty_message(self.map, sender, receiver, **kwargs)
         return receiver
 
+    def test_shared_game_outcome_counts_once_and_names_both_recipients(self):
+        from data import queries
+
+        data = self.map.nation_data
+        a, b = [country for country in data if data[country].get("is_playable")][:2]
+        text = "Shared treaty outcome."
+        before = queries.get_unread_message_count("Spectator", data)
+        dm.send_system_notice(self.map, a, b, text, dm.SHARED_OUTCOME_ACTION)
+        self.assertEqual(queries.get_unread_message_count("Spectator", data), before + 1)
+        rows = [row for row in self.build().rows if row["message"] == text]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["sender"], dm.SYSTEM_NOTICE_AUTHOR)
+        names = [queries.get_country_display_name(country, data) for country in (a, b)]
+        self.assertEqual(rows[0]["receiver"], ", ".join(sorted(names)))
+
     def test_date_column_shows_short_month_names_without_changing_dates_or_sorting(self):
         table = self.build()
         column = next(column for column in table.columns if column.key == "date")

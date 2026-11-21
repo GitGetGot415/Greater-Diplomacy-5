@@ -499,6 +499,41 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertIsNot(screen.compose_surface, old_text)
         self.assertIs(screen.processed_messages, prepared)
 
+    def test_contact_switch_settles_system_notices_with_the_letters(self):
+        from screens.game import messages as messages_module
+
+        screen = self.make_screen()
+        screen.map_screen.nation_data["P"]["inbox"].append({
+            "sender": "B", "type": "DIPLOMACY", "content": "Shared outcome", "action": dm.SHARED_OUTCOME_ACTION,
+        })
+        screen.select_recipient("A")
+        with mock.patch.object(messages_module.time, "monotonic", return_value=50.0):
+            screen.select_recipient("B")
+            self.assertTrue(all(row["anim_start"] <= 50.0 - messages_module.MSG_BUBBLE_ANIM_SECONDS
+                                for row in screen.processed_messages))
+
+    def test_legacy_game_notices_show_once_and_cannot_be_forwarded(self):
+        screen = self.make_screen()
+        inbox = screen.map_screen.nation_data["P"]["inbox"]
+        old_notice = {"sender": "A", "type": "DIPLOMACY", "content": "Mutual ceasefire agreements signed.",
+                      "date": "Today", "system_notice": True, "message_id": "first"}
+        inbox.extend((old_notice, dict(old_notice, sender="To: A", message_id="second")))
+        old_decline = {"sender": "To: A", "type": "DIPLOMACY", "action": "TRADE", "system_notice": True,
+                       "content": "Your proposal was ignored and automatically declined."}
+        inbox.append(old_decline)
+        screen.select_recipient("A")
+
+        notices = [row for row in screen.processed_messages if row["msg_data"].get("is_system")]
+        self.assertEqual(len(notices), 1)
+        self.assertIsNone(notices[0]["forward_button"])
+        pending = dm.queue_forwarded_message(screen.map_screen.nation_data, "P", "B", "P", old_notice)
+        self.assertEqual(pending, "This message cannot be forwarded.")
+        with self.assertRaises(ValueError):
+            dm.canonical_forward_fields(screen.map_screen.nation_data, "P", {"forwarded_message": old_notice})
+        text = dm.automatic_decline_text("A", "P", screen.map_screen.nation_data)
+        self.assertTrue(any(row["msg_data"]["content"] == text and not row["msg_data"].get("is_system")
+                            for row in screen.processed_messages))
+
     def test_deselect_keeps_only_cached_bubbles_and_disables_their_actions_until_exit_finishes(self):
         import copy
         from screens.game import messages as messages_module
@@ -708,7 +743,8 @@ class ConversationInteractionTests(unittest.TestCase):
         screen = self.make_screen()
         screen.map_screen.refresh_diplomacy_maps = mock.Mock()
         screen.select_recipient("A")
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        terms = {"give_materials": 4}
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1, parameters=terms)
         for verdict in (dm.RESPONSE_ACCEPT, dm.RESPONSE_REJECT):
             with self.subTest(verdict=verdict):
                 screen.refresh_ui()
@@ -723,7 +759,7 @@ class ConversationInteractionTests(unittest.TestCase):
                 self.assertFalse(buttons["View Trade Deal"].disabled)
                 with mock.patch("screens.game.messages.open_view_trade_deal_menu") as view:
                     buttons["View Trade Deal"].callback()
-                    view.assert_called_once_with(screen.map_screen, "A")
+                    view.assert_called_once_with(screen.map_screen, "A", params=terms)
                 undo.callback()
                 self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), ("", ""))
         dm.clear_pending(screen.map_screen.nation_data, "A", "P")
@@ -786,13 +822,14 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertEqual(owners, ["New offer."])
 
     def test_ratification_keeps_terms_and_the_matching_undo_after_either_verdict(self):
-        from map_logic.diplomacy import ratification
+        from map_logic.diplomacy import deal, ratification
 
         screen = self.make_screen()
         screen.select_recipient("A")
         for verdict in (ratification.RATIFY, ratification.REFUSE):
             with self.subTest(verdict=verdict):
-                request = {"signatory": "A", "verdict": verdict}
+                terms = deal.new(deal.KIND_PEACE, ["A", "P"], ["B"], [deal.white_peace()])
+                request = {"signatory": "A", "verdict": verdict, "deal": terms}
                 screen.map_screen.nation_data["P"]["pending_ratification"] = request
                 screen.refresh_ui()
                 buttons = {button.text: button for button in screen.offer_buttons}
@@ -803,7 +840,7 @@ class ConversationInteractionTests(unittest.TestCase):
                 self.assertFalse(buttons["View Treaty"].disabled)
                 with mock.patch.object(screen, "view_peace_treaty") as view:
                     buttons["View Treaty"].callback()
-                    view.assert_called_once_with("A")
+                    view.assert_called_once_with("A", terms)
                 buttons[undo_label].callback()
                 self.assertNotIn("verdict", request)
                 buttons = {button.text: button for button in screen.offer_buttons}

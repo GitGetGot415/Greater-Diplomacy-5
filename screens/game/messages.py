@@ -290,7 +290,7 @@ class Messages_Screen(Screen):
             self.refresh_ui()
             return
 
-        # Switching contacts keeps the bars open and settles ordinary letters immediately.
+        # Switching contacts keeps the bars open and settles the new conversation immediately.
         switching = self.selected_recipient is not None
         self.exiting_thread = None
         self.bubble_starts = {}
@@ -764,7 +764,12 @@ class Messages_Screen(Screen):
             outgoing = sender.startswith("To: ")
             country = sender[4:] if outgoing else sender
             recency.setdefault(country, len(recency))
-            previews.setdefault(country, ("You: " if outgoing else "") + " ".join(message.get("content", "").split()))
+            if country not in previews:
+                prefix = "You: " if outgoing else ""
+                if diplomacy_messages.is_system_notice(message):
+                    prefix = f"{diplomacy_messages.SYSTEM_NOTICE_AUTHOR}: "
+                content = diplomacy_messages.conversation_message_text(message, self.map_screen.player_country, self.map_screen.nation_data)
+                previews[country] = prefix + " ".join(content.split())
             if not outgoing and not message.get("read", False):
                 unread_counts[country] = unread_counts.get(country, 0) + 1
 
@@ -869,7 +874,6 @@ class Messages_Screen(Screen):
             offers.append({
                 "action": ratification.ACTION, "request_id": None,
                 "fallback": ratification.ask_text(target, asked.get("opponent", "")),
-                "is_system": True,
                 "buttons": [
                     self._offer_button("green", "Ratified (undo)" if ratified else "Ratify Treaty",
                                        self.clear_ratification if ratified else lambda: self.answer_ratification(True),
@@ -923,6 +927,8 @@ class Messages_Screen(Screen):
     @staticmethod
     def _made_offer(offer, msg):
         """1 when `msg` is the message that made `offer`, 2 when it is by request ID, else 0."""
+        if offer["action"] == peace_scope.CHOICE_ACTION:
+            return 0  # The active choice has its own prompt. Archived outcomes share the action.
         if (msg.get("type") != "DIPLOMACY" or msg.get("action") != offer["action"]
                 or diplomacy_messages.is_forwarded(msg)):
             return 0
@@ -966,8 +972,11 @@ class Messages_Screen(Screen):
         if not self.selected_recipient:
             return
 
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        nation_data = self.map_screen.nation_data
+        player = self.map_screen.player_country
+        p_data = nation_data.get(player, {})
         inbox = p_data.get("inbox", [])
+        seen_notices = set()
 
         display_thread = []
         archived_terms = False
@@ -981,9 +990,15 @@ class Messages_Screen(Screen):
             if msg.get("sender") == self.selected_recipient or msg.get("sender") == f"To: {self.selected_recipient}":
                 is_player = msg["sender"].startswith("To: ")
                 is_system = diplomacy_messages.is_system_notice(msg)
+                key = diplomacy_messages.system_notice_identity(msg, player) if is_system else None
+                if key:
+                    if key in seen_notices:
+                        continue
+                    seen_notices.add(key)
 
                 # Detect newlines and split them back into multiple visual bubbles automatically
-                lines_split = [t for t in msg["content"].split("\n") if t.strip()]
+                content = diplomacy_messages.conversation_message_text(msg, player, nation_data)
+                lines_split = [t for t in content.split("\n") if t.strip()]
                 for idx, sub_text in enumerate(lines_split):
                     # Only append the date to the first bubble if it's a split message
                     show_date = msg.get("date", "") if idx == 0 else ""
@@ -1004,7 +1019,7 @@ class Messages_Screen(Screen):
                         "is_diplo": msg.get("type") == "DIPLOMACY",
                         "date": "" if forwarded_header else show_date,
                         "forwarded_header": forwarded_header,
-                        "forward_source": msg if idx == 0 and not is_player else None,
+                        "forward_source": msg if idx == 0 and not is_player and not is_system else None,
                     })
 
                 # --- WHAT THIS TRADE ACTUALLY ASKED FOR ---
@@ -1135,13 +1150,14 @@ class Messages_Screen(Screen):
         # A bubble slides in once, when it first appears in this conversation. Numbering
         # equal bubbles from the oldest keeps an older bubble's key when a newer one arrives.
         now = time.monotonic()
+        if self.settle_new_bubbles:
+            now -= MSG_BUBBLE_ANIM_SECONDS
         counts = {}
         for msg in display_thread:
             is_system = msg.get("is_system", False)
             same = (msg["is_player"], is_system, msg["is_draft"], msg["content"])
             counts[same] = counts.get(same, -1) + 1
-            start = now - MSG_BUBBLE_ANIM_SECONDS if self.settle_new_bubbles and not is_system else now
-            msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), start)
+            msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), now)
         for msg in reversed(display_thread):
             is_system = msg.get("is_system", False)
             lines = text_utils.wrap_text(msg["content"], font_small, max_width)
@@ -1149,7 +1165,12 @@ class Messages_Screen(Screen):
             for index, header in enumerate(msg["forwarded_header"]):
                 color = c.COLOR_GOLD_HIGHLIGHT if index == 0 else (170, 180, 195)
                 headers.extend((line, color) for line in text_utils.wrap_text(header, font_tiny, max_width))
-            if not headers and msg["date"]:
+            if is_system:
+                label = diplomacy_messages.SYSTEM_NOTICE_AUTHOR
+                if msg["date"]:
+                    label = f"{label} · {msg['date']}"
+                headers = [(label, (151, 163, 181))]
+            elif not headers and msg["date"]:
                 headers = [(msg["date"], (151, 163, 181))]
             width = max([font_small.size(line)[0] for line in lines]
                         + [font_tiny.size(line)[0] for line, _color in headers] + [100]) + 30

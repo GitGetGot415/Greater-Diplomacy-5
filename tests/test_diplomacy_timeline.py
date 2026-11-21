@@ -395,6 +395,11 @@ class SameOutcomeMergeTests(unittest.TestCase):
         self.assertEqual(game.nation_data["A"]["faction"], "Pact")
         self.assertEqual(game.pending_action("A", "B"), "")
         self.assertEqual(game.pending_action("B", "A"), "")
+        notices = [[msg for msg in game.nation_data[country]["inbox"] if diplomacy_messages.is_system_notice(msg)]
+                   for country in ("A", "B")]
+        self.assertEqual([len(inbox) for inbox in notices], [1, 1])
+        self.assertEqual(notices[0][0]["message_id"], notices[1][0]["message_id"])
+        self.assertEqual([inbox[0]["sender"] for inbox in notices], ["B", "A"])
 
     def test_call_to_arms_and_join_wars_merge(self):
         game = StubMapScreen(["A", "B", "C"], human_players=["A", "B"])
@@ -437,8 +442,10 @@ class RejectionAndCooldownTests(unittest.TestCase):
         game.run_turn()   # delivered
         game.run_turn()   # A never answered
 
-        self.assertIn("Your proposal was ignored and automatically declined.",
-                      game.inbound("B", "A"))
+        text = diplomacy_messages.automatic_decline_text("B", "A", game.nation_data)
+        self.assertIn(text, game.inbound("B", "A"))
+        self.assertIn(("out", text), game.thread("A", "B"))
+        self.assertFalse(diplomacy_messages.is_system_notice(game.nation_data["B"]["inbox"][0]))
         self.assertEqual(game.pending_action("B", "A"), "")
 
     def test_undo_clears_a_queued_answer(self):
