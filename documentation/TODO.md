@@ -2,7 +2,7 @@
 
 ## Uncategorized
 
-- the politics section is kinda empty `(TLDR add more stuff there, maybe a 2D political compass rather than it simply being a 1D political compass)`
+- rework how mods work so it's less... weird `(consider https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51)`
 - make it so that in tactical mode you can get other units to make simmilar movement orders to you to coordinate attacks n such
 - you can bring allies when declaring independence
 - bring back in artillery to land battles `(using artillery shells obviously, same stuff naval ships use)`
