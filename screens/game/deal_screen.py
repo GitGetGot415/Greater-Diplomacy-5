@@ -31,6 +31,7 @@ from ui.navigation.screen import MapOverlayScreen
 from map_logic.ai import ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import diplomacy_messages, peace_scope, reach, war_score
+from map_logic.diplomacy.action_definitions import availability
 from ui.rendering import overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
@@ -986,6 +987,11 @@ class Deal_Screen(MapOverlayScreen):
 
         action = "TRADE" if not self.is_peace else (
             "CEASEFIRE" if deal_mod.is_white_peace(agreement) else "PEACE_TREATY")
+        if self.is_peace:
+            available = availability(self.map_screen, self.player, self.target_nation, action)
+            if not available.allowed:
+                self.map_screen.show_feedback(available.reason)
+                return
 
         # The itemized terms and the covering note are two different things and
         # travel in two different fields. `message` is generated from the deal so

@@ -28,6 +28,7 @@ from map_logic.diplomacy import war_calls
 from data import queries
 from data.state_access import session_for
 from map_logic.diplomacy import peace_scope, deal_effects, global_rules, ratification, military_attaches, volunteers
+from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy.action_definitions import handlers_for
 from map_logic.diplomacy.faction_actions import finalize_create_faction, finalize_faction_join, join_faction_wars
 from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -67,16 +68,32 @@ def _escrow_pool(proposer, escrow):
     return {proposer: escrow} if escrow else None
 
 
-def _bloc_ceasefire(proposer, accepter, nation_data):
-    """A plain ceasefire, but between the blocs actually fighting.
+def withdraw_peace_offer(nation_data, sender, target, request):
+    """Close this offer, including its own reply and any resources held for it."""
+    pending = nation_data.get(sender, {}).get("pending_diplomacy", {})
+    if not lifecycle.remove_request(pending, target, request_id=request.get("request_id")):
+        return
+    held = request.pop("escrow", None)
+    if held:
+        deal_effects.release_escrow(nation_data, held, sender)
+    responses = nation_data.get(target, {}).get("diplo_responses", {})
+    reply = responses.get(sender)
+    if isinstance(reply, dict) and lifecycle.response_matches_request(reply, request):
+        lifecycle.remove_response(responses, sender)
 
-    "CEASEFIRE" was always a two-nation action and stayed one even when both
-    sides were factions, which is how a member could quietly stop fighting while
-    its bloc carried on.
-    """
 
-    sides = peace_scope.deal_sides(proposer, accepter, nation_data)
-    return deal_mod.new(deal_mod.KIND_PEACE, sides[0], sides[1], [deal_mod.white_peace()])
+def expire_obsolete_peace(nation_data):
+    """Keep delivered messages as history but close treaties whose fronts are gone."""
+    ratification.expire_obsolete_rounds(nation_data)
+    for sender, country in nation_data.items():
+        if not isinstance(country, dict):
+            continue
+        for target, request in list(country.get("pending_diplomacy", {}).items()):
+            if (not isinstance(request, dict) or request.get("action") not in peace_scope.PEACE_ACTIONS
+                    or request.get("turns", 0) <= 0):
+                continue
+            if not peace_scope.offer_wars(sender, target, request, nation_data):
+                withdraw_peace_offer(nation_data, sender, target, request)
 
 
 def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
@@ -158,8 +175,10 @@ def _accept_peace(host, action, proposer, accepter, params, escrow):
     # carry an itemized deal, an old peace sentence from a save made before
     # the rework, or -- the AI's habit until now -- nothing at all, which
     # coerce reads as the white peace it always silently executed as.
-    agreement = (_bloc_ceasefire(proposer, accepter, nation_data) if action == "CEASEFIRE"
-                 else deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_PEACE))
+    agreement = peace_scope.offered_peace(proposer, accepter, action, params, nation_data)
+    blocked = peace_scope.settlement_block(peace_scope.live_war_pairs(agreement, nation_data), nation_data)
+    if blocked:
+        return _blocked(blocked)
     agreement = with_separate_peace_cost(agreement, proposer, accepter, nation_data)
 
     # Whoever the leader bound gets a say before it takes effect. In an
@@ -275,6 +294,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
             deal_effects.release_escrow(host.nation_data, escrow, proposer)
         return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
     outcome = effect(host, action, proposer, accepter, params, escrow)
+    if escrow and action in peace_scope.PEACE_ACTIONS and outcome.status == "blocked":
+        deal_effects.release_escrow(host.nation_data, escrow, proposer)
     if outcome.status == "applied" and action not in _ACCEPTANCES_WITH_OWN_EVENTS:
         log_global_event(host.nation_data, f"Diplomatic agreement reached between {accepter} and {proposer}.")
     return outcome

@@ -1,6 +1,6 @@
 from data.state_access import world_for, session_for
 import asyncio
-from map_logic.diplomacy import diplomacy_processor
+from map_logic.diplomacy import diplomacy_processor, treaty_effects
 from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy, ai_letters,
                           scripted_events, ai_llm_runner, ai_world, automation_logic)
 from map_logic.system32 import (
@@ -253,6 +253,7 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
 
     # Kill orphaned units and ghost wars
     unit_events.run_step(context, "Country removal", movement_processor.process_dead_nations)
+    treaty_effects.expire_obsolete_peace(world_state.nation_data)
     # Disbands, combat losses, captures, and nation death can all change the
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.

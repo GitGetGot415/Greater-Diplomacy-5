@@ -15,7 +15,7 @@ from data.state_access import session_for
 from ui.dialogs import pickers
 from ui.background_styles import MESSAGE_PANEL_STYLES
 
-from map_logic.diplomacy import player_diplomacy_actions, ratification
+from map_logic.diplomacy import peace_scope, player_diplomacy_actions, ratification
 from map_logic.diplomacy.action_definitions import availability
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
 from screens.game.deal_screen import open_trade_menu
@@ -879,6 +879,9 @@ class Messages_Screen(Screen):
             # A trade can arrive after a war broke out while it waited; the
             # send rule then refuses it, so accepting it is unavailable too.
             acceptable = not is_trade or availability(nation_data, target, player, action).allowed
+            if is_peace:
+                wars = peace_scope.offer_wars(target, player, request, nation_data)
+                acceptable = not peace_scope.settlement_block(wars, nation_data)
             offers.append({
                 "action": action, "request_id": request.get("request_id"),
                 "fallback": diplomacy_messages.announcement_for(action),

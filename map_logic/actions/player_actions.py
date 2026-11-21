@@ -695,9 +695,6 @@ class PlayerActions:
                 text(action[4:], "message")
             elif action not in allowed_actions:
                 raise PlayerActionError("Unknown diplomatic action.")
-            available = availability(self.context, country_id, target, action)
-            if not available.allowed:
-                raise PlayerActionError(available.reason)
             leadership_error = queries.faction_request_leadership_error(
                 country_id, target, action, self.world.nation_data)
             if leadership_error:
@@ -752,6 +749,13 @@ class PlayerActions:
             except ValueError as error:
                 raise PlayerActionError(str(error)) from error
             canonical_responses[target] = entry
+
+        # A counteroffer relies on the decline in this same draft, even when a
+        # previous synchronization had a different answer or no answer yet.
+        for target, entry in canonical_pending.items():
+            available = availability(self.context, country_id, target, entry["action"], responses=canonical_responses)
+            if not available.allowed:
+                raise PlayerActionError(available.reason)
 
         canonical_lists = {}
         for target, messages in draft_lists.items():

@@ -180,6 +180,8 @@ def retire_landless_nation(context, nation, *, force=False):
 
         # Nobody is still allied with, at war with, or in a bloc with a nation
         # that no longer holds any ground.
+        # Treaty execution can itself capture the last province of a country.
+        from map_logic.diplomacy import peace_scope, treaty_effects
         from map_logic.diplomacy.faction_actions import leave_faction
         fac = queries.get_country_faction(nation, world_state.nation_data)
         was_leader = queries.is_faction_leader(nation, world_state.nation_data)
@@ -212,6 +214,9 @@ def retire_landless_nation(context, nation, *, force=False):
                 continue
             if nation in n_data.get("at_war_with", []):
                 n_data["at_war_with"].remove(nation)
+            peace_offer = n_data.get("pending_diplomacy", {}).get(nation)
+            if isinstance(peace_offer, dict) and peace_offer.get("action") in peace_scope.PEACE_ACTIONS:
+                treaty_effects.withdraw_peace_offer(world_state.nation_data, n_id, nation, peace_offer)
             for dict_key in ["pending_diplomacy", "diplo_responses", "diplo_cooldowns",
                              "truces", "draft_lists"]:
                 if nation in n_data.get(dict_key, {}):

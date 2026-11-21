@@ -365,7 +365,7 @@ def handlers_for(field, namespace):
     return handlers
 
 
-def availability(context, sender, target, action, *, phase="draft", scripted=False):
+def availability(context, sender, target, action, *, phase="draft", scripted=False, responses=None):
     """Check game rules independently of selection, player authority, and AI preference.
 
     `scripted` says a scripted event chose this action, which global rules may exempt.
@@ -389,6 +389,13 @@ def availability(context, sender, target, action, *, phase="draft", scripted=Fal
     if definition is None:
         return Availability(False, "unknown diplomatic action")
     allowed, reason = definition.legality(context, sender, target, action, nation_data, sender_data, target_data)
+    if allowed and action in ("PEACE_TREATY", "CEASEFIRE"):
+        from map_logic.diplomacy import peace_scope
+        # Plain nation dictionaries used by compatibility callers have no clock.
+        clock = getattr(world, "time_manager", None)
+        send_turn = clock.total_turns if phase == "send" and clock is not None else None
+        reason = peace_scope.offer_block_reason(sender, target, nation_data, responses=responses, send_turn=send_turn)
+        allowed = not reason
     if allowed:
         choice = global_rules.Choice(global_rules.is_ai_controlled(context, sender), scripted=scripted)
         reason = global_rules.forbidden_reason(context, sender, target, action, choices=(choice,))

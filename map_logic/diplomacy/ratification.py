@@ -30,7 +30,7 @@ import uuid
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
-from map_logic.diplomacy import deal_effects
+from map_logic.diplomacy import deal_effects, peace_scope
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.diplomacy_messages import send_message
 
@@ -172,6 +172,28 @@ def pending_for(nation_data, member):
     return entry if isinstance(entry, dict) else {}
 
 
+def _cancel_round(nation_data, signatory, treaty):
+    del nation_data[signatory]["pending_treaty"]
+    for member in treaty.get("awaiting", []):
+        if pending_for(nation_data, member).get("treaty_id") == treaty.get("treaty_id"):
+            nation_data.get(member, {}).pop("pending_ratification", None)
+    if treaty.get("escrow"):
+        deal_effects.release_escrow(nation_data, treaty["escrow"], signatory)
+
+
+def expire_obsolete_rounds(nation_data):
+    """Close stale or overlapping rounds left by earlier versions or other settlements."""
+    rounds = [(name, treaty) for name, data in nation_data.items() if isinstance(data, dict)
+              if isinstance(treaty := data.get("pending_treaty"), dict)]
+    reserved_wars = set()
+    for signatory, treaty in sorted(rounds, key=lambda entry: entry[1].get("turns", 0), reverse=True):
+        wars = peace_scope.live_war_pairs(treaty.get("deal", {}), nation_data)
+        if not wars or wars & reserved_wars:
+            _cancel_round(nation_data, signatory, treaty)
+        else:
+            reserved_wars.update(wars)
+
+
 def process_ratifications(context):
     """Collects replies and settles any treaty that has all of them.
 
@@ -188,13 +210,17 @@ def process_ratifications(context):
         treaty = data.get("pending_treaty")
         if not isinstance(treaty, dict):
             continue
+        if not peace_scope.live_war_pairs(treaty.get("deal", {}), nation_data):
+            _cancel_round(nation_data, signatory, treaty)
+            continue
 
         treaty["turns"] = treaty.get("turns", 0) + 1
         still_waiting = []
 
         for member in list(treaty.get("awaiting", [])):
             entry = pending_for(nation_data, member)
-            verdict = entry.get("verdict")
+            matches = entry.get("treaty_id") == treaty.get("treaty_id")
+            verdict = entry.get("verdict") if matches else None
 
             if verdict is None and treaty["turns"] <= c.RATIFICATION_TURNS:
                 still_waiting.append(member)
@@ -202,7 +228,8 @@ def process_ratifications(context):
 
             if verdict == REFUSE:
                 treaty.setdefault("refused", []).append(member)
-            nation_data.get(member, {}).pop("pending_ratification", None)
+            if matches:
+                nation_data.get(member, {}).pop("pending_ratification", None)
 
         treaty["awaiting"] = still_waiting
         if still_waiting:

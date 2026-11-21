@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from random import choice
 from data.state_access import world_for, session_for
 from map_logic.ai import ai_evaluation, ai_letters, ai_llm_runner, ai_prompts
 import data.constants as c
@@ -11,7 +12,7 @@ from map_logic.diplomacy import (
     faction_actions, faction_leadership, global_rules, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_actions, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
-    get_pending_action, send_message, send_treaty_message, forward_message,
+    get_pending, get_pending_action, send_message, send_treaty_message, forward_message,
     get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
     FORWARD_ACTION, has_queued_forward, cancel_queued_forward
 )
@@ -111,6 +112,12 @@ def toggle_diplomatic_response(nation_data, player_name, sender_name, verdict, a
         # Undoing a rejection puts their offer back in play. Nothing to refund
         # here -- a trade's escrow belongs to the sender and was never touched.
         clear_response(nation_data, player_name, sender_name)
+        if verdict != RESPONSE_ACCEPT and action in peace_scope.PEACE_ACTIONS:
+            draft = get_pending(nation_data, player_name, sender_name)
+            incoming = get_pending(nation_data, sender_name, player_name)
+            if (draft.get("action") in peace_scope.PEACE_ACTIONS and draft.get("turns", 0) == 0
+                    and lifecycle.response_matches_request(existing, incoming)):
+                treaty_effects.withdraw_peace_offer(nation_data, player_name, sender_name, draft)
         return f"Undo {verb} {action_label}"
 
     extra = {"message": custom_msg}
@@ -342,6 +349,7 @@ def _resolve_simultaneous_clashes(context):
                 lifecycle.remove_request(a_data, nation_b)
 
             elif (a_action == "CEASEFIRE" and b_action == "CEASEFIRE"
+                  and not peace_scope.offer_block_reason(nation_a, nation_b, world_state.nation_data)
                   and not _crossing_forbidden(context, nation_a, nation_b, a_action, a_info, b_info)):
                 finalize_neutral(world_state.nation_data, nation_a, nation_b)
                 log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
@@ -899,69 +907,77 @@ def _process_queued_responses(context):
 
         responses = get_response_map(world_state.nation_data, country_name)
         for sender, resp in list(responses.items()):
-            if not isinstance(resp, dict):
-                del responses[sender]
-                continue
+            _resolve_queued_response(context, country_name, sender, resp)
 
-            verdict = resp.get("verdict", "")
-            orig_action = resp.get("action", "")
-            custom_msg = resp.get("message", "")
-            # True only while custom_msg is what actually goes out: a blocked
-            # or canned outcome below replaces the text, and a replaced line
-            # is not the model's however it was answered.
-            wrote_it = bool(custom_msg) and bool(resp.get("llm"))
-            answered = {"action": orig_action}
 
-            # The terms being agreed to belong to whoever made the offer.
-            their_request = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {}).get(country_name, {})
-            if not isinstance(their_request, dict):
-                their_request = {}
-            if not lifecycle.response_matches_request(resp, their_request):
-                lifecycle.remove_response(responses, sender)
-                continue
-            params = their_request.get("parameters", resp.get("parameters"))
+def _resolve_queued_response(context, country_name, sender, resp):
+    world_state = world_for(context)
+    responses = get_response_map(world_state.nation_data, country_name)
+    if not isinstance(resp, dict):
+        lifecycle.remove_response(responses, sender)
+        return None
 
-            if verdict == RESPONSE_ACCEPT:
-                fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
-                msg_text = custom_msg if custom_msg else fallback_msg
+    verdict = resp.get("verdict", "")
+    orig_action = resp.get("action", "")
+    custom_msg = resp.get("message", "")
+    # True only while custom_msg is what actually goes out: a blocked
+    # or canned outcome below replaces the text, and a replaced line
+    # is not the model's however it was answered.
+    wrote_it = bool(custom_msg) and bool(resp.get("llm"))
+    answered = {"action": orig_action}
 
-                # `sender` proposed and `country_name` accepted. The AI-accepted
-                # pass below runs the same rules -- see treaty_effects.
-                outcome = treaty_effects.apply_treaty_effect(
-                    context, orig_action, sender, country_name, params,
-                    escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False))
-                if outcome.blocked:
-                    msg_text = outcome.blocked
-                    wrote_it = False
-                elif not custom_msg and outcome.canned:
-                    msg_text = outcome.canned
+    # The terms being agreed to belong to whoever made the offer.
+    their_request = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {}).get(country_name, {})
+    if not isinstance(their_request, dict):
+        their_request = {}
+    if not lifecycle.response_matches_request(resp, their_request):
+        lifecycle.remove_response(responses, sender)
+        return None
+    params = their_request.get("parameters", resp.get("parameters"))
 
-                send_message(context, country_name, sender, msg_text, "DIPLOMACY",
-                             extra=answered, llm=wrote_it)
-            else:
-                fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
-                msg_text = custom_msg if custom_msg else fallback_msg
+    outcome = None
+    if verdict == RESPONSE_ACCEPT:
+        fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("ACCEPT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
+        msg_text = custom_msg if custom_msg else fallback_msg
 
-                # Whatever the proposer put up for this offer goes home.
-                _refund_offer_escrow(world_state.nation_data, sender, their_request)
-                if orig_action == volunteers.ACTION:
-                    volunteers.reject_offer(context, sender, country_name)
+        # `sender` proposed and `country_name` accepted. The AI-accepted
+        # pass below runs the same rules -- see treaty_effects.
+        outcome = treaty_effects.apply_treaty_effect(
+            context, orig_action, sender, country_name, params,
+            escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False))
+        if outcome.blocked:
+            msg_text = outcome.blocked
+            wrote_it = False
+        elif not custom_msg and outcome.canned:
+            msg_text = outcome.canned
 
-                send_message(context, country_name, sender, msg_text, "DIPLOMACY",
-                             extra=answered, llm=wrote_it)
-                _decline_cooldown(context, sender, country_name, orig_action)
+        send_message(context, country_name, sender, msg_text, "DIPLOMACY",
+                     extra=answered, llm=wrote_it)
+    else:
+        fallback_msg = ai_prompts.AI_FALLBACK_RESPONSES.get("REJECT_GENERIC").format(action=orig_action.replace('_', ' ').lower())
+        msg_text = custom_msg if custom_msg else fallback_msg
 
-            # Their request has now been answered either way.
-            their_pending = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {})
-            their_entry = their_pending.get(country_name)
-            if isinstance(their_entry, dict) and their_entry.get("action") == orig_action:
-                lifecycle.remove_request(their_pending, country_name, request_id=their_entry.get("request_id"))
+        # Whatever the proposer put up for this offer goes home.
+        _refund_offer_escrow(world_state.nation_data, sender, their_request)
+        if orig_action == volunteers.ACTION:
+            volunteers.reject_offer(context, sender, country_name)
 
-            # A treaty can eliminate its proposer (for example, by ceding its
-            # final province).  The landless-nation cleanup then removes that
-            # proposer from every response map, including this one, before the
-            # response pass reaches its ordinary cleanup.
-            lifecycle.remove_response(responses, sender)
+        send_message(context, country_name, sender, msg_text, "DIPLOMACY",
+                     extra=answered, llm=wrote_it)
+        _decline_cooldown(context, sender, country_name, orig_action)
+
+    # Their request has now been answered either way.
+    their_pending = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {})
+    their_entry = their_pending.get(country_name)
+    if isinstance(their_entry, dict) and their_entry.get("action") == orig_action:
+        lifecycle.remove_request(their_pending, country_name, request_id=their_entry.get("request_id"))
+
+    # A treaty can eliminate its proposer (for example, by ceding its
+    # final province).  The landless-nation cleanup then removes that
+    # proposer from every response map, including this one, before the
+    # response pass reaches its ordinary cleanup.
+    lifecycle.remove_response(responses, sender)
+    return outcome
 
 
 @dataclass(frozen=True)
@@ -1171,6 +1187,8 @@ def _send_offer(send):
     # Peace reparations are promised the moment the offer leaves, the
     # same as a trade's goods.
     _hold_offer_escrow(send.context, send.country, send.target, send.info)
+    if send.action in peace_scope.PEACE_ACTIONS:
+        send.info["delivered_turn"] = send.world.time_manager.total_turns
     _announce(send, parameters=send.info.get("parameters"), note=send.info.get("note", ""))
     return False
 
@@ -1310,7 +1328,10 @@ def _process_pass1_immediate_actions(context):
                 available = availability(context, country_name, target, action, phase="send",
                                          scripted=info.get("scripted", False))
                 if not available.allowed:
-                    actions_to_clear.append(target)
+                    if action in peace_scope.PEACE_ACTIONS:
+                        treaty_effects.withdraw_peace_offer(world_state.nation_data, country_name, target, info)
+                    else:
+                        actions_to_clear.append(target)
                     continue
                 # Recheck imported drafts and leadership changes before delivery.
                 leadership_error = queries.faction_request_leadership_error(
@@ -1447,6 +1468,7 @@ def _resolve_ai_answer(context, ai_results, active_nations_list, delayed_respons
 
     _react_to_reply(context, active_nations_list, delayed_responses, target, sender, reply_dict)
 
+    outcome = None
     if accepted:
         # `sender` proposed and `target` accepted,
         # mirroring the player-accepted pass above. The AI
@@ -1464,6 +1486,59 @@ def _resolve_ai_answer(context, ai_results, active_nations_list, delayed_respons
 
     send_message(context, target, sender, message, "DIPLOMACY",
                  extra={"action": action}, llm=wrote_it)
+    return outcome
+
+
+def _accepts_delivered_peace(nation_data, active_players, ai_results, sender, target, request):
+    if request.get("action") not in peace_scope.PEACE_ACTIONS or request.get("turns", 0) <= 0:
+        return False
+    reply = get_response(nation_data, target, sender)
+    if lifecycle.response_matches_request(reply, request):
+        return reply.get("verdict") == RESPONSE_ACCEPT
+    return (target not in active_players and request["turns"] == 1
+            and ai_results.get((sender, target, request["action"]), {}).get("accepted", False))
+
+
+def _resolve_crossed_peace_acceptances(context, ai_results, active_nations, delayed_responses):
+    """Resolve competing accepted offers before the normal human and AI reply passes."""
+    world = world_for(context)
+    nation_data = world.nation_data
+    players = session_for(context).active_players
+    turn = world.time_manager.total_turns
+
+    for sender, country in list(nation_data.items()):
+        if not isinstance(country, dict):
+            continue
+        for target, request in list(country.get("pending_diplomacy", {}).items()):
+            if sender >= target or get_pending(nation_data, sender, target) is not request:
+                continue
+            reverse = get_pending(nation_data, target, sender)
+            if not (_accepts_delivered_peace(nation_data, players, ai_results, sender, target, request)
+                    and _accepts_delivered_peace(nation_data, players, ai_results, target, sender, reverse)):
+                continue
+
+            if not peace_scope.offer_wars(sender, target, request, nation_data) & peace_scope.offer_wars(target, sender, reverse, nation_data):
+                continue
+
+            # Older saves counted travel turns and did not record a delivery turn.
+            a_turn = request.get("delivered_turn", turn - request["turns"])
+            b_turn = reverse.get("delivered_turn", turn - reverse["turns"])
+            first = (sender, target, request, reverse)
+            second = (target, sender, reverse, request)
+            if a_turn == b_turn:
+                winner = choice((first, second))
+            else:
+                winner = first if a_turn < b_turn else second
+            proposer, accepter, offer, other_offer = winner
+            response = get_response(nation_data, accepter, proposer)
+            if lifecycle.response_matches_request(response, offer):
+                outcome = _resolve_queued_response(context, accepter, proposer, response)
+            else:
+                outcome = _resolve_ai_answer(context, ai_results, active_nations, delayed_responses, proposer, accepter, offer["action"], offer)
+                pending = nation_data.get(proposer, {}).get("pending_diplomacy", {})
+                lifecycle.remove_request(pending, accepter, request_id=offer.get("request_id"))
+            if outcome and outcome.status in ("applied", "awaiting_ratification"):
+                treaty_effects.withdraw_peace_offer(nation_data, accepter, proposer, other_offer)
 
 
 def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info):
@@ -1673,6 +1748,7 @@ def _schedule_conflicting_ai_volunteer_send_homes(context):
 def process_diplomacy_turn(context):
     world_state = world_for(context)
     lifecycle.normalize_diplomacy_channels(world_state.nation_data)
+    treaty_effects.expire_obsolete_peace(world_state.nation_data)
     _decay_modifiers_and_truces(context)
     volunteers.tick(context)
     _process_scheduled_ai_attache_revocations(context)
@@ -1705,12 +1781,16 @@ def process_diplomacy_turn(context):
     # Pass 0.5 runs before Pass 1.
     ratification.process_ratifications(context)
 
+    treaty_effects.expire_obsolete_peace(world_state.nation_data)
+    _resolve_crossed_peace_acceptances(context, ai_results, active_nations_list, delayed_responses)
     _process_queued_responses(context)
+    treaty_effects.expire_obsolete_peace(world_state.nation_data)
     sent_followups = _process_pass1_immediate_actions(context)
     _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses, sent_followups)
     # Pass 2 has settled the messages the letter sitting answered.
     session_for(context).letter_answers = []
     _apply_delayed_responses(context, delayed_responses)
+    treaty_effects.expire_obsolete_peace(world_state.nation_data)
 
     # --- PROCESS CLAIM QUEUES ---
     _process_claim_queues(context)

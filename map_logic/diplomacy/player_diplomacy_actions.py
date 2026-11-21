@@ -3,6 +3,7 @@
 
 from data.state_access import world_for, session_for
 from data import queries
+from map_logic.ai import ai_prompts
 from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, global_rules, peace_scope, ratification
 from map_logic.diplomacy import volunteers
@@ -101,9 +102,9 @@ def handle_ceasefire(context):
         context.show_feedback("There is no active war to settle with that country.")
         return
     # Refuse before the player writes terms that could never be sent.
-    forbidden = global_rules.forbidden_reason(context, context.player_country, target, "PEACE_TREATY")
-    if forbidden:
-        context.show_feedback(f"Cannot make peace: {forbidden}.")
+    available = availability(context, context.player_country, target, "PEACE_TREATY")
+    if not available.allowed:
+        context.show_feedback(available.reason)
         return
 
     # Guard check: Prevent modifying or opening a peace offer if it has already been sent (turns > 0)
@@ -296,6 +297,12 @@ def handle_accept_req(context, target=None, custom_msg=None):
             reason = peace_scope.refusal_reason(context.player_country, target, context.nation_data)
             if reason:
                 context.show_feedback(reason)
+                return
+            request = diplomacy_messages.get_pending(context.nation_data, target, context.player_country)
+            wars = peace_scope.offer_wars(target, context.player_country, request, context.nation_data)
+            blocked = peace_scope.settlement_block(wars, context.nation_data)
+            if blocked:
+                context.show_feedback(ai_prompts.AI_FALLBACK_RESPONSES[blocked])
                 return
         elif action == "TRADE":
             # Check shared availability again when answering an offer.

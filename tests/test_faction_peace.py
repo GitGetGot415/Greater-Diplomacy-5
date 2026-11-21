@@ -19,7 +19,7 @@ from unittest import mock
 
 import data.constants as c
 from data import queries
-from map_logic.diplomacy import (deal, diplomacy_messages, diplomacy_processor, peace_scope, player_diplomacy_actions, ratification)
+from map_logic.diplomacy import (deal, diplomacy_messages, diplomacy_processor, peace_scope, player_diplomacy_actions, ratification, treaty_effects)
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -147,6 +147,18 @@ class RatificationTests(unittest.TestCase):
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "G")
         self.assertFalse(at_war(self.game, "S", "G"))
         self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
+
+    def test_pending_ratification_blocks_a_second_treaty_for_the_same_war(self):
+        self.reach_acceptance()
+        original = self.game.nation_data["A"]["pending_treaty"]
+        mine, theirs = peace_scope.deal_sides("G", "A", self.game.nation_data)
+        second = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
+        result = treaty_effects.apply_treaty_effect(self.game, "PEACE_TREATY", "G", "A", second)
+
+        self.assertEqual(result.status, "blocked")
+        self.assertIs(self.game.nation_data["A"]["pending_treaty"], original)
+        self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["treaty_id"], original["treaty_id"])
+        self.assertTrue(at_war(self.game, "S", "G"))
 
     def test_custom_acceptance_only_announces_peace_after_ratification(self):
         self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)

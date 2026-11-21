@@ -35,6 +35,9 @@ The rules, in the order they are decided:
 """
 
 from data import queries
+from map_logic.diplomacy import deal as deal_mod, diplomacy_lifecycle as lifecycle
+
+PEACE_ACTIONS = frozenset(("PEACE_TREATY", "CEASEFIRE"))
 
 #: This nation speaks for its whole bloc; the deal binds every member.
 BLOC_LEADER = "BLOC_LEADER"
@@ -223,3 +226,62 @@ def has_settleable_war(nation, opponent, nation_data):
 def bound_members(deal_sides_for_proposer, proposer):
     """The proposer's faction-mates a deal would commit besides the proposer."""
     return [n for n in deal_sides_for_proposer if n != proposer]
+
+
+def offered_peace(sender, target, action, params, nation_data):
+    if action == "CEASEFIRE":
+        ours, theirs = deal_sides(sender, target, nation_data)
+        return deal_mod.new(deal_mod.KIND_PEACE, ours, theirs, [deal_mod.white_peace()])
+    return deal_mod.coerce(params, sender, target, kind=deal_mod.KIND_PEACE)
+
+
+def live_war_pairs(agreement, nation_data):
+    """The active fronts named by this treaty, independent of which side proposed it."""
+    if not isinstance(agreement, dict) or not deal_mod.ends_war(agreement):
+        return set()
+    sides = agreement.get("sides", {})
+    if not isinstance(sides, dict):
+        return set()
+    a, b = sides.get("a"), sides.get("b")
+    if not isinstance(a, list) or not isinstance(b, list):
+        return set()
+    return {frozenset((ours, theirs)) for ours in a for theirs in b
+            if isinstance(ours, str) and isinstance(theirs, str) and queries.are_at_war(ours, theirs, nation_data)}
+
+
+def offer_wars(sender, target, request, nation_data):
+    agreement = offered_peace(sender, target, request["action"], request.get("parameters"), nation_data)
+    return live_war_pairs(agreement, nation_data)
+
+
+def ratification_covers(wars, nation_data):
+    if not wars:
+        return False
+    return any(wars & live_war_pairs(round_["deal"], nation_data)
+               for country in nation_data.values() if isinstance(country, dict)
+               if isinstance(round_ := country.get("pending_treaty"), dict)
+               and isinstance(round_.get("deal"), dict))
+
+
+def settlement_block(wars, nation_data):
+    if not wars:
+        return "NO_WAR_TO_SETTLE"
+    if ratification_covers(wars, nation_data):
+        return "PEACE_AWAITING_RATIFICATION"
+    return ""
+
+
+def offer_block_reason(sender, target, nation_data, *, responses=None, send_turn=None):
+    reverse = nation_data[target].get("pending_diplomacy", {}).get(sender, {})
+    if (isinstance(reverse, dict) and reverse.get("action") in PEACE_ACTIONS
+            and reverse.get("turns", 0) > 0
+            and (send_turn is None or reverse.get("delivered_turn") != send_turn)):
+        if responses is None:
+            responses = nation_data[sender].get("diplo_responses", {})
+        reply = responses.get(target, {})
+        if reply.get("verdict") != "REJECT" or not lifecycle.response_matches_request(reply, reverse):
+            return "Decline their peace offer before sending your own."
+    white_peace = offered_peace(sender, target, "CEASEFIRE", None, nation_data)
+    if ratification_covers(live_war_pairs(white_peace, nation_data), nation_data):
+        return "A peace treaty for this war is awaiting ratification."
+    return ""
