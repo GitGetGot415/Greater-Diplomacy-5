@@ -290,7 +290,7 @@ class Messages_Screen(Screen):
             self.refresh_ui()
             return
 
-        # Switching contacts keeps the bars open, so the bubbles also appear without sliding.
+        # Switching contacts keeps the bars open and settles ordinary letters immediately.
         switching = self.selected_recipient is not None
         self.exiting_thread = None
         self.bubble_starts = {}
@@ -1135,13 +1135,13 @@ class Messages_Screen(Screen):
         # A bubble slides in once, when it first appears in this conversation. Numbering
         # equal bubbles from the oldest keeps an older bubble's key when a newer one arrives.
         now = time.monotonic()
-        if self.settle_new_bubbles:
-            now -= MSG_BUBBLE_ANIM_SECONDS
         counts = {}
         for msg in display_thread:
-            same = (msg["is_player"], msg.get("is_system", False), msg["is_draft"], msg["content"])
+            is_system = msg.get("is_system", False)
+            same = (msg["is_player"], is_system, msg["is_draft"], msg["content"])
             counts[same] = counts.get(same, -1) + 1
-            msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), now)
+            start = now - MSG_BUBBLE_ANIM_SECONDS if self.settle_new_bubbles and not is_system else now
+            msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), start)
         for msg in reversed(display_thread):
             is_system = msg.get("is_system", False)
             lines = text_utils.wrap_text(msg["content"], font_small, max_width)
@@ -1282,10 +1282,11 @@ class Messages_Screen(Screen):
                 if current_y + prepared["box_height"] >= rect.top and current_y < rect.bottom:
                     is_system = msg.get("is_system", False)
                     x = rect.right - prepared["box_width"] - 30 if msg["is_player"] else rect.left + 30
-                    # Each bubble enters and leaves through its sender's side.
+                    # Letters use their sender's side. System notices use the left edge.
                     edge_x = rect.right if msg["is_player"] else rect.left - prepared["box_width"]
                     if is_system:
-                        x = edge_x = rect.centerx - prepared["box_width"] // 2
+                        x = rect.centerx - prepared["box_width"] // 2
+                        edge_x = rect.left - prepared["box_width"]
                     if exit_progress is None:
                         progress = max(0.0, min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS))
                         offset = (1 - progress) ** MSG_ENTER_EASING_POWER
@@ -1310,7 +1311,7 @@ class Messages_Screen(Screen):
                     row_y = current_y + prepared["header_h"] + prepared["bubble_h"] + MSG_OFFER_ROW_GAP
                     for row in prepared.get("offer_rows", ()) if interactive else ():
                         stride = MSG_OFFER_BUTTON_SIZE[0] + MSG_OFFER_BUTTON_GAP
-                        row_x = rect.centerx - (len(row) * stride - MSG_OFFER_BUTTON_GAP) // 2 if is_system else x
+                        row_x = x + prepared["box_width"] // 2 - (len(row) * stride - MSG_OFFER_BUTTON_GAP) // 2 if is_system else x
                         for index, button in enumerate(row):
                             button.rect.topleft = (row_x + index * stride, row_y)
                             button.draw(surface)
