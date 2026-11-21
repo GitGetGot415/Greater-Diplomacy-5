@@ -176,10 +176,9 @@ AI_PERCEPTION_SKEW = 0.5
 # Trade. How much a good relationship discounts what we hand over.
 AI_TRADE_GOODWILL_DISCOUNT = 0.5
 
-# Alliances and faction invitations.
-AI_W_ALLY_RELATION = 0.5
-AI_W_ALLY_SHARED_ENEMY = 0.35
-AI_W_ALLY_WEAKNESS = 0.15   # the weak seek protection
+# Alliances and faction invitations. Relations, scaled by trust, take this share;
+# a shared enemy takes the rest.
+AI_ALLY_RELATION_SHARE = 0.5
 AI_ALLIANCE_DESIRE_THRESHOLD = 0.55
 
 # How many proposals one nation may have in flight at once. The pass used to

@@ -611,7 +611,5 @@ def alliance_appetite(world, nation, other, scenario_settings=None):
     theirs = set(queries.get_enemies(other, world.nation_data))
     shared = 1.0 if (mine & theirs) else 0.0
 
-    return clamp01(ai_tuning.AI_W_ALLY_RELATION * relation * (0.5 + person.get("trust", 0.5))
-                    + ai_tuning.AI_W_ALLY_SHARED_ENEMY * shared
-                    + ai_tuning.AI_W_ALLY_WEAKNESS * (1.0 - clamp01(
-                        world.power_ratio(nation, other)[1])))
+    return clamp01(ai_tuning.AI_ALLY_RELATION_SHARE * relation * (0.5 + person.get("trust", 0.5))
+                    + (1.0 - ai_tuning.AI_ALLY_RELATION_SHARE) * shared)
