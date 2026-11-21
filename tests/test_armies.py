@@ -236,6 +236,16 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(queries.army_color_for_unit(member, self.nations), (12, 90, 230))
         self.assertIsNone(queries.army_color_for_unit(ungrouped, self.nations))
 
+    def test_unit_army_id_synchronization_and_transfer_clearing(self):
+        queries.normalize_armies(self.nations, self.world)
+        first, second = self.first["units"]
+        army = queries.create_army("A", [first["unit_id"]], self.nations, self.world)
+        self.assertEqual(first.get("army_id"), army["id"])
+        self.assertIsNone(second.get("army_id"))
+
+        queries.set_unit_owner(first, "B")
+        self.assertIsNone(first.get("army_id"))
+
     def test_map_stack_groups_each_army_and_keeps_ungrouped_units_together(self):
         queries.normalize_armies(self.nations, self.world)
         first, second = self.first["units"]

@@ -208,6 +208,7 @@ def set_unit_owner(unit, country_id):
     """Transfer a unit and all its cargo to the same country."""
     for member in units_with_air_cargo([unit]):
         member["owner"] = country_id
+        member.pop("army_id", None)
 
 
 def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
