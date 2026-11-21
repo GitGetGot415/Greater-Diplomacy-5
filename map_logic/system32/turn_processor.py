@@ -216,10 +216,7 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     politics.tick(context)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
-    unit_events.run_step(context, "Conversions", movement_processor.process_conversions)
-    unit_events.run_step(context, "Disbanding", movement_processor.process_disbands)
-    unit_events.run_step(context, "Repairs", movement_processor.process_repairs)
-    unit_events.run_step(context, "Upgrades", movement_processor.process_upgrades)
+    unit_events.run_step(context, "Unit maintenance", movement_processor.process_unit_maintenance_orders)
     await asyncio.sleep(0)
 
     # Process Queues (Deployments) so new units can defend
