@@ -17,7 +17,7 @@ import zlib
 import pygame
 import data.constants as c
 from data import migrations, queries
-from data.map import history_io
+from data.map import history_io, load_map
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
@@ -123,37 +123,19 @@ def decrypt_dict(encrypted_str, password):
         return None
 
 def strip_sensitive_data_for_player(context, country_id):
+    """Hide in place what a tournament player may not see.
+
+    The loaded map keeps the state a real-time client would receive for this
+    country: queries.player_snapshot_projection filters it, and the shared
+    snapshot applier replaces the map's state with the result.
     """
-    Modifies the active context in place to hide information that the player should not see.
-    """
-    world_state = world_for(context)
     session_state = session_for(context)
-    context.country_economy_summaries = queries.get_shared_country_economy_summaries(
-        country_id, world_state.map_data, world_state.nation_data, context=context)
     session_state.multiplayer_mode = True
     session_state.player_country = country_id
     session_state.active_players = [country_id]
     session_state.current_player_index = 0
-
-    for cid, country in world_state.nation_data.items():
-        if cid != country_id:
-            # Hide production queues
-            country["production_queue"] = []
-            country["manpower_pool"] = 0
-            country["materials_pool"] = 0
-            country["fuel_pool"] = 0
-            
-            # Hide orders
-            country["orders"] = []
-            
-            # Hide research
-            country["current_research"] = None
-            country["research_queue"] = []
-
-            # Hide an AI government's private notebook
-            country.pop("ai_notebook", None)
-            country.pop(politics.ECONOMIC_DRIFT_KEY, None)
-            country.pop("research_funding_slider", None)
+    snapshot = queries.player_snapshot_projection(context, queries.build_save_dict(context), country_id)
+    load_map.apply_authoritative_snapshot(context, snapshot)
 
 
 def strip_sensitive_data_for_tournament_spectator(context):

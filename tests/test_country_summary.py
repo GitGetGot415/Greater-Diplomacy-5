@@ -12,6 +12,7 @@ import data.constants as c
 from data import queries
 from map_logic import politics
 from map_logic.system32 import combat_rules
+from map_logic.system32.time_handler import TimeHandler
 from screens.game.country_summary import CountrySummaryScreen, open_country_summary
 from tests.stub_map_screen import StubMapScreen
 from screens.game import map_input
@@ -226,6 +227,9 @@ class CountrySummaryTests(unittest.TestCase):
     def test_tournament_projection_keeps_shared_totals_before_removing_private_plans(self):
         from data.multiplayer.tournament import files as tournament_files
         game = world()
+        # The tournament filter projects a complete save, which records the date.
+        game.time_manager = TimeHandler()
+        game.presentation_enabled = False  # The stub has no map layers to refresh.
         game.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
         game.nation_data["A"]["puppets"] = ["B"]
         expected = queries.get_country_summary(game, "B")["economy"]
@@ -235,6 +239,24 @@ class CountrySummaryTests(unittest.TestCase):
         tournament_files.strip_sensitive_data_for_tournament_spectator(game)
         self.assertEqual(game.country_economy_summaries, {})
         self.assertFalse(queries.get_country_summary(game, "B")["economy"]["available"])
+
+    def test_tournament_player_map_keeps_only_the_real_time_client_view(self):
+        """Tournament and real-time players receive one projection of the world."""
+        from data.multiplayer.tournament import files as tournament_files
+        game = world()
+        game.time_manager = TimeHandler()
+        game.presentation_enabled = False  # The stub has no map layers to refresh.
+        game.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}], materials=500)
+        game.nation_data["A"].update(materials=700)
+        projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "A")
+        tournament_files.strip_sensitive_data_for_player(game, "A")
+        for field in ("inbox", "research_queue", "materials"):
+            self.assertNotIn(field, game.nation_data["B"])
+        self.assertEqual(game.nation_data["A"]["materials"], 700)
+        for province in game.map_data.values():
+            self.assertEqual(province["units"], projected["provinces"][province["json_key"]]["units"])
+        self.assertEqual(game.home_of("C")["units"], [])
+        self.assertEqual(len(game.home_of("A")["units"]), 1)
 
     def test_legacy_country_uses_existing_slider_defaults_without_writing_them(self):
         game = world()
