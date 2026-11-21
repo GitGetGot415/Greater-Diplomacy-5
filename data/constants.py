@@ -1675,7 +1675,6 @@ AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long
 
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 
-AI_MAX_NAVY_RATIO = 0.5 # LEGACY: superseded by AI_NAVY_PER_COAST_TILE
 AI_NAVY_PER_COAST_TILE = 0.5 # Warships wanted per coastal tile, as a role target
 AI_CONVOY_ESCORT_WEIGHT = 1 # Negative weight to pull pathing warships towards convoys
 AI_CONVOY_COMBAT_WEIGHT = 50 # MASSIVE priority to escort convoys actively being attacked

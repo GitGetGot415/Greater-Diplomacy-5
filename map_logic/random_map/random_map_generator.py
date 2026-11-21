@@ -3,6 +3,7 @@ import random
 from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_construction
 
 def randomize_all_provinces(context, settings):
     world_state = world_for(context)
@@ -294,6 +295,9 @@ def randomize_all_provinces(context, settings):
                         border_provs.append(prov)
                         break # Already flagged as a border, move to next province
 
+            # The starting fleet uses the rule-based AI's warship target for this coastline.
+            target_navy_count = ai_construction.naval_need(len(border_provs), len(coastal_provs))
+
             # Fallback if it's a completely isolated island with no land borders
             if not border_provs:
                 border_provs = owned_provs
@@ -305,24 +309,12 @@ def randomize_all_provinces(context, settings):
             mat_to_man_ratio = inc_man / max(1.0, inc_mat)
             dynamic_tank_ratio = max(1, int(mat_to_man_ratio * c.AI_INFANTRY_TO_TANK_RATIO))
 
-            total_borders = len(border_provs) + len(coastal_provs)
-            target_navy_ratio = 0.0
-            
-            if total_borders > 0:
-                if len(coastal_provs) < c.AI_MIN_COAST_FOR_NAVY and len(border_provs) > 0:
-                    target_navy_ratio = 0.0
-                else:
-                    target_navy_ratio = min(c.AI_MAX_NAVY_RATIO, len(coastal_provs) / total_borders)
-
             inf_count, tank_count, navy_count = 0, 0, 0
             failsafe = 0
 
             # Purchase loop: Stop when budget maxes out or if we hit the limit
             while failsafe < 500:
                 failsafe += 1
-                total_units = inf_count + tank_count + navy_count
-                current_navy_ratio = navy_count / max(1, total_units)
-
                 unit_to_buy = None
 
                 # GUARANTEE GROUND ARMY FIRST (unless Infantry itself was disabled --
@@ -330,7 +322,7 @@ def randomize_all_provinces(context, settings):
                 # stalling the whole purchase loop on a unit that doesn't exist)
                 if inf_count < c.RANDOM_SCENARIO_MIN_INFANTRY and best_inf:
                     unit_to_buy = best_inf
-                elif current_navy_ratio < target_navy_ratio and best_navy:
+                elif navy_count < target_navy_count and best_navy:
                     unit_to_buy = best_navy
                 elif best_tank and (inf_count / max(1, tank_count)) > dynamic_tank_ratio:
                     unit_to_buy = best_tank

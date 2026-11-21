@@ -531,7 +531,7 @@ def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library
     }
 
 
-def _naval_need(land_border_count, sea_border_count):
+def naval_need(land_border_count, sea_border_count):
     """How many warships this nation's coastline justifies.
 
     A count, where this used to be a percentage of the whole army. The
@@ -930,7 +930,7 @@ def process_ai_economy_decisions(context, *, countries=None):
         state["unit_context"] = unit_ctx
         state["role_targets"] = ai_unit_eval.role_targets(
             unit_ctx,
-            naval_need=_naval_need(force_tally["land_border_count"],
+            naval_need=naval_need(force_tally["land_border_count"],
                                    force_tally["sea_border_count"]),
             values=buildable_values)
 
