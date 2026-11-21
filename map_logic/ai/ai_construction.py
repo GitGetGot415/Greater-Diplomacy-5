@@ -181,6 +181,26 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     }
 
 
+_RATIO_KEYS = {"manpower": "man", "materials": "mat", "fuel": "fuel"}
+
+
+def _conversion_pressure(data, state, conversion):
+    """Whether an economy conversion is wanted: None, "short", or "emergency".
+
+    `conversion` names an AI_RESOURCE_CONVERSIONS entry. "short" means the product's
+    upkeep ratio is over target while the source's is under, with a source stock to spare.
+    """
+    rule = c.AI_RESOURCE_CONVERSIONS[conversion]
+    source, product = _RATIO_KEYS[rule["source"]], _RATIO_KEYS[rule["product"]]
+    stock = data.get(rule["source"], 0)
+    if (state["ratio_" + product] > state["target_" + product] and state["ratio_" + source] < state["target_" + source]
+            and stock > rule["min"]):
+        return "short"
+    if (stock > rule["panic"] and data.get(rule["product"], 0) < rule["panic_product"]) or stock > rule["emergency"]:
+        return "emergency"
+    return None
+
+
 def _update_conscription_slider(data, state):
     """If AI has excess manpower but needs materials, convert manpower to
     materials. 1.0 = keep all, 0.0 = convert all.
@@ -190,12 +210,10 @@ def _update_conscription_slider(data, state):
     and stops when it stops being worth it -- so the slider keys purely off the
     upkeep ratios, which is what the remaining branches always did.
     """
-    ratio_mat, target_mat = state["ratio_mat"], state["target_mat"]
-    ratio_man, target_man = state["ratio_man"], state["target_man"]
-
-    if ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
+    pressure = _conversion_pressure(data, state, "conscription")
+    if pressure == "short":
         slider = 0.5 # Convert 50%
-    elif (data.get("manpower", 0) > c.AI_CONSCRIPTION_PANIC_MANPOWER and data.get("materials", 0) < c.AI_CONSCRIPTION_PANIC_MATERIALS) or data.get("manpower", 0) > c.AI_CONSCRIPTION_EMERGENCY_MANPOWER:
+    elif pressure == "emergency":
         slider = 0.25 # Emergency: Convert 75%
     else:
         slider = 1.0 # Normal (keep 100%)
@@ -222,22 +240,14 @@ def _update_fuel_conversion_slider(data, state):
     into fuel makes fuel cheaper, which makes fuel-burning units score better
     on the next pass without either side knowing about the other.
     """
-    ratio_fuel, target_fuel = state["ratio_fuel"], state["target_fuel"]
-    ratio_mat, target_mat = state["ratio_mat"], state["target_mat"]
-
     max_conversion = queries.get_max_fuel_conversion(data)
 
-    if max_conversion > 0:
-        if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > c.AI_CONVERSION_MIN_MATERIALS:
-            # Short of fuel with materials to spare: use all of the legal
-            # conversion. Half of it left armies fuel-starved while materials
-            # piled up (saves/runv3: Germany at 0.07 of 0.14, materials upkeep
-            # at 40% of a 90% target, and no tank affordable).
-            data["mat_to_fuel_slider"] = max_conversion
-        elif (data.get("materials", 0) > c.AI_CONVERSION_PANIC_MATERIALS and data.get("fuel", 0) < c.AI_CONVERSION_PANIC_FUEL) or data.get("materials", 0) > c.AI_CONVERSION_EMERGENCY_MATERIALS:
-            data["mat_to_fuel_slider"] = max_conversion # Emergency: Maximize production safely
-        else:
-            data["mat_to_fuel_slider"] = 0.0
+    # Short of fuel with materials to spare, or in an emergency: use all of the
+    # legal conversion. Half of it left armies fuel-starved while materials
+    # piled up (saves/runv3: Germany at 0.07 of 0.14, materials upkeep
+    # at 40% of a 90% target, and no tank affordable).
+    if max_conversion > 0 and _conversion_pressure(data, state, "fuel"):
+        data["mat_to_fuel_slider"] = max_conversion
     else:
         data["mat_to_fuel_slider"] = 0.0
 

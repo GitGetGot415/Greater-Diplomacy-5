@@ -1695,15 +1695,15 @@ AI_MIN_MATERIALS_FOR_CONSTRUCTION = 15000
 
 AI_SURPLUS_MANPOWER_FOR_CORING = 2000 # Manpower above this triggers AI to prioritize coring uncored provinces
 
-AI_CONSCRIPTION_MIN_MANPOWER = 5000
-AI_CONSCRIPTION_PANIC_MANPOWER = 10000
-AI_CONSCRIPTION_PANIC_MATERIALS = 1000
-AI_CONSCRIPTION_EMERGENCY_MANPOWER = 50000
-
-AI_CONVERSION_MIN_MATERIALS = 500
-AI_CONVERSION_PANIC_MATERIALS = 5000
-AI_CONVERSION_PANIC_FUEL = 500
-AI_CONVERSION_EMERGENCY_MATERIALS = 50000
+# Stock thresholds for the AI's two economy conversions, conscription (manpower into
+# materials) and fuel conversion (materials into fuel). A conversion is wanted when the
+# product is short, the source is spare, and the source stock exceeds "min". It is an
+# emergency when the source stock exceeds "panic" while the product stock is below
+# "panic_product", or when the source stock exceeds "emergency" on its own.
+AI_RESOURCE_CONVERSIONS = {
+    "conscription": {"source": "manpower", "product": "materials", "min": 5000, "panic": 10000, "panic_product": 1000, "emergency": 50000},
+    "fuel": {"source": "materials", "product": "fuel", "min": 500, "panic": 5000, "panic_product": 500, "emergency": 50000},
+}
 
 # How much an economic tech's per-turn yield counts against a military tech's
 # one-off improvement to the units on offer. The two are in different units --
