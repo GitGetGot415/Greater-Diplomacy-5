@@ -23,7 +23,8 @@ import unittest
 
 
 import data.constants as c
-from map_logic.diplomacy import treaty_effects, war_calls
+from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, treaty_effects, war_calls
+from tests.stub_map_screen import StubMapScreen
 
 
 def nation(**over):
@@ -152,6 +153,8 @@ class BackstopTests(unittest.TestCase):
         host = self.Host()
         host.nation_data = nd
         host.map_data = {}
+        host.scenario_settings = {}
+        host.global_rules = []
         return host
 
     def hungary(self):
@@ -191,6 +194,47 @@ class BackstopTests(unittest.TestCase):
             self.host(nd), "JOIN_WARS", "Ally", "Fighter")
         self.assertFalse(outcome.blocked)
         self.assertIn("Enemy", nd["Ally"]["at_war_with"])
+
+
+class ObsoleteWarRequestTests(unittest.TestCase):
+    def setUp(self):
+        self.host = StubMapScreen(("Master", "Subject", "Ally", "Enemy"), human_players=("Master",))
+        self.host.set_faction("Alliance", "Master", "Subject", "Ally")
+        self.host.set_war("Master", "Enemy")
+        self.host.set_war("Ally", "Enemy")
+        self.nd = self.host.nation_data
+        diplomacy_messages.set_pending(self.nd, "Subject", "Master", "JOIN_WARS", turns=1)
+
+    def test_crossed_requests_make_the_queued_acceptance_a_shared_outcome(self):
+        diplomacy_messages.set_response(self.nd, "Master", "Subject", "ACCEPT", "JOIN_WARS")
+        self.host.propose("Ally", "Subject", "CALL_TO_ARMS")
+        self.host.propose("Subject", "Ally", "JOIN_WARS")
+
+        diplomacy_processor.process_diplomacy_turn(self.host)
+
+        self.assertIn("Enemy", self.nd["Subject"]["at_war_with"])
+        self.assertFalse(self.host.pending("Subject", "Master"))
+        self.assertFalse(diplomacy_messages.get_response(self.nd, "Master", "Subject"))
+        notices = [msg for msg in self.nd["Master"]["inbox"] if msg.get("related_action") == "JOIN_WARS"]
+        self.assertEqual(len(notices), 1)
+        notice = notices[0]
+        self.assertTrue(diplomacy_messages.is_system_notice(notice))
+        self.assertIn("already fighting", notice["content"])
+        self.assertIn(dict(notice, sender="Master"), self.nd["Subject"]["inbox"])
+        self.assertFalse(any(msg["sender"] == "To: Subject" for msg in self.nd["Master"]["inbox"]))
+
+    def test_call_blocked_by_a_truce_closes_before_the_truce_expires(self):
+        diplomacy_messages.set_pending(self.nd, "Master", "Subject", "CALL_TO_ARMS", turns=1)
+        self.nd["Subject"]["truces"] = {"Enemy": 1}
+
+        diplomacy_processor.process_diplomacy_turn(self.host)
+
+        self.assertFalse(self.host.pending("Master", "Subject"))
+        self.assertNotIn("Enemy", self.nd["Subject"]["at_war_with"])
+        notices = [msg for msg in self.nd["Subject"]["inbox"] if msg.get("related_action") == "CALL_TO_ARMS"]
+        self.assertEqual(len(notices), 1)
+        self.assertIn("Truces prevent Subject", notices[0]["content"])
+        self.assertTrue(diplomacy_messages.is_system_notice(notices[0]))
 
 
 class LabelTests(unittest.TestCase):

@@ -236,8 +236,9 @@ def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
     # end while it waits. Answering a call to arms that has nothing left to
     # answer used to run join_faction_wars over an empty list and announce
     # an escalation that had not happened.
-    if not war_calls.is_honest(action, proposer, accepter, nation_data):
-        return _blocked("NO_WAR_TO_JOIN")
+    reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
+    if reason:
+        return TreatyOutcome("blocked", blocked=reason)
     join_faction_wars(host.map_data, nation_data, accepter, proposer)
     log_global_event(nation_data,
                      f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
@@ -246,8 +247,9 @@ def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
 
 def _accept_join_wars(host, action, proposer, accepter, params, escrow):
     nation_data = host.nation_data
-    if not war_calls.is_honest(action, proposer, accepter, nation_data):
-        return _blocked("NO_WAR_TO_JOIN")
+    reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
+    if reason:
+        return TreatyOutcome("blocked", blocked=reason)
     join_faction_wars(host.map_data, nation_data, proposer, accepter)
     log_global_event(nation_data,
                      f"ESCALATION: {proposer} has joined the wars of {accepter}!")

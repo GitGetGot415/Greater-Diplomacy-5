@@ -545,6 +545,25 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertFalse(notice["offer_rows"])
         self.assertTrue(screen.offer_buttons)
 
+    def test_obsolete_war_request_shows_the_reason_instead_of_reply_buttons(self):
+        screen = self.make_screen()
+        data = screen.map_screen.nation_data
+        data["P"]["faction"] = data["A"]["faction"] = "Alliance"
+        request = dm.set_pending(data, "A", "P", "JOIN_WARS", turns=1)
+        data["P"]["inbox"].append({"sender": "A", "type": "DIPLOMACY", "action": "JOIN_WARS",
+                                  "request_id": request["request_id"], "content": "May we join your wars?"})
+
+        screen.select_recipient("A")
+
+        self.assertFalse(screen.offer_buttons)
+        notices = [row["msg_data"]["content"] for row in screen.processed_messages if row["msg_data"].get("is_system")]
+        self.assertEqual(len(notices), 1)
+        self.assertIn("Player has no active wars", notices[0])
+        screen.accept_proposal("A")
+        screen.reject_proposal("A")
+        self.assertFalse(dm.get_response(data, "P", "A"))
+        self.assertEqual(dm.get_pending(data, "A", "P"), request)
+
     def test_deselect_keeps_only_cached_bubbles_and_disables_their_actions_until_exit_finishes(self):
         import copy
         from screens.game import messages as messages_module

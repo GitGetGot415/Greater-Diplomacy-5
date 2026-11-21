@@ -6,7 +6,7 @@ from data import queries
 from map_logic.ai import ai_prompts
 from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, global_rules, peace_scope, ratification
-from map_logic.diplomacy import volunteers
+from map_logic.diplomacy import volunteers, war_calls
 from map_logic.diplomacy import guarantees
 from map_logic.diplomacy import military_attaches
 from map_logic.diplomacy.action_definitions import availability
@@ -236,6 +236,11 @@ def _answer_incoming_request(context, target, verdict, custom_msg):
     queued_verdict, queued_action = diplomacy_messages.get_response_status(
         context.nation_data, context.player_country, target)
     is_undo = (queued_verdict == verdict and queued_action == action)
+    if not is_undo:
+        reason = war_calls.request_block_reason(action, target, context.player_country, context.nation_data)
+        if reason:
+            context.show_feedback(reason)
+            return None
 
     if custom_msg is None:
         custom_msg = context.mail_draft_text.strip()
@@ -288,10 +293,6 @@ def handle_accept_req(context, target=None, custom_msg=None):
         elif action == "CREATE_FACTION":
             if my_faction:
                 context.show_feedback("Must leave your current faction first!")
-                return
-        elif action in ["JOIN_WARS", "CALL_TO_ARMS"]:
-            if not queries.are_in_same_faction(context.player_country, target, context.nation_data):
-                context.show_feedback("You must be in the same faction to do this!")
                 return
         elif action in ["PEACE_TREATY", "CEASEFIRE"]:
             reason = peace_scope.refusal_reason(context.player_country, target, context.nation_data)

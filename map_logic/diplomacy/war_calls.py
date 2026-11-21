@@ -31,9 +31,11 @@ function down with it. Same reasoning as map_logic/diplomacy/restrictions.py.
 """
 
 from data import queries
+from map_logic.ai import ai_prompts
 
 CALL_TO_ARMS = "CALL_TO_ARMS"
 JOIN_WARS = "JOIN_WARS"
+WAR_REQUESTS = (CALL_TO_ARMS, JOIN_WARS)
 
 
 def are_pledged(caller, target, nation_data):
@@ -54,6 +56,11 @@ def are_pledged(caller, target, nation_data):
     return mine.get("master") == target or theirs.get("master") == caller
 
 
+def _unshared_enemies(nation, other, nation_data):
+    theirs = set(queries.get_enemies(other, nation_data))
+    return [enemy for enemy in queries.get_enemies(nation, nation_data) if enemy not in theirs and enemy != other]
+
+
 def unshared_wars(nation, other, nation_data):
     """Wars `nation` is fighting that `other` is not, and could still join.
 
@@ -61,11 +68,8 @@ def unshared_wars(nation, other, nation_data):
     one up -- join_faction_wars already refuses to, so a call naming only truced
     enemies would be answered by doing nothing at all.
     """
-    theirs = set(queries.get_enemies(other, nation_data))
-    return [enemy for enemy in queries.get_enemies(nation, nation_data)
-            if enemy not in theirs
-            and enemy != other
-            and not queries.has_active_truce(other, enemy, nation_data)
+    return [enemy for enemy in _unshared_enemies(nation, other, nation_data)
+            if not queries.has_active_truce(other, enemy, nation_data)
             and not queries.has_active_truce(enemy, other, nation_data)]
 
 
@@ -91,6 +95,35 @@ def intended_action(caller, target, nation_data):
 
 def is_honest(action, caller, target, nation_data):
     """Whether this exact message is the one these two nations' wars support."""
-    if action not in (CALL_TO_ARMS, JOIN_WARS):
+    if action not in WAR_REQUESTS:
         return True
     return action == intended_action(caller, target, nation_data)
+
+
+def request_block_reason(action, proposer, recipient, nation_data):
+    """Explain why a delivered request can no longer be carried out."""
+    if is_honest(action, proposer, recipient, nation_data):
+        return ""
+
+    fighter, joiner = (proposer, recipient) if action == CALL_TO_ARMS else (recipient, proposer)
+    if not are_pledged(proposer, recipient, nation_data):
+        key = "WAR_REQUEST_NO_PLEDGE"
+    elif not queries.get_enemies(fighter, nation_data):
+        key = "WAR_REQUEST_NO_ACTIVE_WARS"
+    elif queries.are_at_war(fighter, joiner, nation_data):
+        key = "WAR_REQUEST_OPPOSING_SIDES"
+    elif not _unshared_enemies(fighter, joiner, nation_data):
+        key = "WAR_REQUEST_ALREADY_FIGHTING"
+    elif not unshared_wars(fighter, joiner, nation_data):
+        key = "WAR_REQUEST_TRUCES"
+    else:
+        key = "WAR_REQUEST_DIRECTION_CHANGED"
+
+    return ai_prompts.AI_FALLBACK_RESPONSES[key].format(fighter=queries.get_country_display_name(fighter, nation_data),
+                                                      joiner=queries.get_country_display_name(joiner, nation_data))
+
+
+def closed_request_text(action, proposer, recipient, reason, nation_data):
+    fighter = proposer if action == CALL_TO_ARMS else recipient
+    return ai_prompts.AI_FALLBACK_RESPONSES["WAR_REQUEST_CLOSED"].format(
+        reason=reason, fighter=queries.get_country_display_name(fighter, nation_data))

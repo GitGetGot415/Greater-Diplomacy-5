@@ -15,7 +15,7 @@ from data.state_access import session_for
 from ui.dialogs import pickers
 from ui.background_styles import MESSAGE_PANEL_STYLES
 
-from map_logic.diplomacy import peace_scope, player_diplomacy_actions, ratification
+from map_logic.diplomacy import peace_scope, player_diplomacy_actions, ratification, war_calls
 from map_logic.diplomacy.action_definitions import availability
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
 from screens.game.deal_screen import open_trade_menu
@@ -887,6 +887,12 @@ class Messages_Screen(Screen):
 
         action, turns = queries.get_diplomatic_status(target, player, nation_data)
         if turns > 0 and action in c.BILATERAL_ACTIONS:
+            reason = war_calls.request_block_reason(action, target, player, nation_data)
+            if reason:
+                # Preview the reason locally. Turn resolution records the outcome in both inboxes.
+                offers.append({"action": action, "request_id": None, "fallback": reason,
+                               "is_system": True, "buttons": []})
+                return offers
             verdict, queued_action = diplomacy_messages.get_response_status(nation_data, player, target)
             answered = queued_action == action
             accepted = answered and verdict == diplomacy_messages.RESPONSE_ACCEPT
@@ -928,8 +934,8 @@ class Messages_Screen(Screen):
     @staticmethod
     def _made_offer(offer, msg):
         """1 when `msg` is the message that made `offer`, 2 when it is by request ID, else 0."""
-        if offer["action"] == peace_scope.CHOICE_ACTION:
-            return 0  # The active choice has its own prompt. Archived outcomes share the action.
+        if offer.get("is_system"):
+            return 0  # Game prompts have their own bubble.
         if (msg.get("type") != "DIPLOMACY" or msg.get("action") != offer["action"]
                 or diplomacy_messages.is_forwarded(msg) or diplomacy_messages.is_system_notice(msg)):
             return 0

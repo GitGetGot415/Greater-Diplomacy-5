@@ -932,6 +932,8 @@ def _resolve_queued_response(context, country_name, sender, resp):
     if not lifecycle.response_matches_request(resp, their_request):
         lifecycle.remove_response(responses, sender)
         return None
+    if _close_obsolete_war_request(context, sender, country_name, their_request):
+        return None
     params = their_request.get("parameters", resp.get("parameters"))
 
     outcome = None
@@ -1404,6 +1406,32 @@ def _withdraw_offer(context, sender, target, action, info):
         volunteers.reject_offer(context, sender, target)
 
 
+def _close_obsolete_war_request(context, sender, target, request):
+    action = request.get("action")
+    if action not in war_calls.WAR_REQUESTS or request.get("turns", 0) <= 0:
+        return False
+    nation_data = world_for(context).nation_data
+    reason = war_calls.request_block_reason(action, sender, target, nation_data)
+    if not reason:
+        return False
+
+    pending = nation_data[sender]["pending_diplomacy"]
+    if not lifecycle.remove_request(pending, target, request_id=request.get("request_id")):
+        return False
+    if lifecycle.response_matches_request(get_response(nation_data, target, sender), request):
+        clear_response(nation_data, target, sender)
+    _withdraw_offer(context, sender, target, action, request)
+    text = war_calls.closed_request_text(action, sender, target, reason, nation_data)
+    send_system_notice(context, sender, target, text, SHARED_OUTCOME_ACTION, related_action=action)
+    return True
+
+
+def _close_obsolete_war_requests(context):
+    for sender, data in world_for(context).nation_data.items():
+        for target, request in list(data.get("pending_diplomacy", {}).items()):
+            _close_obsolete_war_request(context, sender, target, request)
+
+
 def _auto_decline(context, sender, target, action, info):
     _withdraw_offer(context, sender, target, action, info)
     text = automatic_decline_text(sender, target, world_for(context).nation_data)
@@ -1626,6 +1654,8 @@ def _process_pass2_delayed_actions(context, ai_results, active_nations_list, del
             # Skip actions that were already handled in Pass 1
             if info.pop("_processed_this_turn", False):
                 continue
+            if _close_obsolete_war_request(context, country_name, target, info):
+                continue
 
             if turns == 1:
                 if _resolve_awaited_action(context, ai_results, active_nations_list, delayed_responses,
@@ -1795,6 +1825,8 @@ def process_diplomacy_turn(context):
     world_state = world_for(context)
     lifecycle.normalize_diplomacy_channels(world_state.nation_data)
     treaty_effects.expire_obsolete_peace(world_state.nation_data)
+    # Close offers that players could not answer before the turn changes truce lengths.
+    _close_obsolete_war_requests(context)
     _decay_modifiers_and_truces(context)
     volunteers.tick(context)
     _process_scheduled_ai_attache_revocations(context)
@@ -1812,6 +1844,7 @@ def process_diplomacy_turn(context):
 
     # --- 1. SIMULTANEOUS ACTION CLASH RESOLUTION ---
     _resolve_simultaneous_clashes(context)
+    _close_obsolete_war_requests(context)
 
     # --- 2. GATHER AI TASKS ---
     ai_tasks = _gather_ai_tasks(context)
