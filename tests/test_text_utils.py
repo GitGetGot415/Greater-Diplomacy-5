@@ -107,6 +107,23 @@ class WrapTextTests(unittest.TestCase):
         )
 
 
+class WrapTextCompactTests(unittest.TestCase):
+    def setUp(self):
+        self.font = FixedWidthFont(10)
+
+    def test_keeps_a_single_line_when_it_fits(self):
+        self.assertEqual(text_utils.wrap_text_compact("one two six ten", self.font, 150), ["one two six ten"])
+
+    def test_balances_wrapped_lines_without_adding_a_line(self):
+        self.assertEqual(text_utils.wrap_text_compact("one two six ten", self.font, 120), ["one two", "six ten"])
+
+    def test_preserves_hard_breaks_and_does_not_split_words_to_shrink(self):
+        self.assertEqual(text_utils.wrap_text_compact("hello\n\nabc de", self.font, 60), ["hello", "", "abc de"])
+
+    def test_balances_an_oversized_word_across_the_required_lines(self):
+        self.assertEqual(text_utils.wrap_text_compact("abcdefghijklm", self.font, 100), ["abcdefg", "hijklm"])
+
+
 class TruncateCharsTests(unittest.TestCase):
     def test_leaves_short_text_alone(self):
         self.assertEqual(text_utils.truncate_chars("abc", 10), "abc")

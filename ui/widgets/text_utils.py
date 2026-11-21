@@ -161,6 +161,28 @@ def wrap_text(text, font, max_width, *, keep_blank_lines=True,
     return lines
 
 
+def wrap_text_compact(text, font, max_width):
+    """Minimize the widest line without adding lines or splitting more words."""
+    text = str(text)
+    lines = wrap_text(text, font, max_width)
+    if len(lines) <= 1:
+        return lines
+
+    line_count = len(lines)
+    word_widths = [font.size(word)[0] for word in text.split()]
+    low = max((width for width in word_widths if width <= max_width), default=0)
+    high = max_width
+    while low < high:
+        width = (low + high) // 2
+        candidate = wrap_text(text, font, width)
+        if len(candidate) > line_count:
+            low = width + 1
+        else:
+            high = width
+            lines = candidate
+    return lines
+
+
 def truncate_chars(text, max_chars, ellipsis=c.ELLIPSIS):
     """Shortens by character count -- for fixed-pitch columns whose width is
     expressed in characters rather than pixels (see ui/widgets/table_screen.py)."""

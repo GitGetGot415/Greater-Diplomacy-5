@@ -92,6 +92,7 @@ MSG_PANEL_BORDER = (13, 17, 24)
 MSG_CONTACT_THEME_HOVER_LIGHTEN = 20
 MSG_BUBBLE_FORWARDED = (65, 105, 75)
 MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
+MSG_BUBBLE_TEXT_PAD = 15
 MSG_FORWARD_BUTTON_SIZE = (82, 24)
 
 
@@ -1145,6 +1146,7 @@ class Messages_Screen(Screen):
         font_small = fonts.get("normal")
         font_tiny = fonts.get("tiny")
         max_width = int(self.thread_rect.width * MSG_BUBBLE_MAX_WIDTH_RATIO)
+        system_max_width = max(1, self.thread_rect.width - 2 * (MSG_MARGIN + MSG_BUBBLE_TEXT_PAD))
         line_height = max(20, font_small.get_height())
         total_h = 20
         # A bubble slides in once, when it first appears in this conversation. Numbering
@@ -1160,7 +1162,10 @@ class Messages_Screen(Screen):
             msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), now)
         for msg in reversed(display_thread):
             is_system = msg.get("is_system", False)
-            lines = text_utils.wrap_text(msg["content"], font_small, max_width)
+            if is_system:
+                lines = text_utils.wrap_text_compact(msg["content"], font_small, system_max_width)
+            else:
+                lines = text_utils.wrap_text(msg["content"], font_small, max_width)
             headers = []
             for index, header in enumerate(msg["forwarded_header"]):
                 color = c.COLOR_GOLD_HIGHLIGHT if index == 0 else (170, 180, 195)
@@ -1173,7 +1178,7 @@ class Messages_Screen(Screen):
             elif not headers and msg["date"]:
                 headers = [(msg["date"], (151, 163, 181))]
             width = max([font_small.size(line)[0] for line in lines]
-                        + [font_tiny.size(line)[0] for line, _color in headers] + [100]) + 30
+                        + [font_tiny.size(line)[0] for line, _color in headers] + [100]) + 2 * MSG_BUBBLE_TEXT_PAD
             header_h = len(headers) * 20 + (5 if headers else 0)
             bubble_h = 20 + len(lines) * line_height
             height = header_h + bubble_h
@@ -1199,7 +1204,7 @@ class Messages_Screen(Screen):
                 pygame.draw.rect(cached, MSG_DIPLO_ACCENT, (2, header_h + 2, 3, bubble_h - 4))
             for index, line in enumerate(lines):
                 rendered = font_small.render(line, True, (242, 245, 250))
-                x = (width - rendered.get_width()) // 2 if is_system else 15
+                x = (width - rendered.get_width()) // 2 if is_system else MSG_BUBBLE_TEXT_PAD
                 cached.blit(rendered, (x, header_h + 10 + index * line_height))
             forward = None
             if msg["forward_source"] and not self.map_screen.tactical_mode:
