@@ -134,7 +134,7 @@ def open_round(context, signatory, opponent, deal, escrow=None):
                 "signatory": binder, "opponent": other, "deal": deal, "turns": 0, "treaty_id": treaty_id}
             send_message(context, binder, member,
                          ask_text(binder, other), "DIPLOMACY",
-                         extra={"action": ACTION, "parameters": deal})
+                         extra={"action": ACTION, "parameters": deal}, system_notice=True)
             awaiting.append(member)
         elif not _ai_ratifies(context, member, deal):
             refused.append(member)

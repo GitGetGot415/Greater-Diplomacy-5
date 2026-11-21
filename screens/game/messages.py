@@ -85,6 +85,7 @@ MSG_EMPTY_BG_COLOR = (0, 0, 0)
 MSG_EMPTY_TEXT_COLOR = (255, 255, 255)
 MSG_BUBBLE_PLAYER = (40, 100, 200)
 MSG_BUBBLE_AI = (60, 60, 80)
+MSG_BUBBLE_SYSTEM = (130, 48, 48)
 MSG_DIPLO_ACCENT = (208, 162, 76)
 MSG_SELECTED_ACCENT = (112, 181, 242)
 MSG_PANEL_BORDER = (13, 17, 24)
@@ -857,7 +858,7 @@ class Messages_Screen(Screen):
                                        editable and not selected),
                 ])
             offers.append({"action": peace_scope.CHOICE_ACTION, "request_id": choice["round_id"],
-                           "fallback": peace_scope.CHOICE_PROMPT, "rows": rows,
+                           "fallback": peace_scope.CHOICE_PROMPT, "is_system": True, "rows": rows,
                            "buttons": [button for row in rows for button in row]})
 
         asked = ratification.pending_for(nation_data, player)
@@ -868,6 +869,7 @@ class Messages_Screen(Screen):
             offers.append({
                 "action": ratification.ACTION, "request_id": None,
                 "fallback": ratification.ask_text(target, asked.get("opponent", "")),
+                "is_system": True,
                 "buttons": [
                     self._offer_button("green", "Ratified (undo)" if ratified else "Ratify Treaty",
                                        self.clear_ratification if ratified else lambda: self.answer_ratification(True),
@@ -978,6 +980,7 @@ class Messages_Screen(Screen):
         for msg in reversed(inbox):
             if msg.get("sender") == self.selected_recipient or msg.get("sender") == f"To: {self.selected_recipient}":
                 is_player = msg["sender"].startswith("To: ")
+                is_system = diplomacy_messages.is_system_notice(msg)
 
                 # Detect newlines and split them back into multiple visual bubbles automatically
                 lines_split = [t for t in msg["content"].split("\n") if t.strip()]
@@ -996,6 +999,7 @@ class Messages_Screen(Screen):
                     display_thread.append({
                         "content": sub_text,
                         "is_player": is_player,
+                        "is_system": is_system,
                         "is_draft": False,
                         "is_diplo": msg.get("type") == "DIPLOMACY",
                         "date": "" if forwarded_header else show_date,
@@ -1069,6 +1073,7 @@ class Messages_Screen(Screen):
                 display_thread.append({
                     "content": offer["fallback"], "is_player": False, "is_draft": False,
                     "is_diplo": True, "date": "", "forwarded_header": [],
+                    "is_system": offer.get("is_system", False),
                     "forward_source": None,
                 })
                 offer["at"] = len(display_thread) - 1
@@ -1134,10 +1139,11 @@ class Messages_Screen(Screen):
             now -= MSG_BUBBLE_ANIM_SECONDS
         counts = {}
         for msg in display_thread:
-            same = (msg["is_player"], msg["is_draft"], msg["content"])
+            same = (msg["is_player"], msg.get("is_system", False), msg["is_draft"], msg["content"])
             counts[same] = counts.get(same, -1) + 1
             msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), now)
         for msg in reversed(display_thread):
+            is_system = msg.get("is_system", False)
             lines = text_utils.wrap_text(msg["content"], font_small, max_width)
             headers = []
             for index, header in enumerate(msg["forwarded_header"]):
@@ -1154,9 +1160,13 @@ class Messages_Screen(Screen):
             for index, (line, color) in enumerate(headers):
                 rendered = font_tiny.render(line, True, color)
                 x = width - rendered.get_width() if msg["is_player"] else 0
+                if is_system:
+                    x = (width - rendered.get_width()) // 2
                 cached.blit(rendered, (x, index * 20))
             color = MSG_BUBBLE_PLAYER if msg["is_player"] else MSG_BUBBLE_AI
-            if msg["forwarded_header"]:
+            if is_system:
+                color = MSG_BUBBLE_SYSTEM
+            elif msg["forwarded_header"]:
                 color = MSG_BUBBLE_FORWARDED
             border = c.COLOR_GOLD_HIGHLIGHT if msg["is_draft"] or msg["forwarded_header"] else MSG_PANEL_BORDER
             bubble = pygame.Rect(0, header_h, width, bubble_h)
@@ -1167,7 +1177,9 @@ class Messages_Screen(Screen):
             if msg["is_diplo"]:
                 pygame.draw.rect(cached, MSG_DIPLO_ACCENT, (2, header_h + 2, 3, bubble_h - 4))
             for index, line in enumerate(lines):
-                cached.blit(font_small.render(line, True, (242, 245, 250)), (15, header_h + 10 + index * line_height))
+                rendered = font_small.render(line, True, (242, 245, 250))
+                x = (width - rendered.get_width()) // 2 if is_system else 15
+                cached.blit(rendered, (x, header_h + 10 + index * line_height))
             forward = None
             if msg["forward_source"] and not self.map_screen.tactical_mode:
                 forward = Button(0, 0, MSG_FORWARD_BUTTON_SIZE, "grey", "Forward", lambda: None, font_preset="tiny")
@@ -1268,9 +1280,12 @@ class Messages_Screen(Screen):
                 current_y -= prepared["box_height"]
                 msg = prepared["msg_data"]
                 if current_y + prepared["box_height"] >= rect.top and current_y < rect.bottom:
+                    is_system = msg.get("is_system", False)
                     x = rect.right - prepared["box_width"] - 30 if msg["is_player"] else rect.left + 30
                     # Each bubble enters and leaves through its sender's side.
                     edge_x = rect.right if msg["is_player"] else rect.left - prepared["box_width"]
+                    if is_system:
+                        x = edge_x = rect.centerx - prepared["box_width"] // 2
                     if exit_progress is None:
                         progress = max(0.0, min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS))
                         offset = (1 - progress) ** MSG_ENTER_EASING_POWER
@@ -1294,9 +1309,10 @@ class Messages_Screen(Screen):
                     # Each open offer's replies, one row per offer, under the bubble.
                     row_y = current_y + prepared["header_h"] + prepared["bubble_h"] + MSG_OFFER_ROW_GAP
                     for row in prepared.get("offer_rows", ()) if interactive else ():
+                        stride = MSG_OFFER_BUTTON_SIZE[0] + MSG_OFFER_BUTTON_GAP
+                        row_x = rect.centerx - (len(row) * stride - MSG_OFFER_BUTTON_GAP) // 2 if is_system else x
                         for index, button in enumerate(row):
-                            button.rect.topleft = (
-                                x + index * (MSG_OFFER_BUTTON_SIZE[0] + MSG_OFFER_BUTTON_GAP), row_y)
+                            button.rect.topleft = (row_x + index * stride, row_y)
                             button.draw(surface)
                             self.offer_button_rects.append((button.rect.clip(rect), button))
                         row_y += MSG_OFFER_ROW_H

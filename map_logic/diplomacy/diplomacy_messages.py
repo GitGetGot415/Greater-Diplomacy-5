@@ -7,7 +7,7 @@ import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
-from map_logic.diplomacy import deal as deal_mod
+from map_logic.diplomacy import deal as deal_mod, peace_scope
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 
@@ -255,6 +255,12 @@ def is_forwarded(msg):
     return isinstance(msg, dict) and msg.get("forwarded") is True
 
 
+def is_system_notice(msg):
+    """Identify game notices, including older records with dedicated action identities."""
+    return not is_forwarded(msg) and (msg.get("system_notice") is True
+                                     or msg.get("action") in (peace_scope.CHOICE_ACTION, "RATIFY_TREATY"))
+
+
 def forwarded_details(msg):
     """Returns the reader-facing provenance fields for a forwarded message.
 
@@ -347,7 +353,7 @@ def _deliver(nation_data, owner, entry):
 
 
 def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None,
-                 llm=False):
+                 llm=False, *, system_notice=False):
     """Delivers one message to the receiver and files a sent copy for the sender.
 
     `extra` is stamped onto both copies. It exists for the terms of a trade: the
@@ -372,11 +378,13 @@ def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None
     # forwarding stamp must not be able to replace the visible sender/date by
     # arriving through an arbitrary `extra` dict.
     protected = {"sender", "content", "type", "read", "spectator_read", "date",
-                 "message_id"}
+                 "message_id", "system_notice"}
     stamp = {key: value for key, value in (extra or {}).items()
              if key not in protected}
     if llm:
         stamp["llm"] = True
+    if system_notice:
+        stamp["system_notice"] = True
 
     message_id = uuid.uuid4().hex
 
