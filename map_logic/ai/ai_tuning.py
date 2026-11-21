@@ -12,10 +12,10 @@ AI_RESEARCH_FUNDING_RATE = 0.10
 # WAR SCORE (LEVERAGE)
 # ==========================================
 # What the AI weighs a demand against: its opponent's leverage, plus its own
-# appetite for getting out. A cautious nation wants a bigger cushion before it
-# signs, which is what the margin scales with.
-AI_PEACE_LEVERAGE_W = 0.6
-AI_PEACE_APPETITE_W = 0.4
+# appetite for getting out. Leverage takes this share and appetite the rest. A
+# cautious nation wants a bigger cushion before it signs, which is what the
+# margin scales with.
+AI_PEACE_LEVERAGE_SHARE = 0.6
 AI_PEACE_MARGIN_BASE = 0.08
 AI_PEACE_MARGIN_CAUTION = 0.12
 
@@ -95,9 +95,9 @@ AI_EXPEDITION_WEIGHT = 5
 # ==========================================
 # AI PERSONALITY (map_logic/ai/ai_personality.py)
 # ==========================================
-# What counts as a trait worth mentioning when describing a nation.
-AI_TRAIT_NOTABLE_HIGH = 0.68
-AI_TRAIT_NOTABLE_LOW = 0.32
+# What counts as a trait worth mentioning when describing a nation: at least
+# this far from the average of 0.5, in either direction.
+AI_TRAIT_NOTABLE_MARGIN = 0.18
 
 AI_RELATION_FACTION_THRESHOLD = 50
 
@@ -202,9 +202,10 @@ AI_TRADE_MIN_AMOUNT = 250
 # else in it, so every AI on the map requested the identical amount of the same
 # player and the offers read as one copy-pasted message.
 AI_TRADE_ASK_BASE_SHARE = 0.35  # a reasonable opening ask
-AI_TRADE_ASK_AMBITION = 0.30    # a pushy nation asks for more (centred on 0.5)
-AI_TRADE_ASK_GOODWILL = 0.30    # a nation that likes you asks for less
-AI_TRADE_ASK_NEED = 0.30        # a nation genuinely short of it pushes harder
+# How far each pressure moves the ask: a pushy nation asks for more (ambition,
+# centred on 0.5), a nation that likes you asks for less, and a nation
+# genuinely short of the resource pushes harder.
+AI_TRADE_ASK_SWING = 0.30
 AI_TRADE_ASK_MIN_SHARE = 0.05
 AI_TRADE_MAX_SHARE = 0.60       # never ask for more of their surplus than this
 AI_TRADE_JITTER = 0.25
@@ -218,9 +219,10 @@ AI_TRADE_JITTER = 0.25
 #: for from the partner's, so a great power with materials in the tens of
 #: thousands would offer all of them for whatever trickle of fuel its neighbour
 #: could spare. 12,000 materials for 40 fuel is a real offer from a real save.
+#: The rate tops out at base plus the full need premium, so the haggling
+#: wobble (stable per pair per turn) never pays more than a nation in full need.
 AI_TRADE_EXCHANGE_BASE = 1.0
 AI_TRADE_EXCHANGE_NEED = 0.35
-AI_TRADE_MAX_GENEROSITY = 1.35          # +/- wobble, stable per pair per turn
 # Offers are round numbers, not spreadsheet output. Largest step the amount can
 # carry wins, so a big offer lands on hundreds and a small one still survives.
 AI_TRADE_ROUNDING_LADDER = (1000, 500, 100, 50, 25, 10, 5)
@@ -241,16 +243,14 @@ POLITICS_AI_WAR_DANGER = 0.35   # ...rising to about +9 when it is going badly
 POLITICS_AI_PEACE_BASE = 0.40   # at peace beside a hostile giant -> about -2
 POLITICS_AI_PEACE_SAFETY = 0.25 # ...falling to about -7 when nobody nearby is a threat
 
-# How much of `danger` is "this war is going badly" versus "there are several of
-# them". Sums to 1.0.
-POLITICS_AI_W_LOSING = 0.65
-POLITICS_AI_W_LOAD = 0.35
+# How much of `danger` is "this war is going badly"; "there are several of
+# them" takes the rest.
+POLITICS_AI_LOSING_SHARE = 0.65
 
 # Temperament, centred on 0.5 so an average nation contributes nothing. A
 # cautious country centralises sooner; so does a belligerent one, for the
-# opposite reason.
-POLITICS_AI_W_CAUTION = 0.10
-POLITICS_AI_W_AGGRO = 0.10
+# opposite reason. Caution and aggression each count this much.
+POLITICS_AI_W_TEMPERAMENT = 0.10
 
 # ==========================================
 # LLM DIRECTOR (map_logic/ai/ai_director.py)
@@ -418,8 +418,8 @@ AI_RETREAT_FORECAST_TURNS = 3
 #  - incoming damage is split across the enemy front IN THAT LANE, then each
 #    subtracts its own defense flat, so a cheap high-defense body is worth far
 #    more than its stats suggest
-AI_W_OFFENSE = 1.0
-AI_W_DURABILITY = 1.0
+# Offense and durability each count once, measured against the mean of the
+# units on offer. The weights below are relative to that.
 AI_W_TRANSPORT = 0.1  # Cargo capacity and flight reach determine transport utility.
 # Flat, not scaled by health: damage is divided by the number of defenders in the
 # lane, so every body in the front rank thins the volley for that rank by the

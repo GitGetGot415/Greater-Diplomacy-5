@@ -143,8 +143,8 @@ def describe(nation_data, nation_name, scenario_settings=None):
                             ("loyalty", "faithless", "loyal"),
                             ("trust", "suspicious", "trusting")):
         value = clamp_float(traits.get(name, _DEFAULT), 0.0, 1.0, _DEFAULT)
-        if value >= ai_tuning.AI_TRAIT_NOTABLE_HIGH:
+        if value >= 0.5 + ai_tuning.AI_TRAIT_NOTABLE_MARGIN:
             words.append(high)
-        elif value <= ai_tuning.AI_TRAIT_NOTABLE_LOW:
+        elif value <= 0.5 - ai_tuning.AI_TRAIT_NOTABLE_MARGIN:
             words.append(low)
     return ", ".join(words) if words else "unremarkable"

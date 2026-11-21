@@ -344,7 +344,7 @@ def evaluate(names, unit_library, ctx):
 
     values = {}
     for name, (stats, attack, durability, health, defense) in raw.items():
-        offense = ai_tuning.AI_W_OFFENSE * (attack / mean_attack)
+        offense = attack / mean_attack
 
         # An extra body is worth what it actually absorbs, which is its DEFENSE.
         # apply_group_damage deals sum(max(0, volley/N - defense_i)), so with
@@ -357,7 +357,7 @@ def evaluate(names, unit_library, ctx):
         # count health twice, since durability above already has it; scaled by
         # what a body soaks, it does the one thing it should.
         soak_share = min(defense, share) / share if share > 0 else 0.0
-        combat = (offense + ai_tuning.AI_W_DURABILITY * (durability / mean_durability)
+        combat = (offense + durability / mean_durability
                   + ai_tuning.AI_W_SOAK * soak_share)
 
         if stats.get("air_transport_capacity", 0) > 0:
@@ -369,7 +369,7 @@ def evaluate(names, unit_library, ctx):
                 {"type": name}, {"type": name}, air_to_air=True, unit_library=unit_library)
             air_ctx = ctx._replace(enemy_def=ctx.air_enemy_def, enemy_stack=ctx.air_enemy_stack)
             interception = effective_attack(float(stats.get("attack", 0)) * air_bonus, air_ctx)
-            combat += ai_tuning.AI_W_OFFENSE * ctx.air_pressure * (interception - attack) / mean_attack
+            combat += ctx.air_pressure * (interception - attack) / mean_attack
 
         bomb_range = bombard_range(name, stats)
         if bomb_range:

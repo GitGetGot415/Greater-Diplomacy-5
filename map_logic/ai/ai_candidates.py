@@ -277,11 +277,11 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     # a cold one made you the same offer, in the same words, every time.
     goodwill = max(-1.0, min(1.0, world.relation(nation, partner) / 200.0))
     share = (ai_tuning.AI_TRADE_ASK_BASE_SHARE
-             + ai_tuning.AI_TRADE_ASK_AMBITION * (person.get("ambition", 0.5) - 0.5)
-             - ai_tuning.AI_TRADE_ASK_GOODWILL * goodwill)
+             + ai_tuning.AI_TRADE_ASK_SWING * (person.get("ambition", 0.5) - 0.5)
+             - ai_tuning.AI_TRADE_ASK_SWING * goodwill)
 
     need = min(1.0, max(0.0, -mine[take]) / theirs[take]) if theirs[take] else 0.0
-    share += ai_tuning.AI_TRADE_ASK_NEED * need
+    share += ai_tuning.AI_TRADE_ASK_SWING * need
 
     share = max(ai_tuning.AI_TRADE_ASK_MIN_SHARE,
                 min(ai_tuning.AI_TRADE_MAX_SHARE, share * _haggle(nation, partner, turn)))
@@ -301,7 +301,8 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     # help at all: trade_appetite only ever runs on the receiving side, so an
     # absurdly generous offer was generated and then trivially accepted.
     prices = ai_unit_eval.resource_prices(econ_a, stock_a)
-    exchange = min(ai_tuning.AI_TRADE_MAX_GENEROSITY,
+    max_generosity = ai_tuning.AI_TRADE_EXCHANGE_BASE + ai_tuning.AI_TRADE_EXCHANGE_NEED
+    exchange = min(max_generosity,
                    (ai_tuning.AI_TRADE_EXCHANGE_BASE + ai_tuning.AI_TRADE_EXCHANGE_NEED * need)
                    * _haggle(partner, nation, turn))
 
@@ -309,7 +310,7 @@ def resource_offer(world, nation, partner, scenario_settings=None):
     give_price = max(prices.get(give, 1.0), 1e-6)
     asked_for = take_price * take_amount
     give_amount = _negotiators_number(asked_for * exchange / give_price,
-                                      ceiling=asked_for * ai_tuning.AI_TRADE_MAX_GENEROSITY / give_price)
+                                      ceiling=asked_for * max_generosity / give_price)
 
     # And never more than we can actually spare. Scaling the ask to match keeps
     # the exchange rate we just settled on rather than quietly overpaying.

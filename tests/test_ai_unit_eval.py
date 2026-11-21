@@ -154,7 +154,8 @@ class ValuationTests(unittest.TestCase):
         """
         values = ue.evaluate(list(SOAK_PAIR), SOAK_PAIR, context(volley=2000.0, stack=5.0))
         paper = values["Paper"]
-        self.assertAlmostEqual(paper.combat - paper.offense - ai_tuning.AI_W_DURABILITY, 0.0)
+        # Durability counts once against the mean of the units on offer.
+        self.assertAlmostEqual(paper.combat - paper.offense - 1.0, 0.0)
 
     def test_defense_still_earns_dilution_credit(self):
         """The term is scaled, not deleted: armour that actually absorbs a hit

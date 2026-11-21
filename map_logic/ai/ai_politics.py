@@ -46,8 +46,8 @@ def _danger(world, nation, enemies):
         losing = max(losing, 1.0 - ai_opinion._sigmoid(
             (border_ratio + global_ratio) / 2.0, 1.0, ai_tuning.AI_ODDS_STEEPNESS))
 
-    return clamp01(ai_tuning.POLITICS_AI_W_LOSING * losing
-                   + ai_tuning.POLITICS_AI_W_LOAD * ai_opinion.war_load(world, nation))
+    return clamp01(ai_tuning.POLITICS_AI_LOSING_SHARE * losing
+                   + (1.0 - ai_tuning.POLITICS_AI_LOSING_SHARE) * ai_opinion.war_load(world, nation))
 
 
 def _menace(world, nation, enemies):
@@ -84,8 +84,8 @@ def desired_value(world, nation, scenario_settings=None):
     # country reaches for the emergency powers sooner; so does a belligerent
     # one, for the opposite reason.
     person = ai_personality.get(world.nation_data, nation, scenario_settings)
-    base += ai_tuning.POLITICS_AI_W_CAUTION * (person.get("caution", 0.5) - 0.5)
-    base += ai_tuning.POLITICS_AI_W_AGGRO * (person.get("aggression", 0.5) - 0.5)
+    base += ai_tuning.POLITICS_AI_W_TEMPERAMENT * (person.get("caution", 0.5) - 0.5)
+    base += ai_tuning.POLITICS_AI_W_TEMPERAMENT * (person.get("aggression", 0.5) - 0.5)
 
     return politics.clamp((2.0 * clamp01(base) - 1.0) * c.POLITICS_MAX)
 

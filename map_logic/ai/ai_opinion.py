@@ -278,8 +278,8 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     scores = war_score.between(_host(world), nation, proposer, world, viewer=nation)
     occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
     appetite = peace_appetite(world, nation, proposer, scenario_settings)
-    willingness = (ai_tuning.AI_PEACE_LEVERAGE_W * scores["theirs"]
-                   + ai_tuning.AI_PEACE_APPETITE_W * appetite)
+    willingness = (ai_tuning.AI_PEACE_LEVERAGE_SHARE * scores["theirs"]
+                   + (1.0 - ai_tuning.AI_PEACE_LEVERAGE_SHARE) * appetite)
     war_prize = ai_tuning.AI_PEACE_PRIZE_W * scores["mine"]
 
     caution = traits(world, nation, scenario_settings).get("caution", 0.5)
