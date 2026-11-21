@@ -447,6 +447,9 @@ FACTION_RESEARCH_BONUS_CAP = 0.50
 # Random Scenario Settings
 RANDOM_SCENARIO_SPAWN_UNITS = True
 RANDOM_SCENARIO_MIN_INFANTRY = 3 # Minimum ground army before buying ships/tanks
+# Infantry bought per tank in a random scenario's starting army, multiplied by the
+# country's manpower-to-materials income ratio, so manpower-rich countries field more infantry.
+RANDOM_SCENARIO_INFANTRY_PER_TANK = 1
 RANDOM_SCENARIO_MIN_FACTORIES = 2 # Minimum factories a country should spawn with
 RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER = get_starting_value("random_setup", "island_filter")
 RANDOM_SCENARIO_MAX_ISLAND_FILTER = 50
@@ -1479,11 +1482,10 @@ AI_BORDER_DISTRACTION_MULTIPLIER = 0.5 # Multiplier for border units actively en
 # AI RECRUITMENT PREFERENCES
 # ==========================================
 
-# LEGACY. These lists no longer decide anything -- map_logic/ai/ai_unit_eval.py
-# scores every unit the nation can actually build from its stats, so a change to
-# unit_data.json changes what the AI builds without anyone editing a list here.
-# Kept defined because mods read them, and because get_best_offensive_unit /
-# get_best_naval_unit still exist as (now stat-derived) wrappers.
+# Fallbacks only. map_logic/ai/ai_unit_eval.py scores every unit the nation can
+# actually build from its stats, so a change to unit_data.json changes what the AI
+# builds without anyone editing a list here. queries.get_best_offensive_unit and
+# get_best_naval_unit read these lists only for a nation with no research to score.
 #
 # For the record, what they used to do: get_best_preferred_unit walks them in
 # REVERSE, so the last entry won. That meant the AI always reached for Main
@@ -1667,8 +1669,6 @@ AI_UPKEEP_TARGETS = {
 # and scrapped a unit every turn of the invasion. Ratio says overspending;
 # runway says running out. Only the second one is worth an army for.
 AI_DISBAND_RUNWAY_TURNS = 8
-
-AI_INFANTRY_TO_TANK_RATIO = 1 # Tanks honestly have no downsides aside from long deployment time so spamming them is pretty good tbh
 
 AI_WAR_UPKEEP_MULTIPLIER = 1.5
 

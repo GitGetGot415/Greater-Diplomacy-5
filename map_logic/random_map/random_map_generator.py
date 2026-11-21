@@ -307,7 +307,7 @@ def randomize_all_provinces(context, settings):
             upk_man, upk_mat, upk_fuel = 0, 0, 0
 
             mat_to_man_ratio = inc_man / max(1.0, inc_mat)
-            dynamic_tank_ratio = max(1, int(mat_to_man_ratio * c.AI_INFANTRY_TO_TANK_RATIO))
+            dynamic_tank_ratio = max(1, int(mat_to_man_ratio * c.RANDOM_SCENARIO_INFANTRY_PER_TANK))
 
             inf_count, tank_count, navy_count = 0, 0, 0
             failsafe = 0
