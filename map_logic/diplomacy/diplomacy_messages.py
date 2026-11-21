@@ -11,6 +11,84 @@ from map_logic.diplomacy import deal as deal_mod, peace_scope
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 
+# How many messages a nation's inbox keeps. Inboxes live in nation_data and
+# are saved wholesale, so an uncapped one grows the save file for the whole
+# length of a game. Newest first, so the oldest fall off the end.
+INBOX_MAX_MESSAGES = 300
+
+# What kind of act a message announced, for anyone reading a list of them.
+#
+# A message's `type` is either TEXT or DIPLOMACY and cannot become more
+# specific: the literal "DIPLOMACY" is what raises the popup and what draws the
+# gold bubble, so widening it would change behaviour rather than labelling it.
+# The action is recorded on the message instead and resolved through here for
+# display, which is why a spectator's overview used to be a column of the word
+# DIPLOMACY with a trade, a war and a faction invite all indistinguishable.
+#
+# An action with no entry reads DIPLOMACY, so a mod adding one is unlabelled
+# rather than broken.
+MESSAGE_CATEGORIES = {
+    "WAR_DECLARATION": "WAR",
+    "JUSTIFY_WARGOAL": "WAR",
+
+    # Allies combining their war efforts, not a war being declared. Both of
+    # these read WAR at first, which is the one thing in the column a reader
+    # cannot afford to misread: "WAR" from an ally you are already fighting
+    # beside looks exactly like that ally turning on you. Neither of them
+    # starts a war -- CALL_TO_ARMS asks an ally into ours, JOIN_WARS asks to be
+    # let into theirs.
+    #
+    # They shared one label on the theory that which way round it is, is on the
+    # row already. It is not: the row is a sender, a receiver and a line of
+    # prose, and the prose is written by a model that gets the direction wrong.
+    # An autonomous puppet offering to join its master's war arrived saying "we
+    # request your aid" under a label reading JOIN WAR, and the only way to tell
+    # which of the two had actually been sent was to open it. "CALL TO ARMS"
+    # renders at exactly the Type column's 100px with nothing to spare, so the
+    # short form carries it.
+    "CALL_TO_ARMS": "AID CALL",
+    "JOIN_WARS": "JOIN WAR",
+    "SEND_VOLUNTEERS": "VOLUNTEERS",
+    "RECALL_VOLUNTEERS": "VOLUNTEERS",
+    "SEND_HOME_VOLUNTEERS": "VOLUNTEERS",
+    "GUARANTEE": "GUARANTEE",
+    "REVOKE_GUARANTEE": "GUARANTEE",
+
+    "CEASEFIRE": "PEACE",
+    "PEACE_TREATY": "PEACE",
+    # Terms your own faction leader signed on your behalf, which you may refuse
+    # at the cost of your membership. Its own label because it is the one kind
+    # of message where doing nothing still binds you.
+    "RATIFY_TREATY": "RATIFY",
+
+    "TRADE": "TRADE",
+
+    "FACTION_INVITE": "FACTION",
+    "JOIN_FACTION_REQ": "FACTION",
+    "CREATE_FACTION": "FACTION",
+    "LEAVE_FACTION": "FACTION",
+    "DISBAND_FACTION": "FACTION",
+    "KICK_FACTION_MEMBER": "FACTION",
+    # Its own label rather than FACTION: every other row in that group is
+    # somebody joining or leaving, and this one is the bloc changing hands over
+    # the head of the nation that founded it.
+    "CLAIM_FACTION_LEADERSHIP": "LEADERSHIP",
+
+    "REQ_MILITARY_ACCESS": "ACCESS",
+    "SEND_MILITARY_ATTACHE": "ATTACHÉ",
+    "WITHDRAW_MILITARY_ATTACHE": "ATTACHÉ",
+    "REVOKE_MILITARY_ATTACHE": "ATTACHÉ",
+    "CANCEL_MILITARY_ACCESS": "ACCESS",
+    "REVOKE_MILITARY_ACCESS": "ACCESS",
+    "FORWARD_MESSAGE": "FORWARDED",
+
+    "ANNEX_PUPPET": "PUPPET",
+    "RELEASE_PUPPET": "PUPPET",
+    "TAKE_PUPPETS": "PUPPET",
+
+    "BREAK_ALLIANCE": "ALLIANCE",
+}
+
 SYSTEM_NOTICE_AUTHOR = "Game"
 SHARED_OUTCOME_ACTION = "SHARED_DIPLOMATIC_OUTCOME"
 _LEGACY_AUTO_DECLINE_TEXT = "Your proposal was ignored and automatically declined."
@@ -410,8 +488,8 @@ def _deliver(nation_data, owner, entry):
 
     inbox = data.setdefault("inbox", [])
     inbox.insert(0, entry)
-    if len(inbox) > c.INBOX_MAX_MESSAGES:
-        del inbox[c.INBOX_MAX_MESSAGES:]
+    if len(inbox) > INBOX_MAX_MESSAGES:
+        del inbox[INBOX_MAX_MESSAGES:]
 
 
 def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None,
@@ -595,5 +673,5 @@ def message_category(msg):
     if action == SHARED_OUTCOME_ACTION:
         action = msg.get("related_action", action)
     if action:
-        return c.MESSAGE_CATEGORIES.get(action, "DIPLOMACY")
+        return MESSAGE_CATEGORIES.get(action, "DIPLOMACY")
     return msg.get("type", "TEXT")

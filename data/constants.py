@@ -73,22 +73,10 @@ TACTICAL_SHELL_SPREAD_MULTIPLIER = 0.35  # Shell spread, including movement and 
 TACTICAL_MUZZLE_SECONDS = 0.12
 TACTICAL_IMPACT_SECONDS = 0.18
 
-# Keybind actions which synthesize the matching physical mouse-button event.
-# The keybind screen owns their player-facing labels and layout; this mapping
-# is shared input behavior, so it belongs with the other global constants.
-KEYBIND_MOUSE_BUTTONS = {
-    "MOUSE_LEFT_CLICK": 1,
-    "MOUSE_MIDDLE_CLICK": 2,
-    "MOUSE_RIGHT_CLICK": 3,
-}
 
 # --- Text Input Limits ---
 COUNTRY_NAME_MAX_LENGTH = 50
 
-# How many messages a nation's inbox keeps. Inboxes live in nation_data and
-# are saved wholesale, so an uncapped one grows the save file for the whole
-# length of a game. Newest first, so the oldest fall off the end.
-INBOX_MAX_MESSAGES = 300
 
 # Economy Data
 BASE_YIELDS = {
@@ -278,18 +266,6 @@ DEFAULT_DEEPSEEK_MODEL = get_starting_value("settings_config.json", "deepseek_mo
 DEFAULT_KIMI_MODEL = get_starting_value("settings_config.json", "kimi_model")
 DEFAULT_OPENROUTER_MODEL = get_starting_value("settings_config.json", "openrouter_model")
 
-# OpenAI-compatible chat completion endpoints for the hosted providers that
-# don't need a user-editable URL (unlike Ollama, which stores its URL in the
-# "api_key" field because it has no key of its own).
-CHATGPT_API_URL = "https://api.openai.com/v1/chat/completions"
-DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-# Moonshot AI is the company; Kimi is the model line they ship under that API host.
-KIMI_API_URL = "https://api.moonshot.ai/v1/chat/completions"
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-# Anthropic's Messages API, used for Claude -- different auth/shape than the
-# OpenAI-compatible providers above, so it gets its own caller.
-CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_API_VERSION = "2023-06-01"
 
 # Models that safely support Ollama's strict JSON grammar engine
 OLLAMA_JSON_SUPPORTED_MODELS = ["llama", "mistral", "phi", "gemma"]
@@ -357,12 +333,6 @@ TOTAL_UI_HEIGHT = 120
 # I think this is implemented in everywhere it needs to be... right?
 TOP_BAR_UI_CENTER_Y = 10
 BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
-
-# ==========================================
-# EDIT COUNTRY
-# ==========================================
-
-MAX_EDITOR_HISTORY = 30
 
 # ==========================================
 # PROVINCE MENU
@@ -559,9 +529,6 @@ DEAL_MAX_RESOURCE_TURNS = 1
 # the AI, but nothing is forbidden by it -- an outrageous demand is refused
 # rather than disallowed.
 
-WAR_SCORE_W_OCCUPATION = 0.65   # how much of their homeland you are standing on
-WAR_SCORE_W_STRENGTH = 0.35     # armies and economies, both blocs summed
-
 
 #: Turns a human faction member has to answer before silence counts as consent.
 RATIFICATION_TURNS = 1
@@ -576,13 +543,6 @@ PUPPET_TYPE_INTEGRATED = "Integrated"
 PUPPET_RELEASE_INDEPENDENT = "Independent"
 PUPPET_RELEASE_TYPES = (PUPPET_TYPE_INTEGRATED, PUPPET_TYPE_AUTONOMOUS, PUPPET_RELEASE_INDEPENDENT)
 MAX_PUPPET_SIPHON = 0.50
-
-# ==========================================
-# INPUT SETTINGS
-# ==========================================
-
-KEY_REPEAT_DELAY = 400
-KEY_REPEAT_INTERVAL = 40
 
 # ==========================================
 # UNIT OBSOLESCENCE
@@ -842,18 +802,6 @@ def _gen_roman(n):
 
 ROMAN_NUMERALS = {i: _gen_roman(i) for i in range(1, 101)}
 
-
-# ==========================================
-# CALCULATIONS & Weights
-# ==========================================
-
-# Used in data/queries/strength.py to estimate a nation's total economic power
-ECONOMY_WEIGHT_MANPOWER = 1
-ECONOMY_WEIGHT_MATERIALS = 10
-ECONOMY_WEIGHT_FUEL = 20
-
-# Used in data/queries/strength.py to calculate military strength (Attack + Defense + (Health / DIVISOR))
-MILITARY_STRENGTH_HEALTH_DIVISOR = 10.0
 
 # ==========================================
 # COMBAT WIDTH
@@ -1197,78 +1145,6 @@ AI_UPKEEP_TARGETS = {
 
 # Actions that happen instantly and do not require the target's consent
 
-# What kind of act a message announced, for anyone reading a list of them.
-#
-# A message's `type` is either TEXT or DIPLOMACY and cannot become more
-# specific: the literal "DIPLOMACY" is what raises the popup and what draws the
-# gold bubble, so widening it would change behaviour rather than labelling it.
-# The action is recorded on the message instead and resolved through here for
-# display, which is why a spectator's overview used to be a column of the word
-# DIPLOMACY with a trade, a war and a faction invite all indistinguishable.
-#
-# An action with no entry reads DIPLOMACY, so a mod adding one is unlabelled
-# rather than broken.
-MESSAGE_CATEGORIES = {
-    "WAR_DECLARATION": "WAR",
-    "JUSTIFY_WARGOAL": "WAR",
-
-    # Allies combining their war efforts, not a war being declared. Both of
-    # these read WAR at first, which is the one thing in the column a reader
-    # cannot afford to misread: "WAR" from an ally you are already fighting
-    # beside looks exactly like that ally turning on you. Neither of them
-    # starts a war -- CALL_TO_ARMS asks an ally into ours, JOIN_WARS asks to be
-    # let into theirs.
-    #
-    # They shared one label on the theory that which way round it is, is on the
-    # row already. It is not: the row is a sender, a receiver and a line of
-    # prose, and the prose is written by a model that gets the direction wrong.
-    # An autonomous puppet offering to join its master's war arrived saying "we
-    # request your aid" under a label reading JOIN WAR, and the only way to tell
-    # which of the two had actually been sent was to open it. "CALL TO ARMS"
-    # renders at exactly the Type column's 100px with nothing to spare, so the
-    # short form carries it.
-    "CALL_TO_ARMS": "AID CALL",
-    "JOIN_WARS": "JOIN WAR",
-    "SEND_VOLUNTEERS": "VOLUNTEERS",
-    "RECALL_VOLUNTEERS": "VOLUNTEERS",
-    "SEND_HOME_VOLUNTEERS": "VOLUNTEERS",
-    "GUARANTEE": "GUARANTEE",
-    "REVOKE_GUARANTEE": "GUARANTEE",
-
-    "CEASEFIRE": "PEACE",
-    "PEACE_TREATY": "PEACE",
-    # Terms your own faction leader signed on your behalf, which you may refuse
-    # at the cost of your membership. Its own label because it is the one kind
-    # of message where doing nothing still binds you.
-    "RATIFY_TREATY": "RATIFY",
-
-    "TRADE": "TRADE",
-
-    "FACTION_INVITE": "FACTION",
-    "JOIN_FACTION_REQ": "FACTION",
-    "CREATE_FACTION": "FACTION",
-    "LEAVE_FACTION": "FACTION",
-    "DISBAND_FACTION": "FACTION",
-    "KICK_FACTION_MEMBER": "FACTION",
-    # Its own label rather than FACTION: every other row in that group is
-    # somebody joining or leaving, and this one is the bloc changing hands over
-    # the head of the nation that founded it.
-    "CLAIM_FACTION_LEADERSHIP": "LEADERSHIP",
-
-    "REQ_MILITARY_ACCESS": "ACCESS",
-    "SEND_MILITARY_ATTACHE": "ATTACHÉ",
-    "WITHDRAW_MILITARY_ATTACHE": "ATTACHÉ",
-    "REVOKE_MILITARY_ATTACHE": "ATTACHÉ",
-    "CANCEL_MILITARY_ACCESS": "ACCESS",
-    "REVOKE_MILITARY_ACCESS": "ACCESS",
-    "FORWARD_MESSAGE": "FORWARDED",
-
-    "ANNEX_PUPPET": "PUPPET",
-    "RELEASE_PUPPET": "PUPPET",
-    "TAKE_PUPPETS": "PUPPET",
-
-    "BREAK_ALLIANCE": "ALLIANCE",
-}
 
 # Proposals that require the target to explicitly Accept or Reject
 # Moves a nation makes about itself rather than at somebody. The distinction
@@ -1308,19 +1184,6 @@ REL_MOD_MAX_CLAIM_PENALTY = -50
 REL_MOD_REMOVE_CORE = -30
 REL_MOD_MAX_REMOVE_CORE_PENALTY = -150
 
-COLOR_REL_MAX_POS = (100, 100, 200) # Light blue at 200
-COLOR_REL_POS = (0, 255, 0)         # Green at 100
-COLOR_REL_NEU = (255, 255, 255)     # White at 0
-COLOR_REL_NEG = (255, 0, 0)         # Red at -100
-COLOR_REL_MAX_NEG = (150, 0, 0)     # Very dark red at -200
-
-# ==========================================
-# RANDOM PROCEDURAL MAP GENERATION DEFAULTS
-# ==========================================
-
-PROCEDURAL_MAP_WIDTH = 1200
-PROCEDURAL_MAP_HEIGHT = 400
-PROCEDURAL_PROVINCE_COUNT = 600
 
 # ==========================================
 # REBELLION SETTINGS

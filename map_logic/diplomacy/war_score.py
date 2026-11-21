@@ -29,12 +29,14 @@ See the note at the top of map_logic/ai/ai_world.py.
 """
 
 from data.state_access import world_for, session_for
-import data.constants as c
 from data.number_utils import clamp01
 from data import queries
 from map_logic.diplomacy import deal as deal_mod
 
 from map_logic.diplomacy import peace_scope
+
+WAR_SCORE_W_OCCUPATION = 0.65   # how much of their homeland you are standing on
+WAR_SCORE_W_STRENGTH = 0.35     # armies and economies, both blocs summed
 
 
 # ==========================================
@@ -174,8 +176,8 @@ def leverage(context, side_a, side_b, world=None, viewer=None):
 
 def _raw(parts):
     """One side's weighted hand, before the two are normalised against each other."""
-    return (c.WAR_SCORE_W_OCCUPATION * parts["occupation"]
-            + c.WAR_SCORE_W_STRENGTH * parts["strength"])
+    return (WAR_SCORE_W_OCCUPATION * parts["occupation"]
+            + WAR_SCORE_W_STRENGTH * parts["strength"])
 
 
 def between(context, nation, opponent, world=None, viewer=None):

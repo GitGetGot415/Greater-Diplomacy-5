@@ -14,6 +14,8 @@ from data.queries.images import load_png_b64
 from data.queries.saves import normalized_scenario_metadata, normalized_standalone_export_settings
 from data.queries.files import validated_scenario_name
 
+MAX_EDITOR_HISTORY = 30
+
 
 def get_editor_paint_region(province, id_to_province, mode):
     """Return connected land with the same owner or core set as the clicked tile."""
@@ -77,7 +79,7 @@ def save_editor_state(context):
         
     context.editor_history.append(_get_current_map_state(context))
     
-    if len(context.editor_history) > c.MAX_EDITOR_HISTORY:
+    if len(context.editor_history) > MAX_EDITOR_HISTORY:
         context.editor_history.pop(0)
 
 

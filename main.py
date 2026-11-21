@@ -16,6 +16,9 @@ import gc
 import os
 import sys
 
+KEY_REPEAT_DELAY = 400
+KEY_REPEAT_INTERVAL = 40
+
 
 def _relaunch_with_project_venv():
     """Run source launches with this checkout's dependency-complete venv.
@@ -218,7 +221,7 @@ class Controller:
             # click ever happens. Undo that here so init_web_audio() (called from
             # the first real user gesture in run()) is the actual first mixer init.
             pygame.mixer.quit()
-        pygame.key.set_repeat(c.KEY_REPEAT_DELAY, c.KEY_REPEAT_INTERVAL)
+        pygame.key.set_repeat(KEY_REPEAT_DELAY, KEY_REPEAT_INTERVAL)
 
         self.clock = pygame.time.Clock()
         self.fps_font = pygame.font.Font(None, 24)
