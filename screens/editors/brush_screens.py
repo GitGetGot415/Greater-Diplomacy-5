@@ -24,7 +24,7 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
         self.province = province
         self.unit_lib = queries.get_unit_library(map_screen)
-        self.selected = {i for i, unit in enumerate(province.get("units", [])) if "original_type" in unit}
+        self.selected = {i for i, unit in enumerate(province.get("units", [])) if queries.is_in_transport(unit)}
         self.refresh_ui()
 
     def toggle(self, idx):
@@ -51,7 +51,7 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
             unit = units[i]
-            name = unit.get("original_type", unit.get("type", "Unknown"))
+            name = queries.get_base_unit_type(unit)
             is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
             suffix = "(Truck)" if is_naval else "(Convoy)"
             checked = i in self.selected
@@ -67,13 +67,13 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         changed = False
         for i, unit in enumerate(units):
             want = i in self.selected
-            if want and "original_type" not in unit:
+            if want and not queries.is_in_transport(unit):
                 name = unit.get("type", "Unknown")
                 is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
                 target = "Truck" if is_naval else "Convoy"
                 queries.load_transport(unit, target, context=self.map_screen)
                 changed = True
-            elif not want and "original_type" in unit:
+            elif not want and queries.is_in_transport(unit):
                 queries.revert_transport(unit, context=self.map_screen)
                 changed = True
 

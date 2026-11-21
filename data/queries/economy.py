@@ -744,7 +744,7 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             u_owner = unit.get("owner")
             if u_owner in econ_data:
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
-                u_type = unit.get("original_type", unit.get("type"))
+                u_type = queries.get_base_unit_type(unit)
                 upkeep = get_unit_upkeep(unit_lib.get(u_type, {}))
                 for res in c.ECON_RESOURCE_KEYS:
                     econ_data[u_owner]["upkeep"][res] += upkeep[res]

@@ -153,3 +153,24 @@ class ConversionTurnsTests(unittest.TestCase):
         self.assertEqual(restored, self.game.scenario_settings)
         self.assertEqual(queries.get_conversion_turns("TRUCK_SHIP", restored), 1)
         self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", restored), c.MAX_CONVERSION_TURNS)
+
+    def test_unified_maintenance_orders_processes_mixed_actions(self):
+        # Setup units with repair, convert, and disband orders on the same tile
+        p = self.base
+        p["industry"] = 1
+        unit_repair = {"type": "Infantry", "owner": "A", "health": 10, "max_health": 100,
+                       "order": {"type": "REPAIR", "turns_left": 1}}
+        unit_convert = {"type": "Infantry", "owner": "A", "health": 100, "max_health": 100,
+                        "order": {"type": "CONVERT", "to": "Truck", "turns_left": 1}}
+        unit_disband = {"type": "Infantry", "owner": "A", "health": 100, "max_health": 100,
+                        "order": {"type": "DISBAND", "turns_left": 1}}
+        p["units"] = [unit_repair, unit_convert, unit_disband]
+
+        movement_processor.process_unit_maintenance_orders(self.game)
+
+        # Disbanded unit should be removed; repair and convert should be completed
+        self.assertEqual(len(p["units"]), 2)
+        repaired = next(u for u in p["units"] if u["health"] == 100 and "Truck" not in u["type"])
+        converted = next(u for u in p["units"] if "Truck" in u["type"])
+        self.assertEqual(repaired["order"], {"type": "MOVE", "path": []})
+        self.assertEqual(converted["order"], {"type": "MOVE", "path": []})

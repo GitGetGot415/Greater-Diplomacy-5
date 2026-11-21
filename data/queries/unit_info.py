@@ -769,11 +769,9 @@ def air_unit_has_mission(unit, *, context=None):
 def is_air_transport(unit, *, context=None):
     name = unit.get("type", "")
     # Truck names remain recognizable at the legacy-save/import boundary.
-    for carrier in ("Convoy", "Truck"):
-        prefix = carrier + " ("
-        if name.startswith(prefix) and name.endswith(")"):
-            original = unit.get("original_type") or name[len(prefix):-1]
-            return bool(queries.get_unit_library(context).get(original, {}).get("air_role"))
+    if queries.is_in_transport(unit):
+        original = queries.get_base_unit_type(unit)
+        return bool(queries.get_unit_library(context).get(original, {}).get("air_role"))
     return False
 
 

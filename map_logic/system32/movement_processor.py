@@ -49,121 +49,112 @@ def process_dead_nations(context):
             break_puppet_link(world_state.nation_data, master, nation)
             log_global_event(world_state.nation_data, f"{nation} has achieved independence following the collapse of {master}!")
 
-def process_disbands(context):
-    """Processes the 1-turn timer for disbanding units and refunds their cost."""
+def process_unit_maintenance_orders(context, order_types=None):
+    """Processes 1-turn timers for maintenance orders (conversions, disbands, repairs, upgrades).
+
+    Consolidates the four individual maintenance passes into a single sweep over provinces and units.
+    """
     world_state = world_for(context)
     unit_library = queries.get_unit_library(context)
+    allowed_types = {"DISBAND", "UPGRADE", "REPAIR", "CONVERT"} if order_types is None else set(order_types)
 
     for province in world_state.map_data.values():
         units_to_keep = []
+        has_factory = None
         for unit in province.get("units", []):
             order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") == "DISBAND":
+            if not isinstance(order, dict):
+                units_to_keep.append(unit)
+                continue
+
+            order_type = order.get("type")
+            if order_type not in allowed_types or "turns_left" not in order:
+                units_to_keep.append(unit)
+                continue
+
+            # 1. Validation & pre-decrement checks
+            if order_type == "DISBAND":
                 if unit.get("air_cargo"):
                     unit["order"] = {"type": "MOVE", "path": []}
                     units_to_keep.append(unit)
                     continue
-                order["turns_left"] -= 1
-
-                if order["turns_left"] <= 0:
-                    # Time's up, process the refund and let the unit fade into the void
-                    p_data = world_state.nation_data.get(unit.get("owner"))
-                    if p_data:
-                        u_type = unit.get("original_type", unit.get("type"))
-                        stats = unit_library.get(u_type, {})
-                        queries.refund_resources(p_data, stats)
-            else:
-                units_to_keep.append(unit)
-
-        # Overwrite with the surviving units
-        province["units"] = units_to_keep
-
-def process_upgrades(context):
-    """Processes the 1-turn timer for upgrading units to a new type."""
-    world_state = world_for(context)
-    unit_library = queries.get_unit_library(context)
-
-    for province in world_state.map_data.values():
-        if not province.get("units"):
-            continue
-
-        # Re-equipping needs the factory that was there when the order was
-        # given, and still is. A tile taken or razed while the work is under way
-        # cancels it rather than finishing somebody else's upgrade -- so no
-        # route to an UPGRADE order can outlive the rule the orders panel and
-        # the AI both issue it under. Upgrades are free, so nothing is refunded.
-        has_factory = queries.has_industry(province)
-
-        for unit in province["units"]:
-            order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") == "UPGRADE":
+            elif order_type == "UPGRADE":
+                if has_factory is None:
+                    has_factory = queries.has_industry(province)
                 if queries.is_air_unit(unit, context=context):
-                    # Aircraft upgrades must retain their family at resolution.
                     try:
                         queries.canonical_unit_order(context, unit["owner"], province, unit, order)
                     except ValueError:
                         unit["order"] = {"type": "MOVE", "path": []}
+                        units_to_keep.append(unit)
                         continue
                 if not has_factory or queries.get_unit_tier(unit.get("type", ""), context=context) <= 0:
                     unit["order"] = {"type": "MOVE", "path": []}
+                    units_to_keep.append(unit)
                     continue
-
-                order["turns_left"] -= 1
-
-                if order["turns_left"] <= 0:
-                    target_type = order.get("target_type")
-                    if target_type and target_type in unit_library:
-                        # The shared stat refresh keeps the health fraction.
-                        unit["type"] = target_type
-                        queries.apply_library_stats(unit, unit_library)
-
-                    # Reset back to a blank move order
-                    unit["order"] = {"type": "MOVE", "path": []}
-
-def process_repairs(context):
-    """Processes the 1-turn timer for repairing units to full health."""
-    world_state = world_for(context)
-    for province in world_state.map_data.values():
-        for unit in province.get("units", []):
-            order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") == "REPAIR":
-                order["turns_left"] -= 1
-
-                if order["turns_left"] <= 0:
-                    unit["health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
-                    # The AI walks wounded units home to a factory and remembers
-                    # where it sent them (ai_movement._assign_maintenance_orders).
-                    # The trip ends here whether the AI issued it or the player
-                    # did, so the key never outlives the repair it belongs to.
-                    unit.pop("repair_trip", None)
-                    # Reset back to a blank move order so they can be selected again
-                    unit["order"] = {"type": "MOVE", "path": []}
-
-def process_conversions(context):
-    """Processes the timer for transferring units into Convoys/Trucks and back."""
-    world_state = world_for(context)
-    for province in world_state.map_data.values():
-        for unit in province.get("units", []):
-            order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") == "CONVERT":
+            elif order_type == "CONVERT":
                 if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context):
                     try:
                         queries.canonical_unit_order(context, unit["owner"], province, unit, order)
                     except ValueError:
                         unit["order"] = {"type": "MOVE", "path": []}
+                        units_to_keep.append(unit)
                         continue
-                order["turns_left"] -= 1
 
-                if order["turns_left"] <= 0:
+            # 2. Timer decrement
+            order["turns_left"] -= 1
+
+            if order["turns_left"] <= 0:
+                # 3. Completion execution
+                if order_type == "DISBAND":
+                    p_data = world_state.nation_data.get(unit.get("owner"))
+                    if p_data:
+                        u_type = unit.get("original_type", unit.get("type"))
+                        stats = unit_library.get(u_type, {})
+                        queries.refund_resources(p_data, stats)
+                    # Dropped from province units
+                    continue
+                elif order_type == "UPGRADE":
+                    target_type = order.get("target_type")
+                    if target_type and target_type in unit_library:
+                        unit["type"] = target_type
+                        queries.apply_library_stats(unit, unit_library)
+                    unit["order"] = {"type": "MOVE", "path": []}
+                elif order_type == "REPAIR":
+                    unit["health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
+                    unit.pop("repair_trip", None)
+                    unit["order"] = {"type": "MOVE", "path": []}
+                elif order_type == "CONVERT":
                     target = order.get("to")
-
                     if target in ["Convoy", "Truck"]:
                         queries.load_transport(unit, target, context=context)
                     else:
                         queries.revert_transport(unit, context=context)
-
-                    # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
+
+            units_to_keep.append(unit)
+
+        province["units"] = units_to_keep
+
+
+def process_disbands(context):
+    """Processes the 1-turn timer for disbanding units and refunds their cost."""
+    process_unit_maintenance_orders(context, order_types={"DISBAND"})
+
+
+def process_upgrades(context):
+    """Processes the 1-turn timer for upgrading units to a new type."""
+    process_unit_maintenance_orders(context, order_types={"UPGRADE"})
+
+
+def process_repairs(context):
+    """Processes the 1-turn timer for repairing units to full health."""
+    process_unit_maintenance_orders(context, order_types={"REPAIR"})
+
+
+def process_conversions(context):
+    """Processes the timer for transferring units into Convoys/Trucks and back."""
+    process_unit_maintenance_orders(context, order_types={"CONVERT"})
 
 def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units, *, eligible_ids=None):
     """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.

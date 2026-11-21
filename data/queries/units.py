@@ -19,17 +19,56 @@ from data.queries.unit_info import (
 from data import queries
 
 
+def is_in_transport(unit):
+    """Return True if this unit is currently converted into a Convoy or Truck."""
+    if not isinstance(unit, dict):
+        return False
+    if unit.get("transport_mode"):
+        return True
+    return "original_type" in unit or unit.get("type", "").startswith(("Convoy (", "Truck ("))
+
+
+def get_transport_mode(unit):
+    """Return 'convoy', 'truck', or None for the unit's active transport mode."""
+    if not isinstance(unit, dict):
+        return None
+    mode = unit.get("transport_mode")
+    if mode:
+        return mode.lower()
+    t = unit.get("type", "")
+    if "original_type" in unit or t.startswith(("Convoy (", "Truck (")):
+        if t.startswith("Convoy ("):
+            return "convoy"
+        if t.startswith("Truck ("):
+            return "truck"
+    return None
+
+
+def get_base_unit_type(unit):
+    """Return the underlying unit type, stripping any Convoy/Truck transport wrapper."""
+    if isinstance(unit, str):
+        if unit.startswith(("Convoy (", "Truck (")) and unit.endswith(")"):
+            inner = unit[unit.find("(") + 1:-1].strip()
+            return inner if inner else unit
+        return unit
+    if not isinstance(unit, dict):
+        return ""
+    if "original_type" in unit and unit["original_type"]:
+        return unit["original_type"]
+    t = unit.get("type", "")
+    if t.startswith(("Convoy (", "Truck (")) and t.endswith(")"):
+        inner = t[t.find("(") + 1:-1].strip()
+        return inner if inner else t
+    return t
+
+
 def get_stored_unit_family(unit):
     """Return the settings family of a stored unit. A Convoy or Truck uses the unit it carries.
 
     This reads the complete default library. A world's active library omits disabled families,
     and a name alone gives the wrong family for stage names such as "Flintlock Infantry I".
     """
-    unit_type = unit.get("original_type") or unit.get("type", "")
-    if unit_type.startswith("Convoy (") or unit_type.startswith("Truck ("):
-        match = re.search(r'\((.*?)\)', unit_type)
-        if match:
-            unit_type = match.group(1).strip()
+    unit_type = get_base_unit_type(unit)
     return queries.get_base_item_name(unit_type)
 
 
@@ -138,15 +177,17 @@ def load_transport(unit, target, *, context=None):
     if target == "Truck" and is_air_unit(unit, context=context):
         raise ValueError("Air units can only be loaded into Convoys.")
 
-    unit["original_type"] = unit["type"]
+    base_type = get_base_unit_type(unit)
+    unit["original_type"] = base_type
     unit["original_speed"] = unit.get("speed", 1)
     unit["original_max_health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)
     unit["original_attack"] = unit.get("attack", c.DEFAULT_UNIT_ATK)
     unit["original_defense"] = unit.get("defense", c.DEFAULT_UNIT_DEF)
+    unit["transport_mode"] = target.lower()
 
     pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
 
-    unit["type"] = f"{target} ({unit['type']})"
+    unit["type"] = f"{target} ({base_type})"
     unit["speed"] = 1
 
     if target == "Convoy":
@@ -167,6 +208,7 @@ def set_unit_owner(unit, country_id):
     """Transfer a unit and all its cargo to the same country."""
     for member in units_with_air_cargo([unit]):
         member["owner"] = country_id
+        member.pop("army_id", None)
 
 
 def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
@@ -234,12 +276,13 @@ def ground_combat_profile(unit, *, context=None):
 
 def revert_transport(unit, *, context=None):
     """Reverts a transport (like a Convoy) back to its original unit type."""
-    if "original_type" not in unit:
+    if not is_in_transport(unit):
         return
 
+    base_type = get_base_unit_type(unit)
     pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
 
-    unit["type"] = unit.get("original_type", "Infantry")
+    unit["type"] = base_type
     unit["speed"] = unit.get("original_speed", 1)
     unit["max_health"] = unit.get("original_max_health", c.DEFAULT_UNIT_HP)
     unit["attack"] = unit.get("original_attack", c.DEFAULT_UNIT_ATK)
@@ -247,6 +290,7 @@ def revert_transport(unit, *, context=None):
 
     unit["health"] = unit["max_health"] * pct
     unit["naval_unit"] = is_naval_unit(unit["type"], context=context)
+    unit.pop("transport_mode", None)
 
     for key in ["original_type", "original_speed", "original_max_health", "original_attack", "original_defense"]:
         if key in unit: del unit[key]
