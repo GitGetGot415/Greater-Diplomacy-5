@@ -561,7 +561,7 @@ class TournamentMoveTests(unittest.TestCase):
         for disabled in (False, True):
             with self.subTest(disabled=disabled), tempfile.TemporaryDirectory() as directory:
                 host = self.coring_host()
-                host.scenario_settings = {"administrative_turn_overrides": {setting: 7},
+                host.scenario_settings = {"administrative_turn_overrides": {setting: c.MIN_CORE_CONSTRUCTION_TURNS + 1},
                                           "administrative_disabled": [setting] if disabled else [],
                                           "use_default_other": False}
                 command = {"type": "province_queue", "province_id": 2, "queue": "building_queue",
@@ -575,7 +575,7 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertFalse(summary["rejections"][0]["overridable"])
                     self.assertEqual(queue, [])
                 else:
-                    self.assertEqual(queue[0]["turns_remaining"], 7)
+                    self.assertEqual(queue[0]["turns_remaining"], c.MIN_CORE_CONSTRUCTION_TURNS + 1)
 
     def test_host_ui_reviews_each_file_and_waits_for_acceptance(self):
         from ui import dialogs 

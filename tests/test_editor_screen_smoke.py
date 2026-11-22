@@ -492,7 +492,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         # Conversions use sliders only. Their text fields would belong to administrative actions.
         self.assertFalse(any(isinstance(el, TextField) and getattr(el, "entry_ref", None) is conversions["values"]
                              for el in screen.elements))
-        sliders = [el for el in screen.elements if isinstance(el, Slider)]
+        sliders = [el for el in screen.elements if isinstance(el, Slider) and el.turn_group == "conversion"]
         self.assertEqual(len(sliders), len(queries.CONVERSION_ACTIONS))
         maximum = c.MAX_CONVERSION_TURNS
         span = maximum - c.MIN_CONVERSION_TURNS
@@ -552,11 +552,12 @@ class EditorScreenSmokeTests(unittest.TestCase):
         screen = UnitStatsEditorScreen(settings=settings, persist=False)
         screen.select_category("other")
         screen.toggle_use_defaults("other")
+        from data import constants as c
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
-        duration = screen.turn_tabs["administrative"]["defaults"][name] + 3
-        field = next(el for el in screen.elements if getattr(el, "entry_key", None) == name)
-        field.text = str(duration)
-        toggle = screen.elements[screen.elements.index(field) + 1]
+        duration = c.MIN_CORE_CONSTRUCTION_TURNS + 3
+        slider = next(el for el in screen.elements if getattr(el, "turn_name", None) == name)
+        slider._set_turns(duration - slider.minimum)
+        toggle = screen.elements[screen.elements.index(slider) + 1]
         toggle.callback()
         self.assertEqual(settings, {})  # An abandoned modal has no side effects.
         with mock.patch.object(queries, "save_scenario_settings") as save, \

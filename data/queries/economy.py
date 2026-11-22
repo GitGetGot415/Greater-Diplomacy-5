@@ -190,6 +190,18 @@ ADMINISTRATIVE_ACTIONS = {
     "REMOVE_CORE": ("Remove Cores", "REMOVE_CORE_TURNS"),
 }
 
+#: The scenario's whole-turn range for each administrative timer.
+ADMINISTRATIVE_TURN_LIMITS = {
+    "CORE": ("MIN_CORE_CONSTRUCTION_TURNS", "MAX_CORE_CONSTRUCTION_TURNS"),
+    "REMOVE_CORE": ("MIN_REMOVE_CORE_TURNS", "MAX_REMOVE_CORE_TURNS"),
+}
+
+
+def get_administrative_turn_limits(order_type):
+    """The (minimum, maximum) turns a scenario may set for one administrative action."""
+    low, high = ADMINISTRATIVE_TURN_LIMITS[order_type]
+    return getattr(c, low), getattr(c, high)
+
 
 def get_administrative_library():
     """Editor rows and historical durations from the canonical core constants."""
@@ -198,13 +210,19 @@ def get_administrative_library():
 
 
 def get_administrative_turns(order_type, scenario_settings=None):
+    """The scenario's turns for one administrative action, within its limits.
+
+    Older scenarios can hold a value outside the limits; it is clamped here.
+    """
     name, constant = ADMINISTRATIVE_ACTIONS[order_type]
     default = getattr(c, constant)
     raw = get_category_setting(scenario_settings, "administrative_turn_overrides", {}).get(name, default)
     try:
-        return max(1, int(raw))
+        turns = int(raw)
     except (TypeError, ValueError):
-        return default
+        turns = default
+    low, high = get_administrative_turn_limits(order_type)
+    return max(low, min(high, turns))
 
 
 CONVERSION_ACTIONS = {
@@ -275,30 +293,40 @@ def province_has_garrison(nation, province):
     return any(unit.get("owner") == nation for unit in province.get("units", []))
 
 
-def get_core_cost(nation, map_data, scenario_settings=None):
-    """Calculates the cost to core a territory dynamically."""
+def _core_manpower_cost(nation, map_data):
+    """Manpower to core one more territory, before politics."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))
-    
-    base_cost = c.CORE_BASE_COST_MANPOWER
-    scaling_cost = c.CORE_SCALING_COST_MANPOWER
-    
+    return c.CORE_BASE_COST_MANPOWER + (c.CORE_SCALING_COST_MANPOWER * core_count)
+
+
+def get_core_cost(nation, map_data, scenario_settings, nation_data):
+    """Calculates the cost to core a territory dynamically.
+
+    The political axis scales the price and shifts the scenario's turns. The
+    order records both when it is placed, so a later shift changes neither.
+    """
+    turns = get_administrative_turns("CORE", scenario_settings)
     return {
-        "cost_manpower": base_cost + (scaling_cost * core_count),
+        "cost_manpower": int(round(_core_manpower_cost(nation, map_data)
+                                   * politics.axis_effect(nation_data, nation, "coring_cost"))),
         "cost_materials": 0,
         "cost_fuel": 0,
-        "time": get_administrative_turns("CORE", scenario_settings),
+        "time": turns + int(round(politics.axis_effect(nation_data, nation, "coring_turns"))),
         "group": "administration"
     }
 
 
-def get_remove_core_cost(nation, map_data, scenario_settings=None):
-    """Returns the cost dictionary for removing foreign cores."""
-    core_cost = get_core_cost(nation, map_data, scenario_settings)
-    manpower_cost = max(0, core_cost.get("cost_manpower", 0) // 2)
+def get_remove_core_cost(nation, map_data, scenario_settings, nation_data):
+    """Returns the cost dictionary for removing foreign cores.
+
+    The political axis scales the price. The scenario's turns apply unchanged.
+    """
+    manpower_cost = max(0, _core_manpower_cost(nation, map_data) // 2)
+    multiplier = politics.axis_effect(nation_data, nation, "remove_core_cost")
     return {
-        "cost_manpower": manpower_cost,
-        "cost_materials": max(0, manpower_cost // 2),
-        "cost_fuel": max(0, core_cost.get("cost_fuel", 0) // 2),
+        "cost_manpower": int(round(manpower_cost * multiplier)),
+        "cost_materials": int(round(max(0, manpower_cost // 2) * multiplier)),
+        "cost_fuel": 0,
         "time": get_administrative_turns("REMOVE_CORE", scenario_settings),
         "group": "administration"
     }

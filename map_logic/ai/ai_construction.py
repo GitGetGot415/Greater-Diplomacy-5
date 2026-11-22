@@ -758,7 +758,8 @@ def _apply_coring_priority(context, ai_name, data, my_provs):
     # Prioritize territories with factories
     valid_uncored.sort(key=lambda p: (queries.has_industry(p), p.get("is_coastal", False)), reverse=True)
     target_core_prov = valid_uncored[0]
-    core_data = queries.get_core_cost(ai_name, world_state.map_data, world_state.scenario_settings)
+    core_data = queries.get_core_cost(ai_name, world_state.map_data, world_state.scenario_settings,
+                                      world_state.nation_data)
     if queries.can_afford(data, core_data):
         production_actions.submit_production(
             context, ai_name, target_core_prov, "building_queue", {"order_type": "CORE"}, authority="ai")

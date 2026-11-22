@@ -896,6 +896,13 @@ TRUCK_CONVERT_TURNS = 2
 # The editor and shared rules use the same inclusive timing limits.
 MIN_CONVERSION_TURNS = 1
 MAX_CONVERSION_TURNS = 9
+# Scenario limits for the administrative timers. The coring minimum leaves a
+# fully authoritarian country, which cores POLITICS_AXIS_EFFECTS' 10 turns
+# faster, at 2 turns or more.
+MIN_CORE_CONSTRUCTION_TURNS = 12
+MAX_CORE_CONSTRUCTION_TURNS = 24
+MIN_REMOVE_CORE_TURNS = 1
+MAX_REMOVE_CORE_TURNS = 9
 
 # Recovery includes landing and this many subsequent complete turns.
 AIR_DROP_RECOVERY_TURNS = 2

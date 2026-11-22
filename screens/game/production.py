@@ -328,7 +328,7 @@ class Production_Screen(Screen):
                 color, text, callback = "grey", "Cannot Core", _no_action
             else:
                 color, text, callback = "purple", "Core Territory", lambda: self.start_coring()
-            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings))
+            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings, self.map_screen.nation_data))
 
         # --- REMOVE CORES BUTTON ---
         # Cores are ignored entirely under the "Disable Cores" scenario rule, so
@@ -348,7 +348,7 @@ class Production_Screen(Screen):
                 color, text, callback = "grey", "Remove Cores", _no_action
             else:
                 color, text, callback = "red", "Remove Cores", lambda: self.start_remove_cores()
-            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings))
+            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings, self.map_screen.nation_data))
 
     def _next_building_in_group(self, group_id, current_buildings):
         b_list = [b for b, d in self.building_library.items() if d.get("group") == group_id]

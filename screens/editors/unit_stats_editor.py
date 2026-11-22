@@ -1,7 +1,8 @@
 """Edit a scenario's unit and building rules in one draft, separate from the active game library.
 
 Construction turns, enabled families, unit ranges, and building stats share one Save All Changes.
-Default turn rows store no override. Conversions use whole-turn sliders and remain enabled.
+Default turn rows store no override. Administrative actions and conversions use whole-turn sliders
+within their limits; conversions remain enabled.
 In Scenario Settings, each category has a Use Defaults row. While it is on, the category uses the map's defaults.
 The map editor uses the same categories to edit the map's defaults.
 """
@@ -66,23 +67,33 @@ def _read_library(path):
         return json.load(handle)
 
 
-class _ConversionTurnSlider(Slider):
-    """Snap the shared slider to whole turns within the conversion limits."""
+def _turn_limits(group, name):
+    """The (minimum, maximum) whole turns of one slider row."""
+    if group == "conversion":
+        return c.MIN_CONVERSION_TURNS, c.MAX_CONVERSION_TURNS
+    order = next(order for order, (label, _constant) in queries.ADMINISTRATIVE_ACTIONS.items() if label == name)
+    return queries.get_administrative_turn_limits(order)
 
-    def __init__(self, x, y, width, turns, callback):
+
+class _TurnSlider(Slider):
+    """Snap the shared slider to whole turns within one row's limits."""
+
+    def __init__(self, x, y, width, turns, callback, minimum, maximum, *, turn_group=None, turn_name=None):
         self.on_change = callback
-        span = c.MAX_CONVERSION_TURNS - c.MIN_CONVERSION_TURNS
-        super().__init__(x, y, width, "", turns - c.MIN_CONVERSION_TURNS,
+        self.minimum = minimum
+        self.turn_group, self.turn_name = turn_group, turn_name
+        span = maximum - minimum
+        super().__init__(x, y, width, "", max(minimum, min(maximum, turns)) - minimum,
                          self._set_turns, visual_max=span, allowed_max=span)
 
     def get_display_string(self):
-        turns = round(self.value) + c.MIN_CONVERSION_TURNS
+        turns = round(self.value) + self.minimum
         return f"{turns} {'turn' if turns == 1 else 'turns'}"
 
     def _set_turns(self, value):
         self.value = round(value)
         self.handle_rect.centerx = self.rect.x + round(self.rect.width * self.value / self.visual_max)
-        self.on_change(self.value + c.MIN_CONVERSION_TURNS)
+        self.on_change(self.value + self.minimum)
 
 
 class UnitStatsEditorScreen(ModalScreen):
@@ -185,6 +196,8 @@ class UnitStatsEditorScreen(ModalScreen):
             [], "time")
         for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
             self.turn_tabs["conversion"]["values"][name] = str(queries.get_conversion_turns(action, settings))
+        for order, (name, _constant) in queries.ADMINISTRATIVE_ACTIONS.items():
+            self.turn_tabs["administrative"]["values"][name] = str(queries.get_administrative_turns(order, settings))
         # A row is (name, turn group), or (None, divider label).
         for category, groups in TURN_ONLY_CATEGORIES.items():
             rows = []
@@ -311,8 +324,9 @@ class UnitStatsEditorScreen(ModalScreen):
                     value = max(1, int(tab["values"][name]))
                 except ValueError:
                     continue
-                if key == "conversion":
-                    value = min(c.MAX_CONVERSION_TURNS, max(c.MIN_CONVERSION_TURNS, value))
+                if key in ("conversion", "administrative"):
+                    low, high = _turn_limits(key, name)
+                    value = min(high, max(low, value))
                 tab["values"][name] = str(value)
                 if value != tab["defaults"][name]:
                     overrides[name] = value
@@ -458,16 +472,8 @@ class UnitStatsEditorScreen(ModalScreen):
             if category == "buildings":
                 self._add_building_fields(name, key, y)
                 continue
-            if key == "conversion":
-                tab = self.turn_tabs[key]
-                values = tab["values"]
-                slider = _ConversionTurnSlider(
-                    self.conversion_slider_x, y + self.CONVERSION_SLIDER_Y_OFF, self.CONVERSION_SLIDER_WIDTH,
-                    tab["defaults"][name] if locked else int(values[name]),
-                    lambda value, row=name, target=values: target.__setitem__(row, str(value)))
-                # A locked slider shows the default turns and ignores input.
-                slider.disabled = locked
-                self.add_list_row(slider)
+            if key in ("conversion", "administrative"):
+                self._add_turn_slider(key, name, y, locked)
                 continue
             self._add_turn_controls(key, name, self.turn_field_x, self.TURN_FIELD_WIDTH, y)
 
@@ -492,6 +498,35 @@ class UnitStatsEditorScreen(ModalScreen):
                             self.BUILDING_FIELD_WIDTH, locked=self.use_defaults["buildings"])
         if key == LEVEL_ONE_ROW:
             self._add_turn_controls("building", name, self.building_turns_x, self.BUILDING_FIELD_WIDTH, row_y)
+
+    def _turn_slider_x(self, group):
+        """Conversions have no ON/OFF button, so their slider sits at the row's right edge."""
+        if group == "conversion":
+            return self.conversion_slider_x
+        return self.check_x - self.TURN_FIELD_GAP - self.CONVERSION_SLIDER_WIDTH
+
+    def _add_turn_slider(self, group, name, row_y, locked):
+        """Add a whole-turn slider, plus the ON/OFF button of an administrative action.
+
+        A locked slider shows the default turns and ignores input.
+        """
+        tab = self.turn_tabs[group]
+        values = tab["values"]
+        minimum, maximum = _turn_limits(group, name)
+        slider = _TurnSlider(
+            self._turn_slider_x(group), row_y + self.CONVERSION_SLIDER_Y_OFF, self.CONVERSION_SLIDER_WIDTH,
+            tab["defaults"][name] if locked else int(values[name]),
+            lambda value, row=name, target=values: target.__setitem__(row, str(value)),
+            minimum, maximum, turn_group=group, turn_name=name)
+        slider.disabled = locked
+        self.add_list_row(slider)
+        if group == "administrative":
+            toggle = make_on_off_button(
+                self.check_x, row_y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2,
+                locked or name not in tab["disabled_set"], lambda row=name: self.toggle_disabled(group, row))
+            if locked:
+                toggle.apply_state(enabled=False)
+            self.add_list_row(toggle)
 
     def _add_turn_controls(self, group, name, x, width, row_y):
         """Add the turns field and ON/OFF button of one family or action in a construction turn group.
@@ -633,8 +668,8 @@ class UnitStatsEditorScreen(ModalScreen):
                 label_x += self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
             label = font.render(name, True, c.UI_TEXT_LIGHT)
             surface.blit(label, label.get_rect(midleft=(label_x, y + self.ROW_HEIGHT // 2)))
-            if group == "conversion":
-                hint_right = self.conversion_slider_x - self.CONVERSION_HINT_GAP
+            if group in ("conversion", "administrative"):
+                hint_right = self._turn_slider_x(group) - self.CONVERSION_HINT_GAP
             else:
                 hint_right = self.turn_field_x - self.TURN_HINT_GAP
             hint = small.render(f"default: {self.turn_tabs[group]['defaults'][name]}", True, c.UI_TEXT_DIM)
