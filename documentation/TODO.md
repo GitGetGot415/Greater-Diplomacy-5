@@ -28,6 +28,7 @@
 - check whether low-health units should deal less damage `(lane targeting already spreads damage across the front rank, and the AI already rotates badly damaged units out)`
 - check whether overkill can kill a unit before the rest of the damage is applied
 - check the maximum country-data length `(search for max_length)`
+- check whether `TOP_BAR_UI_CENTER_Y` and `BOTTOM_BAR_UI_CENTER_Y` are used everywhere the bar positions need them
 - check whether all current tests are needed `(visual menu tests may not be useful)`
 - review the old TODOs `(wow what a HELPFUL SUGGESTION)`
 
@@ -130,6 +131,7 @@
 - add more causes for rebellions besides core removal
 - add focus trees `(im sure scenario creators would love this)`
 - add rules for devastation and recovery `(see greater diplomacy 4 for more context on this)`
+- consider making core removal a policy
 
 ## Scenarios and Maps
 

@@ -322,8 +322,6 @@ TOP_UI_HEIGHT = 60
 BOT_UI_HEIGHT = 60
 TOTAL_UI_HEIGHT = 120
 
-# This probably needs to be implemented in more places than just orders.py / buttons.py (does it? what is this for again?)
-# I think this is implemented in everywhere it needs to be... right?
 TOP_BAR_UI_CENTER_Y = 10
 BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
 
@@ -1065,9 +1063,6 @@ POLITICS_AXIS_EFFECTS = {
         "fort_cost": (1.2, 0.8),
     },
 }
-# Idea for later: removing cores could become a policy.
-
-
 # ==========================================
 # LLM DIRECTOR (map_logic/ai/ai_director.py)
 # ==========================================

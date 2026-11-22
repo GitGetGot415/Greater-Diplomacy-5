@@ -465,8 +465,7 @@ AI_ROLE_DIMINISH = 0.35
 # LANE_SLOTS_TYPICAL x frontline x (AI_RESERVE_DEPTH - 1), which at depth 2.0 is
 # the same count as the assault target, and a 1:1 spend split is what that
 # implies. That is a derivation, not a measurement -- the harness the old number
-# came from was run offline and does not exist in tests/, so re-measuring under
-# the lane rules is outstanding work, recorded in context/TODO.txt.
+# came from was run offline and does not exist in tests/.
 AI_LINE_SPEND_RATIO = 1.0
 # Guns went from support to the only thing that reaches a reserve, and deep
 # reserve stacks are the formation the lane model encourages.
