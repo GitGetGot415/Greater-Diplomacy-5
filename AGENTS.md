@@ -499,7 +499,8 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 - To check real content, read the expected value from the data, for example with `research_lock_cases`.
 - Check every entry in a category. Do not name specific real units or technologies when a loop can select them.
 - When a data edit makes a test fail, rewrite the test around its rule. Do not change the data to pass the test.
-- Run `python scripts/checks/tuning_stress.py` after you add or change tests that read real content.
+- Gameplay values in `data/constants.py` follow the same rule. Read the constant, or the helper that applies it, instead of copying its current value into a test.
+- Run `python scripts/checks/tuning_stress.py` after you add or change tests that read real content or `data/constants.py` values. Its `constants` variant changes those values in memory.
 
 ## Project Text
 

@@ -400,15 +400,17 @@ class QueueFillTests(unittest.TestCase):
     def test_a_queue_that_already_has_a_military_tech_is_left_to_value(self):
         queue = [{"tech_name": "medium_tank", "points_remaining": 2400}]
         ranked = [e for e in self.ranked() if e[0] != "medium_tank"]
+        # The remaining slots take the best-valued techs in order.
+        expected = [entry[0] for entry in ranked][:c.RESEARCH_SLOTS - 1]
         self.fill(queue, ranked, self.research, self.library, self.tree)
-        self.assertEqual([q["tech_name"] for q in queue][1:],
-                         ["factory", "recruitment_buildings"])
+        self.assertEqual([q["tech_name"] for q in queue][1:], expected)
 
     def test_it_does_not_hang_when_nothing_unlocks_a_unit(self):
         queue = []
         economy_only = [e for e in self.ranked() if e[0] != "medium_tank"]
+        expected = min(len(economy_only), c.RESEARCH_SLOTS)
         self.fill(queue, economy_only, self.research, self.library, self.tree)
-        self.assertEqual(len(queue), 3)
+        self.assertEqual(len(queue), expected)
 
     def test_a_full_queue_is_left_alone(self):
         queue = [{"tech_name": "factory", "points_remaining": 1}] * c.RESEARCH_SLOTS

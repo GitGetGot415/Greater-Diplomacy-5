@@ -135,7 +135,7 @@ class ResearchFundingTests(unittest.TestCase):
 
                     asyncio.run(turn_processor.resolve_turn_logic(game))
                     date = queries.get_exact_year(game.time_manager)
-                    base = unmodified_base * (0 if economic_value == c.POLITICS_MIN else 2)
+                    base = unmodified_base * politics.axis_research_multiplier(economic_value)
                     policy_multiplier = politics.policy(policy_id)["effects"]["research"]
                     self.assertEqual(country["materials"], 96)
                     self.assertEqual(country["research_funding_slider"], 0.1)

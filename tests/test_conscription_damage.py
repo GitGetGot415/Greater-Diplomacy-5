@@ -28,15 +28,21 @@ def fixture_unit(owner):
             "defense": 0, "speed": 1, "order": {"type": "IDLE"}}
 
 
+def damage_caption(rate):
+    """The economy screen caption for a conscription rate, from the shared bonus rule."""
+    return f"dmg modifier: +{queries.get_conscription_damage_bonus({'conscription_slider': rate}):.2%}"
+
+
 class ConscriptionCurveTests(unittest.TestCase):
     def bonus(self, rate):
         return queries.get_conscription_damage_bonus({"conscription_slider": rate})
 
     def test_requested_conscription_and_damage_pairs(self):
-        # These values are the requested rule, independent of unit tuning.
-        for rate, expected in ((1.0, 0.0), (0.5, 0.05), (0.25, 0.10), (0.0, 0.20)):
+        # The requested rule: full, half, quarter, and zero conscription give none,
+        # a quarter, a half, and all of the maximum bonus.
+        for rate, share in ((1.0, 0.0), (0.5, 0.25), (0.25, 0.5), (0.0, 1.0)):
             with self.subTest(rate=rate):
-                self.assertAlmostEqual(self.bonus(rate), expected)
+                self.assertAlmostEqual(self.bonus(rate), share * c.CONSCRIPTION_MAX_DAMAGE_BONUS)
 
     def test_intermediate_values_follow_exponential_segments(self):
         self.assertAlmostEqual(self.bonus(0.375), math.sqrt(self.bonus(0.5) * self.bonus(0.25)))
@@ -181,7 +187,7 @@ class ConscriptionSliderTests(unittest.TestCase):
             slider.handle_event(pygame.event.Event(
                 pygame.MOUSEMOTION, pos=(slider.rect.x + slider.rect.width // 4, slider.rect.y)))
         self.assertEqual(game.nation_data["A"]["conscription_slider"], 0.25)
-        self.assertEqual(screen.conscription_damage_caption, "dmg modifier: +10.00%")
+        self.assertEqual(screen.conscription_damage_caption, damage_caption(0.25))
         game.invalidate_map_presentation_cache.assert_called_once_with()
         expected = queries.get_economy_projections("A", game.map_data, game.nation_data)
         self.assertEqual(screen.econ_cache, expected)
@@ -190,7 +196,7 @@ class ConscriptionSliderTests(unittest.TestCase):
         screen, _game = self.screen()
         self.assertEqual(screen.conscription_damage_caption, "dmg modifier: +0.00%")
         screen.set_conscription(0.375)
-        self.assertEqual(screen.conscription_damage_caption, "dmg modifier: +7.07%")
+        self.assertEqual(screen.conscription_damage_caption, damage_caption(0.375))
 
     def test_draw_reuses_previews_without_running_rules(self):
         screen, _game = self.screen()

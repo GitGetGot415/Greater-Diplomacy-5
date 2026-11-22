@@ -26,6 +26,7 @@ import data.constants as c
 from map_logic.ai import ai_tuning
 import pygame
 from data import queries
+from data.queries import relations
 from map_logic import politics
 from map_logic.system32 import combat_processor, combat_rules
 
@@ -216,21 +217,32 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
 class PoliticalAffinityTests(unittest.TestCase):
     def test_affinity_scores_agreement_and_opposition_on_both_axes(self):
+        # Full agreement on one axis is worth the per-axis weight; full opposition costs it.
+        edge, per_axis = c.POLITICS_MAX, relations._POLITICAL_AFFINITY_PER_AXIS
+        half = edge // 2
+
+        def score(a, b):
+            data = {name: {politics.VALUE_KEY: political, politics.ECONOMIC_VALUE_KEY: economic}
+                    for name, (political, economic) in (("A", a), ("B", b))}
+            self.assertEqual(queries.get_relation_score("A", "A", data), 0)
+            forward = queries.get_relation_score("A", "B", data)
+            self.assertEqual(queries.get_relation_score("B", "A", data), forward)
+            return forward
+
         for a, b, expected in (
-            ((10, 10), (10, 10), 20),
-            ((-10, -10), (-10, -10), 20),
-            ((5, 5), (5, 5), 5),
-            ((8, -6), (6, -5), 8),
-            ((10, 10), (10, -10), 0),
-            ((10, 10), (-10, -10), -20),
-            ((10, -10), (0, -10), 10),
+            ((edge, edge), (edge, edge), 2 * per_axis),
+            ((-edge, -edge), (-edge, -edge), 2 * per_axis),
+            ((edge, edge), (edge, -edge), 0),
+            ((edge, edge), (-edge, -edge), -2 * per_axis),
+            ((edge, -edge), (0, -edge), per_axis),
         ):
             with self.subTest(a=a, b=b):
-                data = {name: {politics.VALUE_KEY: political, politics.ECONOMIC_VALUE_KEY: economic}
-                        for name, (political, economic) in (("A", a), ("B", b))}
-                self.assertEqual(queries.get_relation_score("A", "B", data), expected)
-                self.assertEqual(queries.get_relation_score("B", "A", data), expected)
-                self.assertEqual(queries.get_relation_score("A", "A", data), 0)
+                self.assertEqual(score(a, b), expected)
+        # Milder shared leanings add less goodwill than full agreement, but still some.
+        for a, b in (((half, half), (half, half)), ((edge - 2, -half), (half + 1, -half))):
+            with self.subTest(a=a, b=b):
+                self.assertGreater(score(a, b), 0)
+                self.assertLess(score(a, b), 2 * per_axis)
 
 
 class EconomicDriftTests(unittest.TestCase):
@@ -269,21 +281,29 @@ def policy_effect(policy_id, effect):
 # ============================================================================ #
 
 class MultiplierTests(unittest.TestCase):
-    def test_political_curve_trades_core_manpower_for_damage(self):
-        for value, damage, manpower in ((-10, 0.7, 1.5), (-5, 0.85, 1.25), (0, 1, 1),
-                                        (5, 1.15, 0.75), (10, 1.3, 0.5)):
+    def assert_linear_axis(self, multiplier, span, rises_toward_max):
+        """The centre is 1.0, each end is 1 +/- span, and every step moves span / POLITICS_MAX."""
+        sign = 1.0 if rises_toward_max else -1.0
+        self.assertAlmostEqual(multiplier(c.POLITICS_START), 1.0)
+        self.assertAlmostEqual(multiplier(c.POLITICS_MAX), 1.0 + sign * span)
+        self.assertAlmostEqual(multiplier(-c.POLITICS_MAX), 1.0 - sign * span)
+        for value in range(c.POLITICS_MIN, c.POLITICS_MAX):
             with self.subTest(value=value):
-                country = {"A": {"political_value": value, "economic_value": c.POLITICS_MAX}}
-                self.assertAlmostEqual(politics.damage_multiplier(country, "A"), damage)
-                self.assertAlmostEqual(politics.axis_core_manpower_multiplier(value), manpower)
+                self.assertAlmostEqual(multiplier(value + 1) - multiplier(value), sign * span / c.POLITICS_MAX)
+
+    def test_political_curve_trades_core_manpower_for_damage(self):
+        def damage(value):
+            return politics.damage_multiplier({"A": {"political_value": value, "economic_value": c.POLITICS_MAX}}, "A")
+
+        self.assert_linear_axis(damage, c.POLITICS_DAMAGE_SPAN, rises_toward_max=True)
+        self.assert_linear_axis(politics.axis_core_manpower_multiplier, c.POLITICS_CORE_MANPOWER_SPAN, rises_toward_max=False)
 
     def test_economic_curve_trades_factory_output_for_research(self):
-        for value, factory, research in ((-10, 1.2, 0), (-5, 1.1, 0.5), (-2, 1.04, 0.8), (-1, 1.02, 0.9),
-                                         (0, 1, 1), (1, 0.98, 1.1), (2, 0.96, 1.2), (5, 0.9, 1.5), (10, 0.8, 2)):
-            with self.subTest(value=value):
-                country = {"A": {"political_value": c.POLITICS_MAX, "economic_value": value}}
-                self.assertAlmostEqual(politics.axis_factory_multiplier(value), factory)
-                self.assertAlmostEqual(politics.research_multiplier(country, "A"), research)
+        def research(value):
+            return politics.research_multiplier({"A": {"political_value": c.POLITICS_MAX, "economic_value": value}}, "A")
+
+        self.assert_linear_axis(politics.axis_factory_multiplier, c.ECONOMICS_FACTORY_SPAN, rises_toward_max=False)
+        self.assert_linear_axis(research, c.ECONOMICS_RESEARCH_SPAN, rises_toward_max=True)
 
     def test_a_nation_nobody_has_touched_is_centrist(self):
         """An old save has none of these keys, and must play exactly as before."""
@@ -734,12 +754,14 @@ class ResearchTests(unittest.TestCase):
         self.assertGreater(base, 0)
         self.assertEqual(self.points_after_one_turn(c.POLITICS_START, c.POLITICS_MAX), base)
 
-    def test_fully_market_research_is_twice_as_fast(self):
+    def test_fully_market_research_gains_the_whole_research_span(self):
         base = self.points_after_one_turn(c.POLITICS_START)
-        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MAX), base * 2)
+        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MAX), base * (1.0 + c.ECONOMICS_RESEARCH_SPAN))
 
-    def test_fully_planned_research_halts(self):
-        self.assertEqual(self.points_after_one_turn(c.POLITICS_MIN, c.POLITICS_MIN), 0)
+    def test_fully_planned_research_loses_the_whole_research_span(self):
+        base = self.points_after_one_turn(c.POLITICS_START)
+        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MIN, c.POLITICS_MIN),
+                               base * (1.0 - c.ECONOMICS_RESEARCH_SPAN))
 
 
 class FactionResearchTests(unittest.TestCase):

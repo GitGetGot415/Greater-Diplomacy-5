@@ -1,15 +1,18 @@
-"""Find tests that depend on current unit, building, and research values.
+"""Find tests that depend on current unit, building, research, and constants values.
 
 Usage:
     python scripts/checks/tuning_stress.py
     python scripts/checks/tuning_stress.py --variant stats --show-all
 
 Each variant runs the test suite on changed copies of the data in a temporary folder.
-Source data files do not change. A failure outside RECIPE_SYNC_TESTS means that a test
+The constants variant loads a changed copy of data/constants.py in memory instead.
+Source data files do not change. A failure outside EXPECTED_FAILURES means that a test
 depends on current tuning. Rewrite that test around its rule.
 """
 
 import argparse
+import ast
+import importlib.util
 import json
 import os
 import re
@@ -19,7 +22,32 @@ import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-VARIANTS = ("stats", "no_prereqs", "prereq_levels", "years", "bonuses")
+VARIANTS = ("stats", "no_prereqs", "prereq_levels", "years", "bonuses", "constants")
+CONSTANTS_PATH = os.path.join(ROOT, "data", "constants.py")
+# constants.py numbers that are not gameplay tuning. The constants variant leaves them unchanged.
+FIXED_CONSTANTS = {
+    # Layout, colors, and art. Tests may check these, and a changed color can be invalid.
+    # CUSTOM_BATTLE_UNITS_PER_COLUMN sets the custom battle roster's rows as well as its paired columns.
+    "SCREEN_WIDTH", "SCREEN_HEIGHT", "UI_LEFT_OFFSET", "TOP_UI_HEIGHT", "BOT_UI_HEIGHT", "TOTAL_UI_HEIGHT",
+    "TOP_BAR_UI_CENTER_Y", "BOTTOM_BAR_UI_CENTER_Y", "PROVINCE_UI", "SIZES", "MODAL_TITLE_Y_OFFSET", "SCROLL_STEP",
+    "BACK_BTN_TOPLEFT", "MAX_CAMERA_ZOOM", "FLAG_SIZE", "PORTRAIT_SIZE", "ARMY_CUSTOM_SYMBOL_SIZE",
+    "MENU_BOTTOM_TEXT_LINK_COLOR", "DEFAULT_BG_COLOR", "UI_COLORS", "COLOR_GOLD_HIGHLIGHT", "COLOR_SUCCESS_GREEN",
+    "COLOR_DIM_BORDER", "COLOR_RESOURCE_MANPOWER", "COLOR_RESOURCE_MATERIALS", "COLOR_RESOURCE_FUEL", "COLOR_CHROMA_PINK",
+    "UI_TEXT_BRIGHT", "UI_TEXT_LIGHT", "UI_TEXT_DIM", "UI_TEXT_MUTED", "UI_ACCENT_BLUE", "MODAL_OVERLAY_ALPHA", "MODAL_BG",
+    "HUD_PANEL_BG", "HUD_PANEL_BORDER", "PANEL_THEME_DANGER", "PANEL_THEME_CONFIRM", "PANEL_THEME_INFO", "PANEL_THEME_EDIT",
+    "PANEL_THEME_SPECIAL", "PANEL_THEME_CONFIRM_OVER_MAP", "PANEL_THEME_INFO_OVER_MAP", "INPUT_BORDER", "INPUT_BORDER_ACTIVE",
+    "MSG_NOTIFICATION_COLOR", "BOMBARDMENT_ARROW_ICONS", "CUSTOM_BATTLE_UNITS_PER_COLUMN", "DEFAULT_ARMY_SYMBOL_COLOR", "UNASSIGNED_ARMY_COLOR",
+    "ARMY_SYMBOL_COLOR_CHOICES", "ARMY_SYMBOL_ROTATIONS", "DEFAULT_ARMY_SYMBOL_ROTATION", "MAX_CHECKERBOARD_SCROLL_SPEED",
+    "MAX_CHECKERBOARD_GRADIENT_STRENGTH", "HILDEHRAND_GRADIENT_MAX_STRENGTH", "HILDEHRAND_GRADIENT_MIN_BANDS",
+    "HILDEHRAND_GRADIENT_MAX_BANDS",
+    # Encodings and file formats: pygame button numbers, Roman numerals, and save layout.
+    "MOUSE_BUTTONS", "ROMAN_SYMBOL_VALUES", "ROMAN_LETTER_VALUES", "ROMAN_NUMERALS",
+    "HISTORY_INDENT", "LIBRARY_JSON_INDENT", "SAVE_INDENT", "SAVE_LINE_WIDTH", "HISTORY_GZIP_LEVEL",
+    # The calendar must match research years in the JSON data. The years variant moves research years.
+    "START_YEAR", "END_YEAR", "DEFAULT_EQUIPMENT_YEAR", "DEFAULT_1910_TECH", "TACTICAL_DEFAULT_YEAR",
+    # Choices offered in settings, not tuning.
+    "DAYS_PER_TURN_OPTIONS",
+}
 
 # These tests compare JSON to data/generators/recipes.py. Only the JSON changes here, so they must fail.
 RECIPE_SYNC_TESTS = {
@@ -32,6 +60,12 @@ RECIPE_SYNC_TESTS = {
     "test_unit_progression.UnitProgressionTests.test_organized_militia_covers_the_period_before_modern_militia",
     "test_unit_progression.UnitProgressionTests.test_source_rows_and_runtime_research_share_dates_and_level_counts",
 }
+# These tests check that constants.py values agree with each other, so changing each value alone must fail them.
+CONSTANT_RULE_TESTS = {
+    # Each extra aircraft must add total attack, which ties the small-stack and large-stack curves together.
+    "test_air_mechanics.AirResolutionTests.test_equal_aircraft_stacks_gain_total_attack_at_every_size",
+}
+EXPECTED_FAILURES = RECIPE_SYNC_TESTS | CONSTANT_RULE_TESTS
 UNIT_STATS = ("health", "attack", "defense", "cost_materials", "cost_manpower", "cost_fuel",
               "production_time", "bombard_attack", "bombard_range", "range")
 BUILDING_STATS = ("time", "cost_materials", "cost_manpower", "cost_fuel",
@@ -40,6 +74,54 @@ BUILDING_STATS = ("time", "cost_materials", "cost_manpower", "cost_fuel",
 
 def scaled(value):
     return int(round(value * 1.37)) + 1 if value > 0 else value
+
+
+def scaled_constant(value):
+    """Move a constants.py number enough to expose a copied literal, keeping its sign and 0-1 range."""
+    if isinstance(value, bool) or value == 0:
+        return value
+    if isinstance(value, int):
+        # 1 and -1 often mean one step or one direction; larger counts can grow.
+        return value + (1 if value > 0 else -1) if abs(value) >= 2 else value
+    return value * (0.9 if -1 < value < 1 else 1.1)
+
+
+class ConstantScaler(ast.NodeTransformer):
+    def visit_Subscript(self, node):
+        # An index or slice picks an item; changing it would change the data's shape, not its tuning.
+        node.value = self.visit(node.value)
+        return node
+
+    def visit_BinOp(self, node):
+        # Arithmetic on another name, such as COMBAT_WIDTH // 2, is a formula. The named value changes instead.
+        if any(isinstance(child, ast.Name) for child in ast.walk(node)):
+            return node
+        return self.generic_visit(node)
+
+    def visit_Constant(self, node):
+        if isinstance(node.value, (int, float)):
+            return ast.copy_location(ast.Constant(scaled_constant(node.value)), node)
+        return node
+
+
+def install_scaled_constants():
+    """Load data.constants with every assigned number changed, before any other module imports it.
+
+    Running the changed source keeps constants built from other constants consistent.
+    """
+    with open(CONSTANTS_PATH, encoding="utf-8") as handle:
+        tree = ast.parse(handle.read(), CONSTANTS_PATH)
+    for statement in tree.body:
+        targets = statement.targets if isinstance(statement, ast.Assign) else [getattr(statement, "target", None)]
+        names = {target.id for target in targets if isinstance(target, ast.Name)}
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)) and statement.value is not None and not names & FIXED_CONSTANTS:
+            statement.value = ConstantScaler().visit(statement.value)
+    ast.fix_missing_locations(tree)
+    module = importlib.util.module_from_spec(importlib.util.spec_from_file_location("data.constants", CONSTANTS_PATH))
+    sys.modules["data.constants"] = module
+    exec(compile(tree, CONSTANTS_PATH, "exec"), module.__dict__)
+    import data
+    data.constants = module
 
 
 def shift_years(units, tree, end_year):
@@ -98,6 +180,8 @@ def run_variant(variant, output):
     """Run the suite in this process with the data paths pointed at changed copies."""
     os.chdir(ROOT)
     sys.path.insert(0, ROOT)
+    if variant == "constants":
+        install_scaled_constants()
     # Local imports: the root path must be set first, and data paths must change before tests load.
     from tests import configure_test_audio
     configure_test_audio()
@@ -109,29 +193,33 @@ def run_variant(variant, output):
 
     attributes = ("UNIT_DATA_PATH", "BUILDING_DATA_PATH", "RESEARCH_TEMPLATE_PATH")
     with tempfile.TemporaryDirectory() as directory:
-        data = {}
-        for attribute in attributes:
-            with open(getattr(c, attribute), encoding="utf-8") as handle:
-                data[attribute] = json.load(handle)
-        perturb(variant, *(data[attribute] for attribute in attributes), c.END_YEAR)
-        for attribute in attributes:
-            path = os.path.join(directory, os.path.basename(getattr(c, attribute)))
-            with open(path, "w", encoding="utf-8") as handle:
-                json.dump(data[attribute], handle)
-            setattr(c, attribute, path)
+        if variant != "constants":
+            data = {}
+            for attribute in attributes:
+                with open(getattr(c, attribute), encoding="utf-8") as handle:
+                    data[attribute] = json.load(handle)
+            perturb(variant, *(data[attribute] for attribute in attributes), c.END_YEAR)
+            for attribute in attributes:
+                path = os.path.join(directory, os.path.basename(getattr(c, attribute)))
+                with open(path, "w", encoding="utf-8") as handle:
+                    json.dump(data[attribute], handle)
+                setattr(c, attribute, path)
         suite = unittest.defaultTestLoader.discover(start_dir="tests", top_level_dir=ROOT)
         with open(os.devnull, "w", encoding="utf-8") as sink:
             result = unittest.TextTestRunner(stream=sink, verbosity=0).run(suite)
-    failed = sorted({re.sub(r"\s*\(.*\)$", "", str(test.id())).replace("tests.", "", 1)
-                     for test, _trace in (*result.failures, *result.errors)})
+    details = {}
+    for test, trace in (*result.failures, *result.errors):
+        name = re.sub(r"\s*\(.*\)$", "", str(test.id())).replace("tests.", "", 1)
+        details.setdefault(name, trace.strip().splitlines()[-1])
     with open(output, "w", encoding="utf-8") as handle:
-        json.dump({"ran": result.testsRun, "failed": failed}, handle)
+        json.dump({"ran": result.testsRun, "failed": sorted(details), "details": details}, handle)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--variant", action="append", choices=VARIANTS)
-    parser.add_argument("--show-all", action="store_true", help="Also list the expected recipe comparison failures.")
+    parser.add_argument("--show-all", action="store_true", help="Also list the expected recipe and constant rule failures.")
+    parser.add_argument("--details", action="store_true", help="Print the error line under each failing test.")
     parser.add_argument("--child", help=argparse.SUPPRESS)
     parser.add_argument("--output", help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -153,13 +241,15 @@ def main():
                 raise SystemExit(f"The {variant} variant stopped before its report was written.")
             with open(path, encoding="utf-8") as handle:
                 report = json.load(handle)
-            problems = [name for name in report["failed"] if name not in RECIPE_SYNC_TESTS]
+            problems = [name for name in report["failed"] if name not in EXPECTED_FAILURES]
             unexpected += len(problems)
             print(f"{variant}: {report['ran']} tests, {len(problems)} depend on tuning")
             for name in problems:
                 print(f"  {name}")
+                if args.details:
+                    print(f"      {report['details'][name]}")
             if args.show_all:
-                for name in sorted(set(report["failed"]) & RECIPE_SYNC_TESTS):
+                for name in sorted(set(report["failed"]) & EXPECTED_FAILURES):
                     print(f"  expected: {name}")
     return 1 if unexpected else 0
 

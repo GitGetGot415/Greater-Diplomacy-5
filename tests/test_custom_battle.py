@@ -117,6 +117,11 @@ def single_subunits():
     return patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 1})
 
 
+def unit_weapon_damage():
+    """Give every tactical weapon a damage factor of 1, so hit damage follows the fixture's attack alone."""
+    return patch.dict(c.TACTICAL_WEAPONS, {name: dict(weapon, damage=1.0) for name, weapon in c.TACTICAL_WEAPONS.items()})
+
+
 def hold_still(simulation):
     """Stop every unit from moving or firing on its own, so only a test's shots act."""
     for fighter in simulation.fighters:
@@ -129,6 +134,7 @@ class BattleSimulationTests(unittest.TestCase):
         self.library = fixture_library()
         self.enterContext(single_subunits())
         self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
+        self.enterContext(unit_weapon_damage())
 
     def test_catalog_and_constructor_reject_air_artillery_unknown_and_empty_rosters(self):
         self.assertEqual(set(combat.land_unit_types(self.library)), {"Fixture I", "Fixture II", "Fixture III"})
@@ -1140,6 +1146,7 @@ class CloseCombatTests(unittest.TestCase):
         self.library = fixture_library()
         self.enterContext(single_subunits())
         self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
+        self.enterContext(unit_weapon_damage())
 
     def encounter(self, *, controlled=None, shapes=("infantry", "infantry"), gap=None):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
@@ -1519,6 +1526,7 @@ class TacticalTerrainTests(unittest.TestCase):
         self.library = fixture_library()
         self.enterContext(single_subunits())
         self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
+        self.enterContext(unit_weapon_damage())
 
     def field(self, *features):
         return battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.UNIT_RADIUS, features)

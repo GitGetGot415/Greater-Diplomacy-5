@@ -953,8 +953,8 @@ class TournamentMoveTests(unittest.TestCase):
         host.scenario_settings = {}
         host.script_variables = []
         host.default_research = None
-        host.nation_data["Subject"]["siphon_rates"] = {
-            "manpower": 0.25, "materials": 0.5, "fuel": 0.5}
+        rates = {"manpower": c.MAX_PUPPET_SIPHON / 2, "materials": c.MAX_PUPPET_SIPHON, "fuel": c.MAX_PUPPET_SIPHON}
+        host.nation_data["Subject"]["siphon_rates"] = dict(rates)
         authority = Host()
 
         with tempfile.TemporaryDirectory() as directory:
@@ -966,7 +966,7 @@ class TournamentMoveTests(unittest.TestCase):
 
         data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
         puppet = next(command for command in data["player_intents"] if command["type"] == "puppet_draft")
-        self.assertEqual(puppet["siphons"], {"Subject": {"manpower": 0.25, "materials": 0.5, "fuel": 0.5}})
+        self.assertEqual(puppet["siphons"], {"Subject": rates})
         self.assertEqual(summary["loaded"], 1, summary["rejections"])
         self.assertEqual(authority.nation_data["Subject"]["siphon_rates"], puppet["siphons"]["Subject"])
 
@@ -989,7 +989,7 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.syncs, 1)
 
     def test_integrated_puppet_siphons_are_host_validated(self):
-        rates = {"manpower": 0.2, "materials": 0.4, "fuel": 0.5}
+        rates = {"manpower": c.MAX_PUPPET_SIPHON * 0.4, "materials": c.MAX_PUPPET_SIPHON * 0.8, "fuel": c.MAX_PUPPET_SIPHON}
         for allowed in (True, False):
             with self.subTest(allowed=allowed), tempfile.TemporaryDirectory() as directory:
                 host = Host()

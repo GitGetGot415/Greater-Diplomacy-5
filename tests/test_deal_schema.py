@@ -353,7 +353,7 @@ class DescriptionTests(unittest.TestCase):
         line = next(ln for ln in deal.describe(agreement, viewer="A")
                     if ln.startswith("Against:"))
 
-        self.assertIn("and 17 others", line)
+        self.assertIn(f"and {len(crowd) - c.DEAL_NAMES_SHOWN} others", line)
         self.assertLess(len(line), 80)
 
     def test_describe_ignores_something_that_is_not_a_deal(self):

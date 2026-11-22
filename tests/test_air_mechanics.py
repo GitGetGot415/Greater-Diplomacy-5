@@ -533,8 +533,9 @@ class AirResolutionTests(unittest.TestCase):
 
     def test_air_stack_curve_and_floor(self):
         breakpoint = c.AIR_STACK_EFFICIENCY_BREAKPOINT
+        # The tolerance keeps float error from rounding an exact square up to the next count.
         floor_count = math.ceil(((c.AIR_STACK_LARGE_EFFICIENCY_BASE - c.AIR_STACK_MIN_ATTACK_EFFICIENCY)
-                                / c.AIR_STACK_LARGE_EFFICIENCY_PENALTY) ** 2 + 1)
+                                / c.AIR_STACK_LARGE_EFFICIENCY_PENALTY) ** 2 + 1 - 1e-9)
         for count in (0, 1, 2, 3, 10, breakpoint - 1, breakpoint, breakpoint + 1,
                       26, floor_count - 1, floor_count, floor_count + 1, 100):
             with self.subTest(count=count):

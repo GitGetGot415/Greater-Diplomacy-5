@@ -228,8 +228,11 @@ class WarDesireTests(unittest.TestCase):
 
     def test_a_nation_already_at_war_is_less_keen_on_another(self):
         self.set_traits("Avaria")
+        # Hostile relations keep the starting desire well above the 0 floor, whatever the tuning.
+        self.nation_data["Avaria"]["temp_modifiers"]["Carrow"] = {"general": -150}
         self.rebuild()
         before = self.desire()
+        self.assertGreater(before, 0.0)
 
         self.nation_data["Avaria"]["at_war_with"] = ["Borland", "Dunmar", "Carrow-Other"]
         self.rebuild()

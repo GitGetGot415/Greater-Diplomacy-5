@@ -193,8 +193,10 @@ class OneVolleyPerNationTests(unittest.TestCase):
         for name in names:
             screen.add_nation(name, at_war_with=[n for n in names if n != name])
 
-        # Sixty units, twelve apiece, everyone at war with everyone.
-        troops = {n: [unit(n, attack=10) for _ in range(12)] for n in names}
+        # Everyone at war with everyone. Each power sits in one lane per enemy, and
+        # brings more units than the floor seats across those lanes.
+        per_nation = (len(names) - 1) * c.MIN_LANE_SLOTS_PER_SIDE + 4
+        troops = {n: [unit(n, attack=10) for _ in range(per_nation)] for n in names}
         prov = screen.add_province(
             "p1", "A", units=[u for side in troops.values() for u in side])
 
@@ -202,7 +204,8 @@ class OneVolleyPerNationTests(unittest.TestCase):
         seated = sum(len(side.front) for lane in battle.lanes for side in (lane.a, lane.b))
 
         # Ten duels among five mutually hostile powers, so the floor binds:
-        # 12 // 20 is 0, and MIN_LANE_SLOTS_PER_SIDE holds every lane at 2.
+        # the width split across 20 sides rounds below the floor, and
+        # MIN_LANE_SLOTS_PER_SIDE holds every lane at that floor.
         self.assertEqual(len(battle.lanes), 10)
         self.assertEqual(battle.width, seated)
         self.assertEqual(seated, len(battle.lanes) * 2 * c.MIN_LANE_SLOTS_PER_SIDE)

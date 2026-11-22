@@ -71,7 +71,7 @@ class OutputBonusTests(unittest.TestCase):
             screen._presentation_cache_revision += 1
             tooltip.prepare_building_yields(screen)
             self.assertEqual(screen._tooltip_building_yields[0][1],
-                             {key: int(value * 0.7 * c.NON_CORE_BUILDING_MULTIPLIER)
+                             {key: int(value * politics.axis_factory_multiplier(c.POLITICS_MAX) * c.NON_CORE_BUILDING_MULTIPLIER)
                               for key, value in expected.items()})
         screen._presentation_cache_revision += 1
         with patch.object(queries, "is_province_visible", return_value=False):
@@ -211,14 +211,16 @@ class OutputBonusTests(unittest.TestCase):
 
         with patch.object(c, "DISABLE_CORES", False):
             baseline = queries.calculate_all_economies(map_data, nation_data)["A"]["breakdown"]
-            for position, multiplier in ((c.POLITICS_MIN, 1.3), (c.POLITICS_MAX, 0.7)):
+            for position in (c.POLITICS_MIN, c.POLITICS_MAX):
                 nation_data["A"].update(political_value=position, economic_value=position)
                 report = queries.calculate_all_economies(map_data, nation_data)["A"]["breakdown"]
-                self.assertAlmostEqual(report["manpower"]["core"], baseline["manpower"]["core"] * multiplier)
+                self.assertAlmostEqual(report["manpower"]["core"],
+                                       baseline["manpower"]["core"] * politics.axis_core_manpower_multiplier(position))
+                factory_multiplier = politics.axis_factory_multiplier(position)
                 for resource, factory_income in expected.items():
                     with self.subTest(position=position, resource=resource):
                         self.assertEqual(report[resource]["buildings"],
-                                         baseline[resource]["buildings"] - factory_income + int(factory_income * multiplier))
+                                         baseline[resource]["buildings"] - factory_income + int(factory_income * factory_multiplier))
                         for source in ("base", "non_core", "resources"):
                             self.assertEqual(report[resource][source], baseline[resource][source])
 
@@ -233,7 +235,8 @@ class OutputBonusTests(unittest.TestCase):
             self.assertEqual(country[res], expected["total_inc"][res])
 
     def test_first_economic_step_changes_credited_factory_income_and_research(self):
-        self.library["Basic Factory"] = building(100, 0, 0, "industry")
+        factory_materials = 100
+        self.library["Basic Factory"] = building(factory_materials, 0, 0, "industry")
 
         def resolve(drift):
             game = BackendState()
@@ -248,7 +251,7 @@ class OutputBonusTests(unittest.TestCase):
             game.map_data[1] = game.id_to_province[1] = province
             politics.set_economic_drift(game.nation_data, "A", drift)
             asyncio.run(turn_processor.resolve_turn_logic(game))
-            self.assertEqual(politics.economic_value(game.nation_data, "A"), drift)
+            self.assertEqual(politics.economic_value(game.nation_data, "A"), drift * c.POLITICS_STEP)
             return country["materials"], 100_000 - project["points_remaining"]
 
         base_materials, base_research = resolve(0)
@@ -256,8 +259,10 @@ class OutputBonusTests(unittest.TestCase):
         for drift in (-1, 1):
             with self.subTest(drift=drift):
                 materials, research = resolve(drift)
-                self.assertEqual(materials, base_materials - 3 * drift)
-                self.assertAlmostEqual(research, base_research * (1.0 + 0.1 * drift))
+                position = drift * c.POLITICS_STEP
+                self.assertEqual(materials, base_materials - factory_materials
+                                 + int(factory_materials * politics.axis_factory_multiplier(position)))
+                self.assertAlmostEqual(research, base_research * politics.axis_research_multiplier(position))
 
     def test_shared_sweep_tables_give_each_nation_its_own_research_output(self):
         # One economy sweep shares building tables between nations with the same
