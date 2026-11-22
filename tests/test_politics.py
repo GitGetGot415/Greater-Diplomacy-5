@@ -12,7 +12,7 @@ The first is *whose* multiplier applies: a volley is measured off a LaneSide's
 front rank, which is a whole coalition's units, so applying one country's
 multiplier to the total would leak a nation's politics into its allies' guns.
 The second is what happens at the end of the axis -- the direction has to clear
-itself, because the map button's arrow badge reads "am I still drifting" and a
+itself, because the map button's badge reads "am I still drifting" and a
 country pressed against the wall forever would wear it forever.
 
 The AI half is a target position rather than a direction, which is what stops
@@ -61,60 +61,78 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         }
         return Politics_Screen(map_screen)
 
+    @staticmethod
+    def drift_buttons(screen):
+        return [element for element in screen.elements if hasattr(element, "politics_axis")]
+
+    def button(self, screen, axis, direction):
+        return next(element for element in self.drift_buttons(screen)
+                    if (element.politics_axis, element.politics_direction) == (axis, direction))
+
+    @staticmethod
+    def tab(screen, group):
+        return next(element for element in screen.elements if getattr(element, "politics_group", None) == group)
+
     def test_tactical_mode_disables_all_direction_controls(self):
         screen = self.screen(True)
 
         self.assertTrue(screen.is_valid_player)
         self.assertFalse(screen.can_edit)
-        self.assertTrue(all(button.disabled for button in screen.elements[1:7]))
+        self.assertEqual(len(self.drift_buttons(screen)), 6)
+        self.assertTrue(all(button.disabled for button in self.drift_buttons(screen)))
 
     def test_tactical_mode_guard_does_not_change_the_direction(self):
         screen = self.screen(True)
         before = screen.drift
 
-        screen.set_drift(1)
-        screen.set_drift(1, economic=True)
+        for axis in politics.AXES:
+            screen.set_drift(1, axis["id"])
 
         self.assertEqual(screen.drift, before)
-        self.assertEqual(politics.economic_drift(screen.map_screen.nation_data, "A"), 0)
+        for axis in politics.AXES:
+            self.assertEqual(politics.axis_drift(screen.map_screen.nation_data, "A", axis["id"]), 0)
 
     def test_strategic_mode_keeps_direction_controls_editable(self):
         screen = self.screen(False)
 
         self.assertTrue(screen.can_edit)
-        self.assertTrue(all(not button.disabled for button in screen.elements[1:7]))
+        self.assertTrue(all(not button.disabled for button in self.drift_buttons(screen)))
 
     def test_direction_buttons_queue_independent_steps_and_preview_the_turn(self):
         screen = self.screen(False)
-        screen.elements[3].callback()
-        screen.elements[4].callback()
+        self.button(screen, politics.POLITICAL, 1).callback()
+        self.button(screen, politics.ECONOMIC, -1).callback()
         nation_data = screen.map_screen.nation_data
 
         self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), (0, 0))
         self.assertEqual((politics.economic_drift(nation_data, "A"), screen.drift), (-1, 1))
-        self.assertEqual(screen._preview, (-c.POLITICS_STEP, c.POLITICS_STEP))
-        political_effects, economic_effects = screen._axis_effect_rows
-        self.assertEqual([projected for _label, _current, projected in political_effects],
-                         [politics.effect_at("research", c.POLITICS_STEP),
-                          politics.effect_at("coring_cost", c.POLITICS_STEP)])
-        self.assertEqual([projected for _label, _current, projected in economic_effects],
-                         [politics.effect_at("factory_output", -c.POLITICS_STEP),
-                          politics.effect_at("deposit_output", -c.POLITICS_STEP)])
+        self.assertEqual(screen._previews, {politics.POLITICAL: c.POLITICS_STEP, politics.ECONOMIC: -c.POLITICS_STEP,
+                                            politics.QUALITY: 0, politics.STRATEGY: 0})
+        from screens.game.politics_screen import DRIFT_MARKER
+        self.assertTrue(self.tab(screen, politics.CIVILIAN).text.endswith(DRIFT_MARKER))
+        self.assertFalse(self.tab(screen, politics.MILITARY).text.endswith(DRIFT_MARKER))
         politics.tick(screen.map_screen)
-        self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), screen._preview)
+        self.assertEqual(politics.economic_value(nation_data, "A"), -c.POLITICS_STEP)
+        self.assertEqual(screen.value, c.POLITICS_STEP)
         self.assertEqual(screen.map_screen.invalidate_map_presentation_cache.call_count, 2)
 
-        screen.elements[5].callback()
-        _label, current_research, projected_research = screen._axis_effect_rows[0][0]
-        self.assertEqual(current_research, politics.effect_at("research", screen.value))
-        self.assertLess(projected_research, current_research)
-        self.assertTrue(all(current == projected for _label, current, projected in screen._axis_effect_rows[1]))
+        # The Military tab steers its own two axes with the same controls.
+        self.tab(screen, politics.MILITARY).callback()
+        self.assertEqual(screen.group, politics.MILITARY)
+        self.assertEqual({button.politics_axis for button in self.drift_buttons(screen)},
+                         {politics.QUALITY, politics.STRATEGY})
+        self.button(screen, politics.QUALITY, 1).callback()
+        self.button(screen, politics.STRATEGY, -1).callback()
+        self.assertEqual(politics.axis_drift(nation_data, "A", politics.QUALITY), 1)
+        self.assertEqual(politics.axis_drift(nation_data, "A", politics.STRATEGY), -1)
+        self.assertTrue(self.tab(screen, politics.MILITARY).text.endswith(DRIFT_MARKER))
+        self.assertTrue(self.button(screen, politics.QUALITY, 1).is_selected)
 
     def test_policy_eligibility_preview_keeps_current_activation_requirements(self):
         policy = {"id": "preview_fixture", "name": "Preview Fixture", "effect_lines": (), "min_politics": 0}
         with patch.object(politics, "POLICIES", (policy,)), patch.dict(politics.POLICIES_BY_ID, {policy["id"]: policy}):
             screen = self.screen(False)
-            screen.elements[3].callback()  # Centralise from the strict boundary.
+            self.button(screen, politics.POLITICAL, 1).callback()  # Centralise from the strict boundary.
             self.assertIsNotNone(screen._policy_rows[0][4])
             self.assertTrue(screen.elements[-1].disabled)
 
@@ -123,7 +141,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
             self.assertIsNone(screen._policy_rows[0][4])
             self.assertFalse(screen.elements[-1].disabled)
 
-            screen.elements[1].callback()  # Liberalise back across the boundary.
+            self.button(screen, politics.POLITICAL, -1).callback()  # Liberalise back across the boundary.
             self.assertIsNotNone(screen._policy_rows[0][4])
             self.assertFalse(screen.elements[-1].disabled)
 
@@ -152,13 +170,20 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
         self.assertTrue(screen.is_read_only)
         self.assertFalse(screen.can_edit)
-        self.assertEqual(len(screen.elements), 1, "foreign view has no policy or drift controls")
-        self.assertEqual(screen._preview, (c.POLITICS_START, 4))
+        controls = [element for element in screen.elements if not hasattr(element, "politics_group")]
+        self.assertEqual(len(controls), 1, "foreign view has no policy or drift controls")
+        # Directions are private, so the view shows only where B is.
+        self.assertEqual(screen._previews[politics.POLITICAL], 4)
+        self.assertEqual(screen._previews[politics.ECONOMIC], c.POLITICS_START)
         self.assertTrue(all(forecast is None for _definition, _state, _eligible, _requirement, forecast in screen._policy_rows))
         screen.set_drift(1)
-        screen.set_drift(-1, economic=True)
+        screen.set_drift(-1, politics.ECONOMIC)
         self.assertEqual(politics.drift(map_screen.nation_data, "B"), -1)
         self.assertEqual(politics.economic_drift(map_screen.nation_data, "B"), 1)
+        # Viewing the Military axes is not editing.
+        self.tab(screen, politics.MILITARY).callback()
+        self.assertEqual(screen.group, politics.MILITARY)
+        self.assertEqual(self.drift_buttons(screen), [])
 
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)
@@ -192,6 +217,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
                                                    "economic_drift": 1}},
                                 refresh_map_layers=Mock(), show_feedback=Mock())
         screen = Politics_Edit_Screen(map_screen, "A")
+        self.assertEqual(len(screen.rows), len(politics.AXES))
         slider = screen.rows[1][0]
         slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=slider.handle_rect.center, button=1))
         slider.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=slider.rect.midleft, mobile_touch=True))
@@ -202,9 +228,18 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertTrue(screen.done)
         self.assertEqual(politics.value(map_screen.nation_data, "A"), 4)
         self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_MIN)
-        self.assertEqual(politics.drift(map_screen.nation_data, "A"), 0)
-        self.assertEqual(politics.economic_drift(map_screen.nation_data, "A"), 0)
+        for axis in politics.AXES:
+            self.assertEqual(politics.axis_drift(map_screen.nation_data, "A", axis["id"]), 0)
         map_screen.refresh_map_layers.assert_called_once_with("relations")
+
+        # The military sliders save the same way.
+        screen = Politics_Edit_Screen(map_screen, "A")
+        screen._set(2, 1.0)
+        screen._set(3, 0.0)
+        screen.save()
+        self.assertEqual(politics.axis_value(map_screen.nation_data, "A", politics.QUALITY), c.POLITICS_MAX)
+        self.assertEqual(politics.axis_value(map_screen.nation_data, "A", politics.STRATEGY), c.POLITICS_MIN)
+        self.assertEqual(politics.value(map_screen.nation_data, "A"), 4)
 
         screen = Politics_Edit_Screen(map_screen, "A")
         screen.elements[1].callback()
@@ -418,7 +453,7 @@ class DriftTests(unittest.TestCase):
         self.assertEqual(politics.value(screen.nation_data, "A"), 3)
 
     def test_reaching_the_end_clears_the_direction(self):
-        """Which is what puts the map button's arrow badge out by itself."""
+        """Which is what puts the map button's badge out by itself."""
         screen = screen_with(A=(c.POLITICS_MAX - 1, 1))
         politics.tick(screen)
         self.assertEqual(politics.value(screen.nation_data, "A"), c.POLITICS_MAX)

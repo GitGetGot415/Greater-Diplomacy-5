@@ -634,8 +634,12 @@ def make_info_button(x, y, on_click, y_offset=0):
                   sound_kind=None)
 
 
-def draw_political_compass(surface, rect, position, preview=None):
-    """Draw a square compass with economy on x and political authority on y."""
+def draw_political_compass(surface, rect, position, preview=None,
+                           labels=(("Planned", "Market"), ("Libertarian", "Authoritarian"))):
+    """Draw a square compass of two politics axes: the first across, the second up.
+
+    ``labels`` names each axis's (minimum, maximum) ends in the same order.
+    """
     style = SLIDER_STYLES["track"]
     draw_pixel_panel(surface, rect, style["color"], c.COLOR_DIM_BORDER,
                      gradient_strength=style["gradient_strength"])
@@ -660,11 +664,12 @@ def draw_political_compass(surface, rect, position, preview=None):
         pygame.draw.rect(surface, c.UI_TEXT_LIGHT, next_marker, 1)
 
     small = fonts.get("small")
+    (x_low, x_high), (y_low, y_high) = labels
     for text, anchor, coordinates in (
-        ("Authoritarian", "midbottom", (rect.centerx, rect.top - 2)),
-        ("Libertarian", "midtop", (rect.centerx, rect.bottom + 2)),
-        ("Planned", "midright", (rect.left - 8, zero_y)),
-        ("Market", "midleft", (rect.right + 8, zero_y)),
+        (y_high, "midbottom", (rect.centerx, rect.top - 2)),
+        (y_low, "midtop", (rect.centerx, rect.bottom + 2)),
+        (x_low, "midright", (rect.left - 8, zero_y)),
+        (x_high, "midleft", (rect.right + 8, zero_y)),
     ):
         caption = small.render(text, True, c.UI_TEXT_LIGHT)
         surface.blit(caption, caption.get_rect(**{anchor: coordinates}))

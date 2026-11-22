@@ -1,4 +1,4 @@
-"""View the political compass and set a country's turn-by-turn direction."""
+"""View the four politics axes and set a country's turn-by-turn directions."""
 import pygame
 import data.constants as c
 from data import queries
@@ -13,35 +13,74 @@ from map_logic import politics
 # The politics screen intentionally keeps both panels the same size.  Change
 # these values to retune the whole screen layout without hunting through draw
 # calls below.
-PANEL_WIDTH = 800
+PANEL_WIDTH = 1000
 SCREEN_PANEL_MARGIN_Y = 20
 PANEL_GAP = 20
 
 POLITICS_TITLE_OFFSET_Y = 18
+TAB_SIZE = (110, 26)
+TAB_GAP = 8
+TAB_OFFSET_Y = 62
 COMPASS_OFFSET = (105, 83)
 COMPASS_SIZE = 184
-DETAILS_CENTER_X = 588
-POSITION_OFFSET_Y = 69
-POSITION_LINE_GAP = 20
-DRIFT_ROW_TOP = 139
-DRIFT_ROW_GAP = 63
+DETAILS_CENTER_X = 682
+# Each tab shows two axis blocks: a heading, the direction buttons, then effects.
+AXIS_BLOCK_TOP = 98
+AXIS_BLOCK_GAP = 112
+DRIFT_BUTTON_OFFSET_Y = 20
 DRIFT_BUTTON_SIZE = (110, 34)
 DRIFT_BUTTON_GAP = 8
-EFFECTS_OFFSET_Y = 283
-EFFECT_COLUMN_LEFTS = (374, 582)
+EFFECTS_OFFSET_Y = 58
+EFFECT_LINE_GAP = 16
+EFFECT_COLUMN_LEFTS = (394, 700)
+EFFECT_ROWS_PER_COLUMN = 3
+POSITION_LINE_GAP = 20
 COMPASS_CENTER_X = COMPASS_OFFSET[0] + COMPASS_SIZE // 2
 TACTICAL_NOTICE_Y = COMPASS_OFFSET[1] + COMPASS_SIZE + POSITION_LINE_GAP
 DECREASE_COLOR = (255, 150, 150)
-DRIFT_ROWS = (
-    ("Political Direction", ("Libertarian", "Hold", "Authoritarian")),
-    ("Economic Direction", ("Planned", "Hold", "Market")),
-)
-AXIS_EFFECT_ROWS = (
-    (("Base research", lambda position: politics.effect_at("research", position)),
-     ("Coring cost", lambda position: politics.effect_at("coring_cost", position))),
-    (("Factory output", lambda position: politics.effect_at("factory_output", position)),
-     ("Deposits", lambda position: politics.effect_at("deposit_output", position))),
-)
+#: Appended to a tab whose axes are moving.
+DRIFT_MARKER = " •"
+
+#: The tabs, and the axes each shows, top block first. The compass plots the
+#: second axis across and the first up.
+GROUP_TABS = ((politics.CIVILIAN, "Civilian"), (politics.MILITARY, "Military"))
+GROUP_AXES = {politics.CIVILIAN: (politics.POLITICAL, politics.ECONOMIC),
+              politics.MILITARY: (politics.QUALITY, politics.STRATEGY)}
+
+#: How each effect reads: its label, the unit of an added value (None for a
+#: multiplier), and whether a higher value helps the country.
+EFFECT_DISPLAY = {
+    "coring_turns": ("Coring time", "turns", False),
+    "coring_cost": ("Coring cost", None, False),
+    "remove_core_cost": ("Core removal cost", None, False),
+    "research": ("Research", None, True),
+    "reputation": ("Reputation", "", True),
+    "factory_output": ("Factory output", None, True),
+    "deposit_output": ("Deposits", None, True),
+    "building_cost": ("Building cost", None, False),
+    "non_core_province_output": ("Non-core land", None, True),
+    "non_core_building_output": ("Non-core buildings", None, True),
+    "damage": ("Damage", None, True),
+    "tile_manpower": ("Province manpower", None, True),
+    "unit_upkeep": ("Unit upkeep", None, False),
+    "max_health": ("Max health", None, True),
+    "research_year_months": ("Research timing", "months", True),
+    "aircraft_range": ("Aircraft range", None, True),
+    "core_territory_damage": ("Core damage", None, True),
+    "non_core_territory_damage": ("Non-core damage", None, True),
+    "defense": ("Defense", None, True),
+    "fort_cost": ("Fort cost", None, False),
+}
+
+
+def effect_text(effect, value):
+    """A multiplier as x1.20; an added value as a signed whole number and its unit."""
+    unit = EFFECT_DISPLAY[effect][1]
+    if unit is None:
+        return f"×{value:.2f}"
+    text = f"{round(value):+d}"
+    return f"{text} {unit}" if unit else text
+
 
 POLICY_VIEWPORT_MARGIN_X = 20
 POLICY_VIEWPORT_TOP_OFFSET_Y = 62
@@ -69,6 +108,7 @@ class Politics_Screen(Screen):
         # politics must never let an observer steer it or alter its policies.
         self.player = country_id or map_screen.player_country
         self.is_read_only = country_id is not None and country_id != map_screen.player_country
+        self.group = politics.CIVILIAN
         self._set_panel_rects()
         self.policy_scroll_x = 0
         self.policy_scroll_min_x = 0
@@ -118,16 +158,19 @@ class Politics_Screen(Screen):
             return False
         return queries.realtime_turn_open(self.map_screen)
 
-    def set_drift(self, direction, *, economic=False):
+    def select_group(self, group):
+        """Show the Civilian or Military axes. Viewing never needs edit rights."""
+        self.group = group
+        self.refresh_ui()
+
+    def set_drift(self, direction, axis=politics.POLITICAL):
         if not self.can_edit:
             return
         nation_data = self.map_screen.nation_data
-        position = politics.economic_value(nation_data, self.player) if economic else self.value
-        if not politics.can_shift(position, direction):
+        if not politics.can_shift(politics.axis_value(nation_data, self.player, axis), direction):
             self.map_screen.show_feedback("Already as far as this country can go.")
             return
-        setter = politics.set_economic_drift if economic else politics.set_drift
-        setter(nation_data, self.player, direction)
+        politics.set_axis_drift(nation_data, self.player, axis, direction)
         self.map_screen.invalidate_map_presentation_cache()
         self.refresh_ui()
 
@@ -150,39 +193,51 @@ class Politics_Screen(Screen):
             politics.reconcile_policy(self.map_screen.nation_data, self.player)
 
         nation_data = self.map_screen.nation_data
-        position = (politics.economic_value(nation_data, self.player), self.value)
-        direction = (politics.economic_drift(nation_data, self.player), self.drift)
-        self._preview = (tuple(politics.advance(value, drift) for value, drift in zip(position, direction))
-                         if not self.is_read_only else position)
-        self._axis_effect_rows = tuple(
-            tuple((label, multiplier(current), multiplier(projected)) for label, multiplier in effects)
-            for effects, current, projected in zip(AXIS_EFFECT_ROWS, reversed(position), reversed(self._preview))
-        )
-        self._compass_details = self._build_compass_details(position)
+        self._positions = {axis["id"]: politics.axis_value(nation_data, self.player, axis["id"])
+                           for axis in politics.AXES}
+        # Directions are private, so a foreign country shows only where it is.
+        self._drifts = {axis["id"]: 0 if self.is_read_only else politics.axis_drift(nation_data, self.player, axis["id"])
+                        for axis in politics.AXES}
+        self._previews = {axis: politics.advance(position, self._drifts[axis])
+                          for axis, position in self._positions.items()}
+        self._compass_details = self._build_compass_details()
+        political, next_political = self._positions[politics.POLITICAL], self._previews[politics.POLITICAL]
         self._policy_rows = []
         for definition in politics.POLICIES:
             policy_id = definition["id"]
             state = politics.policy_state(nation_data, self.player, policy_id)
             eligible = politics.requirements_met(nation_data, self.player, policy_id)
             next_eligible = eligible
-            if self._preview[1] != position[1]:
-                next_eligible = politics.requirements_met(nation_data, self.player, policy_id, political_value=self._preview[1])
+            if next_political != political:
+                next_eligible = politics.requirements_met(nation_data, self.player, policy_id, political_value=next_political)
             requirement, forecast = self._build_policy_requirement(policy_id, eligible, next_eligible)
             self._policy_rows.append((definition, state, eligible, requirement, forecast))
+
+        tabs_width = len(GROUP_TABS) * TAB_SIZE[0] + (len(GROUP_TABS) - 1) * TAB_GAP
+        tab_x = self.politics_rect.centerx - tabs_width // 2
+        for index, (group, label) in enumerate(GROUP_TABS):
+            moving = any(self._drifts[axis] for axis in GROUP_AXES[group])
+            tab = Button(tab_x + index * (TAB_SIZE[0] + TAB_GAP), self.politics_rect.y + TAB_OFFSET_Y, TAB_SIZE,
+                         "green" if group == self.group else "light_blue", label + (DRIFT_MARKER if moving else ""),
+                         lambda g=group: self.select_group(g), font_preset="small", sound_kind="select_category")
+            tab.is_selected = group == self.group
+            tab.politics_group = group
+            self.elements.append(tab)
 
         if not self.is_read_only:
             center_x = self.politics_rect.x + DETAILS_CENTER_X
             stride = DRIFT_BUTTON_SIZE[0] + DRIFT_BUTTON_GAP
-            for row, (_heading, labels) in enumerate(DRIFT_ROWS):
-                axis = 1 - row  # Compass stores x, y. Controls show politics first.
-                y = self.politics_rect.y + DRIFT_ROW_TOP + row * DRIFT_ROW_GAP + 19
-                for drift, label in zip((-1, 0, 1), labels):
+            for row, axis_id in enumerate(GROUP_AXES[self.group]):
+                ends = politics.AXES_BY_ID[axis_id]["ends"]
+                y = self.politics_rect.y + AXIS_BLOCK_TOP + row * AXIS_BLOCK_GAP + DRIFT_BUTTON_OFFSET_Y
+                for drift, label in zip((-1, 0, 1), (ends[0], "Hold", ends[1])):
                     button = Button(center_x + stride * drift - DRIFT_BUTTON_SIZE[0] // 2, y,
                                     DRIFT_BUTTON_SIZE, "blue" if drift else "grey", label,
-                                    lambda d=drift, economic=axis == 0: self.set_drift(d, economic=economic),
+                                    lambda d=drift, axis=axis_id: self.set_drift(d, axis),
                                     font_preset="small")
-                    button.is_selected = direction[axis] == drift
-                    button.disabled = not self.can_edit or not politics.can_shift(position[axis], drift)
+                    button.politics_axis, button.politics_direction = axis_id, drift
+                    button.is_selected = self._drifts[axis_id] == drift
+                    button.disabled = not self.can_edit or not politics.can_shift(self._positions[axis_id], drift)
                     self.elements.append(button)
 
             for index, (definition, state, eligible, _requirement, _forecast) in enumerate(self._policy_rows):
@@ -273,62 +328,59 @@ class Politics_Screen(Screen):
             forecast = font.render(text, True, color)
         return requirement, forecast
 
-    def _build_compass_details(self, position):
+    def _build_compass_details(self):
         details = pygame.Surface(self.politics_rect.size, pygame.SRCALPHA)
+        y_axis, x_axis = GROUP_AXES[self.group]
         compass = pygame.Rect(*COMPASS_OFFSET, COMPASS_SIZE, COMPASS_SIZE)
-        ui_elements.draw_political_compass(details, compass, position, self._preview)
+        ui_elements.draw_political_compass(
+            details, compass, (self._positions[x_axis], self._positions[y_axis]),
+            (self._previews[x_axis], self._previews[y_axis]),
+            labels=(politics.AXES_BY_ID[x_axis]["ends"], politics.AXES_BY_ID[y_axis]["ends"]))
 
         def draw_line(text, y, color=c.UI_TEXT_LIGHT, *, center_x=DETAILS_CENTER_X, font="small"):
             line = fonts.get(font).render(text, True, color)
             details.blit(line, line.get_rect(centerx=center_x, y=y))
 
-        economic, political = position
-        draw_line(f"Politics  {politics.label(political)} ({political:+d})", POSITION_OFFSET_Y, c.COLOR_GOLD_HIGHLIGHT)
-        draw_line(f"Economy  {politics.economic_label(economic)} ({economic:+d})",
-                  POSITION_OFFSET_Y + POSITION_LINE_GAP, c.COLOR_GOLD_HIGHLIGHT)
-        if self._preview != position:
-            next_economic, next_political = self._preview
-            draw_line(f"Next turn  ({next_economic:+d}, {next_political:+d})",
-                      POSITION_OFFSET_Y + 2 * POSITION_LINE_GAP)
+        for row, axis_id in enumerate(GROUP_AXES[self.group]):
+            top = AXIS_BLOCK_TOP + row * AXIS_BLOCK_GAP
+            current, projected = self._positions[axis_id], self._previews[axis_id]
+            heading = f"{politics.AXES_BY_ID[axis_id]['name']}  {politics.axis_label(axis_id, current)} ({current:+d})"
+            if projected != current:
+                heading += f"  →  {projected:+d}"
+            draw_line(heading, top, c.COLOR_GOLD_HIGHLIGHT)
+            self._draw_axis_effects(details, axis_id, top + EFFECTS_OFFSET_Y)
 
+        if self.is_read_only:
+            draw_line("Read-only", TACTICAL_NOTICE_Y, c.UI_TEXT_DIM, center_x=COMPASS_CENTER_X)
+            return details
+        if self.map_screen.tactical_mode:
+            draw_line("Directions are locked in Tactical Mode.", TACTICAL_NOTICE_Y, c.UI_TEXT_DIM,
+                      center_x=COMPASS_CENTER_X)
         nation_data = self.map_screen.nation_data
         damage = politics.damage_multiplier(nation_data, self.player)
         research = politics.research_multiplier(nation_data, self.player)
-        if self.is_read_only:
-            draw_line("Read-only", DRIFT_ROW_TOP, c.UI_TEXT_DIM)
-            manpower = politics.axis_effect(nation_data, self.player, "tile_manpower")
-            factory = politics.factory_output_multiplier(nation_data, self.player)
-            effects_y = DRIFT_ROW_TOP + DRIFT_ROW_GAP
-            draw_line(f"Army damage x{damage:.2f}      Province manpower x{manpower:.2f}", effects_y)
-            draw_line(f"Factory output x{factory:.2f}      Base research x{research:.2f}", effects_y + POSITION_LINE_GAP)
-        else:
-            for row, (heading, _labels) in enumerate(DRIFT_ROWS):
-                draw_line(heading, DRIFT_ROW_TOP + row * DRIFT_ROW_GAP)
-            if self.map_screen.tactical_mode:
-                draw_line("Political direction is locked in Tactical Mode.", TACTICAL_NOTICE_Y, c.UI_TEXT_DIM,
-                          center_x=COMPASS_CENTER_X)
-            draw_line("Axis effects  |  Current → Next turn", EFFECTS_OFFSET_Y - POSITION_LINE_GAP, c.UI_TEXT_DIM)
-            self._draw_axis_effects(details)
-            if (damage != politics.axis_effect(nation_data, self.player, "damage")
-                    or research != politics.effect_at("research", political)):
-                draw_line(f"Current with policies  Damage ×{damage:.2f}  Base research ×{research:.2f}",
-                          EFFECTS_OFFSET_Y + POSITION_LINE_GAP, c.UI_TEXT_DIM, center_x=COMPASS_CENTER_X, font="tiny")
+        if (damage != politics.axis_effect(nation_data, self.player, "damage")
+                or research != politics.axis_effect(nation_data, self.player, "research")):
+            draw_line(f"Current with policies  Damage ×{damage:.2f}  Base research ×{research:.2f}",
+                      TACTICAL_NOTICE_Y + POSITION_LINE_GAP, c.UI_TEXT_DIM, center_x=COMPASS_CENTER_X, font="tiny")
         return details
 
-    def _draw_axis_effects(self, surface):
+    def _draw_axis_effects(self, surface, axis_id, top):
+        """Each effect at the current position, and where next turn's step takes it."""
         font = fonts.get("tiny")
-        for row, effects in enumerate(self._axis_effect_rows):
-            center_y = EFFECTS_OFFSET_Y + row * POSITION_LINE_GAP + POSITION_LINE_GAP // 2
-            for x, (label, current, projected) in zip(EFFECT_COLUMN_LEFTS, effects):
-                current_text = font.render(f"{label} ×{current:.2f} → ", True, c.UI_TEXT_LIGHT)
-                if projected > current:
-                    arrow, color = " ↑", c.COLOR_SUCCESS_GREEN
-                elif projected < current:
-                    arrow, color = " ↓", DECREASE_COLOR
-                else:
-                    arrow, color = "", c.UI_TEXT_LIGHT
-                next_text = font.render(f"×{projected:.2f}{arrow}", True, color)
-                surface.blit(current_text, current_text.get_rect(midleft=(x, center_y)))
+        for index, effect in enumerate(c.POLITICS_AXIS_EFFECTS[axis_id]):
+            column, row = divmod(index, EFFECT_ROWS_PER_COLUMN)
+            center_y = top + row * EFFECT_LINE_GAP + EFFECT_LINE_GAP // 2
+            label, _unit, higher_is_better = EFFECT_DISPLAY[effect]
+            current = politics.effect_at(effect, self._positions[axis_id])
+            projected = politics.effect_at(effect, self._previews[axis_id])
+            current_text = font.render(f"{label} {effect_text(effect, current)}", True, c.UI_TEXT_LIGHT)
+            x = EFFECT_COLUMN_LEFTS[column]
+            surface.blit(current_text, current_text.get_rect(midleft=(x, center_y)))
+            if projected != current:
+                arrow = " ↑" if projected > current else " ↓"
+                color = c.COLOR_SUCCESS_GREEN if (projected > current) == higher_is_better else DECREASE_COLOR
+                next_text = font.render(f" → {effect_text(effect, projected)}{arrow}", True, color)
                 surface.blit(next_text, next_text.get_rect(midleft=(x + current_text.get_width(), center_y)))
 
     def additional_draw(self, surface):
