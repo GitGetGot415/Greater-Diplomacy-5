@@ -862,6 +862,42 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(self.points_after_one_turn(c.POLITICS_MAX), 0)
 
 
+class QualityResearchYearTests(unittest.TestCase):
+    """Quality moves the year the ahead-of-time penalty measures from."""
+
+    def test_professional_researches_ten_months_ahead_and_numerous_ten_behind(self):
+        tree = {"due_now": {"years": [1920]}, "ten_months_out": {"years": [1920 + 10 / 12]}}
+        for quality in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(quality=quality):
+                nation_data = {"A": {"research": {}, politics.QUALITY_VALUE_KEY: quality,
+                                     "research_queue": [{"tech_name": name, "points_remaining": 10_000} for name in tree]}}
+                progress = queries.get_normal_research_progress(nation_data, "A", tree, 10, 1920.0)
+                base = queries.get_base_research_points(nation_data, "A", 10)
+                year = 1920.0 + politics.effect_at("research_year_months", quality) / 12
+                self.assertAlmostEqual(queries.get_research_year(nation_data, "A", 1920.0), year)
+                for name, data in tree.items():
+                    self.assertAlmostEqual(progress[name], base * queries.get_research_multiplier(year, data["years"][0]))
+                if quality == c.POLITICS_MIN:
+                    self.assertAlmostEqual(progress["ten_months_out"], base)
+                if quality == c.POLITICS_MAX:
+                    self.assertAlmostEqual(progress["due_now"], base * 0.5 ** (10 / 12))
+
+
+class AircraftRangeTests(unittest.TestCase):
+    def test_strategy_scales_every_mission_radius(self):
+        from types import SimpleNamespace
+        library = {"Fixture Bomber": {"air_role": "bomber", "air_range_px": 10}}
+        bomber = {"type": "Fixture Bomber", "owner": "A"}
+        with patch.object(queries, "get_unit_library", return_value=library):
+            listed = {kind: queries.air_order_radius(bomber, kind) for kind in ("AIR_ATTACK", "AIR_REPOSITION")}
+            for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+                with self.subTest(strategy=strategy):
+                    context = SimpleNamespace(nation_data={"A": {politics.STRATEGY_VALUE_KEY: strategy}})
+                    for kind, radius in listed.items():
+                        self.assertAlmostEqual(queries.air_order_radius(bomber, kind, context=context),
+                                               radius * politics.effect_at("aircraft_range", strategy))
+
+
 class FactionResearchTests(unittest.TestCase):
     """Research sharing counts faction partners per exact completed level."""
 

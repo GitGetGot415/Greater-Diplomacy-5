@@ -84,7 +84,8 @@ def process_ai_research(context, *, countries=None):
         # unlocked was any use: an island power researched armour and a nation
         # being overrun researched recruitment buildings. The historical-pace
         # term survives, but as a multiplier on value rather than as the key.
-        current_year = world_state.time_manager.year
+        # Quality shifts the year the ahead-of-time penalty measures from.
+        current_year = queries.get_research_year(world_state.nation_data, ai_name, world_state.time_manager.year)
         available_techs = _rank_for_nation(
             available_techs, ai_name, data, econ, world,
             unit_library, building_library, current_year, research_index=research_index)

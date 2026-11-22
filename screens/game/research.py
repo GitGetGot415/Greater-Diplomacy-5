@@ -275,7 +275,8 @@ class ResearchDetailsScreen(ModalScreen):
         # --- AHEAD OF TIME SIMULATION ---
         target_year = self.node.get("target_year", 1900)
         actual_turns = 0
-        sim_year = queries.get_exact_year(map_screen.time_manager)
+        sim_year = queries.get_research_year(map_screen.nation_data, subject,
+                                             queries.get_exact_year(map_screen.time_manager))
         pts_accumulated = 0
         year_inc = days_per_turn / 360.0
 
