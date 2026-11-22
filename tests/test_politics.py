@@ -420,6 +420,20 @@ class DriftTests(unittest.TestCase):
         politics.tick(screen)
         self.assertNotIn("political_value", screen.nation_data["GLOBAL_EVENTS"])
 
+    def test_every_axis_drifts_and_tick_reports_whose_quality_moved(self):
+        """The turn rescales maximum health only for the countries this names."""
+        screen = StubTurnScreen({name: {} for name in ("A", "B", "C")})
+        for axis in politics.AXES:
+            politics.set_axis_drift(screen.nation_data, "A", axis["id"], 1)
+        politics.set_axis_drift(screen.nation_data, "B", politics.STRATEGY, -1)
+        politics.set_axis_value(screen.nation_data, "C", politics.QUALITY, c.POLITICS_MAX)
+        politics.set_axis_drift(screen.nation_data, "C", politics.QUALITY, 1)
+        self.assertEqual(politics.tick(screen), {"A"})
+        for axis in politics.AXES:
+            self.assertEqual(politics.axis_value(screen.nation_data, "A", axis["id"]), c.POLITICS_STEP)
+        self.assertEqual(politics.axis_value(screen.nation_data, "B", politics.STRATEGY), -c.POLITICS_STEP)
+        self.assertEqual(politics.axis_drift(screen.nation_data, "C", politics.QUALITY), 0)
+
     def test_each_nation_drifts_on_its_own(self):
         screen = screen_with(A=(0, 1), B=(0, -1), C=(0, 0))
         for _ in range(3):
@@ -571,9 +585,9 @@ class CombatDamageTests(unittest.TestCase):
         combat_processor.process_combat(screen)
         return damage_taken(b_units)
 
-    def test_a_centrist_nation_fights_exactly_as_it_always_did(self):
+    def test_a_centrist_nation_deals_its_core_territory_modifier_at_home(self):
         self.assertAlmostEqual(self.damage_dealt_by_a(c.POLITICS_START),
-                               unit("A")["attack"])
+                               unit("A")["attack"] * politics.effect_at("core_territory_damage", c.POLITICS_START))
 
     def test_numerous_armies_hit_softer(self):
         base = self.damage_dealt_by_a(c.POLITICS_START)
@@ -590,9 +604,10 @@ class CombatDamageTests(unittest.TestCase):
         screen, prov = two_nation_tile(b_value=c.POLITICS_MAX)
         a_units = [u for u in prov["units"] if u["owner"] == "A"]
         combat_processor.process_combat(screen)
+        # B fights on A's core, which is non-core territory for B.
         self.assertAlmostEqual(damage_taken(a_units),
-                               self.damage_dealt_by_a(c.POLITICS_START)
-                               * axis_damage_multiplier(c.POLITICS_MAX))
+                               unit("B")["attack"] * axis_damage_multiplier(c.POLITICS_MAX)
+                               * politics.effect_at("non_core_territory_damage", c.POLITICS_START))
 
     def test_a_nations_politics_does_not_leak_into_its_allies_guns(self):
         """The multiplier is per unit, not per volley.
@@ -613,7 +628,8 @@ class CombatDamageTests(unittest.TestCase):
         combat_processor.process_combat(screen)
 
         # A's politics applies only to A's volley, not its centrist ally B's.
-        base = self.damage_dealt_by_a(c.POLITICS_START)
+        # Both fight on C's core, which is non-core territory for each.
+        base = unit("A")["attack"] * politics.effect_at("non_core_territory_damage", c.POLITICS_START)
         self.assertAlmostEqual(
             damage_taken(c_units),
             base * (axis_damage_multiplier(c.POLITICS_MAX)
@@ -627,6 +643,81 @@ class CombatDamageTests(unittest.TestCase):
         self.assertAlmostEqual(combat_rules.volley(units), base)
         self.assertAlmostEqual(combat_rules.volley(units, None, nation_data),
                                base * axis_damage_multiplier(c.POLITICS_MAX))
+
+
+class TerritoryDamageTests(unittest.TestCase):
+    """Strategy's damage modifier depends on whose core the tile is."""
+
+    def dealt(self, tile_owner, cores, strategy=c.POLITICS_START):
+        screen = StubBattleMap()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        politics.set_axis_value(screen.nation_data, "A", politics.STRATEGY, strategy)
+        prov = screen.add_province("p1", tile_owner, units=[unit("A"), unit("B")], cores=cores)
+        b_units = [u for u in prov["units"] if u["owner"] == "B"]
+        combat_processor.process_combat(screen)
+        return damage_taken(b_units)
+
+    def test_core_and_non_core_modifiers_follow_strategy(self):
+        attack = unit("A")["attack"]
+        for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(strategy=strategy):
+                self.assertAlmostEqual(self.dealt("A", ["A"], strategy),
+                                       attack * politics.effect_at("core_territory_damage", strategy))
+                self.assertAlmostEqual(self.dealt("B", ["B"], strategy),
+                                       attack * politics.effect_at("non_core_territory_damage", strategy))
+
+    def test_retaking_an_occupied_core_keeps_the_core_modifier(self):
+        self.assertAlmostEqual(self.dealt("B", ["A", "B"]),
+                               unit("A")["attack"] * politics.effect_at("core_territory_damage", c.POLITICS_START))
+
+    def test_disable_cores_counts_every_owned_tile_as_core(self):
+        attack = unit("A")["attack"]
+        with patch.object(c, "DISABLE_CORES", True):
+            self.assertAlmostEqual(self.dealt("A", []),
+                                   attack * politics.effect_at("core_territory_damage", c.POLITICS_START))
+            self.assertAlmostEqual(self.dealt("B", ["A"]),
+                                   attack * politics.effect_at("non_core_territory_damage", c.POLITICS_START))
+
+
+    def test_each_side_of_a_border_clash_fights_on_its_own_tile(self):
+        nation_data = {"A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]}}
+        a_home = {"id": "p1", "owner": "A", "cores": ["A"]}
+        b_home = {"id": "p2", "owner": "B", "cores": ["B"]}
+        a_unit, b_unit = unit("A"), unit("B")
+        battle = combat_rules.build_battle([[a_unit], [b_unit]], nation_data, tiles=(a_home, b_home))
+        shots = {id(targets[0]): attack for targets, attack in combat_rules.exchange(battle, nation_data)}
+        core = politics.effect_at("core_territory_damage", c.POLITICS_START)
+        self.assertAlmostEqual(shots[id(b_unit)], a_unit["attack"] * core)
+        self.assertAlmostEqual(shots[id(a_unit)], b_unit["attack"] * core)
+
+
+class DefenseAndHealthTests(unittest.TestCase):
+    def test_strategy_scales_unit_defense_and_fort_defense(self):
+        defender = unit("A", defense=50)
+        province = {"owner": "A", "cores": ["A"], "buildings": ["Fort Lvl 2"], "units": [defender]}
+        for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(strategy=strategy):
+                nation_data = {"A": {politics.STRATEGY_VALUE_KEY: strategy}}
+                multiplier = politics.effect_at("defense", strategy)
+                self.assertAlmostEqual(combat_rules.damage_after_defense(defender, 200, nation_data),
+                                       200 - 50 * multiplier)
+                self.assertAlmostEqual(
+                    queries.get_fort_defense_bonus(province, defender, nation_data, combat_active=True),
+                    2 * c.FORT_DEFENSE_PER_LEVEL * multiplier)
+
+    def test_quality_rescales_maximum_health_and_keeps_the_health_fraction(self):
+        library = {"Infantry": {"health": 1000, "attack": 10, "defense": 0, "speed": 1}}
+        soldier = {"type": "Infantry", "owner": "A", "health": 500, "max_health": 1000}
+        map_data = {1: {"owner": "A", "units": [soldier]}}
+        for quality in (c.POLITICS_MIN, c.POLITICS_MAX, c.POLITICS_START):
+            with self.subTest(quality=quality):
+                nation_data = {"A": {politics.QUALITY_VALUE_KEY: quality}}
+                queries.refresh_unit_stats(map_data, nation_data, library)
+                expected = round(1000 * politics.effect_at("max_health", quality))
+                self.assertEqual(soldier["max_health"], expected)
+                self.assertAlmostEqual(soldier["health"] / soldier["max_health"], 0.5)
+                self.assertEqual(queries.create_unit_dict("Infantry", "A", library, nation_data)["max_health"], expected)
 
 
 class DisplayedDamageTests(unittest.TestCase):
@@ -674,7 +765,7 @@ class DisplayedDamageTests(unittest.TestCase):
             defenders = [u for u in prov["units"] if u["owner"] == "B"]
 
             printed = (attacker["attack"]
-                       * combat_rules.effective_damage_multiplier(attacker, screen.nation_data))
+                       * combat_rules.effective_damage_multiplier(attacker, screen.nation_data, province=prov))
             combat_processor.process_combat(screen)
 
             self.assertAlmostEqual(damage_taken(defenders), printed,

@@ -249,7 +249,8 @@ def combat_strengths(sides, nation_data, friendly_nations, player_nation=None,
 
     battle = combat_rules.build_battle(
         sides, nation_data,
-        terrain=province.get("terrain") if province is not None else None)
+        terrain=province.get("terrain") if province is not None else None,
+        tiles=(province,) * len(sides) if province is not None else ())
     for lane in battle.lanes:
         # A volunteer fights on its host's military side, but remains the
         # donor's division for control and presentation.  Treat that side as
@@ -270,8 +271,10 @@ def combat_strengths(sides, nation_data, friendly_nations, player_nation=None,
         involved = True
         ours = mine[0]
         theirs = lane.b if ours is lane.a else lane.a
-        friendly_atk += combat_rules.volley(ours.front, battle.shares, nation_data, battle.profiles)
-        enemy_atk += combat_rules.volley(theirs.front, battle.shares, nation_data, battle.profiles)
+        friendly_atk += combat_rules.volley(ours.front, battle.shares, nation_data, battle.profiles,
+                                            province=combat_rules.battle_tile(battle, ours))
+        enemy_atk += combat_rules.volley(theirs.front, battle.shares, nation_data, battle.profiles,
+                                         province=combat_rules.battle_tile(battle, theirs))
 
     return friendly_atk, enemy_atk, involved
 

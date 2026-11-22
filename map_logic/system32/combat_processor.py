@@ -116,7 +116,7 @@ def process_bombardments(context):
             # back to attack for any family that doesn't define it).
             for hit_targets, total_atk, sources in combat_rules.damage_shots(
                     guns, targets, nation_data=world_state.nation_data, attack_field="bombard_attack",
-                    with_sources=True):
+                    with_sources=True, province=target_prov):
                 apply_group_damage(
                     total_atk, hit_targets,
                     lambda unit, province=target_prov: queries.get_fort_defense_bonus(
@@ -204,7 +204,7 @@ def process_pinning(context):
                                                   attacker_units_only, context=context)
         probe = combat_rules.build_battle(
             [friendly_defenders, attacker_units_only], world_state.nation_data,
-            terrain=dest_prov.get("terrain"))
+            terrain=dest_prov.get("terrain"), tiles=(dest_prov, dest_prov))
 
         # Use the same non-mutating damage projection the AI uses when it
         # decides whether this charge is worth issuing. The actual exchange is
@@ -222,7 +222,7 @@ def process_pinning(context):
                     if not member.targets:
                         continue
                     shot = combat_rules.volley(member.front, probe.shares,
-                                               world_state.nation_data)
+                                               world_state.nation_data, province=dest_prov)
                     if receiving.side_index != CHARGE_SIDE:
                         shots_at_defenders.append((member.targets, shot, member.front))
 
@@ -233,7 +233,7 @@ def process_pinning(context):
         attackers_survive = any(
             probe.profiles.get(id(a_unit), a_unit).get("health", 1) > 0 and
             max(0, incoming_on_charge.get(id(a_unit), 0.0)
-                - a_unit.get("defense", 0) * combat_rules.health_defense_multiplier(a_unit, world_state.nation_data))
+                - a_unit.get("defense", 0) * combat_rules.defense_multiplier(a_unit, world_state.nation_data))
             < a_unit.get("health", 1)
             for a_unit in attacker_units_only)
 
@@ -245,14 +245,16 @@ def process_pinning(context):
                     targets,
                     lambda unit, province=dest_prov: queries.get_fort_defense_bonus(
                         province, unit, world_state.nation_data, combat_active=True),
-                    sources=[(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data))
+                    sources=[(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data,
+                                                         province=dest_prov))
                              for unit in sources], tile=dest_id,
                 nation_data=world_state.nation_data)
 
             # 2. Kill the attackers and remove them from incoming_attacks
             for a_unit, a_origin_id in hostile_attackers:
                 unit_events.record_damage(a_unit, max(0, a_unit.get("health", 0)),
-                    [(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data))
+                    [(unit, combat_rules.volley([unit], probe.shares, world_state.nation_data,
+                                                province=dest_prov))
                      for lane in probe.lanes for side in (lane.a, lane.b)
                      for member in side.members if a_unit in member.targets for unit in member.front],
                     dest_id)
@@ -330,7 +332,9 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
         [units1, units2], nation_data,
         width=combat_rules.meeting_combat_width(prov1, prov2),
         grounded_sides={index for index, province in enumerate((prov1, prov2))
-                        if not queries.is_water_province(province)})
+                        if not queries.is_water_province(province)},
+        # Each side is still in its own province, so that is where it fights.
+        tiles=(prov1, prov2))
 
     # Front *and* reserve. `fought` is what stops a unit here, and a reserve that
     # walked on through the tile its own army is fighting over would be absurd --
@@ -454,7 +458,7 @@ def process_combat(context):
         queries.prepare_aircraft_for_ground_combat(units, world_state.nation_data, on_land=is_land, context=context)
 
         battle = combat_rules.build_battle(
-            [units], world_state.nation_data, terrain=province.get("terrain"))
+            [units], world_state.nation_data, terrain=province.get("terrain"), tiles=(province,))
         fighters = set(battle.engaged)
 
         # Unpack Convoys Caught on Land -- only the ones in the battle.

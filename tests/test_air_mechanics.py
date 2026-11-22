@@ -30,6 +30,11 @@ from tests.air_fixtures import install_air_fixture, patrol_world, runtime_map, t
 from tests.stub_map_screen import bare_orders_screen
 from tests.tournament_fixtures import fast_tournament_crypto
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def load_old_units(game):
     """Convert fixture units as a load does: the conversion rules, then the load repairs."""

@@ -162,7 +162,7 @@ def process_queues(context):
                         for _ in range(militia_count):
                             if militia_name is None:
                                 break
-                            u_dict = queries.create_unit_dict(militia_name, reb_id, unit_library)
+                            u_dict = queries.create_unit_dict(militia_name, reb_id, unit_library, world_state.nation_data)
                             u_dict["custom_name"] = queries.generate_unit_custom_name(u_dict, active_unit_counters, context=context)
                             target_prov.setdefault("units", []).append(u_dict)
                         
@@ -252,7 +252,7 @@ def process_queues(context):
             
             if item["turns_remaining"] <= 0:
                 unit_type = item["unit_type"]
-                new_unit_data = queries.create_unit_dict(unit_type, current_owner, unit_library)
+                new_unit_data = queries.create_unit_dict(unit_type, current_owner, unit_library, world_state.nation_data)
                 
                 # Apply dynamic custom name for standard unit recruitment
                 new_unit_data["custom_name"] = queries.generate_unit_custom_name(new_unit_data, active_unit_counters, context=context)

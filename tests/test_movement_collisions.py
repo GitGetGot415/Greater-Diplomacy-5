@@ -30,6 +30,11 @@ from tests.combat_fixtures import StubBattleMap
 from map_logic.system32 import combat_processor, movement_processor
 from map_logic import custom_battle
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def make_unit(owner, path, speed=1, health=1000, attack=100, defense=50):
     return {

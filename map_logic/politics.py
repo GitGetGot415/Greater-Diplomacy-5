@@ -424,6 +424,21 @@ def axis_effect(nation_data, nation, effect):
     return effect_at(effect, axis_value(nation_data, nation, EFFECT_AXES[effect]))
 
 
+def territory_damage_multiplier(nation_data, nation, province):
+    """Strategy's damage modifier for this nation's units fighting on one tile.
+
+    Core territory is a tile the nation has cored, whoever holds it now, so a
+    country retaking its own land keeps its core modifier. Sea, unowned and
+    enemy tiles are non-core. Under the Disable Cores rule, every tile the
+    nation owns counts as core.
+    """
+    if c.DISABLE_CORES:
+        is_core = province.get("owner") == nation
+    else:
+        is_core = nation in province.get("cores", ())
+    return axis_effect(nation_data, nation, "core_territory_damage" if is_core else "non_core_territory_damage")
+
+
 def factory_output_multiplier(nation_data, nation):
     return axis_effect(nation_data, nation, "factory_output")
 
@@ -500,8 +515,13 @@ def at_limit(political_value):
 
 
 def tick(context):
-    """Advance each axis and clear its direction when it reaches an end."""
+    """Advance each axis and clear its direction when it reaches an end.
+
+    Returns the countries whose Quality position moved, whose units' maximum
+    health the turn then rescales.
+    """
     world_state = world_for(context)
+    quality_moved = set()
     for name, stats in world_state.nation_data.items():
         if name in c.UNPLAYABLE_NATIONS:
             continue
@@ -509,8 +529,11 @@ def tick(context):
         for axis in AXES:
             direction = _read_drift(world_state.nation_data, name, axis["drift_key"])
             if direction:
-                position = advance(_read_value(world_state.nation_data, name, axis["value_key"]), direction)
+                before = _read_value(world_state.nation_data, name, axis["value_key"])
+                position = advance(before, direction)
                 stats[axis["value_key"]] = position
+                if axis["id"] == QUALITY and position != before:
+                    quality_moved.add(name)
                 if at_limit(position):
                     stats[axis["drift_key"]] = 0
 
@@ -534,3 +557,4 @@ def tick(context):
                 stats[POLICY_KEY][policy_id]["turns_remaining"] = turns_left
         if not stats.get(POLICY_KEY):
             stats.pop(POLICY_KEY, None)
+    return quality_moved

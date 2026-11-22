@@ -21,6 +21,11 @@ from tests.combat_fixtures import StubBattleMap
 from ui.panels.sidebar_info import unit_roster_row
 from ui.widgets.ui_elements import Slider
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def fixture_unit(owner):
     return {"owner": owner, "type": "Conscription fixture", "health": 1000,

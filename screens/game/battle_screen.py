@@ -154,7 +154,7 @@ class Battle_Screen(ModalScreen):
             self.province.get("terrain"))
         self.battle = combat_rules.build_battle(
             [self.province.get("units", [])], self.map_screen.nation_data,
-            width=self.combat_width, terrain=self.province.get("terrain"))
+            width=self.combat_width, terrain=self.province.get("terrain"), tiles=(self.province,))
         self.combat_row_data = {}
         for unit in self.province.get("units", []):
             profile = self.battle.profiles.get(id(unit), unit)

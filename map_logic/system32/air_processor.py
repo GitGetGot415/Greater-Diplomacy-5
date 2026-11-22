@@ -97,7 +97,8 @@ def process_air_orders(context):
                 # One side contains every participant: the standard coalition lanes
                 # retain three-or-more-side fights. Aircraft have no width limit.
                 battle = combat_rules.build_battle([force + defenders], world_state.nation_data,
-                                                   air_combat=True)
+                                                   air_combat=True,
+                                                   tiles=(world_state.id_to_province[key[0]],))
                 for targets, attack, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
                     combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0], nation_data=world_state.nation_data)
                 _cleanup(context)
@@ -135,7 +136,8 @@ def process_air_orders(context):
         if survivors and garrison:
             battle = combat_rules.build_battle(
                 [survivors, garrison], world_state.nation_data,
-                terrain=target.get("terrain"), convert_aircraft=False, air_mission_sides={0})
+                terrain=target.get("terrain"), convert_aircraft=False, air_mission_sides={0},
+                tiles=(target, target))
             garrison_ids = {id(u) for u in garrison}
             for targets, attack, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
                 combat_processor.apply_group_damage(attack, targets, lambda unit:
