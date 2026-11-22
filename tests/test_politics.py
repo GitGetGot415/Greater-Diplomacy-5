@@ -270,16 +270,16 @@ def policy_effect(policy_id, effect):
 
 class MultiplierTests(unittest.TestCase):
     def test_political_curve_trades_core_manpower_for_damage(self):
-        for value, damage, manpower in ((-10, 0.7, 1.3), (-5, 0.85, 1.15), (0, 1, 1),
-                                        (5, 1.15, 0.85), (10, 1.3, 0.7)):
+        for value, damage, manpower in ((-10, 0.7, 1.5), (-5, 0.85, 1.25), (0, 1, 1),
+                                        (5, 1.15, 0.75), (10, 1.3, 0.5)):
             with self.subTest(value=value):
                 country = {"A": {"political_value": value, "economic_value": c.POLITICS_MAX}}
                 self.assertAlmostEqual(politics.damage_multiplier(country, "A"), damage)
                 self.assertAlmostEqual(politics.axis_core_manpower_multiplier(value), manpower)
 
     def test_economic_curve_trades_factory_output_for_research(self):
-        for value, factory, research in ((-10, 1.3, 0), (-5, 1.15, 0.5), (-2, 1.06, 0.8), (-1, 1.03, 0.9),
-                                         (0, 1, 1), (1, 0.97, 1.1), (2, 0.94, 1.2), (5, 0.85, 1.5), (10, 0.7, 2)):
+        for value, factory, research in ((-10, 1.2, 0), (-5, 1.1, 0.5), (-2, 1.04, 0.8), (-1, 1.02, 0.9),
+                                         (0, 1, 1), (1, 0.98, 1.1), (2, 0.96, 1.2), (5, 0.9, 1.5), (10, 0.8, 2)):
             with self.subTest(value=value):
                 country = {"A": {"political_value": c.POLITICS_MAX, "economic_value": value}}
                 self.assertAlmostEqual(politics.axis_factory_multiplier(value), factory)

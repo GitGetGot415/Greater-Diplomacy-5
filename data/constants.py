@@ -1025,8 +1025,8 @@ POLITICS_START = 0              # centrist / mixed
 POLITICS_STEP = 1               # distance per processed turn on each axis
 
 POLITICS_DAMAGE_SPAN = 0.3      # +/-30% damage dealt at the extremes (0.7x .. 1.3x)
-POLITICS_CORE_MANPOWER_SPAN = 0.3  # 1.3x libertarian, 0.7x authoritarian
-ECONOMICS_FACTORY_SPAN = 0.3       # 1.3x planned, 0.7x market
+POLITICS_CORE_MANPOWER_SPAN = 0.5  # 1.5x libertarian, 0.5x authoritarian
+ECONOMICS_FACTORY_SPAN = 0.2       # 1.2x planned, 0.8x market
 ECONOMICS_RESEARCH_SPAN = 1.0      # 0.0x planned, 2.0x market
 
 
