@@ -1051,7 +1051,10 @@ Military - Quality, Strategy
 Political   (Libertarian, Authoritarian)
                 LIB   AUTH
 Coring turns    +10 / -10       (turns to core may not ever go below 2. 2 is the minimum. removing cores is not affected by this)
-Research Mod    1.6 / 0.4
+SOLUTION -> MAKE IT SO THAT IN SCENARIO SETTINGS, CORING TURNS CANNOT BE SET BELOW 12, THAT WAY 12 - 10 = 2 AT MINIMUM
+
+Coring costs    1.2 - 0.8
+Research Mod    1.6 - 0.4
 
 ...maybe removing cores should be a policy that can be applicable...
 
