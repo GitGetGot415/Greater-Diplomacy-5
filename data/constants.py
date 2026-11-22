@@ -82,7 +82,7 @@ COUNTRY_NAME_MAX_LENGTH = 50
 BASE_YIELDS = {
     "manpower": 100,
     "materials": 10,
-    "fuel": 1
+    "fuel": 2
 }
 
 GENERAL_RECRUITMENT_BONUS = 5 # Add this
@@ -131,7 +131,7 @@ DAYS_PER_TURN_OPTIONS = ["Default", 5, 10, 15, 30]
 NON_CORE_MULTIPLIERS = {
     "manpower": 0.1,
     "materials": 0.5,
-    "fuel": 1.0
+    "fuel": 0.5
 }
 
 NON_CORE_BUILDING_MULTIPLIER = 0.5
@@ -194,12 +194,6 @@ UNIT_ART_STYLES = ("classic", "hanskolmer")
 
 GAME_VERSION = "v50"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
-
-# --- TACTICAL MODE CONSTANTS ---
-# The stockpile of a country that a tactical division founds with Declare Independence.
-TACTICAL_INDEPENDENCE_STOCKPILE = {"manpower": 1000, "materials": 1000, "fuel": 1000}
-
-TACTICAL_DEFAULT_YEAR = 1910
 
 # ==========================================
 # SCENARIO SETTINGS
@@ -402,6 +396,12 @@ TARGET_FPS = get_starting_value("settings_config.json", "target_fps")
 
 START_YEAR = 1800
 END_YEAR = 2200
+
+# --- TACTICAL MODE CONSTANTS ---
+# The stockpile of a country that a tactical division founds with Declare Independence.
+TACTICAL_INDEPENDENCE_STOCKPILE = {"manpower": 1000, "materials": 1000, "fuel": 1000}
+
+TACTICAL_DEFAULT_YEAR = START_YEAR
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
@@ -1064,20 +1064,22 @@ yes this means a max auth country ends up having a 0 opinion modifier of every o
 ...maybe removing cores should be a policy that can be applicable...
 
 Economic    (Planned, Market)
-                    PLN   MRK
-Factory Output      0.9 - 1.1
-Resource Mult       0.8 - 1.2
-Building Cost       0.7 - 1.3
-Non-core output     1.2 - 0.8
+                        PLN   MRK
+Factory Output          0.9 - 1.1 (yes this applies to EVERY one of your factories, including non core ones)
+Resource Mult           0.9 - 1.1 (yes this applies to ALL resources)
+Building Cost           0.8 - 1.2 (this does not include forts)
+Non-core prov output    2.0 - 0.0 (this does not include factories)
+Non-core fac output     0.6 - 0.4 (this is just factories, also remember, the default right now is 0.5)
 
 ===== MIL
 
-Quality     (Professional, Numberous) THIS NAME SHOULD BE WORKED ON
-                PRF   NUM
-Damage          1.3 - 0.7
-Manpower        0.4 - 1.6
-Unit Upkeep     1.5 - 0.5
-Max Health      1.3 - 0.7
+Quality     (Professional, Numerous)
+                    PRF   NUM
+Damage              1.3 - 0.7
+Manpower            0.5 - 1.5   (this affects both core and non core manpower)
+Unit Upkeep         1.5 - 0.5   (total unit upkeep, including manpower, resources, fuel, etc)
+Max Health          1.2 - 0.8
+Ahead of Time Mod   +10 / -10   (this is in months, so if you max out proffesionalism, the ahead of time penalty assumes you're living 10 months in the future, and lets you research future tech faster)
 
 Strategy    (Offensive, Defensive)
                     OFF   DEF
