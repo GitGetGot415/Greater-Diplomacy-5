@@ -1040,9 +1040,9 @@ POLITICS_AXIS_EFFECTS = {
         "reputation": (10, -10),            # added to every other country's opinion of this one
     },
     "economic": {
-        "factory_output": (0.9, 1.1),       # factories (group "industry") only, on any territory
-        "deposit_output": (0.9, 1.1),       # natural resource deposits only
-        "building_cost": (0.8, 1.2),        # every building except forts
+        "factory_output": (0.8, 1.2),       # factories (group "industry") only, on any territory
+        "deposit_output": (0.8, 1.2),       # natural resource deposits only
+        "building_cost": (0.7, 1.3),        # every building except forts
         "non_core_province_output": (2.0, 0.0),  # multiplies NON_CORE_MULTIPLIERS on tiles and deposits; not buildings
         "non_core_building_output": (0.6, 0.4),  # every building's output on non-core territory
     },
