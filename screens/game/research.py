@@ -42,7 +42,7 @@ RESEARCH_BREAKDOWN_PADDING = 8
 RESEARCH_BREAKDOWN_GAP = 14
 RESEARCH_BREAKDOWN_LABELS = {
     "base": "Base research",
-    "economy": "Economic system",
+    "politics": "Political system",
     "policies": "Domestic policies",
     "funding": "Research funding",
 }
@@ -288,7 +288,7 @@ class ResearchDetailsScreen(ModalScreen):
 
         warning = None
         if pts_per_turn <= 0:
-            warning = "Normal research is halted in a fully planned economy."
+            warning = "Normal research is halted at full Authoritarian."
         elif pts_accumulated < cost:
             warning = f"Estimated Actual Time: >{MAX_RESEARCH_TURN_SIMULATION} turns"
         elif actual_turns > base_time:

@@ -697,9 +697,8 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         for res in c.ECON_RESOURCE_KEYS:
             breakdown[res]["base"] = c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0)
 
-        core_manpower_multiplier = politics.axis_core_manpower_multiplier(politics.value(nation_data, name))
         econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult,
-                           "core_manpower_multiplier": core_manpower_multiplier,
+                           "tile_manpower_multiplier": politics.axis_effect(nation_data, name, "tile_manpower"),
                            "factory_multiplier": politics.factory_output_multiplier(nation_data, name)}
 
     # Single efficient pass over the map
@@ -717,9 +716,9 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             # Base tile yields based on ownership tier
             for res in c.ECON_RESOURCE_KEYS:
                 mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[res]
+                if res == "manpower":
+                    mult *= economy["tile_manpower_multiplier"]
                 bd[res][cat] += mult * dyn_yields[res]
-            if is_core:
-                bd["manpower"]["core"] += dyn_yields["manpower"] * (economy["core_manpower_multiplier"] - 1.0)
 
             # Natural Resources
             res = province.get("resources", {})
@@ -932,7 +931,7 @@ def get_projected_research_breakdown(context, country_id):
     nation_data = world.nation_data
     country = nation_data[country_id]
     days = queries.get_days_per_turn(world.scenario_settings)
-    base, economic, modified = get_base_research_rates(nation_data, country_id, days)
+    base, political, modified = get_base_research_rates(nation_data, country_id, days)
 
     funding = 0
     if get_research_funding_rate(country):
@@ -942,8 +941,8 @@ def get_projected_research_breakdown(context, country_id):
 
     return {
         "base": base,
-        "economy": economic - base,
-        "policies": modified - economic,
+        "politics": political - base,
+        "policies": modified - political,
         "funding": funding,
     }
 

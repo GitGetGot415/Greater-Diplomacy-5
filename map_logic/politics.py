@@ -1,10 +1,11 @@
-"""Domestic politics: political and economic drift and timed national policies.
+"""Domestic politics: drift on four axes and timed national policies.
 
-The vertical axis trades army damage against core province manpower. The
-horizontal axis trades factory output against research speed. Each axis moves
-by ``POLITICS_STEP`` per processed turn while a direction is selected. Map
-authors can set a country's starting coordinates. National policies have their
-own activation and cancellation durations.
+Two Civilian axes (Political, Economic) and two Military axes (Quality,
+Strategy) each move by ``POLITICS_STEP`` per processed turn while a direction
+is selected. Every axis effect is a row of ``c.POLITICS_AXIS_EFFECTS``; the
+systems that own each number read it through ``axis_effect``. Map authors can
+set a country's starting coordinates. National policies have their own
+activation and cancellation durations.
 
 Damage means every point of damage a nation's units deal, attacking or
 defending, plus bombardment. A lane fight is a simultaneous exchange with no
@@ -18,6 +19,13 @@ imported at module level from combat_rules without joining the queries cycle.
 from data.state_access import world_for, session_for
 import data.constants as c
 
+POLITICAL = "political"
+ECONOMIC = "economic"
+QUALITY = "quality"
+STRATEGY = "strategy"
+CIVILIAN = "civilian"
+MILITARY = "military"
+
 #: Position and drift live on nation_data[name]. Flat and defaulted, never
 #: written at country-creation time: build_save_dict dumps nation_data verbatim
 #: and snapshot_history copies scalars by value, so persistence costs nothing,
@@ -27,6 +35,32 @@ VALUE_KEY = "political_value"
 DRIFT_KEY = "political_drift"
 ECONOMIC_VALUE_KEY = "economic_value"
 ECONOMIC_DRIFT_KEY = "economic_drift"
+QUALITY_VALUE_KEY = "quality_value"
+QUALITY_DRIFT_KEY = "quality_drift"
+STRATEGY_VALUE_KEY = "strategy_value"
+STRATEGY_DRIFT_KEY = "strategy_drift"
+
+#: Every axis in screen order. ``ends`` names the POLITICS_MIN and
+#: POLITICS_MAX ends; ``bands`` names the five compass bands from min to max.
+AXES = (
+    {"id": POLITICAL, "group": CIVILIAN, "name": "Political", "value_key": VALUE_KEY, "drift_key": DRIFT_KEY,
+     "ends": ("Libertarian", "Authoritarian"),
+     "bands": ("Libertarian", "Liberal", "Centrist", "Statist", "Authoritarian")},
+    {"id": ECONOMIC, "group": CIVILIAN, "name": "Economic", "value_key": ECONOMIC_VALUE_KEY, "drift_key": ECONOMIC_DRIFT_KEY,
+     "ends": ("Planned", "Market"),
+     "bands": ("Planned", "Planned-leaning", "Mixed", "Market-leaning", "Market")},
+    {"id": QUALITY, "group": MILITARY, "name": "Quality", "value_key": QUALITY_VALUE_KEY, "drift_key": QUALITY_DRIFT_KEY,
+     "ends": ("Professional", "Numerous"),
+     "bands": ("Professional", "Professional-leaning", "Balanced", "Numerous-leaning", "Numerous")},
+    {"id": STRATEGY, "group": MILITARY, "name": "Strategy", "value_key": STRATEGY_VALUE_KEY, "drift_key": STRATEGY_DRIFT_KEY,
+     "ends": ("Offensive", "Defensive"),
+     "bands": ("Offensive", "Offensive-leaning", "Balanced", "Defensive-leaning", "Defensive")},
+)
+AXES_BY_ID = {axis["id"]: axis for axis in AXES}
+DRIFT_KEYS = tuple(axis["drift_key"] for axis in AXES)
+VALUE_KEYS = tuple(axis["value_key"] for axis in AXES)
+#: Effect name -> the axis that owns it.
+EFFECT_AXES = {effect: axis for axis, effects in c.POLITICS_AXIS_EFFECTS.items() for effect in effects}
 
 # Policies remain a flat mapping within nation_data so saves and history
 # snapshots need no schema migration.  Every card has its own lifecycle.
@@ -94,14 +128,19 @@ def _read_value(nation_data, nation, key):
     return clamp(nation_data.get(nation, {}).get(key, c.POLITICS_START))
 
 
+def axis_value(nation_data, nation, axis):
+    """Where this nation sits on one axis, POLITICS_MIN..POLITICS_MAX. Centre by default."""
+    return _read_value(nation_data or {}, nation, AXES_BY_ID[axis]["value_key"])
+
+
 def value(nation_data, nation):
-    """Where this nation sits, POLITICS_MIN..POLITICS_MAX. Centre by default."""
-    return _read_value(nation_data or {}, nation, VALUE_KEY)
+    """Where this nation sits on the political axis."""
+    return axis_value(nation_data, nation, POLITICAL)
 
 
 def economic_value(nation_data, nation):
     """Where the economy sits, from planned to market. Mixed by default."""
-    return _read_value(nation_data or {}, nation, ECONOMIC_VALUE_KEY)
+    return axis_value(nation_data, nation, ECONOMIC)
 
 
 def _read_drift(nation_data, nation, key):
@@ -112,38 +151,53 @@ def _read_drift(nation_data, nation, key):
     return max(-1, min(1, raw))
 
 
-def drift(nation_data, nation):
-    """Which way it is heading: -1 libertarian, 0 holding, +1 authoritarian.
+def axis_drift(nation_data, nation, axis):
+    """Which way one axis is heading: -1 toward POLITICS_MIN, 0 holding, +1 toward POLITICS_MAX.
 
     A direction persists until the player or AI changes it or the axis reaches
     an end.
     """
-    return _read_drift(nation_data or {}, nation, DRIFT_KEY)
+    return _read_drift(nation_data or {}, nation, AXES_BY_ID[axis]["drift_key"])
+
+
+def drift(nation_data, nation):
+    """Which way the political axis is heading: -1 libertarian, 0 holding, +1 authoritarian."""
+    return axis_drift(nation_data, nation, POLITICAL)
 
 
 def economic_drift(nation_data, nation):
     """Read the economic direction: -1 planned, 0 hold, +1 market."""
-    return _read_drift(nation_data or {}, nation, ECONOMIC_DRIFT_KEY)
+    return axis_drift(nation_data, nation, ECONOMIC)
+
+
+def set_axis_value(nation_data, nation, axis, new_value):
+    """Pins a nation's position on one axis outright. The map editor's starting value."""
+    nation_data.setdefault(nation, {})[AXES_BY_ID[axis]["value_key"]] = clamp(new_value)
+
+
+def set_axis_drift(nation_data, nation, axis, direction):
+    """Points one axis toward an end, or stops it."""
+    nation_data.setdefault(nation, {})[AXES_BY_ID[axis]["drift_key"]] = max(-1, min(1, int(direction)))
 
 
 def set_value(nation_data, nation, new_value):
-    """Pins a nation's position outright. The map editor's starting value."""
-    nation_data.setdefault(nation, {})[VALUE_KEY] = clamp(new_value)
+    """Pins a nation's political position outright. The map editor's starting value."""
+    set_axis_value(nation_data, nation, POLITICAL, new_value)
 
 
 def set_drift(nation_data, nation, direction):
-    """Points a nation at one end of the axis, or stops it."""
-    nation_data.setdefault(nation, {})[DRIFT_KEY] = max(-1, min(1, int(direction)))
+    """Points a nation at one end of the political axis, or stops it."""
+    set_axis_drift(nation_data, nation, POLITICAL, direction)
 
 
 def set_economic_value(nation_data, nation, new_value):
     """Set a scenario's starting economic position."""
-    nation_data.setdefault(nation, {})[ECONOMIC_VALUE_KEY] = clamp(new_value)
+    set_axis_value(nation_data, nation, ECONOMIC, new_value)
 
 
 def set_economic_drift(nation_data, nation, direction):
     """Point a nation toward a planned or market economy, or hold."""
-    nation_data.setdefault(nation, {})[ECONOMIC_DRIFT_KEY] = max(-1, min(1, int(direction)))
+    set_axis_drift(nation_data, nation, ECONOMIC, direction)
 
 
 def advance(position, direction):
@@ -354,85 +408,80 @@ def effect_multiplier(nation_data, nation, effect):
     return result
 
 
-def _axis_strength(position):
-    return position / float(c.POLITICS_MAX)
+def effect_at(effect, position):
+    """An axis effect's value at a position, interpolated between the axis ends.
+
+    Previews use this for a projected position; ``axis_effect`` reads a
+    country's current one.
+    """
+    low, high = c.POLITICS_AXIS_EFFECTS[EFFECT_AXES[effect]][effect]
+    fraction = (clamp(position) - c.POLITICS_MIN) / float(c.POLITICS_MAX - c.POLITICS_MIN)
+    return low * (1.0 - fraction) + high * fraction
 
 
-def axis_damage_multiplier(position):
-    return 1.0 + c.POLITICS_DAMAGE_SPAN * _axis_strength(position)
-
-
-def axis_core_manpower_multiplier(position):
-    return 1.0 - c.POLITICS_CORE_MANPOWER_SPAN * _axis_strength(position)
-
-
-def axis_factory_multiplier(position):
-    return 1.0 - c.ECONOMICS_FACTORY_SPAN * _axis_strength(position)
+def axis_effect(nation_data, nation, effect):
+    """One axis effect at this nation's current position."""
+    return effect_at(effect, axis_value(nation_data, nation, EFFECT_AXES[effect]))
 
 
 def factory_output_multiplier(nation_data, nation):
-    return axis_factory_multiplier(economic_value(nation_data, nation))
-
-
-def axis_research_multiplier(position):
-    return 1.0 + c.ECONOMICS_RESEARCH_SPAN * _axis_strength(position)
+    return axis_effect(nation_data, nation, "factory_output")
 
 
 def damage_multiplier(nation_data, nation):
-    """What this nation's units multiply their damage by, including policy."""
-    axis_multiplier = axis_damage_multiplier(value(nation_data, nation))
-    return axis_multiplier * effect_multiplier(nation_data, nation, "damage")
+    """What this nation's units multiply their damage by: Quality, then policy."""
+    return axis_effect(nation_data, nation, "damage") * effect_multiplier(nation_data, nation, "damage")
 
 
 def research_multiplier(nation_data, nation):
     """Normal research multiplier, including policy.
 
-    Fully planned economies pause normal research. Funded research points
+    Fully authoritarian countries pause normal research. Funded research points
     bypass this multiplier.
     """
-    axis_multiplier = axis_research_multiplier(economic_value(nation_data, nation))
-    return axis_multiplier * effect_multiplier(nation_data, nation, "research")
+    return axis_effect(nation_data, nation, "research") * effect_multiplier(nation_data, nation, "research")
 
 
 def resource_multiplier(nation_data, nation, resource):
-    """What this nation multiplies one resource's produced income by."""
+    """What this nation's policies multiply one resource's produced income by."""
     return effect_multiplier(nation_data, nation, resource)
 
 
-#: Both axes share the same five score ranges. Each row contains the upper
-#: bound, political label, political palette, and economic label. The political
-#: label and palette describe the same band, with yellow for the centre.
-_COMPASS_BANDS = (
-    (-7, "Libertarian", "light_blue", "Planned"),
-    (-3, "Liberal", "green", "Planned-leaning"),
-    (2, "Centrist", "yellow", "Mixed"),
-    (6, "Statist", "orange", "Market-leaning"),
-    (c.POLITICS_MAX, "Authoritarian", "red", "Market"),
-)
-BANDS = tuple(row[:3] for row in _COMPASS_BANDS)
+#: Every axis shares the same five score ranges: each band's upper bound and
+#: the c.UI_COLORS palette it is drawn in, with yellow for the centre. Labels
+#: come from each axis's ``bands``.
+_BAND_BOUNDS = (-7, -3, 2, 6, c.POLITICS_MAX)
+_BAND_PALETTES = ("light_blue", "green", "yellow", "orange", "red")
+#: The political axis's (bound, label, palette) rows.
+BANDS = tuple(zip(_BAND_BOUNDS, AXES_BY_ID[POLITICAL]["bands"], _BAND_PALETTES))
 
 
 def _band_index(position):
     position = clamp(position)
-    for index, row in enumerate(_COMPASS_BANDS):
-        if position <= row[0]:
+    for index, bound in enumerate(_BAND_BOUNDS):
+        if position <= bound:
             return index
-    return len(_COMPASS_BANDS) - 1
+    return len(_BAND_BOUNDS) - 1
 
 
 def band(political_value):
-    """The (bound, label, palette) entry a value falls in."""
+    """The (bound, label, palette) entry a political value falls in."""
     return BANDS[_band_index(political_value)]
 
 
+def axis_label(axis, position):
+    """A short word for a position on one axis, for screens and tooltips."""
+    return AXES_BY_ID[axis]["bands"][_band_index(position)]
+
+
 def label(political_value):
-    """A short word for a position, for screens and tooltips."""
-    return band(political_value)[1]
+    """A short word for a political position."""
+    return axis_label(POLITICAL, political_value)
 
 
 def economic_label(position):
     """Return the economic label for the position's compass band."""
-    return _COMPASS_BANDS[_band_index(position)][3]
+    return axis_label(ECONOMIC, position)
 
 
 def palette(political_value):
@@ -457,13 +506,13 @@ def tick(context):
         if name in c.UNPLAYABLE_NATIONS:
             continue
 
-        for value_key, drift_key in ((VALUE_KEY, DRIFT_KEY), (ECONOMIC_VALUE_KEY, ECONOMIC_DRIFT_KEY)):
-            direction = _read_drift(world_state.nation_data, name, drift_key)
+        for axis in AXES:
+            direction = _read_drift(world_state.nation_data, name, axis["drift_key"])
             if direction:
-                position = advance(_read_value(world_state.nation_data, name, value_key), direction)
-                stats[value_key] = position
+                position = advance(_read_value(world_state.nation_data, name, axis["value_key"]), direction)
+                stats[axis["value_key"]] = position
                 if at_limit(position):
-                    stats[drift_key] = 0
+                    stats[axis["drift_key"]] = 0
 
     # Do this after political drift, before combat/economy/research resolve.
     # An activated policy becomes effective on the third processed turn; a

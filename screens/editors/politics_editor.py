@@ -122,12 +122,12 @@ class Politics_Edit_Screen(EditorSliderScreen):
             for index, text in enumerate((*self._readings(), "Read-only")):
                 reading = small.render(text, True, c.UI_TEXT_LIGHT)
                 self._preview.blit(reading, reading.get_rect(centerx=center_x, y=self.SLIDER_TOP + index * 28))
-        damage = politics.axis_damage_multiplier(self.value)
-        manpower = politics.axis_core_manpower_multiplier(self.value)
-        factory = politics.axis_factory_multiplier(self.economic_value)
-        research = politics.axis_research_multiplier(self.economic_value)
-        lines = (f"Army damage x{damage:.2f}      Core manpower x{manpower:.2f}",
-                 f"Factory output x{factory:.2f}      Base research x{research:.2f}")
+        research = politics.effect_at("research", self.value)
+        coring = politics.effect_at("coring_cost", self.value)
+        factory = politics.effect_at("factory_output", self.economic_value)
+        deposits = politics.effect_at("deposit_output", self.economic_value)
+        lines = (f"Base research x{research:.2f}      Coring cost x{coring:.2f}",
+                 f"Factory output x{factory:.2f}      Deposits x{deposits:.2f}")
         for row, text in enumerate(lines):
             effects = small.render(text, True, c.UI_TEXT_DIM)
             self._preview.blit(effects, effects.get_rect(centerx=center_x, y=self.EFFECTS_Y + row * self.EFFECTS_LINE_GAP))

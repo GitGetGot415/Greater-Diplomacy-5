@@ -515,13 +515,13 @@ def get_base_research_points(nation_data, country_id, days_per_turn):
 
 
 def get_base_research_rates(nation_data, country_id, days_per_turn):
-    """Return per-slot points before modifiers, after the economic system, and after policy."""
+    """Return per-slot points before modifiers, after the political system, and after policy."""
     # Politics imports the query package for its other rules.
     from map_logic import politics
     base = get_unmodified_research_points(days_per_turn)
-    economic = base * politics.axis_research_multiplier(politics.economic_value(nation_data, country_id))
+    political = base * politics.axis_effect(nation_data, country_id, "research")
     modified = base * politics.research_multiplier(nation_data, country_id)
-    return base, economic, modified
+    return base, political, modified
 
 
 def get_project_research_rate(base_points, nation_data, country_id, tech_name, level):

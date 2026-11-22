@@ -61,7 +61,7 @@ class CountrySummaryScreen(Screen):
             f"{scope} damage output: {military['raw_damage_output']:,.2f} "
             f"x {multiplier:.6g} = {military['damage_output']:,.2f}",
             f"{scope} units: {military['unit_count']:,}",
-            f"Politics and policies: {military['political_damage_multiplier']:.3g}x damage",
+            f"Quality and policies: {military['political_damage_multiplier']:.3g}x damage",
             f"Conscription bonus: +{military['conscription_damage_bonus']:.2%}",
         ]
 
@@ -70,8 +70,10 @@ class CountrySummaryScreen(Screen):
         direction = {-1: "Liberalising", 0: "Holding", 1: "Centralising"}[politics["drift"]]
         lines = [f"Political position: {politics['label']} ({politics['value']:+d})",
                  f"Political direction: {direction}",
-                 f"Core province manpower: {politics['core_manpower_multiplier']:.2f}x",
                  f"Economic position: {politics['economic_label']} ({politics['economic_value']:+d})",
+                 f"Quality position: {politics['quality_label']} ({politics['quality_value']:+d})",
+                 f"Strategy position: {politics['strategy_label']} ({politics['strategy_value']:+d})",
+                 f"Province manpower: {politics['tile_manpower_multiplier']:.2f}x",
                  f"Factory output: {politics['factory_multiplier']:.2f}x",
                  f"Base research modifier: {politics['research_multiplier'] - 1.0:+.2%}"]
         if not politics["policies"]:
