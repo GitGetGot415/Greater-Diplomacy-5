@@ -1024,10 +1024,62 @@ POLITICS_MAX = 10               # authoritarian / market
 POLITICS_START = 0              # centrist / mixed
 POLITICS_STEP = 1               # distance per processed turn on each axis
 
-POLITICS_DAMAGE_SPAN = 0.3      # +/-30% damage dealt at the extremes (0.7x .. 1.3x)
-POLITICS_CORE_MANPOWER_SPAN = 0.5  # 1.5x libertarian, 0.5x authoritarian
-ECONOMICS_FACTORY_SPAN = 0.2       # 1.2x planned, 0.8x market
-ECONOMICS_RESEARCH_SPAN = 1.0      # 0.0x planned, 2.0x market
+POLITICS_DAMAGE_SPAN = 0.3          # +/-30% damage dealt at the extremes (0.7x .. 1.3x)
+POLITICS_CORE_MANPOWER_SPAN = 0.6   # 1.6x libertarian, 0.4x authoritarian
+ECONOMICS_FACTORY_SPAN = 0.2        # 1.2x planned, 0.8x market
+ECONOMICS_RESEARCH_SPAN = 0.6       # 0.4x planned, 1.6x market
+# other potential effects:
+# unit upkeep
+# resource extraction multiplier (should be light and a secondary modifier)
+# unit max health (if a unit is at 500/1000 health, and the max health goes up to 1100, then the actual health should be increased with this to 550/1100)
+# unit defense modifier
+# core territory damage modifier
+# aircraft range modifier
+
+# Military doctrine: Quality ↔ Quantity, Offensive ↔ Defensive
+# Quality Quantity      = [damage] - [manpower] (replace politics with ???)
+# Offensive Defensive   = [aircraft range modifier, ] - [core territory damage modifier, defense, max health]
+
+'''
+PLAN - Civillian Policy, Military Policy tables
+
+Civilian - Political, Economic
+Military - Quality, Strategy
+
+===== CIV
+
+Political   (Libertarian, Authoritarian)
+                LIB   AUTH
+Coring turns    +10 / -10       (turns to core may not ever go below 2. 2 is the minimum. removing cores is not affected by this)
+Research Mod    1.6 / 0.4
+
+...maybe removing cores should be a policy that can be applicable...
+
+Economic    (Planned, Market)
+                PLAN  MARK
+Factory Output  1.2 - 0.8
+(???) Research Mod    0.4 - 1.6
+
+===== MIL
+
+Quality     (Professional, Numerous) THIS NAME SHOULD BE WORKED ON
+                PROF  NUM
+Damage          1.3 - 0.7
+Manpower        0.4 - 1.6
+Unit Upkeep     1.5 - 0.5
+Max Health      1.3 - 0.7
+
+Strategy    (Offensive, Defensive)
+                    OFF   DEF
+Aircraft range mod  1.2 - 0.8
+Core ter dmg mod    1.0 - 1.2 (yes this means that every country now gets a +10% damage modifier on core territory by default)
+Non-Core ter dmg    1.0 - 0.8 (non core territory damage modifier. yes, this is a seperate thing from the core ter dmg modifier. yes this means that every country now gets a -10% damage modifier on enemy territory by default)
+Defense modifier    0.8 - 1.2 (defense modifier applies both to fort defense and good ol unit defense)
+Fort Cost           1.2 - 0.8
+
+why is non-core territory damage seperate from core territory damage modifier?
+that way two countries having different strategies can have those both take effect in either one's territory
+'''
 
 
 # ==========================================
