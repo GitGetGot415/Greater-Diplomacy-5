@@ -225,9 +225,8 @@ class PoliticalAffinityTests(unittest.TestCase):
         def score(a, b):
             data = {name: {politics.VALUE_KEY: political, politics.ECONOMIC_VALUE_KEY: economic}
                     for name, (political, economic) in (("A", a), ("B", b))}
-            self.assertEqual(queries.get_relation_score("A", "A", data), 0)
-            forward = queries.get_relation_score("A", "B", data)
-            self.assertEqual(queries.get_relation_score("B", "A", data), forward)
+            forward = relations._political_affinity("A", "B", data)
+            self.assertEqual(relations._political_affinity("B", "A", data), forward)
             return forward
 
         for a, b, expected in (
@@ -244,6 +243,24 @@ class PoliticalAffinityTests(unittest.TestCase):
             with self.subTest(a=a, b=b):
                 self.assertGreater(score(a, b), 0)
                 self.assertLess(score(a, b), 2 * per_axis)
+
+    def test_reputation_is_how_everyone_else_sees_a_country(self):
+        """The design's own examples: political axis only, economies at the centre."""
+        edge = c.POLITICS_MAX
+
+        def opinion(viewer, viewed):
+            data = {"Viewer": {politics.VALUE_KEY: viewer}, "Viewed": {politics.VALUE_KEY: viewed}}
+            self.assertEqual(queries.get_relation_score("Viewer", "Viewer", data), 0)
+            return queries.get_relation_score("Viewer", "Viewed", data)
+
+        self.assertEqual(opinion(-edge, edge), -20)   # libertarian of authoritarian
+        self.assertEqual(opinion(edge, -edge), 0)     # authoritarian of libertarian
+        self.assertEqual(opinion(edge, edge), 0)
+        self.assertEqual(opinion(-edge, -edge), 20)
+        for other in range(c.POLITICS_MIN, c.POLITICS_MAX + 1):
+            with self.subTest(other=other):
+                # A fully authoritarian country stops caring about ideology.
+                self.assertEqual(opinion(edge, other), 0)
 
 
 class EconomicDriftTests(unittest.TestCase):

@@ -373,7 +373,9 @@ class MapSurfaceCacheTests(unittest.TestCase):
         politics.set_economic_drift(self.screen.nation_data, "B", -1)
 
         self.refresh(refresh_map.refresh_relations_map)
-        self.assertEqual(self.screen._relations_scores["A"], -30)
+        # Everyone sees an authoritarian A with its reputation.
+        a_reputation = round(politics.effect_at("reputation", c.POLITICS_MAX))
+        self.assertEqual(self.screen._relations_scores["A"], -30 + a_reputation)
         ui_info_popup.prepare_relation_indicators(self.screen)
 
         politics.tick(self.screen)
@@ -385,13 +387,16 @@ class MapSurfaceCacheTests(unittest.TestCase):
         # B drifted toward A on both axes, so the shared rule now adds goodwill both ways.
         affinity = relations._political_affinity("A", "B", self.screen.nation_data)
         self.assertGreater(affinity, 0)
-        self.assertEqual(self.screen._relations_scores["A"], -30 + affinity)
+        b_reputation = round(politics.effect_at("reputation", politics.value(self.screen.nation_data, "B")))
+        self.assertEqual(self.screen._relations_scores["A"], -30 + affinity + a_reputation)
         _, (their_opinion, our_opinion) = self.screen._relation_indicator_cache
-        self.assertEqual(their_opinion[1], -30 + affinity)
-        self.assertEqual(our_opinion[1], affinity)
+        self.assertEqual(their_opinion[1], -30 + affinity + a_reputation)
+        self.assertEqual(our_opinion[1], affinity + b_reputation)
         affinity_label = ui_info_popup.RELATION_FACTORS["political_affinity"]
         self.assertIn((affinity_label, affinity), their_opinion[2])
         self.assertIn((affinity_label, affinity), our_opinion[2])
+        reputation_label = ui_info_popup.RELATION_FACTORS["political_reputation"]
+        self.assertIn((reputation_label, a_reputation), their_opinion[2])
 
     def show_relations(self):
         self.screen.map_mode = self.screen.base_layer = "RELATIONS"
