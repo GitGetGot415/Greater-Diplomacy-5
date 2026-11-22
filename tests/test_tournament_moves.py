@@ -1029,6 +1029,8 @@ class TournamentMoveTests(unittest.TestCase):
         politics.set_economic_value(host.nation_data, "Leader", 4)
         politics.set_economic_value(player.nation_data, "Leader", -6)
         politics.set_economic_drift(player.nation_data, "Leader", -1)
+        politics.set_axis_drift(player.nation_data, "Leader", politics.QUALITY, 1)
+        politics.set_axis_drift(player.nation_data, "Leader", politics.STRATEGY, -1)
         player.nation_data["Leader"]["research_funding_slider"] = 0.37
         host.nation_data["Member"]["research_funding_slider"] = 0.15
         with tempfile.TemporaryDirectory() as directory:
@@ -1040,6 +1042,9 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(politics.economic_value(host.nation_data, "Leader"), 4)
         self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), -1)
         self.assertEqual(politics.economic_drift(host.nation_data, "Member"), 0)
+        self.assertEqual(politics.axis_drift(host.nation_data, "Leader", politics.QUALITY), 1)
+        self.assertEqual(politics.axis_drift(host.nation_data, "Leader", politics.STRATEGY), -1)
+        self.assertEqual(politics.axis_drift(host.nation_data, "Member", politics.QUALITY), 0)
         self.assertEqual(host.nation_data["Leader"]["research_funding_slider"], 0.37)
         self.assertEqual(host.nation_data["Member"]["research_funding_slider"], 0.15)
 
@@ -1047,6 +1052,8 @@ class TournamentMoveTests(unittest.TestCase):
         host = Host()
         politics.set_economic_value(host.nation_data, "Leader", 4)
         politics.set_economic_drift(host.nation_data, "Leader", -1)
+        politics.set_axis_drift(host.nation_data, "Leader", politics.QUALITY, 1)
+        politics.set_axis_drift(host.nation_data, "Leader", politics.STRATEGY, -1)
         host.nation_data["Leader"]["research_funding_slider"] = 0.2
         command = {"type": "country_preferences", "political_drift": 1}
         move = self.previous_release_move(host, player_intents=[command])
@@ -1057,27 +1064,33 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(summary["loaded"], 1, summary["rejections"])
         self.assertEqual(politics.economic_value(host.nation_data, "Leader"), 4)
         self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), -1)
+        self.assertEqual(politics.axis_drift(host.nation_data, "Leader", politics.QUALITY), 1)
+        self.assertEqual(politics.axis_drift(host.nation_data, "Leader", politics.STRATEGY), -1)
+        self.assertEqual(politics.drift(host.nation_data, "Leader"), 1)
         self.assertEqual(host.nation_data["Leader"]["research_funding_slider"], 0.2)
 
     def test_tournament_rejects_malformed_unauthorized_or_stale_economic_intents(self):
-        for failure in ("malformed", "position", "funding", "stale"):
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
-                host = Host()
-                preferences = {"type": "country_preferences", politics.ECONOMIC_DRIFT_KEY: 1}
-                move = self.player_data(host, player_intents=[preferences])
-                if failure == "malformed":
-                    preferences[politics.ECONOMIC_DRIFT_KEY] = True
-                elif failure == "position":
-                    preferences[politics.ECONOMIC_VALUE_KEY] = 8
-                elif failure == "funding":
-                    preferences["research_funding_slider"] = 1.1
-                else:
-                    move["tournament_turn"] -= 1
-                path = self.write_move(directory, "invalid-compass.gd5move", "Leader", move)
-                summary = self.import_moves(host, [path])
+        for axis in politics.AXES:
+            for failure in ("malformed", "position", "edge", "funding", "stale"):
+                with self.subTest(axis=axis["id"], failure=failure), tempfile.TemporaryDirectory() as directory:
+                    host = Host()
+                    preferences = {"type": "country_preferences", axis["drift_key"]: 1}
+                    move = self.player_data(host, player_intents=[preferences])
+                    if failure == "malformed":
+                        preferences[axis["drift_key"]] = True
+                    elif failure == "position":
+                        preferences[axis["value_key"]] = 8
+                    elif failure == "edge":
+                        politics.set_axis_value(host.nation_data, "Leader", axis["id"], c.POLITICS_MAX)
+                    elif failure == "funding":
+                        preferences["research_funding_slider"] = 1.1
+                    else:
+                        move["tournament_turn"] -= 1
+                    path = self.write_move(directory, "invalid-compass.gd5move", "Leader", move)
+                    summary = self.import_moves(host, [path])
 
-                self.assertEqual(summary["loaded"], 0)
-                self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), 0)
+                    self.assertEqual(summary["loaded"], 0)
+                    self.assertEqual(politics.axis_drift(host.nation_data, "Leader", axis["id"]), 0)
 
     def test_tournament_round_trip_and_malformed_key_entry(self):
         host = Host()

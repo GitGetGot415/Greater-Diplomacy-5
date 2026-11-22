@@ -55,7 +55,7 @@ def tournament_player_intents(payload, map_data=None):
                 if key in older and older[key] != command.get(key):
                     raise ValueError("Conflicting unit choices in the move file.")
         elif kind == "country_preferences":
-            for key in ("political_drift", politics.ECONOMIC_DRIFT_KEY, "automation", "conscription_slider",
+            for key in (*politics.DRIFT_KEYS, "automation", "conscription_slider",
                         "mat_to_fuel_slider", "research_funding_slider", "custom_production_units"):
                 if key in country and country[key] != command.get(key):
                     raise ValueError("Conflicting country choices in the move file.")

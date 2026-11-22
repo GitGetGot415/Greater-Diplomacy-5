@@ -67,15 +67,16 @@ class CountrySummaryScreen(Screen):
 
     def _politics_lines(self):
         politics = self.summary["politics"]
-        direction = {-1: "Liberalising", 0: "Holding", 1: "Centralising"}[politics["drift"]]
-        lines = [f"Political position: {politics['label']} ({politics['value']:+d})",
-                 f"Political direction: {direction}",
-                 f"Economic position: {politics['economic_label']} ({politics['economic_value']:+d})",
-                 f"Quality position: {politics['quality_label']} ({politics['quality_value']:+d})",
-                 f"Strategy position: {politics['strategy_label']} ({politics['strategy_value']:+d})",
-                 f"Province manpower: {politics['tile_manpower_multiplier']:.2f}x",
-                 f"Factory output: {politics['factory_multiplier']:.2f}x",
-                 f"Base research modifier: {politics['research_multiplier'] - 1.0:+.2%}"]
+        lines = [f"Political position: {politics['label']} ({politics['value']:+d})"]
+        if politics["drift"] is not None:
+            direction = {-1: "Liberalising", 0: "Holding", 1: "Centralising"}[politics["drift"]]
+            lines.append(f"Political direction: {direction}")
+        lines += [f"Economic position: {politics['economic_label']} ({politics['economic_value']:+d})",
+                  f"Quality position: {politics['quality_label']} ({politics['quality_value']:+d})",
+                  f"Strategy position: {politics['strategy_label']} ({politics['strategy_value']:+d})",
+                  f"Province manpower: {politics['tile_manpower_multiplier']:.2f}x",
+                  f"Factory output: {politics['factory_multiplier']:.2f}x",
+                  f"Base research modifier: {politics['research_multiplier'] - 1.0:+.2%}"]
         if not politics["policies"]:
             lines.append("Policies: None")
         for policy in politics["policies"]:

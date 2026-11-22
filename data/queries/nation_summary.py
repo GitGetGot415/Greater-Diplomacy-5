@@ -150,7 +150,8 @@ def get_country_summary(context, country_id):
         },
         "politics": {"label": politics.label(political_value),
                      "value": political_value,
-                     "drift": politics.drift(nation_data, country_id),
+                     # Directions are private; only the viewer's own country shows one.
+                     "drift": politics.drift(nation_data, country_id) if unrestricted or country_id == viewer else None,
                      "economic_value": economic_value,
                      "economic_label": politics.economic_label(economic_value),
                      "quality_value": quality_value,

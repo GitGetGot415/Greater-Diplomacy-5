@@ -171,7 +171,8 @@ def strip_sensitive_data_for_tournament_spectator(context):
         country["diplo_responses"] = {}
         country.pop("peace_choices", None)
         country.pop("ai_notebook", None)
-        country.pop(politics.ECONOMIC_DRIFT_KEY, None)
+        for key in politics.DRIFT_KEYS:
+            country.pop(key, None)
         country.pop("research_funding_slider", None)
 
     for province in world_state.map_data.values():
@@ -217,7 +218,8 @@ def build_tournament_spectator_save(save_dict):
             country["diplo_responses"] = {}
             country.pop("peace_choices", None)
             country.pop("ai_notebook", None)
-            country.pop(politics.ECONOMIC_DRIFT_KEY, None)
+            for key in politics.DRIFT_KEYS:
+                country.pop(key, None)
             country.pop("research_funding_slider", None)
 
     for province in spectator_save.get("provinces", {}).values():
