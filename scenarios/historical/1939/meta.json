@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:28.725437",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:27.858690",
   "date": {"day": 15, "month": 2, "year": 1939, "total_turns": 0},
   "loop_map": true,
   "player_country": "Editor",
@@ -7137,12 +7137,6 @@
       "diplo_responses": {},
       "military_attaches": [],
       "armies": []
-    },
-    "FACTION_WAR_MAPS": {
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
     },
     "Morocco": {
       "name": "Morocco",

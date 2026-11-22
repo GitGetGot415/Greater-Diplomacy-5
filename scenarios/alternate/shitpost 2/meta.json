@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:40.858137",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:40.434143",
   "date": {"day": 15, "month": 0, "year": 1918, "total_turns": 0},
   "loop_map": true,
   "player_country": "Editor",
@@ -8470,11 +8470,7 @@
         "890": "Japanese Empire",
         "891": "Japanese Empire",
         "905": "Japanese Empire"
-      },
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
+      }
     }
   },
   "factions": {

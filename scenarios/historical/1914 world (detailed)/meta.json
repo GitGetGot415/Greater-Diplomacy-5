@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:26.480019",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:25.420337",
   "date": {"day": 15, "month": 0, "year": 1914, "total_turns": 0},
   "loop_map": true,
   "player_country": "None",
@@ -22929,24 +22929,6 @@
       "military_attaches": [],
       "armies": []
     },
-    "FACTION_WAR_MAPS": {
-      "Mexican Rebels": {
-        "1097": "Sinaloa",
-        "1154": "Chihuahua",
-        "1171": "Sinaloa",
-        "1228": "Sinaloa",
-        "1256": "Chihuahua",
-        "1289": "Sinaloa",
-        "1317": "Sinaloa",
-        "1403": "Sinaloa",
-        "1465": "Sinaloa",
-        "1572": "Zapatistas"
-      },
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
-    },
     "Djibouti": {
       "name": "Djibouti",
       "color": [0, 128, 192],
@@ -32338,7 +32320,21 @@
     "Reichskommissariat Skandinavien": {},
     "Zheleznogorsk": {},
     "Communist Hive Mind Raj": {},
-    "Polynesian SSR": {}
+    "Polynesian SSR": {},
+    "FACTION_WAR_MAPS": {
+      "Mexican Rebels": {
+        "1097": "Sinaloa",
+        "1154": "Chihuahua",
+        "1171": "Sinaloa",
+        "1228": "Sinaloa",
+        "1256": "Chihuahua",
+        "1289": "Sinaloa",
+        "1317": "Sinaloa",
+        "1403": "Sinaloa",
+        "1465": "Sinaloa",
+        "1572": "Zapatistas"
+      }
+    }
   },
   "factions": {
     "faction-bee4374a90e58ef343eff6a9": {

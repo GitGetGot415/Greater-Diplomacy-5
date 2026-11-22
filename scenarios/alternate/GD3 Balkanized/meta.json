@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:38.061673",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:37.707551",
   "date": {"day": 15, "month": 0, "year": 1910, "total_turns": 0},
   "loop_map": true,
   "player_country": "None",
@@ -9539,12 +9539,6 @@
     "Andalusia": {},
     "United Colonies": {},
     "Thirteen Colonies": {},
-    "FACTION_WAR_MAPS": {
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
-    },
     "Chad": {
       "name": "Chad",
       "color": [150, 100, 200],

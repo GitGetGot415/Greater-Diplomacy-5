@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:40.112155",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:39.668548",
   "date": {"day": 15, "month": 0, "year": 2026, "total_turns": 0},
   "loop_map": true,
   "player_country": "None",
@@ -3966,12 +3966,6 @@
       "diplo_responses": {},
       "military_attaches": [],
       "armies": []
-    },
-    "FACTION_WAR_MAPS": {
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
     },
     "Neptune Society": {
       "name": "Neptune Society",

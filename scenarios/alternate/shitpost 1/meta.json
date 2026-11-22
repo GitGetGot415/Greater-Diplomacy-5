@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:40.573642",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:40.148778",
   "date": {"day": 15, "month": 0, "year": 1910, "total_turns": 0},
   "loop_map": true,
   "player_country": "None",
@@ -5434,12 +5434,6 @@
     "Oceania": {},
     "Oceanian Federation": {},
     "Union of South Africa": {},
-    "FACTION_WAR_MAPS": {
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
-    },
     "Confederate States of America": {},
     "Democratic Republic of the Congo": {},
     "Republic of the Congo": {},

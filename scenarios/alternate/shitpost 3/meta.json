@@ -1,6 +1,6 @@
 {
-  "version": "v49",
-  "generated_at": "2026-11-15T20:26:41.318994",
+  "version": "v50",
+  "generated_at": "2026-11-21T23:51:40.843403",
   "date": {"day": 15, "month": 0, "year": 1950, "total_turns": 0},
   "loop_map": true,
   "player_country": "Editor",
@@ -5208,13 +5208,7 @@
     "Bahrain": {},
     "Zheleznogorsk": {},
     "Communist Hive Mind Raj": {},
-    "Polynesian SSR": {},
-    "FACTION_WAR_MAPS": {
-      "at_war_with": [],
-      "military_attaches": [],
-      "pending_diplomacy": {},
-      "diplo_responses": {}
-    }
+    "Polynesian SSR": {}
   },
   "factions": {
     "faction-f11b1dbafe9f2e844f705852": {
