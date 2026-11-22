@@ -990,12 +990,16 @@ class FactionResearchTests(unittest.TestCase):
 # ============================================================================ #
 
 class StubWorld:
-    """The three things ai_politics asks an AIWorld for."""
+    """The parts of an AIWorld that ai_politics reads."""
 
     def __init__(self, nation_data, ratios=None, neighbors=None):
         self.nation_data = nation_data
         self._ratios = ratios or {}
         self.neighbors = neighbors or {}
+        self.provs_by_owner = {}
+        self.units_by_owner = {}
+        self.land_border_tiles = {}
+        self.economies = {}
 
     def power_ratio(self, nation, other):
         return self._ratios.get((nation, other), (1.0, 1.0))
@@ -1006,107 +1010,138 @@ def ai_world_with(*nations, **kwargs):
     return StubWorld(nation_data, **kwargs)
 
 
+def at_war(world, a="A", b="B"):
+    world.nation_data[a]["at_war_with"] = [b]
+    world.nation_data[b]["at_war_with"] = [a]
+
+
 class AIPoliticsTests(unittest.TestCase):
     def setUp(self):
         from map_logic.ai import ai_politics
         self.ai_politics = ai_politics
 
-    def test_a_nation_at_peace_and_safe_leans_libertarian(self):
-        world = ai_world_with("A", "B")
-        self.assertLess(self.ai_politics.desired_value(world, "A"), 0)
+    def land(self, world, cored, uncored, nation="A"):
+        world.provs_by_owner[nation] = ([{"owner": nation, "cores": [nation]} for _ in range(cored)]
+                                        + [{"owner": nation, "cores": []} for _ in range(uncored)])
 
-    def test_a_nation_at_war_leans_authoritarian(self):
-        world = ai_world_with("A", "B")
-        world.nation_data["A"]["at_war_with"] = ["B"]
-        world.nation_data["B"]["at_war_with"] = ["A"]
-        self.assertGreater(self.ai_politics.desired_value(world, "A"), 0)
+    # --- Political and Economic follow how much land is cored --------------
 
-    def test_losing_a_war_centralises_harder_than_winning_one(self):
+    def test_fully_cored_land_is_libertarian_and_market(self):
+        world = ai_world_with("A")
+        self.land(world, 5, 0)
+        with patch.object(c, "DISABLE_CORES", False):
+            self.assertEqual(self.ai_politics.desired_value(world, "A"), c.POLITICS_MIN)
+            self.assertEqual(self.ai_politics.desired_economic_value(world, "A"), c.POLITICS_MAX)
+
+    def test_uncored_land_pulls_toward_authority_and_planning(self):
+        world = ai_world_with("A")
+        with patch.object(c, "DISABLE_CORES", False):
+            self.land(world, 4, 1)
+            some = (self.ai_politics.desired_value(world, "A"), self.ai_politics.desired_economic_value(world, "A"))
+            self.land(world, 1, 4)
+            most = (self.ai_politics.desired_value(world, "A"), self.ai_politics.desired_economic_value(world, "A"))
+        self.assertGreater(some[0], c.POLITICS_MIN)
+        self.assertLess(some[1], c.POLITICS_MAX)
+        self.assertEqual(most, (c.POLITICS_MAX, c.POLITICS_MIN))
+
+    # --- Quality -------------------------------------------------------------
+
+    def test_a_safe_well_garrisoned_solvent_nation_is_professional(self):
+        world = ai_world_with("A")
+        self.assertEqual(self.ai_politics.desired_quality_value(world, "A"), c.POLITICS_MIN)
+
+    def test_losing_a_war_pulls_toward_numerous(self):
         def target(border, glob):
             world = ai_world_with("A", "B", ratios={("A", "B"): (border, glob)})
-            world.nation_data["A"]["at_war_with"] = ["B"]
-            world.nation_data["B"]["at_war_with"] = ["A"]
-            return self.ai_politics.desired_value(world, "A")
+            at_war(world)
+            return self.ai_politics.desired_quality_value(world, "A")
 
         self.assertGreater(target(0.2, 0.2), target(5.0, 5.0))
+        self.assertGreater(target(5.0, 5.0), c.POLITICS_MIN)
 
-    def test_a_war_it_is_winning_does_not_go_to_the_wall(self):
-        """The nuance the whole target-position design exists for."""
-        world = ai_world_with("A", "B", ratios={("A", "B"): (5.0, 5.0)})
-        world.nation_data["A"]["at_war_with"] = ["B"]
-        world.nation_data["B"]["at_war_with"] = ["A"]
-        self.assertLess(self.ai_politics.desired_value(world, "A"), c.POLITICS_MAX)
+    def test_a_long_thinly_held_border_pulls_toward_numerous(self):
+        """A big country that cannot put a unit on every border tile wants more of them, cheaper."""
+        world = ai_world_with("A")
+        world.land_border_tiles["A"] = set(range(10))
+        world.units_by_owner["A"] = [({"owner": "A", "type": "Fixture"}, {}) for _ in range(2)]
+        with patch.object(queries, "is_air_unit", return_value=False):
+            thin = self.ai_politics.desired_quality_value(world, "A")
+            world.units_by_owner["A"] = [({"owner": "A", "type": "Fixture"}, {}) for _ in range(10)]
+            manned = self.ai_politics.desired_quality_value(world, "A")
+        self.assertGreater(thin, c.POLITICS_START)
+        self.assertEqual(manned, c.POLITICS_MIN)
 
-    def test_a_threatening_neighbour_holds_a_peaceful_nation_nearer_the_centre(self):
-        safe = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                             ratios={("A", "B"): (1.0, 5.0)})
-        scared = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                               ratios={("A", "B"): (1.0, 0.1)})
-        self.assertGreater(self.ai_politics.desired_value(scared, "A"),
-                           self.ai_politics.desired_value(safe, "A"))
+    def test_an_unaffordable_army_pulls_toward_numerous(self):
+        """A resource-poor country that cannot pay its upkeep wants the cheaper army."""
+        world = ai_world_with("A")
+        income = {"manpower": 1000, "materials": 1000, "fuel": 1000}
+        world.economies["A"] = {"total_inc": income, "upkeep": dict.fromkeys(income, 0)}
+        self.assertEqual(self.ai_politics.desired_quality_value(world, "A"), c.POLITICS_MIN)
+        world.economies["A"]["upkeep"] = dict(income)
+        self.assertEqual(self.ai_politics.desired_quality_value(world, "A"), c.POLITICS_MAX)
 
-    def test_a_peaceful_nation_does_not_go_to_the_wall_either(self):
-        world = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                              ratios={("A", "B"): (1.0, 100.0)})
-        self.assertGreater(self.ai_politics.desired_value(world, "A"), c.POLITICS_MIN)
+    # --- Strategy ------------------------------------------------------------
 
-    def test_an_ally_next_door_is_not_a_menace(self):
-        allied = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                               ratios={("A", "B"): (1.0, 0.1)})
-        allied.nation_data["A"]["faction"] = allied.nation_data["B"]["faction"] = "Fixture Coalition"
-        alone = ai_world_with("A", neighbors={"A": set()})
-        self.assertEqual(self.ai_politics.desired_value(allied, "A"),
-                         self.ai_politics.desired_value(alone, "A"))
-
-    def test_it_walks_toward_the_target_and_stops_on_arrival(self):
+    def test_strategy_is_balanced_at_peace_and_follows_the_war_at_war(self):
         world = ai_world_with("A", "B")
-        target = self.ai_politics.desired_value(world, "A")
+        self.assertEqual(self.ai_politics.desired_strategy_value(world, "A"), c.POLITICS_START)
 
-        politics.set_value(world.nation_data, "A", 0)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), -1)
+        winning = ai_world_with("A", "B", ratios={("A", "B"): (5.0, 5.0)})
+        losing = ai_world_with("A", "B", ratios={("A", "B"): (0.2, 0.2)})
+        at_war(winning)
+        at_war(losing)
+        self.assertLess(self.ai_politics.desired_strategy_value(winning, "A"), c.POLITICS_START)
+        self.assertGreater(self.ai_politics.desired_strategy_value(losing, "A"), c.POLITICS_START)
 
-        politics.set_value(world.nation_data, "A", target)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), 0)
-        self.assertEqual(politics.drift(world.nation_data, "A"), 0)
+    def test_enemies_on_its_cores_turn_a_winning_nation_defensive(self):
+        world = ai_world_with("A", "B", ratios={("A", "B"): (5.0, 5.0)})
+        at_war(world)
+        self.land(world, 3, 0)
+        offensive = self.ai_politics.desired_strategy_value(world, "A")
+        world.provs_by_owner["B"] = [{"owner": "B", "cores": ["A"]}]
+        self.assertEqual(self.ai_politics.desired_strategy_value(world, "A"), c.POLITICS_MAX)
+        self.assertLess(offensive, c.POLITICS_START)
 
-        politics.set_value(world.nation_data, "A", c.POLITICS_MIN)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), 1)
+    # --- Walking toward the targets --------------------------------------------
+
+    def test_it_walks_every_axis_toward_its_target_and_stops_on_arrival(self):
+        world = ai_world_with("A", "B")
+        targets = {axis: desired(world, "A") for axis, desired in self.ai_politics.DESIRED_POSITIONS.items()}
+        for axis, target in targets.items():
+            politics.set_axis_value(world.nation_data, "A", axis, target)
+        directions = self.ai_politics.decide(world, "A", world.nation_data)
+        self.assertEqual(set(directions.values()), {0})
+
+        for axis, target in targets.items():
+            with self.subTest(axis=axis):
+                if target > c.POLITICS_MIN:
+                    politics.set_axis_value(world.nation_data, "A", axis, c.POLITICS_MIN)
+                    self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[axis], 1)
+                    self.assertEqual(politics.axis_drift(world.nation_data, "A", axis), 1)
+                if target < c.POLITICS_MAX:
+                    politics.set_axis_value(world.nation_data, "A", axis, c.POLITICS_MAX)
+                    self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[axis], -1)
+                politics.set_axis_value(world.nation_data, "A", axis, target)
 
     def test_a_war_turns_a_drifting_nation_around(self):
         """The target is recomputed every turn, so it reverses rather than snaps."""
-        world = ai_world_with("A", "B")
-        politics.set_value(world.nation_data, "A", -4)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), -1)
+        world = ai_world_with("A", "B", ratios={("A", "B"): (0.2, 0.2)})
+        politics.set_axis_value(world.nation_data, "A", politics.QUALITY, -4)
+        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[politics.QUALITY], -1)
 
-        world.nation_data["A"]["at_war_with"] = ["B"]
-        world.nation_data["B"]["at_war_with"] = ["A"]
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), 1)
-        self.assertEqual(politics.value(world.nation_data, "A"), -4,
+        at_war(world)
+        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[politics.QUALITY], 1)
+        self.assertEqual(politics.axis_value(world.nation_data, "A", politics.QUALITY), -4,
                          "deciding must not move the value; only tick does that")
 
     def test_the_same_world_decides_the_same_way_twice(self):
         """No `random` -- see the note in ai_personality.procedural."""
-        first = ai_world_with("A", "B")
-        second = ai_world_with("A", "B")
-        self.assertEqual(self.ai_politics.desired_value(first, "A"),
-                         self.ai_politics.desired_value(second, "A"))
-
-    def test_economic_drift_responds_to_a_shortage_independently(self):
-        world = ai_world_with("A")
-        world.provs_by_owner = {"A": [{"buildings": ["Basic Factory"]}]}
-        world.economies = {"A": {"upkeep": {"materials": 100, "fuel": 20},
-                                 "total_inc": {"materials": 80, "fuel": 10},
-                                 "breakdown": {"materials": {"buildings": 60},
-                                               "fuel": {"buildings": 0}}}}
-        politics.set_drift(world.nation_data, "A", 1)
-        self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), -1)
-        self.assertEqual(politics.economic_value(world.nation_data, "A"), c.POLITICS_START)
-        self.assertEqual(politics.drift(world.nation_data, "A"), 1)
-
-        # A factory cannot help the remaining fuel deficit in this economy.
-        world.nation_data["A"]["materials"] = 20 * ai_tuning.AI_DISBAND_RUNWAY_TURNS
-        self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), 1)
-        self.assertEqual(politics.economic_drift(world.nation_data, "A"), 1)
+        first = ai_world_with("A", "B", ratios={("A", "B"): (0.7, 1.3)})
+        second = ai_world_with("A", "B", ratios={("A", "B"): (0.7, 1.3)})
+        at_war(first)
+        at_war(second)
+        for desired in self.ai_politics.DESIRED_POSITIONS.values():
+            self.assertEqual(desired(first, "A"), desired(second, "A"))
 
 
 if __name__ == "__main__":

@@ -230,26 +230,25 @@ AI_TRADE_ROUNDING_LADDER = (1000, 500, 100, 50, 25, 10, 5)
 # POLITICS (map_logic/politics.py, map_logic/ai/ai_politics.py)
 # ==========================================
 # --- What the AI aims for (map_logic/ai/ai_politics.py) ---
-# The AI picks a target position on the axis and walks toward it, rather than
+# The AI picks a target position on each axis and walks toward it, rather than
 # picking a direction and running to the wall. Two nations in the same war end
 # up in different places, and a nation that has arrived stops.
-#
-# The two bands deliberately do not span the whole axis: a country at peace is
-# not a country with no army, and a country winning a war has less reason to
-# centralise than one losing three.
-POLITICS_AI_WAR_BASE = 0.60     # at war and comfortably winning -> about +2
-POLITICS_AI_WAR_DANGER = 0.35   # ...rising to about +9 when it is going badly
-POLITICS_AI_PEACE_BASE = 0.40   # at peace beside a hostile giant -> about -2
-POLITICS_AI_PEACE_SAFETY = 0.25 # ...falling to about -7 when nobody nearby is a threat
 
-# How much of `danger` is "this war is going badly"; "there are several of
-# them" takes the rest.
+# Political: fully authoritarian, for fast and cheap coring, once this share of
+# its land is uncored. Less uncored land leaves it proportionally nearer the
+# libertarian end, where research is fastest.
+POLITICS_AI_UNCORED_SHARE_FOR_AUTHORITY = 0.5
+
+# Economic: fully planned, where non-core land stays productive, once this
+# share of its land is non-core. Less leaves it proportionally nearer market.
+POLITICS_AI_UNCORED_SHARE_FOR_PLANNING = 0.5
+
+# Quality: how much of `danger` is "this war is going badly"; "there are several
+# of them" takes the rest.
 POLITICS_AI_LOSING_SHARE = 0.65
 
-# Temperament, centred on 0.5 so an average nation contributes nothing. A
-# cautious country centralises sooner; so does a belligerent one, for the
-# opposite reason. Caution and aggression each count this much.
-POLITICS_AI_W_TEMPERAMENT = 0.10
+# Strategy: fully defensive once enemies hold this share of its cores.
+POLITICS_AI_OCCUPIED_SHARE_FOR_DEFENSE = 0.25
 
 # ==========================================
 # LLM DIRECTOR (map_logic/ai/ai_director.py)
