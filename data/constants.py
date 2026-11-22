@@ -1049,24 +1049,31 @@ Military - Quality, Strategy
 ===== CIV
 
 Political   (Libertarian, Authoritarian)
-                LIB   AUTH
-Coring turns    +10 / -10       (turns to core may not ever go below 2. 2 is the minimum. removing cores is not affected by this)
-SOLUTION -> MAKE IT SO THAT IN SCENARIO SETTINGS, CORING TURNS CANNOT BE SET BELOW 12, THAT WAY 12 - 10 = 2 AT MINIMUM
-
-Coring costs    1.2 - 0.8
-Research Mod    1.6 - 0.4
+                        LIB   ATH
+Coring turns            +10 / -10       (turns to core may not ever go below 2. 2 is the minimum. removing cores is not affected by this)
+SOLUTION -> MAKE IT SO THAT IN SCENARIO SETTINGS, CORING TURNS CANNOT BE SET BELOW 12, THAT WAY 12 - 10 = 2 AT MINIMUM (having a slider between 12 and 24 ought to solve this issue)
+also make the remove cores turn thing a slider as well from 1 to 9
+Coring costs            1.2 - 0.8
+Remov core cost         1.2 - 0.8
+Research Mod            2.0 - 0.0
+Other AI Opinion Mod    +10 / -10       (yes, this means a country that's maxed out lib views a maxed out auth country as -20 opinion because -10 from political differences and -10 generally)
+2 max auth countries - 0 opinion modifier of each other because the -10 cancels each other out
+2 max lib countries - 20 opinion modifier of each other because +10 political alignment and +10 liberal opinion modifier
+yes this means a max auth country ends up having a 0 opinion modifier of every other country (makes sense i guess, past a certain point you stop caring about political ideology)
 
 ...maybe removing cores should be a policy that can be applicable...
 
 Economic    (Planned, Market)
-                PLAN  MARK
-Factory Output  1.2 - 0.8
-(???) Research Mod    0.4 - 1.6
+                    PLN   MRK
+Factory Output      0.9 - 1.1
+Resource Mult       0.8 - 1.2
+Building Cost       0.7 - 1.3
+Non-core output     1.2 - 0.8
 
 ===== MIL
 
-Quality     (Professional, Numerous) THIS NAME SHOULD BE WORKED ON
-                PROF  NUM
+Quality     (Professional, Numberous) THIS NAME SHOULD BE WORKED ON
+                PRF   NUM
 Damage          1.3 - 0.7
 Manpower        0.4 - 1.6
 Unit Upkeep     1.5 - 0.5
