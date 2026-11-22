@@ -67,13 +67,13 @@ class CategorySettingTests(unittest.TestCase):
     def test_administrative_and_conversion_rules_read_the_values_that_apply(self):
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
         default = queries.get_administrative_turns("CORE", {})
-        settings = {"administrative_turn_overrides": {name: default + 1},
-                    "map_defaults": {"administrative_turn_overrides": {name: default + 2},
+        settings = {"administrative_turn_overrides": {name: default - 1},
+                    "map_defaults": {"administrative_turn_overrides": {name: default - 2},
                                      "administrative_disabled": [name]}}
-        self.assertEqual(queries.get_administrative_turns("CORE", settings), default + 2)
+        self.assertEqual(queries.get_administrative_turns("CORE", settings), default - 2)
         self.assertFalse(queries.is_administrative_action_enabled("CORE", settings))
         settings["use_default_other"] = False
-        self.assertEqual(queries.get_administrative_turns("CORE", settings), default + 1)
+        self.assertEqual(queries.get_administrative_turns("CORE", settings), default - 1)
         self.assertTrue(queries.is_administrative_action_enabled("CORE", settings))
 
 

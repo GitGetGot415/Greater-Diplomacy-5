@@ -232,11 +232,11 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(queries.get_factory_count("A", game.map_data), 0)
         self.assertEqual(queries.get_factory_count("B", game.map_data), 3)
         self.assertEqual(
-            queries.get_building_cost("Basic Factory", "A", game.map_data, {})["cost_manpower"],
+            queries.get_building_cost("Basic Factory", "A", game.map_data, {}, game.nation_data)["cost_manpower"],
             c.BASIC_FACTORY_BASE_COST_X,
         )
         self.assertEqual(
-            queries.get_building_cost("Basic Factory", "B", game.map_data, {})["cost_manpower"],
+            queries.get_building_cost("Basic Factory", "B", game.map_data, {}, game.nation_data)["cost_manpower"],
             c.BASIC_FACTORY_BASE_COST_X + (3 * c.BASIC_FACTORY_COST_MULTIPLIER),
         )
 

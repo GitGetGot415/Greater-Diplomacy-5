@@ -42,6 +42,11 @@ from data import queries
 from ui.rendering import overlay_renderer
 from map_logic.system32 import combat_processor, combat_rules, movement_processor
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def five_nation_tile():
     """The tile from the request. Returns (screen, province, units by nation).

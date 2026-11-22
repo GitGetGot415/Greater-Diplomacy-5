@@ -21,6 +21,11 @@ from tests import test_tournament_moves as tournament_tests
 from tests.stub_map_screen import map_double
 from tests.tournament_fixtures import fast_tournament_crypto
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def fixture():
     provinces = {pid: {"id": pid, "json_key": str(pid), "owner": owner, "terrain": "Plains",

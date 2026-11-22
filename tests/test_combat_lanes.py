@@ -33,6 +33,11 @@ from map_logic.system32 import combat_forecast, combat_processor, combat_rules
 
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def tile(screen, troops, owner=None):
     """One province holding everyone, in the order the nations were listed."""

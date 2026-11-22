@@ -23,6 +23,9 @@ def building(materials, manpower, fuel, group):
     return dict(prod_materials=materials, prod_manpower=manpower, prod_fuel=fuel,
                 cost_materials=0, cost_manpower=0, cost_fuel=0, time=1, group=group)
 
+#: Non-core building output for a country at the centre of the economic axis.
+NON_CORE_BUILDING_CENTRE = politics.effect_at("non_core_building_output", c.POLITICS_START)
+
 
 class OutputBonusTests(unittest.TestCase):
     def setUp(self):
@@ -71,7 +74,8 @@ class OutputBonusTests(unittest.TestCase):
             screen._presentation_cache_revision += 1
             tooltip.prepare_building_yields(screen)
             self.assertEqual(screen._tooltip_building_yields[0][1],
-                             {key: int(value * politics.axis_factory_multiplier(c.POLITICS_MAX) * c.NON_CORE_BUILDING_MULTIPLIER)
+                             {key: int(value * politics.effect_at("factory_output", c.POLITICS_MAX)
+                                         * politics.effect_at("non_core_building_output", c.POLITICS_MAX))
                               for key, value in expected.items()})
         screen._presentation_cache_revision += 1
         with patch.object(queries, "is_province_visible", return_value=False):
@@ -174,7 +178,7 @@ class OutputBonusTests(unittest.TestCase):
         research = {"first": 1, "recruit": 1}
         for core in (True, False):
             province = self.province(core)
-            mult = 1 if core else c.NON_CORE_BUILDING_MULTIPLIER
+            mult = 1 if core else NON_CORE_BUILDING_CENTRE
             expected = {res: sum(int(self.output(name, research)[res] * mult) for name in self.library)
                         for res in c.ECON_RESOURCE_KEYS}
             actual = queries.get_province_building_output(province, research, self.library)
@@ -197,32 +201,65 @@ class OutputBonusTests(unittest.TestCase):
                 output = queries.get_province_building_output(province, {"first": 2}, self.library,
                                                               factory_multiplier=multiplier)
                 self.assertEqual(output["materials"], int(self.library["Basic Factory"]["prod_materials"]
-                                 * 1.5 ** 2 * multiplier * fraction * c.NON_CORE_BUILDING_MULTIPLIER))
+                                 * 1.5 ** 2 * multiplier * fraction * NON_CORE_BUILDING_CENTRE))
 
-    def test_compass_changes_factory_and_core_manpower_income_at_the_shared_source(self):
+    def test_compass_changes_each_income_source_at_the_shared_source(self):
+        """Quality scales tile manpower; the economy scales factories, deposits and non-core land."""
         self.library["Basic Factory"] = building(40, 20, 60, "industry")
-        core = self.province()
-        core["buildings"] = ["Basic Factory", "Recruitment Building Lvl 1"]
-        non_core = self.province(False)
-        non_core["buildings"] = []
-        map_data = {1: core, 2: non_core}
-        nation_data = {"A": {"research": {"first": 1}}}
-        expected = {"materials": 60, "manpower": 20, "fuel": 60}
-
+        research = {"first": 1}
         with patch.object(c, "DISABLE_CORES", False):
-            baseline = queries.calculate_all_economies(map_data, nation_data)["A"]["breakdown"]
+            for core in (True, False):
+                province = self.province(core)
+                tier = "core" if core else "non_core"
+                centre = queries.calculate_all_economies({1: province}, {"A": {"research": research}})["A"]["breakdown"]
+                for position in (c.POLITICS_MIN, c.POLITICS_MAX):
+                    with self.subTest(core=core, position=position):
+                        nation_data = {"A": {"research": research, "quality_value": position, "economic_value": position}}
+                        report = queries.calculate_all_economies({1: province}, nation_data)["A"]["breakdown"]
+                        territory = 1.0 if core else politics.effect_at("non_core_province_output", position)
+                        building_territory = 1.0 if core else politics.effect_at("non_core_building_output", position)
+                        factory = politics.effect_at("factory_output", position)
+                        for res in c.ECON_RESOURCE_KEYS:
+                            manpower = politics.effect_at("tile_manpower", position) if res == "manpower" else 1.0
+                            self.assertAlmostEqual(report[res][tier], centre[res][tier] * territory * manpower)
+                            self.assertAlmostEqual(report[res]["resources"], centre[res]["resources"] * territory
+                                                   * politics.effect_at("deposit_output", position))
+                            self.assertEqual(report[res]["base"], centre[res]["base"])
+                            # Factory output reaches factories only; recruitment keeps its yield.
+                            self.assertEqual(report[res]["buildings"], sum(
+                                int(queries.get_building_output(name, research, self.library, factory_multiplier=factory)[res]
+                                    * building_territory) for name in self.library))
+
+    def test_unit_upkeep_follows_quality_everywhere_it_is_reported(self):
+        from screens.game.economy import expense_table_rows
+
+        library = {"Infantry": {"cost_manpower": 100, "cost_materials": 40, "cost_fuel": 10}}
+        unit = {"type": "Infantry", "owner": "A"}
+        province = {"id": 1, "owner": "A", "cores": ["A"], "buildings": [], "units": [unit]}
+        with patch.object(queries, "get_unit_library", return_value=library):
+            centre = queries.calculate_all_economies({1: province}, {"A": {}})["A"]["upkeep"]
             for position in (c.POLITICS_MIN, c.POLITICS_MAX):
-                nation_data["A"].update(political_value=position, economic_value=position)
-                report = queries.calculate_all_economies(map_data, nation_data)["A"]["breakdown"]
-                self.assertAlmostEqual(report["manpower"]["core"],
-                                       baseline["manpower"]["core"] * politics.axis_core_manpower_multiplier(position))
-                factory_multiplier = politics.axis_factory_multiplier(position)
-                for resource, factory_income in expected.items():
-                    with self.subTest(position=position, resource=resource):
-                        self.assertEqual(report[resource]["buildings"],
-                                         baseline[resource]["buildings"] - factory_income + int(factory_income * factory_multiplier))
-                        for source in ("base", "non_core", "resources"):
-                            self.assertEqual(report[resource][source], baseline[resource][source])
+                with self.subTest(position=position):
+                    nation_data = {"A": {"quality_value": position}}
+                    upkeep = queries.calculate_all_economies({1: province}, nation_data)["A"]["upkeep"]
+                    rows, _grouped = expense_table_rows([(unit, province)], library, nation_data)
+                    for res in c.ECON_RESOURCE_KEYS:
+                        self.assertAlmostEqual(upkeep[res], centre[res] * politics.effect_at("unit_upkeep", position))
+                        self.assertAlmostEqual(rows[0][res], upkeep[res])
+
+    def test_building_prices_follow_the_economy_and_forts_follow_strategy(self):
+        library = {"Recruitment Building Lvl 1": {"group": "recruitment", "cost_manpower": 200, "cost_materials": 150, "cost_fuel": 5},
+                   "Fort Lvl 1": {"group": "fortification", "cost_manpower": 100, "cost_materials": 300, "cost_fuel": 0}}
+        for library_name, effect, key in (("Recruitment Building Lvl 1", "building_cost", "economic_value"),
+                                          ("Fort Lvl 1", "fort_cost", "strategy_value")):
+            for position in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+                with self.subTest(building=library_name, position=position):
+                    other = "strategy_value" if key == "economic_value" else "economic_value"
+                    nation_data = {"A": {key: position, other: c.POLITICS_MAX}}
+                    cost = queries.get_building_cost(library_name, "A", {}, library, nation_data)
+                    for res in c.ECON_RESOURCE_KEYS:
+                        self.assertEqual(cost[f"cost_{res}"], int(round(library[library_name].get(f"cost_{res}", 0)
+                                                                         * politics.effect_at(effect, position))))
 
     def test_turn_processor_applies_the_reported_income(self):
         country = {"research": {"first": 1}, "political_value": c.POLITICS_MAX,
@@ -234,7 +271,7 @@ class OutputBonusTests(unittest.TestCase):
         for res in c.ECON_RESOURCE_KEYS:
             self.assertEqual(country[res], expected["total_inc"][res])
 
-    def test_first_economic_step_changes_credited_factory_income_and_research(self):
+    def test_first_compass_step_changes_credited_factory_income_and_research(self):
         factory_materials = 100
         self.library["Basic Factory"] = building(factory_materials, 0, 0, "industry")
 
@@ -250,8 +287,10 @@ class OutputBonusTests(unittest.TestCase):
                         "cores": ["A"], "units": [], "buildings": ["Basic Factory"]}
             game.map_data[1] = game.id_to_province[1] = province
             politics.set_economic_drift(game.nation_data, "A", drift)
+            politics.set_drift(game.nation_data, "A", drift)
             asyncio.run(turn_processor.resolve_turn_logic(game))
             self.assertEqual(politics.economic_value(game.nation_data, "A"), drift * c.POLITICS_STEP)
+            self.assertEqual(politics.value(game.nation_data, "A"), drift * c.POLITICS_STEP)
             return country["materials"], 100_000 - project["points_remaining"]
 
         base_materials, base_research = resolve(0)
@@ -261,8 +300,8 @@ class OutputBonusTests(unittest.TestCase):
                 materials, research = resolve(drift)
                 position = drift * c.POLITICS_STEP
                 self.assertEqual(materials, base_materials - factory_materials
-                                 + int(factory_materials * politics.axis_factory_multiplier(position)))
-                self.assertAlmostEqual(research, base_research * politics.axis_research_multiplier(position))
+                                 + int(factory_materials * politics.effect_at("factory_output", position)))
+                self.assertAlmostEqual(research, base_research * politics.effect_at("research", position))
 
     def test_shared_sweep_tables_give_each_nation_its_own_research_output(self):
         # One economy sweep shares building tables between nations with the same
@@ -560,10 +599,10 @@ class OutputResearchScreenTests(unittest.TestCase):
             for res in c.ECON_RESOURCE_KEYS:
                 self.assertEqual(stats["previous_yields"][res],
                                  int(library["Basic Factory"][f"prod_{res}"] * multipliers[res]
-                                     * c.NON_CORE_BUILDING_MULTIPLIER))
+                                     * NON_CORE_BUILDING_CENTRE))
                 self.assertEqual(stats[f"prod_{res}"],
                                  int(library["Factory Lvl 1"][f"prod_{res}"] * multipliers[res]
-                                     * c.NON_CORE_BUILDING_MULTIPLIER))
+                                     * NON_CORE_BUILDING_CENTRE))
             with patch.object(queries, "get_province_building_output", side_effect=AssertionError("frame output rules")):
                 screen.update()
                 screen.draw(self.surface)

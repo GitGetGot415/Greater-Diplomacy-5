@@ -217,8 +217,8 @@ class PlayerActions:
 
     def _collect_country_preferences(self, country_id):
         country_data = self.world.nation_data.get(country_id, {})
-        return {"political_drift": country_data.get("political_drift", 0),
-                politics.ECONOMIC_DRIFT_KEY: politics.economic_drift(self.world.nation_data, country_id),
+        return {**{axis["drift_key"]: politics.axis_drift(self.world.nation_data, country_id, axis["id"])
+                   for axis in politics.AXES},
                 "automation": copy.deepcopy(country_data.get("automation", {})),
                 "conscription_slider": queries.get_conscription_rate(country_data),
                 "mat_to_fuel_slider": queries.get_fuel_conversion_rate(country_data),
@@ -229,9 +229,10 @@ class PlayerActions:
 
     def _apply_country_preferences(self, country_id, command):
         country_data = self.world.nation_data[country_id]
-        country_data["political_drift"] = command["political_drift"]
-        if politics.ECONOMIC_DRIFT_KEY in command:
-            politics.set_economic_drift(self.world.nation_data, country_id, command[politics.ECONOMIC_DRIFT_KEY])
+        # Older moves can omit an axis; its drift on the host stays as it is.
+        for axis in politics.AXES:
+            if axis["drift_key"] in command:
+                politics.set_axis_drift(self.world.nation_data, country_id, axis["id"], command[axis["drift_key"]])
         country_data["automation"] = copy.deepcopy(command["automation"])
         country_data["conscription_slider"] = command["conscription_slider"]
         country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
@@ -247,20 +248,21 @@ class PlayerActions:
         """Validate politics, automation, economy, and custom unit choices."""
 
         country = self._country(country_id)
-        drift = command.get("political_drift", 0)
         automation = command.get("automation", {})
-        if not isinstance(drift, int) or drift not in (-1, 0, 1):
-            raise PlayerActionError("Invalid political direction.")
-        if politics.ECONOMIC_VALUE_KEY in command:
-            raise PlayerActionError("The host controls the economic position.")
-        economic_preference = {}
-        if politics.ECONOMIC_DRIFT_KEY in command:
-            economic_drift = command[politics.ECONOMIC_DRIFT_KEY]
-            if type(economic_drift) is not int or economic_drift not in (-1, 0, 1):
-                raise PlayerActionError("Invalid economic direction.")
-            if not politics.can_shift(politics.economic_value(self.world.nation_data, country_id), economic_drift):
-                raise PlayerActionError("The economy is already at the end of that direction.")
-            economic_preference[politics.ECONOMIC_DRIFT_KEY] = economic_drift
+        if set(politics.VALUE_KEYS) & set(command):
+            raise PlayerActionError("The host controls political positions.")
+        # Every move carries the political direction; older moves may omit the others.
+        drifts = {}
+        for axis in politics.AXES:
+            key = axis["drift_key"]
+            if key not in command and axis["id"] != politics.POLITICAL:
+                continue
+            direction = command.get(key, 0)
+            if type(direction) is not int or direction not in (-1, 0, 1):
+                raise PlayerActionError(f"Invalid {axis['name'].lower()} direction.")
+            if not politics.can_shift(politics.axis_value(self.world.nation_data, country_id, axis["id"]), direction):
+                raise PlayerActionError(f"The {axis['name'].lower()} position is already at the end of that direction.")
+            drifts[key] = direction
         if not isinstance(automation, dict) or set(automation) - self._AUTOMATION_KEYS:
             raise PlayerActionError("Invalid automation settings.")
         if any(not isinstance(value, bool) for value in automation.values()):
@@ -294,8 +296,7 @@ class PlayerActions:
                 self.world.nation_data, country_id, command.get(politics.POLICY_KEY, {}))
         except ValueError as exc:
             raise PlayerActionError(str(exc)) from exc
-        return {"political_drift": drift,
-                **economic_preference,
+        return {**drifts,
                 "automation": {key: bool(automation.get(key, False))
                                for key in self._AUTOMATION_KEYS},
                 "conscription_slider": float(conscription),

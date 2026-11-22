@@ -87,6 +87,13 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["politics"]["economic_value"], -4)
         self.assertEqual(summary["politics"]["research_multiplier"], politics.research_multiplier(game.nation_data, "A"))
 
+    def test_only_the_viewers_own_country_shows_its_political_direction(self):
+        game = world()
+        politics.set_drift(game.nation_data, "A", 1)
+        politics.set_drift(game.nation_data, "B", -1)
+        self.assertEqual(queries.get_country_summary(game, "A")["politics"]["drift"], 1)
+        self.assertIsNone(queries.get_country_summary(game, "B")["politics"]["drift"])
+
     def test_foreign_totals_exclude_fogged_units_hidden_submarines_and_cargo(self):
         game = world()
         visible = game.home_of("B")["units"][0]

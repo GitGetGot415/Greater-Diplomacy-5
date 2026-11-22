@@ -21,6 +21,11 @@ from tests.combat_fixtures import StubBattleMap
 from ui.panels.sidebar_info import unit_roster_row
 from ui.widgets.ui_elements import Slider
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def fixture_unit(owner):
     return {"owner": owner, "type": "Conscription fixture", "health": 1000,
@@ -126,7 +131,7 @@ class ConscriptionCombatTests(unittest.TestCase):
     def test_bonus_multiplies_health_politics_and_policy_without_changing_raw_stats(self):
         game = self.game()
         country = game.nation_data["A"]
-        country.update({"political_value": c.POLITICS_MAX,
+        country.update({"political_value": c.POLITICS_MAX, politics.QUALITY_VALUE_KEY: c.POLITICS_MIN,
                         politics.POLICY_KEY: {"total_mobilisation": {"status": politics.POLICY_ACTIVE}}})
         attacker = fixture_unit("A")
         attacker["health"] /= 2

@@ -8,6 +8,8 @@ from data import queries
 import data.constants as c
 from map_logic.ai import ai_tuning
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
+from map_logic import politics
+from map_logic.actions import production_actions
 from map_logic.ai.ai_construction import _apply_coring_priority
 from tests.stub_map_screen import map_double, sample_map_screen
 
@@ -29,15 +31,19 @@ class AdministrativeConstructionTests(unittest.TestCase):
             for invalid in (None, "invalid", {}):
                 self.settings["administrative_turn_overrides"][name] = invalid
                 self.assertEqual(queries.get_administrative_turns(order, self.settings), getattr(c, constant))
+            # Older scenarios can hold a value outside the slider's limits.
+            low, high = queries.get_administrative_turn_limits(order)
             self.settings["administrative_turn_overrides"][name] = -3
-            self.assertEqual(queries.get_administrative_turns(order, self.settings), 1)
+            self.assertEqual(queries.get_administrative_turns(order, self.settings), low)
+            self.settings["administrative_turn_overrides"][name] = high + 5
+            self.assertEqual(queries.get_administrative_turns(order, self.settings), high)
 
     def test_independent_disabling_and_shared_cost_timers(self):
         for order, (name, constant) in queries.ADMINISTRATIVE_ACTIONS.items():
-            duration = getattr(c, constant) + 3
+            duration = queries.get_administrative_turn_limits(order)[0] + 3
             self.settings["administrative_turn_overrides"][name] = duration
             cost_fn = queries.get_core_cost if order == "CORE" else queries.get_remove_core_cost
-            self.assertEqual(cost_fn("A", self.world.map_data, self.settings)["time"], duration)
+            self.assertEqual(cost_fn("A", self.world.map_data, self.settings, self.world.nation_data)["time"], duration)
             self.settings["administrative_disabled"] = [name]
             self.assertFalse(queries.is_administrative_action_enabled(order, self.settings))
             other = next(key for key in queries.ADMINISTRATIVE_ACTIONS if key != order)
@@ -48,7 +54,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
 
     def test_ai_uses_timer_and_does_not_spend_when_disabled(self):
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
-        duration = c.CORE_CONSTRUCTION_TURNS + 3
+        duration = c.MIN_CORE_CONSTRUCTION_TURNS + 3
         self.settings["administrative_turn_overrides"][name] = duration
         country = self.world.nation_data["A"]
         before = copy.deepcopy(country)
@@ -65,7 +71,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
         driver = MapRealtimeDriver(self.world)
         self.province["units"] = [{"owner": "A"}]
         for order, (name, constant) in queries.ADMINISTRATIVE_ACTIONS.items():
-            duration = getattr(c, constant) + 3
+            duration = queries.get_administrative_turn_limits(order)[0] + 3
             self.settings["administrative_turn_overrides"][name] = duration
             intent = {"order_type": order, "turns_remaining": 999}
             item, _cost = driver._build_queue_item("A", self.province, "building_queue", intent)
@@ -115,7 +121,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
     def test_paid_core_order_finishes_after_its_configured_duration(self):
         from map_logic.system32.economy_processor import process_queues
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
-        self.settings["administrative_turn_overrides"][name] = 3  # Artificial short scenario.
+        self.settings["administrative_turn_overrides"][name] = c.MIN_CORE_CONSTRUCTION_TURNS  # The shortest scenario.
         duration = queries.get_administrative_turns("CORE", self.settings)
         self.province["building_queue"] = [{"order_type": "CORE", "turns_remaining": duration}]
         self.world.active_players = ["A"]
@@ -129,6 +135,45 @@ class AdministrativeConstructionTests(unittest.TestCase):
             process_queues(self.world)
         self.assertIn("A", self.province["cores"])
         self.assertFalse(self.province["building_queue"])
+
+
+    def test_political_axis_shifts_coring_turns_and_prices_both_actions(self):
+        core_name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
+        remove_name = queries.ADMINISTRATIVE_ACTIONS["REMOVE_CORE"][0]
+        self.settings["administrative_turn_overrides"] = {core_name: c.MIN_CORE_CONSTRUCTION_TURNS, remove_name: 4}
+        centre_core = queries.get_core_cost("A", self.world.map_data, self.settings, {})
+        centre_remove = queries.get_remove_core_cost("A", self.world.map_data, self.settings, {})
+        for position in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(position=position):
+                nation_data = {"A": {politics.VALUE_KEY: position}}
+                core = queries.get_core_cost("A", self.world.map_data, self.settings, nation_data)
+                remove = queries.get_remove_core_cost("A", self.world.map_data, self.settings, nation_data)
+                # Libertarian cores ten turns slower; authoritarian ten faster, never below two.
+                self.assertEqual(core["time"], c.MIN_CORE_CONSTRUCTION_TURNS - position)
+                self.assertGreaterEqual(core["time"], 2)
+                self.assertEqual(core["cost_manpower"], round(centre_core["cost_manpower"]
+                                                              * politics.effect_at("coring_cost", position)))
+                self.assertEqual(remove["time"], 4)
+                for res in ("cost_manpower", "cost_materials"):
+                    self.assertEqual(remove[res], round(centre_remove[res] * politics.effect_at("remove_core_cost", position)))
+
+    def test_coring_order_keeps_its_turns_when_the_country_later_shifts(self):
+        from map_logic.system32.economy_processor import process_queues
+        self.province["cores"] = []
+        country = self.world.nation_data["A"]
+        politics.set_value(self.world.nation_data, "A", c.POLITICS_MAX)
+        result = production_actions.submit_production(self.world, "A", self.province, "building_queue",
+                                                       {"order_type": "CORE"}, authority="ai")
+        turns = result.order["turns_remaining"]
+        self.assertEqual(turns, c.CORE_CONSTRUCTION_TURNS - c.POLITICS_MAX)
+        politics.set_value(self.world.nation_data, "A", c.POLITICS_MIN)
+        self.world.active_players = ["A"]
+        self.world.player_country = "A"
+        self.world.show_feedback = mock.Mock()
+        with mock.patch.object(queries, "is_province_in_active_combat", return_value=False):
+            process_queues(self.world)
+        self.assertEqual(self.province["building_queue"][0]["turns_remaining"], turns - 1)
+        self.assertLess(country["manpower"], ai_tuning.AI_SURPLUS_MANPOWER_FOR_CORING * 100)
 
 
 class CoringReachTests(unittest.TestCase):

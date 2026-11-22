@@ -1,17 +1,18 @@
-"""Political and economic compass rules, policies, and input.
+"""Four-axis compass rules, policies, and input.
 
 The rule, as specified:
 
-    Authority trades core manpower income for damage. A planned economy
-    favours factory income and a market economy favours research. Both axes
-    take one step each processed turn while a direction is set.
+    Two Civilian axes (Political, Economic) and two Military axes (Quality,
+    Strategy) each take one step per processed turn while a direction is set.
+    Every effect is a row of c.POLITICS_AXIS_EFFECTS, interpolated linearly
+    between the axis ends. Quality sets army damage; Political sets research.
 
 Two things in there are easy to get quietly wrong and are pinned hardest here.
 The first is *whose* multiplier applies: a volley is measured off a LaneSide's
 front rank, which is a whole coalition's units, so applying one country's
 multiplier to the total would leak a nation's politics into its allies' guns.
 The second is what happens at the end of the axis -- the direction has to clear
-itself, because the map button's arrow badge reads "am I still drifting" and a
+itself, because the map button's badge reads "am I still drifting" and a
 country pressed against the wall forever would wear it forever.
 
 The AI half is a target position rather than a direction, which is what stops
@@ -60,60 +61,78 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         }
         return Politics_Screen(map_screen)
 
+    @staticmethod
+    def drift_buttons(screen):
+        return [element for element in screen.elements if hasattr(element, "politics_axis")]
+
+    def button(self, screen, axis, direction):
+        return next(element for element in self.drift_buttons(screen)
+                    if (element.politics_axis, element.politics_direction) == (axis, direction))
+
+    @staticmethod
+    def tab(screen, group):
+        return next(element for element in screen.elements if getattr(element, "politics_group", None) == group)
+
     def test_tactical_mode_disables_all_direction_controls(self):
         screen = self.screen(True)
 
         self.assertTrue(screen.is_valid_player)
         self.assertFalse(screen.can_edit)
-        self.assertTrue(all(button.disabled for button in screen.elements[1:7]))
+        self.assertEqual(len(self.drift_buttons(screen)), 6)
+        self.assertTrue(all(button.disabled for button in self.drift_buttons(screen)))
 
     def test_tactical_mode_guard_does_not_change_the_direction(self):
         screen = self.screen(True)
         before = screen.drift
 
-        screen.set_drift(1)
-        screen.set_drift(1, economic=True)
+        for axis in politics.AXES:
+            screen.set_drift(1, axis["id"])
 
         self.assertEqual(screen.drift, before)
-        self.assertEqual(politics.economic_drift(screen.map_screen.nation_data, "A"), 0)
+        for axis in politics.AXES:
+            self.assertEqual(politics.axis_drift(screen.map_screen.nation_data, "A", axis["id"]), 0)
 
     def test_strategic_mode_keeps_direction_controls_editable(self):
         screen = self.screen(False)
 
         self.assertTrue(screen.can_edit)
-        self.assertTrue(all(not button.disabled for button in screen.elements[1:7]))
+        self.assertTrue(all(not button.disabled for button in self.drift_buttons(screen)))
 
     def test_direction_buttons_queue_independent_steps_and_preview_the_turn(self):
         screen = self.screen(False)
-        screen.elements[3].callback()
-        screen.elements[4].callback()
+        self.button(screen, politics.POLITICAL, 1).callback()
+        self.button(screen, politics.ECONOMIC, -1).callback()
         nation_data = screen.map_screen.nation_data
 
         self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), (0, 0))
         self.assertEqual((politics.economic_drift(nation_data, "A"), screen.drift), (-1, 1))
-        self.assertEqual(screen._preview, (-c.POLITICS_STEP, c.POLITICS_STEP))
-        political_effects, economic_effects = screen._axis_effect_rows
-        self.assertEqual([projected for _label, _current, projected in political_effects],
-                         [politics.axis_damage_multiplier(c.POLITICS_STEP),
-                          politics.axis_core_manpower_multiplier(c.POLITICS_STEP)])
-        self.assertEqual([projected for _label, _current, projected in economic_effects],
-                         [politics.axis_factory_multiplier(-c.POLITICS_STEP),
-                          politics.axis_research_multiplier(-c.POLITICS_STEP)])
+        self.assertEqual(screen._previews, {politics.POLITICAL: c.POLITICS_STEP, politics.ECONOMIC: -c.POLITICS_STEP,
+                                            politics.QUALITY: 0, politics.STRATEGY: 0})
+        from screens.game.politics_screen import DRIFT_MARKER
+        self.assertTrue(self.tab(screen, politics.CIVILIAN).text.endswith(DRIFT_MARKER))
+        self.assertFalse(self.tab(screen, politics.MILITARY).text.endswith(DRIFT_MARKER))
         politics.tick(screen.map_screen)
-        self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), screen._preview)
+        self.assertEqual(politics.economic_value(nation_data, "A"), -c.POLITICS_STEP)
+        self.assertEqual(screen.value, c.POLITICS_STEP)
         self.assertEqual(screen.map_screen.invalidate_map_presentation_cache.call_count, 2)
 
-        screen.elements[5].callback()
-        _label, current_damage, projected_damage = screen._axis_effect_rows[0][0]
-        self.assertEqual(current_damage, politics.axis_damage_multiplier(screen.value))
-        self.assertGreater(projected_damage, current_damage)
-        self.assertTrue(all(current == projected for _label, current, projected in screen._axis_effect_rows[1]))
+        # The Military tab steers its own two axes with the same controls.
+        self.tab(screen, politics.MILITARY).callback()
+        self.assertEqual(screen.group, politics.MILITARY)
+        self.assertEqual({button.politics_axis for button in self.drift_buttons(screen)},
+                         {politics.QUALITY, politics.STRATEGY})
+        self.button(screen, politics.QUALITY, 1).callback()
+        self.button(screen, politics.STRATEGY, -1).callback()
+        self.assertEqual(politics.axis_drift(nation_data, "A", politics.QUALITY), 1)
+        self.assertEqual(politics.axis_drift(nation_data, "A", politics.STRATEGY), -1)
+        self.assertTrue(self.tab(screen, politics.MILITARY).text.endswith(DRIFT_MARKER))
+        self.assertTrue(self.button(screen, politics.QUALITY, 1).is_selected)
 
     def test_policy_eligibility_preview_keeps_current_activation_requirements(self):
         policy = {"id": "preview_fixture", "name": "Preview Fixture", "effect_lines": (), "min_politics": 0}
         with patch.object(politics, "POLICIES", (policy,)), patch.dict(politics.POLICIES_BY_ID, {policy["id"]: policy}):
             screen = self.screen(False)
-            screen.elements[3].callback()  # Centralise from the strict boundary.
+            self.button(screen, politics.POLITICAL, 1).callback()  # Centralise from the strict boundary.
             self.assertIsNotNone(screen._policy_rows[0][4])
             self.assertTrue(screen.elements[-1].disabled)
 
@@ -122,7 +141,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
             self.assertIsNone(screen._policy_rows[0][4])
             self.assertFalse(screen.elements[-1].disabled)
 
-            screen.elements[1].callback()  # Liberalise back across the boundary.
+            self.button(screen, politics.POLITICAL, -1).callback()  # Liberalise back across the boundary.
             self.assertIsNotNone(screen._policy_rows[0][4])
             self.assertFalse(screen.elements[-1].disabled)
 
@@ -151,13 +170,20 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
         self.assertTrue(screen.is_read_only)
         self.assertFalse(screen.can_edit)
-        self.assertEqual(len(screen.elements), 1, "foreign view has no policy or drift controls")
-        self.assertEqual(screen._preview, (c.POLITICS_START, 4))
+        controls = [element for element in screen.elements if not hasattr(element, "politics_group")]
+        self.assertEqual(len(controls), 1, "foreign view has no policy or drift controls")
+        # Directions are private, so the view shows only where B is.
+        self.assertEqual(screen._previews[politics.POLITICAL], 4)
+        self.assertEqual(screen._previews[politics.ECONOMIC], c.POLITICS_START)
         self.assertTrue(all(forecast is None for _definition, _state, _eligible, _requirement, forecast in screen._policy_rows))
         screen.set_drift(1)
-        screen.set_drift(-1, economic=True)
+        screen.set_drift(-1, politics.ECONOMIC)
         self.assertEqual(politics.drift(map_screen.nation_data, "B"), -1)
         self.assertEqual(politics.economic_drift(map_screen.nation_data, "B"), 1)
+        # Viewing the Military axes is not editing.
+        self.tab(screen, politics.MILITARY).callback()
+        self.assertEqual(screen.group, politics.MILITARY)
+        self.assertEqual(self.drift_buttons(screen), [])
 
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)
@@ -191,6 +217,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
                                                    "economic_drift": 1}},
                                 refresh_map_layers=Mock(), show_feedback=Mock())
         screen = Politics_Edit_Screen(map_screen, "A")
+        self.assertEqual(len(screen.rows), len(politics.AXES))
         slider = screen.rows[1][0]
         slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=slider.handle_rect.center, button=1))
         slider.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=slider.rect.midleft, mobile_touch=True))
@@ -201,9 +228,18 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertTrue(screen.done)
         self.assertEqual(politics.value(map_screen.nation_data, "A"), 4)
         self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_MIN)
-        self.assertEqual(politics.drift(map_screen.nation_data, "A"), 0)
-        self.assertEqual(politics.economic_drift(map_screen.nation_data, "A"), 0)
+        for axis in politics.AXES:
+            self.assertEqual(politics.axis_drift(map_screen.nation_data, "A", axis["id"]), 0)
         map_screen.refresh_map_layers.assert_called_once_with("relations")
+
+        # The military sliders save the same way.
+        screen = Politics_Edit_Screen(map_screen, "A")
+        screen._set(2, 1.0)
+        screen._set(3, 0.0)
+        screen.save()
+        self.assertEqual(politics.axis_value(map_screen.nation_data, "A", politics.QUALITY), c.POLITICS_MAX)
+        self.assertEqual(politics.axis_value(map_screen.nation_data, "A", politics.STRATEGY), c.POLITICS_MIN)
+        self.assertEqual(politics.value(map_screen.nation_data, "A"), 4)
 
         screen = Politics_Edit_Screen(map_screen, "A")
         screen.elements[1].callback()
@@ -224,9 +260,8 @@ class PoliticalAffinityTests(unittest.TestCase):
         def score(a, b):
             data = {name: {politics.VALUE_KEY: political, politics.ECONOMIC_VALUE_KEY: economic}
                     for name, (political, economic) in (("A", a), ("B", b))}
-            self.assertEqual(queries.get_relation_score("A", "A", data), 0)
-            forward = queries.get_relation_score("A", "B", data)
-            self.assertEqual(queries.get_relation_score("B", "A", data), forward)
+            forward = relations._political_affinity("A", "B", data)
+            self.assertEqual(relations._political_affinity("B", "A", data), forward)
             return forward
 
         for a, b, expected in (
@@ -243,6 +278,24 @@ class PoliticalAffinityTests(unittest.TestCase):
             with self.subTest(a=a, b=b):
                 self.assertGreater(score(a, b), 0)
                 self.assertLess(score(a, b), 2 * per_axis)
+
+    def test_reputation_is_how_everyone_else_sees_a_country(self):
+        """The design's own examples: political axis only, economies at the centre."""
+        edge = c.POLITICS_MAX
+
+        def opinion(viewer, viewed):
+            data = {"Viewer": {politics.VALUE_KEY: viewer}, "Viewed": {politics.VALUE_KEY: viewed}}
+            self.assertEqual(queries.get_relation_score("Viewer", "Viewer", data), 0)
+            return queries.get_relation_score("Viewer", "Viewed", data)
+
+        self.assertEqual(opinion(-edge, edge), -20)   # libertarian of authoritarian
+        self.assertEqual(opinion(edge, -edge), 0)     # authoritarian of libertarian
+        self.assertEqual(opinion(edge, edge), 0)
+        self.assertEqual(opinion(-edge, -edge), 20)
+        for other in range(c.POLITICS_MIN, c.POLITICS_MAX + 1):
+            with self.subTest(other=other):
+                # A fully authoritarian country stops caring about ideology.
+                self.assertEqual(opinion(edge, other), 0)
 
 
 class EconomicDriftTests(unittest.TestCase):
@@ -267,8 +320,9 @@ def screen_with(**by_nation):
 
 
 def axis_damage_multiplier(value):
-    """Expected axis-only damage multiplier from the canonical tuning values."""
-    return 1.0 + c.POLITICS_DAMAGE_SPAN * value / float(c.POLITICS_MAX)
+    """Expected Quality-only damage multiplier from the canonical tuning values."""
+    low, high = c.POLITICS_AXIS_EFFECTS[politics.QUALITY]["damage"]
+    return low + (high - low) * (value - c.POLITICS_MIN) / float(c.POLITICS_MAX - c.POLITICS_MIN)
 
 
 def policy_effect(policy_id, effect):
@@ -281,29 +335,34 @@ def policy_effect(policy_id, effect):
 # ============================================================================ #
 
 class MultiplierTests(unittest.TestCase):
-    def assert_linear_axis(self, multiplier, span, rises_toward_max):
-        """The centre is 1.0, each end is 1 +/- span, and every step moves span / POLITICS_MAX."""
-        sign = 1.0 if rises_toward_max else -1.0
-        self.assertAlmostEqual(multiplier(c.POLITICS_START), 1.0)
-        self.assertAlmostEqual(multiplier(c.POLITICS_MAX), 1.0 + sign * span)
-        self.assertAlmostEqual(multiplier(-c.POLITICS_MAX), 1.0 - sign * span)
-        for value in range(c.POLITICS_MIN, c.POLITICS_MAX):
+    def test_every_effect_runs_linearly_between_its_ends(self):
+        """Each end is the table's value, and every step moves the same distance."""
+        for axis, effects in c.POLITICS_AXIS_EFFECTS.items():
+            for effect, (low, high) in effects.items():
+                with self.subTest(effect=effect):
+                    self.assertEqual(politics.EFFECT_AXES[effect], axis)
+                    self.assertAlmostEqual(politics.effect_at(effect, c.POLITICS_MIN), low)
+                    self.assertAlmostEqual(politics.effect_at(effect, c.POLITICS_MAX), high)
+                    step = (high - low) / (c.POLITICS_MAX - c.POLITICS_MIN)
+                    for value in range(c.POLITICS_MIN, c.POLITICS_MAX):
+                        self.assertAlmostEqual(politics.effect_at(effect, value + 1)
+                                               - politics.effect_at(effect, value), step)
+
+    def test_effect_names_are_unique_across_axes(self):
+        names = [effect for effects in c.POLITICS_AXIS_EFFECTS.values() for effect in effects]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(set(c.POLITICS_AXIS_EFFECTS), set(politics.AXES_BY_ID))
+
+    def test_quality_sets_damage_and_political_sets_research(self):
+        for value in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
             with self.subTest(value=value):
-                self.assertAlmostEqual(multiplier(value + 1) - multiplier(value), sign * span / c.POLITICS_MAX)
-
-    def test_political_curve_trades_core_manpower_for_damage(self):
-        def damage(value):
-            return politics.damage_multiplier({"A": {"political_value": value, "economic_value": c.POLITICS_MAX}}, "A")
-
-        self.assert_linear_axis(damage, c.POLITICS_DAMAGE_SPAN, rises_toward_max=True)
-        self.assert_linear_axis(politics.axis_core_manpower_multiplier, c.POLITICS_CORE_MANPOWER_SPAN, rises_toward_max=False)
-
-    def test_economic_curve_trades_factory_output_for_research(self):
-        def research(value):
-            return politics.research_multiplier({"A": {"political_value": c.POLITICS_MAX, "economic_value": value}}, "A")
-
-        self.assert_linear_axis(politics.axis_factory_multiplier, c.ECONOMICS_FACTORY_SPAN, rises_toward_max=False)
-        self.assert_linear_axis(research, c.ECONOMICS_RESEARCH_SPAN, rises_toward_max=True)
+                quality = {"A": {politics.QUALITY_VALUE_KEY: value, politics.VALUE_KEY: c.POLITICS_MAX,
+                                 politics.ECONOMIC_VALUE_KEY: c.POLITICS_MAX}}
+                political = {"A": {politics.VALUE_KEY: value, politics.ECONOMIC_VALUE_KEY: c.POLITICS_MAX,
+                                   politics.QUALITY_VALUE_KEY: c.POLITICS_MAX}}
+                self.assertAlmostEqual(politics.damage_multiplier(quality, "A"), politics.effect_at("damage", value))
+                self.assertAlmostEqual(politics.research_multiplier(political, "A"), politics.effect_at("research", value))
+        self.assertEqual(politics.effect_at("research", c.POLITICS_MAX), 0.0)
 
     def test_a_nation_nobody_has_touched_is_centrist(self):
         """An old save has none of these keys, and must play exactly as before."""
@@ -394,7 +453,7 @@ class DriftTests(unittest.TestCase):
         self.assertEqual(politics.value(screen.nation_data, "A"), 3)
 
     def test_reaching_the_end_clears_the_direction(self):
-        """Which is what puts the map button's arrow badge out by itself."""
+        """Which is what puts the map button's badge out by itself."""
         screen = screen_with(A=(c.POLITICS_MAX - 1, 1))
         politics.tick(screen)
         self.assertEqual(politics.value(screen.nation_data, "A"), c.POLITICS_MAX)
@@ -412,6 +471,20 @@ class DriftTests(unittest.TestCase):
         screen = StubTurnScreen({"GLOBAL_EVENTS": {"political_drift": 1}})
         politics.tick(screen)
         self.assertNotIn("political_value", screen.nation_data["GLOBAL_EVENTS"])
+
+    def test_every_axis_drifts_and_tick_reports_whose_quality_moved(self):
+        """The turn rescales maximum health only for the countries this names."""
+        screen = StubTurnScreen({name: {} for name in ("A", "B", "C")})
+        for axis in politics.AXES:
+            politics.set_axis_drift(screen.nation_data, "A", axis["id"], 1)
+        politics.set_axis_drift(screen.nation_data, "B", politics.STRATEGY, -1)
+        politics.set_axis_value(screen.nation_data, "C", politics.QUALITY, c.POLITICS_MAX)
+        politics.set_axis_drift(screen.nation_data, "C", politics.QUALITY, 1)
+        self.assertEqual(politics.tick(screen), {"A"})
+        for axis in politics.AXES:
+            self.assertEqual(politics.axis_value(screen.nation_data, "A", axis["id"]), c.POLITICS_STEP)
+        self.assertEqual(politics.axis_value(screen.nation_data, "B", politics.STRATEGY), -c.POLITICS_STEP)
+        self.assertEqual(politics.axis_drift(screen.nation_data, "C", politics.QUALITY), 0)
 
     def test_each_nation_drifts_on_its_own(self):
         screen = screen_with(A=(0, 1), B=(0, -1), C=(0, 0))
@@ -457,7 +530,7 @@ class PolicyTests(unittest.TestCase):
 
         self.assertIsNone(politics.policy_state(screen.nation_data, "A"))
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
-                               politics.axis_research_multiplier(politics.economic_value(screen.nation_data, "A")))
+                               politics.effect_at("research", politics.value(screen.nation_data, "A")))
 
     def test_cancel_can_be_undone_before_the_next_processed_turn(self):
         screen = self.screen_at(0)
@@ -506,7 +579,7 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(politics.policy_state(screen.nation_data, "A", "prioritize_industrial_needs")["status"],
                          politics.POLICY_ACTIVE)
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
-                               politics.axis_research_multiplier(politics.economic_value(screen.nation_data, "A"))
+                               politics.effect_at("research", politics.value(screen.nation_data, "A"))
                                * policy_effect("prioritize_civilian_needs", "research")
                                * policy_effect("prioritize_industrial_needs", "research"))
         self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"),
@@ -534,11 +607,12 @@ class PolicyTests(unittest.TestCase):
         policy_id = "total_mobilisation"
         screen = self.screen_at(political_value=politics.policy(policy_id)["min_politics"] + 1)
         self.activate_and_finish(screen, policy_id)
-        value = politics.value(screen.nation_data, "A")
+        quality = politics.axis_value(screen.nation_data, "A", politics.QUALITY)
         self.assertAlmostEqual(politics.damage_multiplier(screen.nation_data, "A"),
-                               axis_damage_multiplier(value) * policy_effect(policy_id, "damage"))
+                               axis_damage_multiplier(quality) * policy_effect(policy_id, "damage"))
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
-                               policy_effect(policy_id, "research"))
+                               politics.effect_at("research", politics.value(screen.nation_data, "A"))
+                               * policy_effect(policy_id, "research"))
 
 
 # ============================================================================ #
@@ -550,8 +624,8 @@ def two_nation_tile(a_value=c.POLITICS_START, b_value=c.POLITICS_START):
     screen = StubBattleMap()
     screen.add_nation("A", at_war_with=["B"])
     screen.add_nation("B", at_war_with=["A"])
-    politics.set_value(screen.nation_data, "A", a_value)
-    politics.set_value(screen.nation_data, "B", b_value)
+    politics.set_axis_value(screen.nation_data, "A", politics.QUALITY, a_value)
+    politics.set_axis_value(screen.nation_data, "B", politics.QUALITY, b_value)
     prov = screen.add_province("p1", "A", units=[unit("A"), unit("B")])
     return screen, prov
 
@@ -563,16 +637,16 @@ class CombatDamageTests(unittest.TestCase):
         combat_processor.process_combat(screen)
         return damage_taken(b_units)
 
-    def test_a_centrist_nation_fights_exactly_as_it_always_did(self):
+    def test_a_centrist_nation_deals_its_core_territory_modifier_at_home(self):
         self.assertAlmostEqual(self.damage_dealt_by_a(c.POLITICS_START),
-                               unit("A")["attack"])
+                               unit("A")["attack"] * politics.effect_at("core_territory_damage", c.POLITICS_START))
 
-    def test_authoritarian_armies_hit_harder(self):
+    def test_numerous_armies_hit_softer(self):
         base = self.damage_dealt_by_a(c.POLITICS_START)
         self.assertAlmostEqual(self.damage_dealt_by_a(c.POLITICS_MAX),
                                base * axis_damage_multiplier(c.POLITICS_MAX))
 
-    def test_libertarian_armies_hit_softer(self):
+    def test_professional_armies_hit_harder(self):
         base = self.damage_dealt_by_a(c.POLITICS_START)
         self.assertAlmostEqual(self.damage_dealt_by_a(c.POLITICS_MIN),
                                base * axis_damage_multiplier(c.POLITICS_MIN))
@@ -582,9 +656,10 @@ class CombatDamageTests(unittest.TestCase):
         screen, prov = two_nation_tile(b_value=c.POLITICS_MAX)
         a_units = [u for u in prov["units"] if u["owner"] == "A"]
         combat_processor.process_combat(screen)
+        # B fights on A's core, which is non-core territory for B.
         self.assertAlmostEqual(damage_taken(a_units),
-                               self.damage_dealt_by_a(c.POLITICS_START)
-                               * axis_damage_multiplier(c.POLITICS_MAX))
+                               unit("B")["attack"] * axis_damage_multiplier(c.POLITICS_MAX)
+                               * politics.effect_at("non_core_territory_damage", c.POLITICS_START))
 
     def test_a_nations_politics_does_not_leak_into_its_allies_guns(self):
         """The multiplier is per unit, not per volley.
@@ -598,14 +673,15 @@ class CombatDamageTests(unittest.TestCase):
         screen.add_nation("B", at_war_with=["C"])
         screen.add_nation("C", at_war_with=["A", "B"])
         screen.nation_data["A"]["faction"] = screen.nation_data["B"]["faction"] = "Fixture Coalition"
-        politics.set_value(screen.nation_data, "A", c.POLITICS_MAX)
+        politics.set_axis_value(screen.nation_data, "A", politics.QUALITY, c.POLITICS_MAX)
 
         prov = screen.add_province("p1", "C", units=[unit("A"), unit("B"), unit("C")])
         c_units = [u for u in prov["units"] if u["owner"] == "C"]
         combat_processor.process_combat(screen)
 
         # A's politics applies only to A's volley, not its centrist ally B's.
-        base = self.damage_dealt_by_a(c.POLITICS_START)
+        # Both fight on C's core, which is non-core territory for each.
+        base = unit("A")["attack"] * politics.effect_at("non_core_territory_damage", c.POLITICS_START)
         self.assertAlmostEqual(
             damage_taken(c_units),
             base * (axis_damage_multiplier(c.POLITICS_MAX)
@@ -613,12 +689,87 @@ class CombatDamageTests(unittest.TestCase):
 
     def test_volley_without_nation_data_is_unmodified(self):
         """The callers that compare raw unit stats must see raw unit stats."""
-        nation_data = {"A": {"political_value": c.POLITICS_MAX}}
+        nation_data = {"A": {politics.QUALITY_VALUE_KEY: c.POLITICS_MAX}}
         units = [unit("A")]
         base = units[0]["attack"]
         self.assertAlmostEqual(combat_rules.volley(units), base)
         self.assertAlmostEqual(combat_rules.volley(units, None, nation_data),
                                base * axis_damage_multiplier(c.POLITICS_MAX))
+
+
+class TerritoryDamageTests(unittest.TestCase):
+    """Strategy's damage modifier depends on whose core the tile is."""
+
+    def dealt(self, tile_owner, cores, strategy=c.POLITICS_START):
+        screen = StubBattleMap()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        politics.set_axis_value(screen.nation_data, "A", politics.STRATEGY, strategy)
+        prov = screen.add_province("p1", tile_owner, units=[unit("A"), unit("B")], cores=cores)
+        b_units = [u for u in prov["units"] if u["owner"] == "B"]
+        combat_processor.process_combat(screen)
+        return damage_taken(b_units)
+
+    def test_core_and_non_core_modifiers_follow_strategy(self):
+        attack = unit("A")["attack"]
+        for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(strategy=strategy):
+                self.assertAlmostEqual(self.dealt("A", ["A"], strategy),
+                                       attack * politics.effect_at("core_territory_damage", strategy))
+                self.assertAlmostEqual(self.dealt("B", ["B"], strategy),
+                                       attack * politics.effect_at("non_core_territory_damage", strategy))
+
+    def test_retaking_an_occupied_core_keeps_the_core_modifier(self):
+        self.assertAlmostEqual(self.dealt("B", ["A", "B"]),
+                               unit("A")["attack"] * politics.effect_at("core_territory_damage", c.POLITICS_START))
+
+    def test_disable_cores_counts_every_owned_tile_as_core(self):
+        attack = unit("A")["attack"]
+        with patch.object(c, "DISABLE_CORES", True):
+            self.assertAlmostEqual(self.dealt("A", []),
+                                   attack * politics.effect_at("core_territory_damage", c.POLITICS_START))
+            self.assertAlmostEqual(self.dealt("B", ["A"]),
+                                   attack * politics.effect_at("non_core_territory_damage", c.POLITICS_START))
+
+
+    def test_each_side_of_a_border_clash_fights_on_its_own_tile(self):
+        nation_data = {"A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]}}
+        a_home = {"id": "p1", "owner": "A", "cores": ["A"]}
+        b_home = {"id": "p2", "owner": "B", "cores": ["B"]}
+        a_unit, b_unit = unit("A"), unit("B")
+        battle = combat_rules.build_battle([[a_unit], [b_unit]], nation_data, tiles=(a_home, b_home))
+        shots = {id(targets[0]): attack for targets, attack in combat_rules.exchange(battle, nation_data)}
+        core = politics.effect_at("core_territory_damage", c.POLITICS_START)
+        self.assertAlmostEqual(shots[id(b_unit)], a_unit["attack"] * core)
+        self.assertAlmostEqual(shots[id(a_unit)], b_unit["attack"] * core)
+
+
+class DefenseAndHealthTests(unittest.TestCase):
+    def test_strategy_scales_unit_defense_and_fort_defense(self):
+        defender = unit("A", defense=50)
+        province = {"owner": "A", "cores": ["A"], "buildings": ["Fort Lvl 2"], "units": [defender]}
+        for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(strategy=strategy):
+                nation_data = {"A": {politics.STRATEGY_VALUE_KEY: strategy}}
+                multiplier = politics.effect_at("defense", strategy)
+                self.assertAlmostEqual(combat_rules.damage_after_defense(defender, 200, nation_data),
+                                       200 - 50 * multiplier)
+                self.assertAlmostEqual(
+                    queries.get_fort_defense_bonus(province, defender, nation_data, combat_active=True),
+                    2 * c.FORT_DEFENSE_PER_LEVEL * multiplier)
+
+    def test_quality_rescales_maximum_health_and_keeps_the_health_fraction(self):
+        library = {"Infantry": {"health": 1000, "attack": 10, "defense": 0, "speed": 1}}
+        soldier = {"type": "Infantry", "owner": "A", "health": 500, "max_health": 1000}
+        map_data = {1: {"owner": "A", "units": [soldier]}}
+        for quality in (c.POLITICS_MIN, c.POLITICS_MAX, c.POLITICS_START):
+            with self.subTest(quality=quality):
+                nation_data = {"A": {politics.QUALITY_VALUE_KEY: quality}}
+                queries.refresh_unit_stats(map_data, nation_data, library)
+                expected = round(1000 * politics.effect_at("max_health", quality))
+                self.assertEqual(soldier["max_health"], expected)
+                self.assertAlmostEqual(soldier["health"] / soldier["max_health"], 0.5)
+                self.assertEqual(queries.create_unit_dict("Infantry", "A", library, nation_data)["max_health"], expected)
 
 
 class DisplayedDamageTests(unittest.TestCase):
@@ -635,7 +786,7 @@ class DisplayedDamageTests(unittest.TestCase):
     def test_it_stacks_on_top_of_the_health_penalty(self):
         wounded = unit("A", attack=100, health=50000)
         wounded["max_health"] = 100000
-        nation_data = {"A": {"political_value": c.POLITICS_MAX}}
+        nation_data = {"A": {politics.QUALITY_VALUE_KEY: c.POLITICS_MAX}}
 
         health_multiplier = wounded["health"] / wounded["max_health"]
         self.assertAlmostEqual(combat_rules.health_damage_multiplier(wounded), health_multiplier)
@@ -646,7 +797,7 @@ class DisplayedDamageTests(unittest.TestCase):
     def test_it_runs_the_full_span(self):
         healthy = unit("A", attack=100)
         for value in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
-            nation_data = {"A": {"political_value": value}}
+            nation_data = {"A": {politics.QUALITY_VALUE_KEY: value}}
             self.assertAlmostEqual(
                 combat_rules.effective_damage_multiplier(healthy, nation_data),
                 axis_damage_multiplier(value))
@@ -666,7 +817,7 @@ class DisplayedDamageTests(unittest.TestCase):
             defenders = [u for u in prov["units"] if u["owner"] == "B"]
 
             printed = (attacker["attack"]
-                       * combat_rules.effective_damage_multiplier(attacker, screen.nation_data))
+                       * combat_rules.effective_damage_multiplier(attacker, screen.nation_data, province=prov))
             combat_processor.process_combat(screen)
 
             self.assertAlmostEqual(damage_taken(defenders), printed,
@@ -690,7 +841,7 @@ class BombardmentDamageTests(unittest.TestCase):
         screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
-        politics.set_value(screen.nation_data, "A", a_value)
+        politics.set_axis_value(screen.nation_data, "A", politics.QUALITY, a_value)
 
         gun = unit("A", kind="Artillery")
         gun["bombard_attack"] = 100
@@ -722,7 +873,7 @@ class BombardmentDamageTests(unittest.TestCase):
 class ResearchTests(unittest.TestCase):
     """The resolver reads the multiplier off the nation whose queue it is on."""
 
-    def points_after_one_turn(self, economic_value, political_value=c.POLITICS_MAX):
+    def points_after_one_turn(self, political_value, economic_value=c.POLITICS_MAX):
         from map_logic.system32 import research_processor
 
         class Screen:
@@ -749,19 +900,54 @@ class ResearchTests(unittest.TestCase):
         after = screen.nation_data["A"]["research_queue"][0]["points_remaining"]
         return before - after
 
-    def test_mixed_research_is_independent_of_political_position(self):
+    def test_centrist_research_is_independent_of_the_economy(self):
         base = self.points_after_one_turn(c.POLITICS_START, c.POLITICS_MIN)
         self.assertGreater(base, 0)
         self.assertEqual(self.points_after_one_turn(c.POLITICS_START, c.POLITICS_MAX), base)
 
-    def test_fully_market_research_gains_the_whole_research_span(self):
+    def test_fully_libertarian_research_reaches_the_table_maximum(self):
         base = self.points_after_one_turn(c.POLITICS_START)
-        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MAX), base * (1.0 + c.ECONOMICS_RESEARCH_SPAN))
+        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MIN),
+                               base * c.POLITICS_AXIS_EFFECTS[politics.POLITICAL]["research"][0])
 
-    def test_fully_planned_research_loses_the_whole_research_span(self):
-        base = self.points_after_one_turn(c.POLITICS_START)
-        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MIN, c.POLITICS_MIN),
-                               base * (1.0 - c.ECONOMICS_RESEARCH_SPAN))
+    def test_fully_authoritarian_research_stops(self):
+        self.assertEqual(self.points_after_one_turn(c.POLITICS_MAX), 0)
+
+
+class QualityResearchYearTests(unittest.TestCase):
+    """Quality moves the year the ahead-of-time penalty measures from."""
+
+    def test_professional_researches_ten_months_ahead_and_numerous_ten_behind(self):
+        tree = {"due_now": {"years": [1920]}, "ten_months_out": {"years": [1920 + 10 / 12]}}
+        for quality in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+            with self.subTest(quality=quality):
+                nation_data = {"A": {"research": {}, politics.QUALITY_VALUE_KEY: quality,
+                                     "research_queue": [{"tech_name": name, "points_remaining": 10_000} for name in tree]}}
+                progress = queries.get_normal_research_progress(nation_data, "A", tree, 10, 1920.0)
+                base = queries.get_base_research_points(nation_data, "A", 10)
+                year = 1920.0 + politics.effect_at("research_year_months", quality) / 12
+                self.assertAlmostEqual(queries.get_research_year(nation_data, "A", 1920.0), year)
+                for name, data in tree.items():
+                    self.assertAlmostEqual(progress[name], base * queries.get_research_multiplier(year, data["years"][0]))
+                if quality == c.POLITICS_MIN:
+                    self.assertAlmostEqual(progress["ten_months_out"], base)
+                if quality == c.POLITICS_MAX:
+                    self.assertAlmostEqual(progress["due_now"], base * 0.5 ** (10 / 12))
+
+
+class AircraftRangeTests(unittest.TestCase):
+    def test_strategy_scales_every_mission_radius(self):
+        from types import SimpleNamespace
+        library = {"Fixture Bomber": {"air_role": "bomber", "air_range_px": 10}}
+        bomber = {"type": "Fixture Bomber", "owner": "A"}
+        with patch.object(queries, "get_unit_library", return_value=library):
+            listed = {kind: queries.air_order_radius(bomber, kind) for kind in ("AIR_ATTACK", "AIR_REPOSITION")}
+            for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
+                with self.subTest(strategy=strategy):
+                    context = SimpleNamespace(nation_data={"A": {politics.STRATEGY_VALUE_KEY: strategy}})
+                    for kind, radius in listed.items():
+                        self.assertAlmostEqual(queries.air_order_radius(bomber, kind, context=context),
+                                               radius * politics.effect_at("aircraft_range", strategy))
 
 
 class FactionResearchTests(unittest.TestCase):
@@ -839,12 +1025,16 @@ class FactionResearchTests(unittest.TestCase):
 # ============================================================================ #
 
 class StubWorld:
-    """The three things ai_politics asks an AIWorld for."""
+    """The parts of an AIWorld that ai_politics reads."""
 
     def __init__(self, nation_data, ratios=None, neighbors=None):
         self.nation_data = nation_data
         self._ratios = ratios or {}
         self.neighbors = neighbors or {}
+        self.provs_by_owner = {}
+        self.units_by_owner = {}
+        self.land_border_tiles = {}
+        self.economies = {}
 
     def power_ratio(self, nation, other):
         return self._ratios.get((nation, other), (1.0, 1.0))
@@ -855,107 +1045,138 @@ def ai_world_with(*nations, **kwargs):
     return StubWorld(nation_data, **kwargs)
 
 
+def at_war(world, a="A", b="B"):
+    world.nation_data[a]["at_war_with"] = [b]
+    world.nation_data[b]["at_war_with"] = [a]
+
+
 class AIPoliticsTests(unittest.TestCase):
     def setUp(self):
         from map_logic.ai import ai_politics
         self.ai_politics = ai_politics
 
-    def test_a_nation_at_peace_and_safe_leans_libertarian(self):
-        world = ai_world_with("A", "B")
-        self.assertLess(self.ai_politics.desired_value(world, "A"), 0)
+    def land(self, world, cored, uncored, nation="A"):
+        world.provs_by_owner[nation] = ([{"owner": nation, "cores": [nation]} for _ in range(cored)]
+                                        + [{"owner": nation, "cores": []} for _ in range(uncored)])
 
-    def test_a_nation_at_war_leans_authoritarian(self):
-        world = ai_world_with("A", "B")
-        world.nation_data["A"]["at_war_with"] = ["B"]
-        world.nation_data["B"]["at_war_with"] = ["A"]
-        self.assertGreater(self.ai_politics.desired_value(world, "A"), 0)
+    # --- Political and Economic follow how much land is cored --------------
 
-    def test_losing_a_war_centralises_harder_than_winning_one(self):
+    def test_fully_cored_land_is_libertarian_and_market(self):
+        world = ai_world_with("A")
+        self.land(world, 5, 0)
+        with patch.object(c, "DISABLE_CORES", False):
+            self.assertEqual(self.ai_politics.desired_value(world, "A"), c.POLITICS_MIN)
+            self.assertEqual(self.ai_politics.desired_economic_value(world, "A"), c.POLITICS_MAX)
+
+    def test_uncored_land_pulls_toward_authority_and_planning(self):
+        world = ai_world_with("A")
+        with patch.object(c, "DISABLE_CORES", False):
+            self.land(world, 4, 1)
+            some = (self.ai_politics.desired_value(world, "A"), self.ai_politics.desired_economic_value(world, "A"))
+            self.land(world, 1, 4)
+            most = (self.ai_politics.desired_value(world, "A"), self.ai_politics.desired_economic_value(world, "A"))
+        self.assertGreater(some[0], c.POLITICS_MIN)
+        self.assertLess(some[1], c.POLITICS_MAX)
+        self.assertEqual(most, (c.POLITICS_MAX, c.POLITICS_MIN))
+
+    # --- Quality -------------------------------------------------------------
+
+    def test_a_safe_well_garrisoned_solvent_nation_is_professional(self):
+        world = ai_world_with("A")
+        self.assertEqual(self.ai_politics.desired_quality_value(world, "A"), c.POLITICS_MIN)
+
+    def test_losing_a_war_pulls_toward_numerous(self):
         def target(border, glob):
             world = ai_world_with("A", "B", ratios={("A", "B"): (border, glob)})
-            world.nation_data["A"]["at_war_with"] = ["B"]
-            world.nation_data["B"]["at_war_with"] = ["A"]
-            return self.ai_politics.desired_value(world, "A")
+            at_war(world)
+            return self.ai_politics.desired_quality_value(world, "A")
 
         self.assertGreater(target(0.2, 0.2), target(5.0, 5.0))
+        self.assertGreater(target(5.0, 5.0), c.POLITICS_MIN)
 
-    def test_a_war_it_is_winning_does_not_go_to_the_wall(self):
-        """The nuance the whole target-position design exists for."""
-        world = ai_world_with("A", "B", ratios={("A", "B"): (5.0, 5.0)})
-        world.nation_data["A"]["at_war_with"] = ["B"]
-        world.nation_data["B"]["at_war_with"] = ["A"]
-        self.assertLess(self.ai_politics.desired_value(world, "A"), c.POLITICS_MAX)
+    def test_a_long_thinly_held_border_pulls_toward_numerous(self):
+        """A big country that cannot put a unit on every border tile wants more of them, cheaper."""
+        world = ai_world_with("A")
+        world.land_border_tiles["A"] = set(range(10))
+        world.units_by_owner["A"] = [({"owner": "A", "type": "Fixture"}, {}) for _ in range(2)]
+        with patch.object(queries, "is_air_unit", return_value=False):
+            thin = self.ai_politics.desired_quality_value(world, "A")
+            world.units_by_owner["A"] = [({"owner": "A", "type": "Fixture"}, {}) for _ in range(10)]
+            manned = self.ai_politics.desired_quality_value(world, "A")
+        self.assertGreater(thin, c.POLITICS_START)
+        self.assertEqual(manned, c.POLITICS_MIN)
 
-    def test_a_threatening_neighbour_holds_a_peaceful_nation_nearer_the_centre(self):
-        safe = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                             ratios={("A", "B"): (1.0, 5.0)})
-        scared = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                               ratios={("A", "B"): (1.0, 0.1)})
-        self.assertGreater(self.ai_politics.desired_value(scared, "A"),
-                           self.ai_politics.desired_value(safe, "A"))
+    def test_an_unaffordable_army_pulls_toward_numerous(self):
+        """A resource-poor country that cannot pay its upkeep wants the cheaper army."""
+        world = ai_world_with("A")
+        income = {"manpower": 1000, "materials": 1000, "fuel": 1000}
+        world.economies["A"] = {"total_inc": income, "upkeep": dict.fromkeys(income, 0)}
+        self.assertEqual(self.ai_politics.desired_quality_value(world, "A"), c.POLITICS_MIN)
+        world.economies["A"]["upkeep"] = dict(income)
+        self.assertEqual(self.ai_politics.desired_quality_value(world, "A"), c.POLITICS_MAX)
 
-    def test_a_peaceful_nation_does_not_go_to_the_wall_either(self):
-        world = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                              ratios={("A", "B"): (1.0, 100.0)})
-        self.assertGreater(self.ai_politics.desired_value(world, "A"), c.POLITICS_MIN)
+    # --- Strategy ------------------------------------------------------------
 
-    def test_an_ally_next_door_is_not_a_menace(self):
-        allied = ai_world_with("A", "B", neighbors={"A": {"B"}},
-                               ratios={("A", "B"): (1.0, 0.1)})
-        allied.nation_data["A"]["faction"] = allied.nation_data["B"]["faction"] = "Fixture Coalition"
-        alone = ai_world_with("A", neighbors={"A": set()})
-        self.assertEqual(self.ai_politics.desired_value(allied, "A"),
-                         self.ai_politics.desired_value(alone, "A"))
-
-    def test_it_walks_toward_the_target_and_stops_on_arrival(self):
+    def test_strategy_is_balanced_at_peace_and_follows_the_war_at_war(self):
         world = ai_world_with("A", "B")
-        target = self.ai_politics.desired_value(world, "A")
+        self.assertEqual(self.ai_politics.desired_strategy_value(world, "A"), c.POLITICS_START)
 
-        politics.set_value(world.nation_data, "A", 0)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), -1)
+        winning = ai_world_with("A", "B", ratios={("A", "B"): (5.0, 5.0)})
+        losing = ai_world_with("A", "B", ratios={("A", "B"): (0.2, 0.2)})
+        at_war(winning)
+        at_war(losing)
+        self.assertLess(self.ai_politics.desired_strategy_value(winning, "A"), c.POLITICS_START)
+        self.assertGreater(self.ai_politics.desired_strategy_value(losing, "A"), c.POLITICS_START)
 
-        politics.set_value(world.nation_data, "A", target)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), 0)
-        self.assertEqual(politics.drift(world.nation_data, "A"), 0)
+    def test_enemies_on_its_cores_turn_a_winning_nation_defensive(self):
+        world = ai_world_with("A", "B", ratios={("A", "B"): (5.0, 5.0)})
+        at_war(world)
+        self.land(world, 3, 0)
+        offensive = self.ai_politics.desired_strategy_value(world, "A")
+        world.provs_by_owner["B"] = [{"owner": "B", "cores": ["A"]}]
+        self.assertEqual(self.ai_politics.desired_strategy_value(world, "A"), c.POLITICS_MAX)
+        self.assertLess(offensive, c.POLITICS_START)
 
-        politics.set_value(world.nation_data, "A", c.POLITICS_MIN)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), 1)
+    # --- Walking toward the targets --------------------------------------------
+
+    def test_it_walks_every_axis_toward_its_target_and_stops_on_arrival(self):
+        world = ai_world_with("A", "B")
+        targets = {axis: desired(world, "A") for axis, desired in self.ai_politics.DESIRED_POSITIONS.items()}
+        for axis, target in targets.items():
+            politics.set_axis_value(world.nation_data, "A", axis, target)
+        directions = self.ai_politics.decide(world, "A", world.nation_data)
+        self.assertEqual(set(directions.values()), {0})
+
+        for axis, target in targets.items():
+            with self.subTest(axis=axis):
+                if target > c.POLITICS_MIN:
+                    politics.set_axis_value(world.nation_data, "A", axis, c.POLITICS_MIN)
+                    self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[axis], 1)
+                    self.assertEqual(politics.axis_drift(world.nation_data, "A", axis), 1)
+                if target < c.POLITICS_MAX:
+                    politics.set_axis_value(world.nation_data, "A", axis, c.POLITICS_MAX)
+                    self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[axis], -1)
+                politics.set_axis_value(world.nation_data, "A", axis, target)
 
     def test_a_war_turns_a_drifting_nation_around(self):
         """The target is recomputed every turn, so it reverses rather than snaps."""
-        world = ai_world_with("A", "B")
-        politics.set_value(world.nation_data, "A", -4)
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), -1)
+        world = ai_world_with("A", "B", ratios={("A", "B"): (0.2, 0.2)})
+        politics.set_axis_value(world.nation_data, "A", politics.QUALITY, -4)
+        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[politics.QUALITY], -1)
 
-        world.nation_data["A"]["at_war_with"] = ["B"]
-        world.nation_data["B"]["at_war_with"] = ["A"]
-        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data), 1)
-        self.assertEqual(politics.value(world.nation_data, "A"), -4,
+        at_war(world)
+        self.assertEqual(self.ai_politics.decide(world, "A", world.nation_data)[politics.QUALITY], 1)
+        self.assertEqual(politics.axis_value(world.nation_data, "A", politics.QUALITY), -4,
                          "deciding must not move the value; only tick does that")
 
     def test_the_same_world_decides_the_same_way_twice(self):
         """No `random` -- see the note in ai_personality.procedural."""
-        first = ai_world_with("A", "B")
-        second = ai_world_with("A", "B")
-        self.assertEqual(self.ai_politics.desired_value(first, "A"),
-                         self.ai_politics.desired_value(second, "A"))
-
-    def test_economic_drift_responds_to_a_shortage_independently(self):
-        world = ai_world_with("A")
-        world.provs_by_owner = {"A": [{"buildings": ["Basic Factory"]}]}
-        world.economies = {"A": {"upkeep": {"materials": 100, "fuel": 20},
-                                 "total_inc": {"materials": 80, "fuel": 10},
-                                 "breakdown": {"materials": {"buildings": 60},
-                                               "fuel": {"buildings": 0}}}}
-        politics.set_drift(world.nation_data, "A", 1)
-        self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), -1)
-        self.assertEqual(politics.economic_value(world.nation_data, "A"), c.POLITICS_START)
-        self.assertEqual(politics.drift(world.nation_data, "A"), 1)
-
-        # A factory cannot help the remaining fuel deficit in this economy.
-        world.nation_data["A"]["materials"] = 20 * ai_tuning.AI_DISBAND_RUNWAY_TURNS
-        self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), 1)
-        self.assertEqual(politics.economic_drift(world.nation_data, "A"), 1)
+        first = ai_world_with("A", "B", ratios={("A", "B"): (0.7, 1.3)})
+        second = ai_world_with("A", "B", ratios={("A", "B"): (0.7, 1.3)})
+        at_war(first)
+        at_war(second)
+        for desired in self.ai_politics.DESIRED_POSITIONS.values():
+            self.assertEqual(desired(first, "A"), desired(second, "A"))
 
 
 if __name__ == "__main__":

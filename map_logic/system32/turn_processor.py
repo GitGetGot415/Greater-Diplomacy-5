@@ -210,10 +210,14 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     days_to_advance = queries.get_days_per_turn(world_state.scenario_settings)
     world_state.time_manager.process_time(days_to_advance)
 
-    # Resolve both axes before combat, income, and research so all three use
+    # Resolve every axis before combat, income, and research so all three use
     # the same new compass position. Players choose directions in Politics.
     # AI countries choose them in prepare_turn.
-    politics.tick(context)
+    quality_moved = politics.tick(context)
+    # Quality sets maximum health, so rescale the units of every country it moved.
+    if quality_moved:
+        queries.refresh_unit_stats(world_state.map_data, world_state.nation_data,
+                                   queries.get_unit_library(context), owners=quality_moved)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
     unit_events.run_step(context, "Unit maintenance", movement_processor.process_unit_maintenance_orders)

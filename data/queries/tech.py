@@ -495,8 +495,23 @@ def get_exact_year(time_manager):
     return time_manager.year + (time_manager.month_index / 12.0) + (time_manager.day / 360.0)
 
 
+def get_research_year(nation_data, country_id, current_exact_year):
+    """The year a country's ahead-of-time penalty measures from.
+
+    Quality shifts it: a professional country researches as though it were up
+    to ten months later, a numerous one as though it were up to ten months
+    earlier. The calendar itself does not move.
+    """
+    # Politics imports the query package for its other rules.
+    from map_logic import politics
+    return current_exact_year + politics.axis_effect(nation_data, country_id, "research_year_months") / 12.0
+
+
 def get_research_multiplier(current_exact_year, target_year):
-    """Calculates the ahead-of-time penalty multiplier."""
+    """Calculates the ahead-of-time penalty multiplier.
+
+    Pass a country's get_research_year, not the bare calendar year.
+    """
     years_ahead = target_year - current_exact_year
     if years_ahead > 0:
         return 0.5 ** years_ahead
@@ -515,13 +530,13 @@ def get_base_research_points(nation_data, country_id, days_per_turn):
 
 
 def get_base_research_rates(nation_data, country_id, days_per_turn):
-    """Return per-slot points before modifiers, after the economic system, and after policy."""
+    """Return per-slot points before modifiers, after the political system, and after policy."""
     # Politics imports the query package for its other rules.
     from map_logic import politics
     base = get_unmodified_research_points(days_per_turn)
-    economic = base * politics.axis_research_multiplier(politics.economic_value(nation_data, country_id))
+    political = base * politics.axis_effect(nation_data, country_id, "research")
     modified = base * politics.research_multiplier(nation_data, country_id)
-    return base, economic, modified
+    return base, political, modified
 
 
 def get_project_research_rate(base_points, nation_data, country_id, tech_name, level):
@@ -534,6 +549,7 @@ def get_normal_research_progress(nation_data, country_id, tech_tree, days_per_tu
     country = nation_data[country_id]
     levels = country.get("research", {})
     base_points = get_base_research_points(nation_data, country_id, days_per_turn)
+    research_year = get_research_year(nation_data, country_id, current_year)
     progress = {}
     for project in country.get("research_queue", []):
         tech_name = project["tech_name"]
@@ -541,7 +557,7 @@ def get_normal_research_progress(nation_data, country_id, tech_tree, days_per_tu
         years = tech_tree.get(tech_name, {}).get("years", [1850])
         target_year = years[min(level, len(years) - 1)]
         rate = get_project_research_rate(base_points, nation_data, country_id, tech_name, level + 1)
-        progress[tech_name] = rate * get_research_multiplier(current_year, target_year)
+        progress[tech_name] = rate * get_research_multiplier(research_year, target_year)
     return progress
 
 

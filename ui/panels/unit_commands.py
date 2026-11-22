@@ -1315,7 +1315,7 @@ class UnitCommandControls:
         if order_type == "BOMBARD":
             return f"Bombard: P{order.get('target_id', '?')}", BOMBARD_TARGET_COLOR
         if order_type in queries.AIR_ORDER_TYPES:
-            radius = queries.air_order_radius(unit, order_type)
+            radius = queries.air_order_radius(unit, order_type, context=self.map_screen)
             target_labels = {"AIR_ATTACK": "Strike", "AIR_REPOSITION": "Reposition", "AIR_DROP": "Air Drop"}
             label = (f"Defend area: {order.get('priority', queries.AIR_DEFAULT_PRIORITY).lower()} first"
                      if order_type == "AIR_PATROL" else

@@ -134,7 +134,6 @@ NON_CORE_MULTIPLIERS = {
     "fuel": 0.5
 }
 
-NON_CORE_BUILDING_MULTIPLIER = 0.5
 CORE_BASE_COST_MANPOWER = 1000
 CORE_SCALING_COST_MANPOWER = 500
 
@@ -897,6 +896,13 @@ TRUCK_CONVERT_TURNS = 2
 # The editor and shared rules use the same inclusive timing limits.
 MIN_CONVERSION_TURNS = 1
 MAX_CONVERSION_TURNS = 9
+# Scenario limits for the administrative timers. The coring minimum leaves a
+# fully authoritarian country, which cores POLITICS_AXIS_EFFECTS' 10 turns
+# faster, at 2 turns or more.
+MIN_CORE_CONSTRUCTION_TURNS = 12
+MAX_CORE_CONSTRUCTION_TURNS = 24
+MIN_REMOVE_CORE_TURNS = 1
+MAX_REMOVE_CORE_TURNS = 9
 
 # Recovery includes landing and this many subsequent complete turns.
 AIR_DROP_RECOVERY_TURNS = 2
@@ -1015,83 +1021,51 @@ AI_NEARBY_SEA_TILES = 3 # Longest water crossing considered nearby for AI claims
 # ==========================================
 # POLITICS (map_logic/politics.py, map_logic/ai/ai_politics.py)
 # ==========================================
-# The political axis trades army damage against core province manpower. The
-# economic axis trades factory output against research speed. Each axis moves
-# independently once per processed turn.
+# Four axes in two groups, each moving independently once per processed turn:
+#   Civilian: Political (libertarian / authoritarian), Economic (planned / market)
+#   Military: Quality (professional / numerous), Strategy (offensive / defensive)
 
-POLITICS_MIN = -10              # libertarian / planned
-POLITICS_MAX = 10               # authoritarian / market
-POLITICS_START = 0              # centrist / mixed
+POLITICS_MIN = -10              # libertarian / planned / professional / offensive
+POLITICS_MAX = 10               # authoritarian / market / numerous / defensive
+POLITICS_START = 0              # the centre of every axis
 POLITICS_STEP = 1               # distance per processed turn on each axis
 
-POLITICS_DAMAGE_SPAN = 0.3          # +/-30% damage dealt at the extremes (0.7x .. 1.3x)
-POLITICS_CORE_MANPOWER_SPAN = 0.6   # 1.6x libertarian, 0.4x authoritarian
-ECONOMICS_FACTORY_SPAN = 0.2        # 1.2x planned, 0.8x market
-ECONOMICS_RESEARCH_SPAN = 0.6       # 0.4x planned, 1.6x market
-# other potential effects:
-# unit upkeep
-# resource extraction multiplier (should be light and a secondary modifier)
-# unit max health (if a unit is at 500/1000 health, and the max health goes up to 1100, then the actual health should be increased with this to 550/1100)
-# unit defense modifier
-# core territory damage modifier
-# aircraft range modifier
-
-# Military doctrine: Quality ↔ Quantity, Offensive ↔ Defensive
-# Quality Quantity      = [damage] - [manpower] (replace politics with ???)
-# Offensive Defensive   = [aircraft range modifier, ] - [core territory damage modifier, defense, max health]
-
-'''
-PLAN - Civillian Policy, Military Policy tables
-
-Civilian - Political, Economic
-Military - Quality, Strategy
-
-===== CIV
-
-Political   (Libertarian, Authoritarian)
-                        LIB   ATH
-Coring turns            +10 / -10       (turns to core may not ever go below 2. 2 is the minimum. removing cores is not affected by this)
-SOLUTION -> MAKE IT SO THAT IN SCENARIO SETTINGS, CORING TURNS CANNOT BE SET BELOW 12, THAT WAY 12 - 10 = 2 AT MINIMUM (having a slider between 12 and 24 ought to solve this issue)
-also make the remove cores turn thing a slider as well from 1 to 9
-Coring costs            1.2 - 0.8
-Remov core cost         1.2 - 0.8
-Research Mod            2.0 - 0.0
-Other AI Opinion Mod    +10 / -10       (yes, this means a country that's maxed out lib views a maxed out auth country as -20 opinion because -10 from political differences and -10 generally)
-2 max auth countries - 0 opinion modifier of each other because the -10 cancels each other out
-2 max lib countries - 20 opinion modifier of each other because +10 political alignment and +10 liberal opinion modifier
-yes this means a max auth country ends up having a 0 opinion modifier of every other country (makes sense i guess, past a certain point you stop caring about political ideology)
-
-...maybe removing cores should be a policy that can be applicable...
-
-Economic    (Planned, Market)
-                        PLN   MRK
-Factory Output          0.9 - 1.1 (yes this applies to EVERY one of your factories, including non core ones)
-Resource Mult           0.9 - 1.1 (yes this applies to ALL resources)
-Building Cost           0.8 - 1.2 (this does not include forts)
-Non-core prov output    2.0 - 0.0 (this does not include factories)
-Non-core fac output     0.6 - 0.4 (this is just factories, also remember, the default right now is 0.5)
-
-===== MIL
-
-Quality     (Professional, Numerous)
-                    PRF   NUM
-Damage              1.3 - 0.7
-Manpower            0.5 - 1.5   (this affects both core and non core manpower)
-Unit Upkeep         1.5 - 0.5   (total unit upkeep, including manpower, resources, fuel, etc)
-Max Health          1.2 - 0.8
-Ahead of Time Mod   +10 / -10   (this is in months, so if you max out proffesionalism, the ahead of time penalty assumes you're living 10 months in the future, and lets you research future tech faster)
-
-Strategy    (Offensive, Defensive)
-                    OFF   DEF
-Aircraft range mod  1.2 - 0.8
-Core ter dmg mod    1.0 - 1.2 (yes this means that every country now gets a +10% damage modifier on core territory by default)
-Non-Core ter dmg    1.0 - 0.8 (non core territory damage modifier. yes, this is a seperate thing from the core ter dmg modifier. yes this means that every country now gets a -10% damage modifier on enemy territory by default)
-Defense modifier    0.8 - 1.2 (defense modifier applies both to fort defense and good ol unit defense)
-Fort Cost           1.2 - 0.8
-
-why is non-core territory damage seperate from core territory damage modifier?
-that way two countries having different strategies can have those both take effect in either one's territory
-'''
+# Every axis effect, as (value at POLITICS_MIN, value at POLITICS_MAX). A
+# position between the ends interpolates linearly. Effect names are unique
+# across axes, so a name alone identifies its axis.
+POLITICS_AXIS_EFFECTS = {
+    "political": {
+        "coring_turns": (10, -10),          # added to the scenario's coring turns
+        "coring_cost": (1.2, 0.8),
+        "remove_core_cost": (1.2, 0.8),     # removing cores keeps its scenario turns
+        "research": (2.0, 0.0),             # normal research; funded research bypasses it
+        "reputation": (10, -10),            # added to every other country's opinion of this one
+    },
+    "economic": {
+        "factory_output": (0.9, 1.1),       # factories (group "industry") only, on any territory
+        "deposit_output": (0.9, 1.1),       # natural resource deposits only
+        "building_cost": (0.8, 1.2),        # every building except forts
+        "non_core_province_output": (2.0, 0.0),  # multiplies NON_CORE_MULTIPLIERS on tiles and deposits; not buildings
+        "non_core_building_output": (0.6, 0.4),  # every building's output on non-core territory
+    },
+    "quality": {
+        "damage": (1.3, 0.7),
+        "tile_manpower": (0.5, 1.5),        # core and non-core province tiles only
+        "unit_upkeep": (1.5, 0.5),          # the whole upkeep bill: manpower, materials and fuel
+        "max_health": (1.2, 0.8),
+        "research_year_months": (10, -10),  # the ahead-of-time penalty treats the date as this many months later
+    },
+    "strategy": {
+        "aircraft_range": (1.2, 0.8),
+        # Core and non-core damage are separate so two countries with different
+        # strategies each keep their own modifier in either one's territory.
+        "core_territory_damage": (1.0, 1.2),
+        "non_core_territory_damage": (1.0, 0.8),
+        "defense": (0.8, 1.2),              # unit defense and fort defense
+        "fort_cost": (1.2, 0.8),
+    },
+}
+# Idea for later: removing cores could become a policy.
 
 
 # ==========================================

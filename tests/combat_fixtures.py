@@ -1,6 +1,29 @@
 """Shared combat fixtures: a battle map stand-in, combat units, and damage totals."""
 
+from unittest import mock
+
+import data.constants as c
 from tests.stub_map_screen import fill_state_defaults
+
+
+def neutral_territory():
+    """Patch Strategy's territory damage to 1.0 on every tile.
+
+    For tests about lanes, volleys, stacks and conscription rather than
+    politics. Otherwise even a country at the centre of the Strategy axis deals
+    its core and non-core territory modifiers. tests/test_politics.py covers
+    those modifiers.
+    """
+    strategy = dict(c.POLITICS_AXIS_EFFECTS["strategy"],
+                    core_territory_damage=(1.0, 1.0), non_core_territory_damage=(1.0, 1.0))
+    return mock.patch.dict(c.POLITICS_AXIS_EFFECTS, {"strategy": strategy})
+
+
+def install_neutral_territory(module_globals):
+    """Give a test module setUpModule/tearDownModule hooks that hold neutral_territory()."""
+    patcher = neutral_territory()
+    module_globals["setUpModule"] = patcher.start
+    module_globals["tearDownModule"] = patcher.stop
 
 
 class StubBattleMap:

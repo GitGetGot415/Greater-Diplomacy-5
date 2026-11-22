@@ -102,10 +102,10 @@ class ResearchFundingTests(unittest.TestCase):
 
     def test_funding_preview_and_resolution_agree_after_upkeep_and_modifiers(self):
         tree = {"first": {"years": [1922]}, "second": {"years": [1920]}}
-        for economic_value in (c.POLITICS_MIN, c.POLITICS_MAX):
-            with self.subTest(economic_value=economic_value):
+        for political_value in (c.POLITICS_MIN, c.POLITICS_MAX):
+            with self.subTest(political_value=political_value):
                 policy_id = "prioritize_industrial_needs"
-                country = {"materials": 8, "research_funding_slider": 0.1, "economic_value": economic_value,
+                country = {"materials": 8, "research_funding_slider": 0.1, "political_value": political_value,
                            "research": {}, "research_queue": [project(tech, 1_000) for tech in tree],
                            politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_ACTIVE}}}
                 game = BackendState()
@@ -135,11 +135,11 @@ class ResearchFundingTests(unittest.TestCase):
 
                     asyncio.run(turn_processor.resolve_turn_logic(game))
                     date = queries.get_exact_year(game.time_manager)
-                    base = unmodified_base * politics.axis_research_multiplier(economic_value)
+                    base = unmodified_base * politics.effect_at("research", political_value)
                     policy_multiplier = politics.policy(policy_id)["effects"]["research"]
                     self.assertEqual(country["materials"], 96)
                     self.assertEqual(country["research_funding_slider"], 0.1)
-                    self.assertAlmostEqual(breakdown["base"] + breakdown["economy"], base)
+                    self.assertAlmostEqual(breakdown["base"] + breakdown["politics"], base)
                     self.assertAlmostEqual(breakdown["policies"], base * (policy_multiplier - 1))
                     for entry in country["research_queue"]:
                         penalty = 0.5 ** max(0, tree[entry["tech_name"]]["years"][0] - date)

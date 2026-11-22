@@ -118,7 +118,7 @@ def process_unit_maintenance_orders(context, order_types=None):
                     target_type = order.get("target_type")
                     if target_type and target_type in unit_library:
                         unit["type"] = target_type
-                        queries.apply_library_stats(unit, unit_library)
+                        queries.apply_library_stats(unit, unit_library, world_state.nation_data)
                     unit["order"] = {"type": "MOVE", "path": []}
                 elif order_type == "REPAIR":
                     unit["health"] = unit.get("max_health", c.DEFAULT_UNIT_HP)

@@ -350,7 +350,8 @@ def _spawn_unit(run, nation, _data, _pending, act):
     unit_type = act.get("unit_type") or queries.get_unit_for_family_year(
         library, "Infantry Type", c.DEFAULT_EQUIPMENT_YEAR, context=run.context)
     for target, province in _target_provinces(run, nation, act):
-        province.setdefault("units", []).append(queries.create_unit_dict(unit_type, target, library))
+        province.setdefault("units", []).append(
+            queries.create_unit_dict(unit_type, target, library, world_for(run.context).nation_data))
 
 
 def _set_variable(run, _nation, _data, _pending, act):

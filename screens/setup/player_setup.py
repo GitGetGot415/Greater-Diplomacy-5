@@ -49,7 +49,7 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         if infantry_years and unit_type == f"Infantry Type {infantry_years[0]}":
             unit_type = f"Infantry Type {c.TACTICAL_DEFAULT_YEAR}"
 
-        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library(map_screen))
+        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library(map_screen), map_screen.nation_data)
         new_unit["_is_tactical_ghost"] = True # Tag it so we can delete it if they cancel
         
         active_counters = queries.build_active_unit_counters(map_screen.map_data, context=map_screen)

@@ -136,6 +136,8 @@ def get_country_summary(context, country_id):
                 for policy_id, state in politics.policy_states(nation_data, country_id).items()]
     political_value = politics.value(nation_data, country_id)
     economic_value = politics.economic_value(nation_data, country_id)
+    quality_value = politics.axis_value(nation_data, country_id, politics.QUALITY)
+    strategy_value = politics.axis_value(nation_data, country_id, politics.STRATEGY)
     return {
         "country_id": country_id, "name": get_country_display_name(country_id, nation_data),
         "military": {
@@ -148,11 +150,16 @@ def get_country_summary(context, country_id):
         },
         "politics": {"label": politics.label(political_value),
                      "value": political_value,
-                     "drift": politics.drift(nation_data, country_id),
+                     # Directions are private; only the viewer's own country shows one.
+                     "drift": politics.drift(nation_data, country_id) if unrestricted or country_id == viewer else None,
                      "economic_value": economic_value,
                      "economic_label": politics.economic_label(economic_value),
-                     "core_manpower_multiplier": politics.axis_core_manpower_multiplier(political_value),
-                     "factory_multiplier": politics.axis_factory_multiplier(economic_value),
+                     "quality_value": quality_value,
+                     "quality_label": politics.axis_label(politics.QUALITY, quality_value),
+                     "strategy_value": strategy_value,
+                     "strategy_label": politics.axis_label(politics.STRATEGY, strategy_value),
+                     "tile_manpower_multiplier": politics.axis_effect(nation_data, country_id, "tile_manpower"),
+                     "factory_multiplier": politics.factory_output_multiplier(nation_data, country_id),
                      "research_multiplier": politics.research_multiplier(nation_data, country_id),
                      "policies": policies},
         "diplomacy": {"faction": faction,

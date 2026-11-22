@@ -107,6 +107,12 @@ def _relation_factors(nation_a, nation_b, nation_data, claim_count):
     if affinity:
         yield "political_affinity", affinity, None
 
+    # How everyone sees B: liberty earns goodwill and authority costs it. Only
+    # B's own position counts, so this half of an opinion is one-way.
+    reputation = round(politics.axis_effect(nation_data, nation_b, "reputation"))
+    if reputation:
+        yield "political_reputation", reputation, None
+
     master_a = nation_data.get(nation_a, {}).get("master", "")
     master_b = nation_data.get(nation_b, {}).get("master", "")
     if master_b == nation_a:

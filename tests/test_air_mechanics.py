@@ -30,6 +30,11 @@ from tests.air_fixtures import install_air_fixture, patrol_world, runtime_map, t
 from tests.stub_map_screen import bare_orders_screen
 from tests.tournament_fixtures import fast_tournament_crypto
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 def load_old_units(game):
     """Convert fixture units as a load does: the conversion rules, then the load repairs."""
@@ -317,7 +322,7 @@ class AirResolutionTests(unittest.TestCase):
         # separate bombardment stat. Wounds and political modifiers are shared.
         aircraft["bombard_attack"] = aircraft["attack"] * 10
         aircraft["health"] *= 0.6
-        politics.set_value(self.game.nation_data, "B", c.POLITICS_MAX)
+        politics.set_axis_value(self.game.nation_data, "B", politics.QUALITY, c.POLITICS_MAX)
         battle = combat_rules.build_battle([[aircraft], [defender]], self.game.nation_data,
             terrain=self.target["terrain"], convert_aircraft=False, air_mission_sides={0})
         expected = combat_rules.projected_incoming_damage(battle, self.game.nation_data)

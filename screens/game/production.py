@@ -328,7 +328,7 @@ class Production_Screen(Screen):
                 color, text, callback = "grey", "Cannot Core", _no_action
             else:
                 color, text, callback = "purple", "Core Territory", lambda: self.start_coring()
-            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings))
+            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings, self.map_screen.nation_data))
 
         # --- REMOVE CORES BUTTON ---
         # Cores are ignored entirely under the "Disable Cores" scenario rule, so
@@ -348,7 +348,7 @@ class Production_Screen(Screen):
                 color, text, callback = "grey", "Remove Cores", _no_action
             else:
                 color, text, callback = "red", "Remove Cores", lambda: self.start_remove_cores()
-            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings))
+            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings, self.map_screen.nation_data))
 
     def _next_building_in_group(self, group_id, current_buildings):
         b_list = [b for b, d in self.building_library.items() if d.get("group") == group_id]
@@ -368,6 +368,7 @@ class Production_Screen(Screen):
         research = self._owner_research()
         building_queue = province.get("building_queue", [])
         factory_multiplier = politics.factory_output_multiplier(self.map_screen.nation_data, owner)
+        non_core_multiplier = politics.axis_effect(self.map_screen.nation_data, owner, "non_core_building_output")
 
         for group_id in ("industry", "fortification", "recruitment"):
             target = self._next_building_in_group(group_id, province.get("buildings", []))
@@ -375,10 +376,12 @@ class Production_Screen(Screen):
                 continue
 
             # Dynamically calculate the visual cost for the player
-            data = queries.get_building_cost(target, owner, self.map_screen.map_data, self.building_library)
+            data = queries.get_building_cost(target, owner, self.map_screen.map_data, self.building_library,
+                                             self.map_screen.nation_data)
             output = queries.get_province_building_output(
                 {"owner": owner, "cores": province.get("cores", []), "buildings": [target]},
-                research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier)
+                research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier,
+                non_core_multiplier=non_core_multiplier)
             data.update({f"prod_{res}": amount for res, amount in output.items()})
             # Compare this building chain only; unrelated buildings retain their yields.
             data["previous_yields"] = queries.get_province_building_output(
@@ -387,7 +390,8 @@ class Production_Screen(Screen):
                                if self.building_library.get(name, {}).get("group") == group_id],
                  "building_queue": [project for project in building_queue
                                     if self.building_library.get(project.get("item_name"), {}).get("group") == group_id]},
-                research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier)
+                research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier,
+                non_core_multiplier=non_core_multiplier)
             is_building = any(q.get("group") == data["group"] for q in building_queue)
             req_tech, req_lvl = queries.get_building_required_tech(target)
 

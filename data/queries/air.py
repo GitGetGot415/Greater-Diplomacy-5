@@ -6,6 +6,7 @@ import data.constants as c
 import pygame
 from types import SimpleNamespace
 from data.state_access import session_for, world_for
+from map_logic import politics
 from data.queries.geometry import is_water_province
 from data.queries.diplomacy import are_at_war
 from data.queries.unit_info import (
@@ -285,9 +286,18 @@ def air_range_preview_kind(context, unit, destination=None):
 
 
 def air_order_radius(unit, kind, *, context=None):
-    """Air drops reserve half the transport's listed movement range for the return."""
+    """Air drops reserve half the transport's listed movement range for the return.
+
+    The owner's Strategy scales the listed range before any mission rule, so
+    every mission kind scales with it.
+    """
     stats = air_unit_stats(unit, context=context)
+    # Type-level callers pass a library context or none, and read the type's
+    # listed range; a game context carries the countries.
+    nation_data = getattr(world_for(context), "nation_data", None)
     radius = stats.get("air_range_px", 0)
+    if nation_data is not None and unit.get("owner"):
+        radius *= politics.axis_effect(nation_data, unit["owner"], "aircraft_range")
     if kind == "AIR_DROP":
         return radius / 2
     if kind == "AIR_REPOSITION" and not air_unit_can_transport(unit, context=context):

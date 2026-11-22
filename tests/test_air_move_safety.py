@@ -12,6 +12,11 @@ from map_logic.system32 import air_processor, combat_rules, movement_processor
 from screens.game.map import Map
 from tests.air_fixtures import controlled_air_library, tile, wing, world
 
+from tests.combat_fixtures import install_neutral_territory
+
+# Territory damage is a politics rule; these tests measure combat mechanics.
+install_neutral_territory(globals())
+
 
 class AirMissionPlanningTests(unittest.TestCase):
     def setUp(self):

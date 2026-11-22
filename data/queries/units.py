@@ -17,6 +17,7 @@ from data.queries.unit_info import (
     units_with_air_cargo,
 )
 from data import queries
+from map_logic import politics
 
 
 def is_in_transport(unit):
@@ -295,28 +296,38 @@ def revert_transport(unit, *, context=None):
         if key in unit: del unit[key]
 
 
-def refresh_unit_stats(map_data, nation_data, unit_library):
-    """Apply library stats to every map unit, carried unit, and held volunteer unit."""
-    for province in map_data.values():
-        for unit in units_with_air_cargo(province.get("units", [])):
-            apply_library_stats(unit, unit_library)
-    for unit in held_volunteer_units(nation_data):
-        apply_library_stats(unit, unit_library)
+def refresh_unit_stats(map_data, nation_data, unit_library, owners=None):
+    """Apply library stats to every map unit, carried unit, and held volunteer unit.
+
+    Runs on load for every unit. A turn's politics step passes ``owners``, the
+    countries whose Quality moved, so their units' maximum health follows it.
+    """
+    units = [unit for province in map_data.values() for unit in units_with_air_cargo(province.get("units", []))]
+    for unit in units + list(held_volunteer_units(nation_data)):
+        if owners is None or unit.get("owner") in owners:
+            apply_library_stats(unit, unit_library, nation_data)
 
 
-def library_unit_stats(stats):
+def max_health_multiplier(nation_data, owner):
+    """Quality's maximum health multiplier for one country's units; 1.0 without country data."""
+    return politics.axis_effect(nation_data, owner, "max_health") if nation_data is not None else 1.0
+
+
+def library_unit_stats(stats, health_multiplier=1.0):
     """Return the combat fields a unit record copies from its library entry."""
-    return {"max_health": stats.get("health", c.DEFAULT_UNIT_HP),
+    health = stats.get("health", c.DEFAULT_UNIT_HP)
+    return {"max_health": health if health_multiplier == 1.0 else round(health * health_multiplier),
             "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
             "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
             "speed": stats.get("speed", c.DEFAULT_UNIT_SPD)}
 
 
-def apply_library_stats(unit, unit_library):
+def apply_library_stats(unit, unit_library, nation_data=None):
     """Set a unit's combat stats from the unit library and keep its health fraction.
 
     The library is the only source of unit stats. Unit records hold a copy for
     their readers. Every load and every type change refreshes that copy.
+    With ``nation_data``, the owner's Quality scales the library health.
     A Convoy or Truck takes its own stats from the shared constants and keeps
     the carried unit's library stats in its original_* fields.
     Return False for a type that is not in the library, and leave the unit unchanged.
@@ -327,7 +338,7 @@ def apply_library_stats(unit, unit_library):
     if stats is None:
         return False
     old_max = unit.get("max_health")
-    values = library_unit_stats(stats)
+    values = library_unit_stats(stats, max_health_multiplier(nation_data, unit.get("owner")))
     if carrier == "Convoy":
         unit.update({"original_" + field: value for field, value in values.items()})
         values = {"max_health": c.CONVOY_MAX_HP, "attack": c.CONVOY_ATK,

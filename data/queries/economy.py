@@ -40,13 +40,15 @@ def has_turn_economy(name, economies):
     return name in economies and name not in c.UNPLAYABLE_NATIONS
 
 
-def get_unit_upkeep(stats):
-    """Calculates dynamically modified unit upkeep costs."""
-    return {
-        "manpower": stats.get("cost_manpower", 0) * c.UPKEEP_MODIFIERS["manpower"],
-        "materials": stats.get("cost_materials", 0) * c.UPKEEP_MODIFIERS["materials"],
-        "fuel": stats.get("cost_fuel", 0) * c.UPKEEP_MODIFIERS["fuel"]
-    }
+def get_unit_upkeep(stats, nation_data=None, owner=None):
+    """Calculates dynamically modified unit upkeep costs.
+
+    Pass ``nation_data`` and ``owner`` to apply that country's Quality upkeep
+    multiplier. Omit them to price a unit type rather than one country's unit.
+    """
+    multiplier = politics.axis_effect(nation_data, owner, "unit_upkeep") if nation_data is not None else 1.0
+    return {res: stats.get(f"cost_{res}", 0) * c.UPKEEP_MODIFIERS[res] * multiplier
+            for res in c.ECON_RESOURCE_KEYS}
 
 
 def get_max_fuel_conversion(nation_data_block):
@@ -188,6 +190,18 @@ ADMINISTRATIVE_ACTIONS = {
     "REMOVE_CORE": ("Remove Cores", "REMOVE_CORE_TURNS"),
 }
 
+#: The scenario's whole-turn range for each administrative timer.
+ADMINISTRATIVE_TURN_LIMITS = {
+    "CORE": ("MIN_CORE_CONSTRUCTION_TURNS", "MAX_CORE_CONSTRUCTION_TURNS"),
+    "REMOVE_CORE": ("MIN_REMOVE_CORE_TURNS", "MAX_REMOVE_CORE_TURNS"),
+}
+
+
+def get_administrative_turn_limits(order_type):
+    """The (minimum, maximum) turns a scenario may set for one administrative action."""
+    low, high = ADMINISTRATIVE_TURN_LIMITS[order_type]
+    return getattr(c, low), getattr(c, high)
+
 
 def get_administrative_library():
     """Editor rows and historical durations from the canonical core constants."""
@@ -196,13 +210,19 @@ def get_administrative_library():
 
 
 def get_administrative_turns(order_type, scenario_settings=None):
+    """The scenario's turns for one administrative action, within its limits.
+
+    Older scenarios can hold a value outside the limits; it is clamped here.
+    """
     name, constant = ADMINISTRATIVE_ACTIONS[order_type]
     default = getattr(c, constant)
     raw = get_category_setting(scenario_settings, "administrative_turn_overrides", {}).get(name, default)
     try:
-        return max(1, int(raw))
+        turns = int(raw)
     except (TypeError, ValueError):
-        return default
+        turns = default
+    low, high = get_administrative_turn_limits(order_type)
+    return max(low, min(high, turns))
 
 
 CONVERSION_ACTIONS = {
@@ -273,30 +293,40 @@ def province_has_garrison(nation, province):
     return any(unit.get("owner") == nation for unit in province.get("units", []))
 
 
-def get_core_cost(nation, map_data, scenario_settings=None):
-    """Calculates the cost to core a territory dynamically."""
+def _core_manpower_cost(nation, map_data):
+    """Manpower to core one more territory, before politics."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))
-    
-    base_cost = c.CORE_BASE_COST_MANPOWER
-    scaling_cost = c.CORE_SCALING_COST_MANPOWER
-    
+    return c.CORE_BASE_COST_MANPOWER + (c.CORE_SCALING_COST_MANPOWER * core_count)
+
+
+def get_core_cost(nation, map_data, scenario_settings, nation_data):
+    """Calculates the cost to core a territory dynamically.
+
+    The political axis scales the price and shifts the scenario's turns. The
+    order records both when it is placed, so a later shift changes neither.
+    """
+    turns = get_administrative_turns("CORE", scenario_settings)
     return {
-        "cost_manpower": base_cost + (scaling_cost * core_count),
+        "cost_manpower": int(round(_core_manpower_cost(nation, map_data)
+                                   * politics.axis_effect(nation_data, nation, "coring_cost"))),
         "cost_materials": 0,
         "cost_fuel": 0,
-        "time": get_administrative_turns("CORE", scenario_settings),
+        "time": turns + int(round(politics.axis_effect(nation_data, nation, "coring_turns"))),
         "group": "administration"
     }
 
 
-def get_remove_core_cost(nation, map_data, scenario_settings=None):
-    """Returns the cost dictionary for removing foreign cores."""
-    core_cost = get_core_cost(nation, map_data, scenario_settings)
-    manpower_cost = max(0, core_cost.get("cost_manpower", 0) // 2)
+def get_remove_core_cost(nation, map_data, scenario_settings, nation_data):
+    """Returns the cost dictionary for removing foreign cores.
+
+    The political axis scales the price. The scenario's turns apply unchanged.
+    """
+    manpower_cost = max(0, _core_manpower_cost(nation, map_data) // 2)
+    multiplier = politics.axis_effect(nation_data, nation, "remove_core_cost")
     return {
-        "cost_manpower": manpower_cost,
-        "cost_materials": max(0, manpower_cost // 2),
-        "cost_fuel": max(0, core_cost.get("cost_fuel", 0) // 2),
+        "cost_manpower": int(round(manpower_cost * multiplier)),
+        "cost_materials": int(round(max(0, manpower_cost // 2) * multiplier)),
+        "cost_fuel": 0,
         "time": get_administrative_turns("REMOVE_CORE", scenario_settings),
         "group": "administration"
     }
@@ -396,8 +426,12 @@ def generate_rebellion_name(cores_on_tile, nation_data):
     return rebel_id, final_name
 
 
-def get_building_cost(b_name, nation, map_data, bldg_lib):
+def get_building_cost(b_name, nation, map_data, bldg_lib, nation_data):
     """Dynamically scales the building cost, bypassing the JSON for Basic Factories.
+
+    Politics scales the price: Strategy for forts, the economic system for every
+    other building. Orders record what they paid, so a later shift on either
+    axis never changes a refund.
 
     Time is left untouched -- it comes straight from bldg_lib, so it already
     reflects both the recipes.py default and any construction turns override from Edit Unit / Building Stats.
@@ -409,6 +443,11 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
         stats["cost_materials"] = x * 2
         stats["cost_manpower"] = x
         stats["cost_fuel"] = 0
+    effect = "fort_cost" if stats.get("group") == "fortification" else "building_cost"
+    multiplier = politics.axis_effect(nation_data, nation, effect)
+    for res in c.ECON_RESOURCE_KEYS:
+        if f"cost_{res}" in stats:
+            stats[f"cost_{res}"] = int(round(stats[f"cost_{res}"] * multiplier))
     return stats
 
 
@@ -444,7 +483,8 @@ def refund_queue_item(nation_data_block, item, owner=None, map_data=None, *, con
 
     stats = {}
     if item.get("order_type") == "BUILDING":
-        stats = queries.get_building_cost(item.get("item_name"), owner, map_data, queries.get_building_library(context))
+        stats = queries.get_building_cost(item.get("item_name"), owner, map_data, queries.get_building_library(context),
+                                          world_for(context).nation_data)
     elif "unit_type" in item:
         stats = queries.get_unit_library(context).get(item["unit_type"], {})
     refund_resources(nation_data_block, stats)
@@ -641,15 +681,23 @@ def get_building_output(building_name, research, building_library=None, *, conte
             for res in c.ECON_RESOURCE_KEYS}
 
 
-def get_province_building_output(province, research, building_library=None, *, context=None, multipliers=None, modifiers=None, factory_multiplier=1.0):
-    """Apply building bonuses and territory penalties, including factory construction yields."""
+def get_province_building_output(province, research, building_library=None, *, context=None, multipliers=None, modifiers=None, factory_multiplier=1.0,
+                                 non_core_multiplier=None):
+    """Apply building bonuses and territory penalties, including factory construction yields.
+
+    ``non_core_multiplier`` is the owner's economic non-core building output;
+    callers pass it beside ``factory_multiplier``. Omitted, it is the centre of
+    the axis.
+    """
     if building_library is None:
         building_library = queries.get_building_library(context)
     if modifiers is None:
         modifiers = get_building_output_modifiers(research, building_library, context=context)
     if multipliers is None:
         multipliers = modifiers["multipliers"]
-    territory_mult = 1.0 if queries.has_core(province.get("owner"), province) else c.NON_CORE_BUILDING_MULTIPLIER
+    if non_core_multiplier is None:
+        non_core_multiplier = politics.effect_at("non_core_building_output", c.POLITICS_START)
+    territory_mult = 1.0 if queries.has_core(province.get("owner"), province) else non_core_multiplier
     output = {res: 0 for res in c.ECON_RESOURCE_KEYS}
     for name in province.get("buildings", []):
         yields = queries.get_building_output(name, research, building_library, context=context,
@@ -697,9 +745,11 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         for res in c.ECON_RESOURCE_KEYS:
             breakdown[res]["base"] = c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0)
 
-        core_manpower_multiplier = politics.axis_core_manpower_multiplier(politics.value(nation_data, name))
         econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult,
-                           "core_manpower_multiplier": core_manpower_multiplier,
+                           "tile_manpower_multiplier": politics.axis_effect(nation_data, name, "tile_manpower"),
+                           "non_core_province_multiplier": politics.axis_effect(nation_data, name, "non_core_province_output"),
+                           "deposit_multiplier": politics.axis_effect(nation_data, name, "deposit_output"),
+                           "non_core_building_multiplier": politics.axis_effect(nation_data, name, "non_core_building_output"),
                            "factory_multiplier": politics.factory_output_multiplier(nation_data, name)}
 
     # Single efficient pass over the map
@@ -716,17 +766,18 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
 
             # Base tile yields based on ownership tier
             for res in c.ECON_RESOURCE_KEYS:
-                mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[res]
+                mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[res] * economy["non_core_province_multiplier"]
+                if res == "manpower":
+                    mult *= economy["tile_manpower_multiplier"]
                 bd[res][cat] += mult * dyn_yields[res]
-            if is_core:
-                bd["manpower"]["core"] += dyn_yields["manpower"] * (economy["core_manpower_multiplier"] - 1.0)
 
             # Natural Resources
             res = province.get("resources", {})
             if isinstance(res, dict):
-                refining_mult = economy["resource_mult"]
+                refining_mult = economy["resource_mult"] * economy["deposit_multiplier"]
                 for deposit, econ_res in c.NATURAL_RESOURCE_OUTPUTS.items():
-                    bd[econ_res]["resources"] += int(res.get(deposit, 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS[econ_res]) * refining_mult
+                    territory_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[econ_res] * economy["non_core_province_multiplier"]
+                    bd[econ_res]["resources"] += int(res.get(deposit, 0)) * territory_mult * refining_mult
 
             # Buildings
             owner_research = nation_data[owner].get("research", {})
@@ -735,7 +786,8 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
                 modifiers = building_modifiers[owner] = get_building_output_modifiers(
                     owner_research, bldg_lib, context=context, cache=modifier_cache)
             building_output = queries.get_province_building_output(
-                province, owner_research, bldg_lib, modifiers=modifiers, factory_multiplier=economy["factory_multiplier"])
+                province, owner_research, bldg_lib, modifiers=modifiers, factory_multiplier=economy["factory_multiplier"],
+                non_core_multiplier=economy["non_core_building_multiplier"])
             for res in c.ECON_RESOURCE_KEYS:
                 bd[res]["buildings"] += building_output[res]
 
@@ -745,7 +797,7 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             if u_owner in econ_data:
                 # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
                 u_type = queries.get_base_unit_type(unit)
-                upkeep = get_unit_upkeep(unit_lib.get(u_type, {}))
+                upkeep = get_unit_upkeep(unit_lib.get(u_type, {}), nation_data, u_owner)
                 for res in c.ECON_RESOURCE_KEYS:
                     econ_data[u_owner]["upkeep"][res] += upkeep[res]
 
@@ -932,7 +984,7 @@ def get_projected_research_breakdown(context, country_id):
     nation_data = world.nation_data
     country = nation_data[country_id]
     days = queries.get_days_per_turn(world.scenario_settings)
-    base, economic, modified = get_base_research_rates(nation_data, country_id, days)
+    base, political, modified = get_base_research_rates(nation_data, country_id, days)
 
     funding = 0
     if get_research_funding_rate(country):
@@ -942,8 +994,8 @@ def get_projected_research_breakdown(context, country_id):
 
     return {
         "base": base,
-        "economy": economic - base,
-        "policies": modified - economic,
+        "politics": political - base,
+        "policies": modified - political,
         "funding": funding,
     }
 

@@ -111,7 +111,8 @@ def _air_exchange_value(context, wings, opponents, *, air_combat=False, target=N
     battle = combat_rules.build_battle(sides, world_state.nation_data,
         air_combat=air_combat, convert_aircraft=False,
         air_mission_sides=None if air_combat else {0},
-        terrain=target.get("terrain") if target else None)
+        terrain=target.get("terrain") if target else None,
+        tiles=(target,) * len(sides) if target else ())
     opponent_ids = {id(unit) for unit in opponents}
 
     def fort_bonus(unit):
@@ -132,7 +133,7 @@ def _air_exchange_value(context, wings, opponents, *, air_combat=False, target=N
         library = queries.get_building_library(context)
         for lost_level in range(level, max(0, level - hits), -1):
             stats = queries.get_building_cost(f"Fort Lvl {lost_level}", target.get("owner"),
-                                             world_state.map_data, library)
+                                             world_state.map_data, library, world_state.nation_data)
             value += sum(stats.get(f"cost_{resource}", 0) for resource in ai_unit_eval.RESOURCES)
     return value
 
@@ -1116,7 +1117,7 @@ def _attackers_would_survive(context, ai_name, target_prov, attackers):
     target_units = list(target_prov.get("units", ()))
     battle = combat_rules.build_battle(
         [target_units, attackers], world_state.nation_data,
-        terrain=target_prov.get("terrain"))
+        terrain=target_prov.get("terrain"), tiles=(target_prov, target_prov))
     attackers = [unit for unit in attackers
                  if battle.profiles.get(id(unit), unit).get("health", 1) > 0]
     if not attackers:

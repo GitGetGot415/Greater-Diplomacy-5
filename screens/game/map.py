@@ -1376,7 +1376,7 @@ class Map(StateAccess, Screen):
 
                 # Check if the unit is still valid
                 if base_type in unit_library or base_type in ["Convoy", "Truck"]:
-                    if queries.apply_library_stats(unit, unit_library):
+                    if queries.apply_library_stats(unit, unit_library, self.nation_data):
                         updated_count += 1
                     units_to_keep.append(unit)
                 else:

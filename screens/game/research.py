@@ -42,7 +42,7 @@ RESEARCH_BREAKDOWN_PADDING = 8
 RESEARCH_BREAKDOWN_GAP = 14
 RESEARCH_BREAKDOWN_LABELS = {
     "base": "Base research",
-    "economy": "Economic system",
+    "politics": "Political system",
     "policies": "Domestic policies",
     "funding": "Research funding",
 }
@@ -275,7 +275,8 @@ class ResearchDetailsScreen(ModalScreen):
         # --- AHEAD OF TIME SIMULATION ---
         target_year = self.node.get("target_year", 1900)
         actual_turns = 0
-        sim_year = queries.get_exact_year(map_screen.time_manager)
+        sim_year = queries.get_research_year(map_screen.nation_data, subject,
+                                             queries.get_exact_year(map_screen.time_manager))
         pts_accumulated = 0
         year_inc = days_per_turn / 360.0
 
@@ -288,7 +289,7 @@ class ResearchDetailsScreen(ModalScreen):
 
         warning = None
         if pts_per_turn <= 0:
-            warning = "Normal research is halted in a fully planned economy."
+            warning = "Normal research is halted at full Authoritarian."
         elif pts_accumulated < cost:
             warning = f"Estimated Actual Time: >{MAX_RESEARCH_TURN_SIMULATION} turns"
         elif actual_turns > base_time:
@@ -318,8 +319,9 @@ class ResearchDetailsScreen(ModalScreen):
             for name in [self.entity_name, *self.modal_unlocks]
             if name in self.building_library}
         self.modal_building_costs = {
-            name: (queries.get_building_cost(name, research.subject, map_screen.map_data, self.building_library)
-                   if name == "Basic Factory" and research.subject in map_screen.nation_data
+            name: (queries.get_building_cost(name, research.subject, map_screen.map_data, self.building_library,
+                                             map_screen.nation_data)
+                   if research.subject in map_screen.nation_data
                    else self.building_library[name])
             for name in self.modal_building_outputs}
         has_air_traits = self.unit_library.get(self.entity_name, {}).get("air_role")

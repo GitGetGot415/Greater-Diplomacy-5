@@ -105,7 +105,7 @@ def prepare_production(context, country_id, province, queue, intent, *,
                 raise ValueError("That territory is already cored.")
             if not can_reach:
                 raise ValueError("That territory must touch the coast or one of your cores.")
-            cost = queries.get_core_cost(country_id, world.map_data, world.scenario_settings)
+            cost = queries.get_core_cost(country_id, world.map_data, world.scenario_settings, world.nation_data)
             name = "Core Territory"
         else:
             if not any(core != country_id for core in province.get("cores", [])):
@@ -114,7 +114,7 @@ def prepare_production(context, country_id, province, queue, intent, *,
                 raise ValueError("Removing cores requires your units in that territory.")
             if not can_reach:
                 raise ValueError("That territory must touch the coast or one of your cores.")
-            cost = queries.get_remove_core_cost(country_id, world.map_data, world.scenario_settings)
+            cost = queries.get_remove_core_cost(country_id, world.map_data, world.scenario_settings, world.nation_data)
             name = "Remove Cores"
         group = "administration"
     elif order_type == "BUILDING":
@@ -127,7 +127,7 @@ def prepare_production(context, country_id, province, queue, intent, *,
         requirement, level = queries.get_building_required_tech(name)
         if requirement and country.get("research", {}).get(requirement, 0) < level:
             raise ValueError("Required building research is not complete.")
-        cost = queries.get_building_cost(name, country_id, world.map_data, library)
+        cost = queries.get_building_cost(name, country_id, world.map_data, library, world.nation_data)
         if not policy.charge_building_manpower:
             cost = dict(cost, cost_manpower=0)
         group = cost.get("group", "")

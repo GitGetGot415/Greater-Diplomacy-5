@@ -23,11 +23,8 @@ from ui.panels import sidebar_info
 # key deliberately includes every camera-derived input to a transform.
 _VIEWPORT_SCALE_CACHE_LIMIT = 16
 MAP_CHECKERBOARD_SCALE = 0.5
-POLITICS_DIRECTION_ARROWS = {
-    (-1, 1): "↖", (0, 1): "↑", (1, 1): "↗",
-    (-1, 0): "←",             (1, 0): "→",
-    (-1, -1): "↙", (0, -1): "↓", (1, -1): "↘",
-}
+#: Badge on the Politics button while any of the player's axes is moving.
+POLITICS_DRIFT_BADGE = "•"
 
 
 def _scaled_map_region(map_screen, source, source_rect, destination_size):
@@ -480,9 +477,9 @@ def draw_badges(map_screen, surface):
             my_faction = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
             leadership_contested = bool(
                 faction_leadership.contenders(map_screen.nation_data, my_faction))
-            direction = (politics.economic_drift(map_screen.nation_data, map_screen.player_country),
-                         politics.drift(map_screen.nation_data, map_screen.player_country))
-            politics_arrow = POLITICS_DIRECTION_ARROWS.get(direction)
+            politics_arrow = (POLITICS_DRIFT_BADGE if any(
+                politics.axis_drift(map_screen.nation_data, map_screen.player_country, axis["id"])
+                for axis in politics.AXES) else None)
             map_screen._badge_state_cache = (
                 cache_key, (unread_msgs, free_research, incoming_claims,
                             leadership_contested, politics_arrow))

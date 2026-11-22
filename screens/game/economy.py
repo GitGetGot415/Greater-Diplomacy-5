@@ -91,14 +91,14 @@ def expense_table_columns(grouped):
     ]
 
 
-def expense_table_rows(units, unit_library):
+def expense_table_rows(units, unit_library, nation_data=None):
     """Build individual and grouped presentation rows from the same unit upkeep."""
     individual = []
     grouped = {}
     for unit, prov in units:
         # Use base unit type to properly account for converted units like Convoys and Trucks.
         u_type = queries.get_base_unit_type(unit)
-        upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}))
+        upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}), nation_data, unit.get("owner"))
         unit_name = unit.get("type")
         label = queries.get_unit_display_name(unit_name, unit_library)
         individual.append({"unit": label, "location": prov["id"], **upkeep})
@@ -294,7 +294,7 @@ class Economy_Screen(Screen):
         _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
         unit_lib = queries.get_unit_library(self.map_screen)
 
-        individual_rows, grouped_rows = expense_table_rows(units, unit_lib)
+        individual_rows, grouped_rows = expense_table_rows(units, unit_lib, self.map_screen.nation_data)
 
         screen_runner._run_pygame_sub_screen(self.map_screen,
                                ExpensesTableScreen(self, individual_rows, grouped_rows))

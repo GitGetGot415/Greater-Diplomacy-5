@@ -680,7 +680,7 @@ def _place_unit_with_brush(map_screen, province):
     if map_screen.brush_unit not in unit_library:
         map_screen.show_feedback("This unit's family is disabled in the map's defaults.")
         return False
-    new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, unit_library)
+    new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, unit_library, map_screen.nation_data)
     if queries.is_air_unit(new_unit, context=map_screen) and queries.is_water_province(province):
         map_screen.show_feedback("Aircraft need a land base.")
         return False

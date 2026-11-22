@@ -84,7 +84,8 @@ def simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_s
         battle = combat_rules.build_battle(
             simulated_sides, nation_data,
             terrain=province.get("terrain") if province is not None else None,
-            grounded_sides=grounded_sides)
+            grounded_sides=grounded_sides,
+            tiles=(province,) * len(simulated_sides) if province is not None else ())
         engaged.update(battle.engaged)
         if not battle.lanes:
             live_side_indexes = [index for index, side in enumerate(simulated_sides)

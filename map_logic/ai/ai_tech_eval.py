@@ -223,7 +223,7 @@ def built_levels(provinces, building_library):
 
 
 def economy_gain(tech_key, level, prices, building_library, income, built=None, *,
-                 research=None, provinces=(), context=None, factory_multiplier=1.0):
+                 research=None, provinces=(), context=None, factory_multiplier=1.0, non_core_multiplier=None):
     """Per-turn economic value of a tech that unlocks a building or a flat bonus.
 
     Priced with the same scarcity vector as units, so a refinery is worth more
@@ -243,9 +243,11 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
         gain = 0.0
         for province in provinces:
             before = queries.get_province_building_output(province, research, building_library,
-                                                         context=context, modifiers=before_modifiers, factory_multiplier=factory_multiplier)
+                                                         context=context, modifiers=before_modifiers, factory_multiplier=factory_multiplier,
+                                                         non_core_multiplier=non_core_multiplier)
             after = queries.get_province_building_output(province, ahead, building_library,
-                                                        context=context, modifiers=after_modifiers, factory_multiplier=factory_multiplier)
+                                                        context=context, modifiers=after_modifiers, factory_multiplier=factory_multiplier,
+                                                        non_core_multiplier=non_core_multiplier)
             gain += sum(prices[res] * (after[res] - before[res]) for res in ai_unit_eval.RESOURCES)
         return max(0.0, gain)
 
@@ -300,7 +302,8 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
                 or not queries.check_tech_requirements(ahead, requirements, target_level)):
             continue
         gain = economy_gain(target, target_level, prices, building_library, income, built,
-                            research=ahead, provinces=provinces, context=context, factory_multiplier=factory_multiplier)
+                            research=ahead, provinces=provinces, context=context, factory_multiplier=factory_multiplier,
+                            non_core_multiplier=non_core_multiplier)
         # Include both research projects when comparing value per point.
         gate_cost = tree[tech_key]["cost"]
         best = max(best, gain * gate_cost / (gate_cost + tree[target]["cost"]))
@@ -332,7 +335,8 @@ def schedule_pressure(current_year, target_year):
 
 
 def rank_available(available, research, unit_library, building_library, ctx,
-                   current_names, current_year, income, built=None, *, provinces=(), research_index=None, factory_multiplier=1.0):
+                   current_names, current_year, income, built=None, *, provinces=(), research_index=None, factory_multiplier=1.0,
+                   non_core_multiplier=None):
     """Orders candidate techs best-first.
 
     `available` is (tech_key, target_year, cost, is_new). Value per point of
@@ -370,7 +374,8 @@ def rank_available(available, research, unit_library, building_library, ctx,
         # Applied across the army this nation can afford, not to one unit.
         military = gains.gain(tech_key) * max(1.0, ctx.budget)
         economic = (economy_gain(tech_key, level, ctx.prices, building_library, income, built,
-                                 research=research, provinces=provinces, context=building_library, factory_multiplier=factory_multiplier)
+                                 research=research, provinces=provinces, context=building_library, factory_multiplier=factory_multiplier,
+                                 non_core_multiplier=non_core_multiplier)
                     * buy_rate * horizon * ai_tuning.AI_TECH_ECONOMY_WEIGHT)
 
         pace = schedule_pressure(current_year, target_year)

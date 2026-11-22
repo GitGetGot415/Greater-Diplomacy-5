@@ -384,7 +384,7 @@ def player_snapshot_projection(context, snapshot, country_id):
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists", "peace_choices",
         "queued_ai_actions", "ai_notebook", "orders", "armies", "automation", "materials",
-        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool", politics.ECONOMIC_DRIFT_KEY,
+        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool", *politics.DRIFT_KEYS,
         "research_funding_slider")
     # New record fields must not bypass the established country visibility policy.
     result["factions"] = {

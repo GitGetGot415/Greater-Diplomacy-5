@@ -71,6 +71,7 @@ import data.constants as c
 
 from data import queries
 from data.runtime_rules import value
+from map_logic import politics
 
 
 #: One nation's contribution to one side of one duel. `slots` is its share of
@@ -105,7 +106,10 @@ Lane = namedtuple("Lane", "index slots a b")
 #: width      -- distinct units holding a front slot anywhere in this fight
 #: shares     -- {id(unit): fronts it is holding}, so a unit spread over two
 #:               duels fires one volley split between them rather than two
-Battle = namedtuple("Battle", "lanes engaged bystanders width shares profiles air_combat", defaults=({}, False))
+#: tiles      -- the province each of `sides` fights on, for Strategy's
+#:               territory damage. Empty when the caller names no tile.
+Battle = namedtuple("Battle", "lanes engaged bystanders width shares profiles air_combat tiles",
+                    defaults=({}, False, ()))
 
 
 def _hostile(nation_data):
@@ -547,7 +551,7 @@ def single_attacker_signature(unit):
 
 
 def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False,
-                 convert_aircraft=True, grounded_sides=None, air_mission_sides=None):
+                 convert_aircraft=True, grounded_sides=None, air_mission_sides=None, tiles=()):
     """Who duels whom, and who is in the front rank, for one fight.
 
     `sides` is a list of unit lists. One side is a tile: everyone standing here
@@ -734,7 +738,7 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
                   # fighting, not two.
                   len({id(u) for lane in lanes for side in (lane.a, lane.b)
                        for u in side.front}),
-                  shares, profiles, air_combat)
+                  shares, profiles, air_combat, tuple(tiles))
 
 
 def health_damage_multiplier(unit, nation_data=None, *, health_floor=None):
@@ -767,19 +771,29 @@ def health_defense_multiplier(unit, nation_data=None):
     return floor + (1.0 - floor) * frac
 
 
+def defense_multiplier(unit, nation_data=None):
+    """Scale unit defense by health and, with country data, the owner's Strategy."""
+    multiplier = health_defense_multiplier(unit, nation_data)
+    if nation_data:
+        multiplier *= politics.axis_effect(nation_data, unit.get("owner"), "defense")
+    return multiplier
+
+
 def damage_after_defense(unit, attack_per_target, nation_data=None, defense_bonus=0):
-    """Apply health-scaled unit defense and a flat situational defense bonus."""
-    defense = unit.get("defense", 0) * health_defense_multiplier(unit, nation_data) + defense_bonus
+    """Apply health- and Strategy-scaled unit defense and a flat situational defense bonus."""
+    defense = unit.get("defense", 0) * defense_multiplier(unit, nation_data) + defense_bonus
     return max(0, attack_per_target - defense)
 
 
-def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True, health_floor=None):
+def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True, health_floor=None, province=None):
     """Scale damage by health, politics, and conscription.
 
     Combat resolution and unit panels must use the same product.
     Health scaling alone would make displayed attack disagree with combat.
     Pass `nation_data` to apply each unit owner's politics and conscription.
     Omit it when comparing raw unit types for production or research.
+    Pass `province`, the tile the unit fights on, to add Strategy's
+    territory damage.
     Health scaling still applies without country data, unless `scale_health`
     is disabled. `health_floor` overrides the campaign's zero-health multiplier
     for tactical sub-units. Other damage restrictions still apply.
@@ -789,11 +803,18 @@ def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True, he
         return 0.0
     national = (queries.get_country_damage_multiplier(unit.get("owner"), nation_data)
                 if nation_data else 1.0)
+    if nation_data and province is not None:
+        national *= politics.territory_damage_multiplier(nation_data, unit.get("owner"), province)
     health = health_damage_multiplier(unit, nation_data, health_floor=health_floor) if scale_health else 1.0
     return health * national
 
 
-def volley(units, shares=None, nation_data=None, profiles=None):
+def battle_tile(battle, side):
+    """The province a lane side fights on, or None when the battle names no tile."""
+    return battle.tiles[side.side_index] if side.side_index < len(battle.tiles) else None
+
+
+def volley(units, shares=None, nation_data=None, profiles=None, *, province=None):
     """Attack of a front rank, with any unit fighting on two fronts counted once.
 
     `shares` is Battle.shares. Omitting it reads every unit as holding this
@@ -805,7 +826,7 @@ def volley(units, shares=None, nation_data=None, profiles=None):
     read the latter.
     """
     return sum((profiles or {}).get(id(u), u).get("attack", c.DEFAULT_UNIT_ATK) / (shares or {}).get(id(u), 1)
-               * effective_damage_multiplier((profiles or {}).get(id(u), u), nation_data)
+               * effective_damage_multiplier((profiles or {}).get(id(u), u), nation_data, province=province)
                for u in units)
 
 
@@ -829,12 +850,12 @@ def exchange(battle, nation_data=None, *, with_sources=False):
                     shots.extend(damage_shots(member.front, member.targets,
                                               battle.shares, nation_data, profiles=battle.profiles,
                                               air_to_air=battle.air_combat,
-                                              with_sources=with_sources))
+                                              with_sources=with_sources, province=battle_tile(battle, side)))
     return shots
 
 
 def damage_shots(units, targets, shares=None, nation_data=None, attack_field="attack", profiles=None,
-                 air_to_air=False, *, with_sources=False, scale_health=True, health_floor=None):
+                 air_to_air=False, *, with_sources=False, scale_health=True, health_floor=None, province=None):
     """Pool equally affected targets while preserving the shared damage divisor.
 
     Tank immunity and fighter bonuses require source/target attribution. A mixed
@@ -854,7 +875,8 @@ def damage_shots(units, targets, shares=None, nation_data=None, attack_field="at
                      (profiles or {}).get(id(unit), unit).get("attack", c.DEFAULT_UNIT_ATK))
                      / (shares or {}).get(id(unit), 1)
                      * effective_damage_multiplier((profiles or {}).get(id(unit), unit), nation_data,
-                                                   scale_health=scale_health, health_floor=health_floor) * multiplier)
+                                                   scale_health=scale_health, health_floor=health_floor,
+                                                   province=province) * multiplier)
                      for unit, multiplier in zip(units, multipliers)]
         attack = sum(contributions)
         shot = (group, attack * len(group) / len(targets))
