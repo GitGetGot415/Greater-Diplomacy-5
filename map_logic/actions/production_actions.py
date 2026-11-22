@@ -127,7 +127,7 @@ def prepare_production(context, country_id, province, queue, intent, *,
         requirement, level = queries.get_building_required_tech(name)
         if requirement and country.get("research", {}).get(requirement, 0) < level:
             raise ValueError("Required building research is not complete.")
-        cost = queries.get_building_cost(name, country_id, world.map_data, library)
+        cost = queries.get_building_cost(name, country_id, world.map_data, library, world.nation_data)
         if not policy.charge_building_manpower:
             cost = dict(cost, cost_manpower=0)
         group = cost.get("group", "")

@@ -132,7 +132,7 @@ def _air_exchange_value(context, wings, opponents, *, air_combat=False, target=N
         library = queries.get_building_library(context)
         for lost_level in range(level, max(0, level - hits), -1):
             stats = queries.get_building_cost(f"Fort Lvl {lost_level}", target.get("owner"),
-                                             world_state.map_data, library)
+                                             world_state.map_data, library, world_state.nation_data)
             value += sum(stats.get(f"cost_{resource}", 0) for resource in ai_unit_eval.RESOURCES)
     return value
 

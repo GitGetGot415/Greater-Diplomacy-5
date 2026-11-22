@@ -157,7 +157,7 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
         for q in prov.get("unit_queue", []):
             q_type = q.get("unit_type")
             if q_type:
-                q_upkeep = queries.get_unit_upkeep(unit_library.get(q_type, {}))
+                q_upkeep = queries.get_unit_upkeep(unit_library.get(q_type, {}), world_for(context).nation_data, ai_name)
                 upk_man += q_upkeep["manpower"]
                 upk_mat += q_upkeep["materials"]
                 upk_fuel += q_upkeep["fuel"]
@@ -496,7 +496,7 @@ def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library
                             authority="ai", unit_library=unit_library)
 
                         # Adjust upkeep tracking
-                        panic_upkeep = queries.get_unit_upkeep(panic_stats)
+                        panic_upkeep = queries.get_unit_upkeep(panic_stats, world_state.nation_data, ai_name)
                         state["upk_man"] += panic_upkeep["manpower"]
                         state["upk_mat"] += panic_upkeep["materials"]
                         state["upk_fuel"] += panic_upkeep["fuel"]
@@ -712,7 +712,7 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
         cost_man = stats.get("cost_manpower", 0)
         cost_fuel = stats.get("cost_fuel", 0)
 
-        upkeep = queries.get_unit_upkeep(stats)
+        upkeep = queries.get_unit_upkeep(stats, world_for(context).nation_data, ai_name)
         upk_man += upkeep["manpower"]
         upk_mat += upkeep["materials"]
         upk_fuel += upkeep["fuel"]
@@ -829,7 +829,8 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
 
         if target_bldg:
             # We have the tech and the physical foundation, now check dynamic costs
-            b_stats = queries.get_building_cost(target_bldg, ai_name, world_state.map_data, building_library)
+            b_stats = queries.get_building_cost(target_bldg, ai_name, world_state.map_data, building_library,
+                                                world_state.nation_data)
             c_mat = b_stats.get("cost_materials", 0)
             c_fuel = b_stats.get("cost_fuel", 0)
 
