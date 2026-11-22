@@ -12,6 +12,7 @@
 - also maybe like medals or something
 - level up and progress in tactical mode
 - **have years on infantry names** or at least make that an option
+- consider making core removal a policy
 
 ## Check First
 
@@ -131,7 +132,6 @@
 - add more causes for rebellions besides core removal
 - add focus trees `(im sure scenario creators would love this)`
 - add rules for devastation and recovery `(see greater diplomacy 4 for more context on this)`
-- consider making core removal a policy
 
 ## Scenarios and Maps
 
