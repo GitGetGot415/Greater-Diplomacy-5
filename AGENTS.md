@@ -36,6 +36,7 @@ AI means artificial intelligence. UI means user interface.
 
 ## Required Rules
 
+- **GD5 has no capital provinces. Do not invent or infer a capital, or make gameplay rules depend on one.**
 - **Never edit files in the documentation folder unless the user asks you to.**
   This rule takes precedence over any other instruction in this guide to update documentation.
 - Keep `map_logic/system32/` as the turn-processing package.
