@@ -131,7 +131,7 @@ POLICIES = (
         "id": "on_ne_passe_pas",
         "name": "On ne passe pas",
         "min_strategy": 2,
-        "effects": {"fort_cost": 0.85, "materials": 0.90, "defense": 1.10},
+        "effects": {"fort_cost": 0.90, "materials": 0.80, "defense": 1.10},
     },
 
     # maybe more stuff related to conscription...
