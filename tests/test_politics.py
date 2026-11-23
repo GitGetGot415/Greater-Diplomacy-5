@@ -128,21 +128,18 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertTrue(self.tab(screen, politics.MILITARY).text.endswith(DRIFT_MARKER))
         self.assertTrue(self.button(screen, politics.QUALITY, 1).is_selected)
 
-    def test_policy_eligibility_preview_keeps_current_activation_requirements(self):
-        policy = {"id": "preview_fixture", "name": "Preview Fixture", "effect_lines": (), "min_politics": 0}
+    def test_policy_activation_follows_current_position_while_drifting(self):
+        policy = {"id": "eligibility_fixture", "name": "Eligibility Fixture", "effects": {}, "min_politics": 0}
         with patch.object(politics, "POLICIES", (policy,)), patch.dict(politics.POLICIES_BY_ID, {policy["id"]: policy}):
             screen = self.screen(False)
             self.button(screen, politics.POLITICAL, 1).callback()  # Centralise from the strict boundary.
-            self.assertIsNotNone(screen._policy_rows[0][4])
             self.assertTrue(screen.elements[-1].disabled)
 
             politics.tick(screen.map_screen)
             screen.refresh_ui()
-            self.assertIsNone(screen._policy_rows[0][4])
             self.assertFalse(screen.elements[-1].disabled)
 
             self.button(screen, politics.POLITICAL, -1).callback()  # Liberalise back across the boundary.
-            self.assertIsNotNone(screen._policy_rows[0][4])
             self.assertFalse(screen.elements[-1].disabled)
 
             politics.tick(screen.map_screen)
@@ -175,7 +172,6 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         # Directions are private, so the view shows only where B is.
         self.assertEqual(screen._previews[politics.POLITICAL], 4)
         self.assertEqual(screen._previews[politics.ECONOMIC], c.POLITICS_START)
-        self.assertTrue(all(forecast is None for _definition, _state, _eligible, _requirement, forecast in screen._policy_rows))
         screen.set_drift(1)
         screen.set_drift(-1, politics.ECONOMIC)
         self.assertEqual(politics.drift(map_screen.nation_data, "B"), -1)
@@ -187,6 +183,8 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)
+        screen.policies_rect.width = 500
+        screen.refresh_ui()
         self.assertLess(screen.policy_scroll_min_x, 0)
         screen.policy_scroll_track_rect = pygame.Rect(100, 100, 500, 14)
 

@@ -1,11 +1,15 @@
 """View the four politics axes and set a country's turn-by-turn directions."""
+from dataclasses import dataclass
+
 import pygame
 import data.constants as c
 from data import queries
 from ui.background_styles import POLITICS_PANEL_STYLES
 from ui.widgets import ui_elements
+from ui.widgets.text_utils import render_inline_text, wrap_text
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
+from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.navigation.screen import Screen
 from map_logic import politics
@@ -84,16 +88,37 @@ def effect_text(effect, value):
 
 POLICY_VIEWPORT_MARGIN_X = 20
 POLICY_VIEWPORT_TOP_OFFSET_Y = 62
-POLICY_VIEWPORT_BOTTOM_OFFSET_Y = 38
-POLICY_CARD_WIDTH = 250
-POLICY_CARD_GAP = 16
+POLICY_CARD_WIDTH = 152
+POLICY_CARD_HEIGHT = 110
+POLICY_CARD_GAP = 8
+POLICY_COLUMNS = 6
+POLICY_ROWS = 2
 POLICY_SCROLL_WHEEL_STEP = 90
 POLICY_SCROLLBAR_HEIGHT = 14
-POLICY_CARD_PADDING = 12
-POLICY_TITLE_FONT = "normal"
+POLICY_SCROLLBAR_GAP = 6
+POLICY_CARD_PADDING = 6
+POLICY_TITLE_CENTER_Y = 19
+POLICY_EFFECT_FIRST_Y = 42
+POLICY_EFFECT_ROW_GAP = 16
+POLICY_EFFECT_COLUMNS = 3
+POLICY_EFFECT_ICON_SIZE = (14, 14)
+POLICY_STATUS_CENTER_Y = 74
 POLICY_BUTTON_WIDTH = POLICY_CARD_WIDTH - 2 * POLICY_CARD_PADDING
-POLICY_BUTTON_HEIGHT = c.SIZES["small"][1]
-POLICY_BUTTON_BOTTOM_GAP = 8
+POLICY_BUTTON_HEIGHT = 24
+POLICY_BUTTON_BOTTOM_GAP = 5
+POLICY_EFFECT_SYMBOLS = {
+    "research": "Research",
+    "manpower": "Infantry",
+    "materials": "Iron",
+    "fuel": "Oil",
+    "damage": "Attack",
+}
+
+
+@dataclass
+class _PolicyCard:
+    rect: pygame.Rect
+    face: pygame.Surface
 
 
 class Politics_Screen(Screen):
@@ -180,8 +205,9 @@ class Politics_Screen(Screen):
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
-        self._update_policy_scroll_bounds()
+        self._policy_cards = []
         self.scroll_content_rect = self._policy_viewport_rect()
+        self._update_policy_scroll_bounds()
 
         if not self.is_valid_player:
             return
@@ -201,18 +227,6 @@ class Politics_Screen(Screen):
         self._previews = {axis: politics.advance(position, self._drifts[axis])
                           for axis, position in self._positions.items()}
         self._compass_details = self._build_compass_details()
-        political, next_political = self._positions[politics.POLITICAL], self._previews[politics.POLITICAL]
-        self._policy_rows = []
-        for definition in politics.POLICIES:
-            policy_id = definition["id"]
-            state = politics.policy_state(nation_data, self.player, policy_id)
-            eligible = politics.requirements_met(nation_data, self.player, policy_id)
-            next_eligible = eligible
-            if next_political != political:
-                next_eligible = politics.requirements_met(nation_data, self.player, policy_id, political_value=next_political)
-            requirement, forecast = self._build_policy_requirement(policy_id, eligible, next_eligible)
-            self._policy_rows.append((definition, state, eligible, requirement, forecast))
-
         tabs_width = len(GROUP_TABS) * TAB_SIZE[0] + (len(GROUP_TABS) - 1) * TAB_GAP
         tab_x = self.politics_rect.centerx - tabs_width // 2
         for index, (group, label) in enumerate(GROUP_TABS):
@@ -240,43 +254,54 @@ class Politics_Screen(Screen):
                     button.disabled = not self.can_edit or not politics.can_shift(self._positions[axis_id], drift)
                     self.elements.append(button)
 
-            for index, (definition, state, eligible, _requirement, _forecast) in enumerate(self._policy_rows):
-                button = self._make_policy_button(index, definition, state, eligible)
+        scroll_guard = self.content_hover_guard() if self.policy_scroll_min_x < 0 else None
+        for index, definition in enumerate(politics.POLICIES):
+            policy_id = definition["id"]
+            state = politics.policy_state(nation_data, self.player, policy_id)
+            eligible = politics.requirements_met(nation_data, self.player, policy_id)
+            card = self._policy_card_rect(index)
+            self._policy_cards.append(self._build_policy_card(card, definition, state, eligible))
+            if not self.is_read_only:
+                button = self._make_policy_button(card, policy_id, state, eligible)
                 button.is_scrollable = True
-                viewport = self._policy_viewport_rect()
-                button.click_guard = lambda rect=viewport: rect.collidepoint(pygame.mouse.get_pos())
+                button.click_guard = scroll_guard
                 self.elements.append(button)
 
+    def _policy_columns(self):
+        return max(POLICY_COLUMNS, (len(politics.POLICIES) + POLICY_ROWS - 1) // POLICY_ROWS)
+
     def _policy_viewport_rect(self):
+        columns = self._policy_columns()
+        rows = max(1, (len(politics.POLICIES) + columns - 1) // columns)
         return pygame.Rect(
             self.policies_rect.x + POLICY_VIEWPORT_MARGIN_X,
             self.policies_rect.y + POLICY_VIEWPORT_TOP_OFFSET_Y,
             self.policies_rect.width - 2 * POLICY_VIEWPORT_MARGIN_X,
-            self.policies_rect.height - POLICY_VIEWPORT_TOP_OFFSET_Y - POLICY_VIEWPORT_BOTTOM_OFFSET_Y,
+            rows * POLICY_CARD_HEIGHT + (rows - 1) * POLICY_CARD_GAP,
         )
 
     def _policy_content_width(self):
-        return (len(politics.POLICIES) * POLICY_CARD_WIDTH
-                + max(0, len(politics.POLICIES) - 1) * POLICY_CARD_GAP)
+        columns = min(len(politics.POLICIES), self._policy_columns())
+        return columns * POLICY_CARD_WIDTH + max(0, columns - 1) * POLICY_CARD_GAP
 
     def _update_policy_scroll_bounds(self):
-        viewport = self._policy_viewport_rect()
-        self.policy_scroll_min_x = min(0, viewport.width - self._policy_content_width())
+        self.policy_scroll_min_x = min(0, self.scroll_content_rect.width - self._policy_content_width())
         self.policy_scroll_x = max(self.policy_scroll_min_x, min(0, self.policy_scroll_x))
 
     def _policy_card_rect(self, index):
-        viewport = self._policy_viewport_rect()
+        viewport = self.scroll_content_rect
+        row, column = divmod(index, self._policy_columns())
         return pygame.Rect(viewport.x + self.policy_scroll_x
-                           + index * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
-                           viewport.y, POLICY_CARD_WIDTH, viewport.height)
+                           + column * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
+                           viewport.y + row * (POLICY_CARD_HEIGHT + POLICY_CARD_GAP),
+                           POLICY_CARD_WIDTH, POLICY_CARD_HEIGHT)
 
-    def _make_policy_button(self, index, definition, state, eligible):
-        card = self._policy_card_rect(index)
+    def _make_policy_button(self, card, policy_id, state, eligible):
         label, color, disabled = self._policy_button_appearance(state, eligible)
         button = Button(card.x + POLICY_CARD_PADDING,
                         card.bottom - POLICY_BUTTON_HEIGHT - POLICY_BUTTON_BOTTOM_GAP,
                         (POLICY_BUTTON_WIDTH, POLICY_BUTTON_HEIGHT), color, label,
-                        lambda policy_id=definition["id"]: self.toggle_policy(policy_id))
+                        lambda: self.toggle_policy(policy_id), font_preset="small")
         button.disabled = disabled
         return button
 
@@ -315,18 +340,6 @@ class Politics_Screen(Screen):
     # ------------------------------------------------------------------ #
     #                              DRAWING                               #
     # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def _build_policy_requirement(policy_id, eligible, next_eligible):
-        changes = eligible != next_eligible
-        font = fonts.get("small")
-        requirement = font.render(politics.requirement_text(policy_id, compact=changes), True,
-                                  c.UI_TEXT_DIM if eligible else DECREASE_COLOR)
-        forecast = None
-        if changes:
-            text, color = ("Eligible next turn", c.COLOR_SUCCESS_GREEN) if next_eligible else ("Unmet next turn", DECREASE_COLOR)
-            forecast = font.render(text, True, color)
-        return requirement, forecast
 
     def _build_compass_details(self):
         details = pygame.Surface(self.politics_rect.size, pygame.SRCALPHA)
@@ -412,24 +425,21 @@ class Politics_Screen(Screen):
                                      border_width=3, gradient_strength=style["gradient_strength"])
 
     def _draw_policies(self, surface):
-        viewport = self._policy_viewport_rect()
+        viewport = self.scroll_content_rect
         with ui_bars.clip_scroll_region(surface, viewport):
-            for index, (definition, state, _eligible, requirement, forecast) in enumerate(self._policy_rows):
-                self._draw_policy_card(surface, self._policy_card_rect(index), definition, state, requirement, forecast)
+            for card in self._policy_cards:
+                surface.blit(card.face, card.rect)
 
         track, handle = ui_bars.draw_standard_scrollbar_horizontal(
-            # The policy cards themselves retain conventional direct-drag
-            # behavior, but the scrollbar is intentionally reversed: moving
-            # its handle left shifts the cards right, as requested for this
-            # horizontally arranged policy carousel.
+            # Moving the handle left shifts the cards right.
             surface, self.policy_scroll_min_x - self.policy_scroll_x,
-            self.policy_scroll_min_x, 0,
-            viewport.x, self.policies_rect.bottom - POLICY_SCROLLBAR_HEIGHT - 10,
+            self.policy_scroll_min_x, 0, viewport.x, viewport.bottom + POLICY_SCROLLBAR_GAP,
             viewport.width, POLICY_SCROLLBAR_HEIGHT)
         self.policy_scroll_track_rect = track
         self.policy_scroll_handle_rect = handle
 
-    def _draw_policy_card(self, surface, card, definition, state, requirement, forecast):
+    @staticmethod
+    def _build_policy_card(card, definition, state, eligible):
         if state and state["status"] == politics.POLICY_ACTIVE:
             border = c.COLOR_GOLD_HIGHLIGHT
         elif state:
@@ -437,41 +447,54 @@ class Politics_Screen(Screen):
         else:
             border = c.COLOR_DIM_BORDER
         style = POLITICS_PANEL_STYLES["policy_card"]
-        ui_elements.draw_pixel_panel(surface, card, style["color"], border,
+        face = pygame.Surface(card.size, pygame.SRCALPHA)
+        ui_elements.draw_pixel_panel(face, face.get_rect(), style["color"], border,
                                      gradient_strength=style["gradient_strength"])
 
-        heading = fonts.get(POLICY_TITLE_FONT).render(definition["name"], True, c.UI_TEXT_LIGHT)
-        surface.blit(heading, heading.get_rect(centerx=card.centerx,
-                                                y=card.y + POLICY_CARD_PADDING))
-        y = card.y + POLICY_CARD_PADDING + heading.get_height() + 8
-        small = fonts.get("small")
-        for line in definition["effect_lines"]:
-            effect = small.render(line, True, c.UI_TEXT_MUTED)
-            surface.blit(effect, (card.x + POLICY_CARD_PADDING, y))
-            y += effect.get_height() + 3
+        title_font = fonts.get("small")
+        title_lines = wrap_text(definition["name"], title_font, POLICY_BUTTON_WIDTH)
+        title_y = POLICY_TITLE_CENTER_Y - len(title_lines) * title_font.get_height() // 2
+        for line in title_lines:
+            heading = title_font.render(line, True, c.UI_TEXT_LIGHT)
+            face.blit(heading, heading.get_rect(midtop=(card.width // 2, title_y)))
+            title_y += title_font.get_height()
 
-        requirement_y = y + 4
-        surface.blit(requirement, (card.x + POLICY_CARD_PADDING, requirement_y))
-        if forecast is not None:
-            surface.blit(forecast, forecast.get_rect(right=card.right - POLICY_CARD_PADDING, y=requirement_y))
+        font = fonts.get("tiny")
+        cell_width = POLICY_BUTTON_WIDTH // POLICY_EFFECT_COLUMNS
+        for index, (effect, multiplier) in enumerate(definition["effects"].items()):
+            value = f"{multiplier - 1.0:+.0%}"
+            symbol = POLICY_EFFECT_SYMBOLS[effect]
+            icon = symbol_loader.get_symbol(symbol, 1, style="classic", fit_size=POLICY_EFFECT_ICON_SIZE)
+            color = c.COLOR_SUCCESS_GREEN if multiplier > 1.0 else DECREASE_COLOR
+            entry, = render_inline_text([(value, icon)], font, cell_width, color, icon_gap=2)
+            row, column = divmod(index, POLICY_EFFECT_COLUMNS)
+            x = POLICY_CARD_PADDING + column * cell_width + cell_width // 2
+            y = POLICY_EFFECT_FIRST_Y + row * POLICY_EFFECT_ROW_GAP
+            face.blit(entry, entry.get_rect(center=(x, y)))
 
-        status = self._policy_status_text(definition, state)
-        status_surf = small.render(status, True, c.COLOR_GOLD_HIGHLIGHT if state else c.UI_TEXT_MUTED)
-        surface.blit(status_surf, (card.x + POLICY_CARD_PADDING, card.bottom - 74))
+        if state:
+            status = Politics_Screen._policy_status_text(state)
+            status_color = c.COLOR_GOLD_HIGHLIGHT
+        else:
+            status = politics.requirement_text(definition["id"], compact=True)
+            status_color = c.UI_TEXT_DIM if eligible else DECREASE_COLOR
+        status_surf = font.render(status, True, status_color)
+        face.blit(status_surf, status_surf.get_rect(center=(card.width // 2, POLICY_STATUS_CENTER_Y)))
+
+        return _PolicyCard(card, face)
 
     @staticmethod
-    def _policy_status_text(definition, state):
-        if not state:
-            return "Inactive"
+    def _policy_status_text(state):
         if state["status"] == politics.POLICY_ACTIVE:
             return "Active"
         if state["status"] == politics.POLICY_CANCELLING:
-            return "Cancelling: %d turn remaining" % state.get("turns_remaining", 1)
-        return "Activating: %d turns remaining" % state.get("turns_remaining", 0)
+            return f"Cancelling · {state.get('turns_remaining', 1)}t"
+        return f"Activating · {state.get('turns_remaining', 0)}t"
 
     def additional_events(self, event):
-        viewport = self._policy_viewport_rect()
-        if event.type == pygame.MOUSEWHEEL and viewport.collidepoint(pygame.mouse.get_pos()):
+        viewport = self.scroll_content_rect
+        if (self.policy_scroll_min_x < 0 and event.type == pygame.MOUSEWHEEL
+                and viewport.collidepoint(pygame.mouse.get_pos())):
             self.policy_scroll_x = max(self.policy_scroll_min_x,
                                        min(0, self.policy_scroll_x + event.y * POLICY_SCROLL_WHEEL_STEP))
             self.refresh_ui()
@@ -479,8 +502,9 @@ class Politics_Screen(Screen):
 
         if self._handle_policy_scrollbar(event):
             return
-        self.handle_content_drag(event, attr="policy_scroll_x", limit_attr="policy_scroll_min_x",
-                                 rect_attr="scroll_content_rect", axis="x")
+        if self.policy_scroll_min_x < 0:
+            self.handle_content_drag(event, attr="policy_scroll_x", limit_attr="policy_scroll_min_x",
+                                     rect_attr="scroll_content_rect", axis="x")
 
     def _handle_policy_scrollbar(self, event):
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:

@@ -71,7 +71,7 @@ POLICY_CANCELLING = "CANCELLING"
 POLICY_ACTIVATION_TURNS = 2
 POLICY_CANCELLATION_TURNS = 1
 
-# Ordered left-to-right exactly as the Politics panel presents the cards.
+# In Politics panel display order.
 # Requirements are strict: e.g. max_politics=-2 means the country must be at
 # -3 or further left.  Effects are multiplicative and apply only when ACTIVE.
 POLICIES = (
@@ -80,34 +80,29 @@ POLICIES = (
         "name": "Research Subsidies",
         "max_politics": -2,
         "effects": {"research": 1.50, "manpower": 0.80, "materials": 0.90, "fuel": 0.90},
-        "effect_lines": ("Research +50%", "Manpower -20%", "Materials -10%", "Fuel -10%"),
     },
     {
         "id": "prioritize_civilian_needs",
         "name": "Prioritize Civilian Needs",
         "max_politics": 3,
         "effects": {"research": 1.20, "manpower": 0.90},
-        "effect_lines": ("Research +20%", "Manpower -10%"),
     },
     {
         "id": "prioritize_industrial_needs",
         "name": "Prioritize Industrial Needs",
         "effects": {"materials": 1.10, "fuel": 1.10, "research": 0.80, "manpower": 0.80},
-        "effect_lines": ("Materials +10%", "Fuel +10%", "Research -20%", "Manpower -20%"),
     },
     {
         "id": "recruitment_propaganda",
         "name": "Recruitment Propaganda",
         "min_politics": -3,
         "effects": {"research": 0.80, "manpower": 1.10},
-        "effect_lines": ("Research -20%", "Manpower +10%"),
     },
     {
         "id": "total_mobilisation",
         "name": "Total Mobilisation",
         "min_politics": 2,
         "effects": {"damage": 1.10, "research": 0.50, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
-        "effect_lines": ("Army damage +10%", "Research -50%", "Manpower -20%", "Materials -20%", "Fuel -20%"),
     },
 
     # maybe more stuff related to conscription...

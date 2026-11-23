@@ -2,6 +2,7 @@
 
 This file gives the rules for AI-assisted changes in this repository.
 AI means artificial intelligence. UI means user interface.
+**Before making any edits, read all of `AGENTS.md` and confirm to the user that you read the entire file.**
 
 ## Scope of Changes
 
