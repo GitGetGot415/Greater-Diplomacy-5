@@ -1036,7 +1036,7 @@ POLITICS_AXIS_EFFECTS = {
         "coring_turns": (10, -10),          # added to the scenario's coring turns
         "coring_cost": (1.2, 0.8),
         "remove_core_cost": (1.2, 0.8),     # removing cores keeps its scenario turns
-        "research": (2.0, 0.0),             # normal research; funded research bypasses it
+        "research": (1.5, 0.5),             # normal research; funded research bypasses it
         "reputation": (10, -10),            # added to every other country's opinion of this one
     },
     "economic": {
