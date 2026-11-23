@@ -5,7 +5,7 @@ import data.constants as c
 from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
-from map_logic.ai import ai_unit_eval, ai_world
+from map_logic.ai import ai_supply, ai_unit_eval, ai_world
 from map_logic.system32 import combat_forecast, combat_rules
 
 
@@ -1069,7 +1069,7 @@ def _available_reinforcements(context, ai_name, prov, units_info):
             and queries.can_unit_move_step(unit, here, prov, nation_data, context=context)]
 
 
-def _retreat_tile(context, ai_name, unit, prov, friendly_nations, unsafe_waters, havens):
+def _retreat_tile(context, ai_name, unit, prov, friendly_nations, unsafe_waters, havens, supply=None):
     """The best neighbouring tile for `unit` to fall back to, or None.
 
     Chosen per unit, because a ship, a convoy and a division standing on the
@@ -1103,7 +1103,7 @@ def _retreat_tile(context, ai_name, unit, prov, friendly_nations, unsafe_waters,
                     _visible_hostiles(context, ai_name, far)
                     or queries.are_at_war(ai_name, far.get("owner"), nation_data)):
                 danger += 1
-        choices.append((n_id not in havens, n_prov.get("owner") not in friendly_nations,
+        choices.append((-supply.quality(unit, n_id) if supply else 0, n_id not in havens, n_prov.get("owner") not in friendly_nations,
                         danger, n_id))
     return min(choices)[-1] if choices else None
 
@@ -1184,7 +1184,7 @@ def _attack_target_is_immediate_loss(context, ai_name, target_id, unit,
 
 
 def _track_battles_and_convoys(context, ai_name, units_info, friendly_nations, unsafe_waters,
-                               all_enemy_coasts, enemy_coastal_waters, havens=frozenset()):
+                               all_enemy_coasts, enemy_coastal_waters, havens=frozenset(), supply=None):
     """Finds active battles (and whether this nation is about to lose them, in
     which case its units fall back -- see _retreat_tile), plus which convoys are
     in combat or near danger so the escort-priority weighting can protect them."""
@@ -1206,7 +1206,7 @@ def _track_battles_and_convoys(context, ai_name, units_info, friendly_nations, u
                 # with nowhere to run, the units fight it out as a battle.
                 if _tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements) and any(
                         _retreat_tile(context, ai_name, mine, prov, friendly_nations,
-                                      unsafe_waters, havens) is not None
+                                      unsafe_waters, havens, supply) is not None
                         for mine, here in units_info if here is prov):
                     lost_battles.add(p_id)
                 else:
@@ -1476,6 +1476,8 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     naval_stacks = ctx["naval_stacks"]
     target_capacity = ctx["target_capacity"]
     havens = ctx.get("repair_havens", set())
+    supply = ctx.get("supply")
+    relief = ctx.get("relief_targets", set())
     # Where a wounded unit must not be routed: anywhere the fighting is.
     combat_destinations = (set(active_battles) | set(ctx.get("enemy_targets", ()))
                            | set(ctx.get("expedition_targets", ()))
@@ -1505,8 +1507,34 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     def retreat(unit, prov):
         """Falls back one step to the unit's own best tile. True if ordered."""
         tile = _retreat_tile(context, ai_name, unit, prov, friendly_nations,
-                             unsafe_waters, havens)
-        return tile is not None and _order_move(context, ai_name, prov, unit, [tile])
+                             unsafe_waters, havens, supply)
+        if tile is None or not assign(unit, prov, [tile]):
+            return False
+        if tile not in water_ids:
+            claim(tile, from_tile=prov["id"])
+        return True
+
+    def assign(unit, prov, path):
+        if not _order_move(context, ai_name, prov, unit, path):
+            return False
+        if supply:
+            supply.book(unit, path)
+        return True
+
+    def restore_supply(unit, prov, signature, wounded):
+        current = supply.current(unit)
+        candidates = [(tile, supply.quality(unit, tile)) for tile in prov.get("neighbors", ())
+                      if tile in world_state.id_to_province and tile not in water_ids]
+        candidates = [(tile, quality) for tile, quality in candidates
+                      if quality > current or (not wounded and tile in relief)]
+        for tile, _ in sorted(candidates, key=lambda choice: (-choice[1], choice[0] not in havens, pressure(choice[0]), choice[0])):
+            visible_enemy = supply.known.occupants.get(tile, set()) & supply.enemies
+            if visible_enemy and _attack_target_is_immediate_loss(context, ai_name, tile, unit, survival_cache, signature):
+                continue
+            if assign(unit, prov, [tile]):
+                claim(tile, from_tile=prov["id"])
+                return True
+        return False
 
     for unit, prov in units_info:
         if not any(current is unit for current in prov.get("units", [])):
@@ -1526,6 +1554,13 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             continue
 
         in_combat = queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data)
+
+        if supply and not in_combat and not (is_convoy or is_naval_combatant):
+            if curr_id in supply.critical and target_stacks.get(curr_id, 0) <= 1:
+                _try_bombard(context, ai_name, unit, prov)
+                continue
+            if restore_supply(unit, prov, attacker_signature, wounded):
+                continue
 
         if in_combat:
             # A convoy is a land unit mid-crossing with no business in a sea
@@ -1574,14 +1609,17 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             adjacent_unclaimed = [n for n in adjacent_unclaimed if queries.can_convoy_enter(prov, world_state.id_to_province.get(n)) and n not in unsafe_waters]
 
         if adjacent_unclaimed and not is_naval_combatant:
-            best_adj = min(adjacent_unclaimed, key=pressure)
+            best_adj = min(adjacent_unclaimed, key=lambda tile: (
+                -supply.quality(unit, tile) if supply and not is_convoy else 0, pressure(tile)))
 
             # Let fast units pathfind deeper into unclaimed territory!
             path = [best_adj] + _extend_fast_unit_path(
                 context, unit, best_adj, curr_id, is_convoy, unsafe_waters, pressure,
                 lambda owner: owner in c.UNOWNED_LAND_OWNERS)
 
-            if _order_move(context, ai_name, prov, unit, path):
+            if supply and not is_convoy:
+                path = supply.advance(unit, path)
+            if assign(unit, prov, path):
                 claim(path[-1], from_tile=curr_id)
                 continue
 
@@ -1602,10 +1640,12 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                     if not _attack_target_is_immediate_loss(
                         context, ai_name, target_id, unit,
                         survival_cache, attacker_signature)
+                    and (supply is None or supply.improves_reinforcement(unit, world_state.id_to_province[target_id]))
                 ]
             if adjacent_targets:
                 # Pick the adjacent enemy with the least attackers currently assigned
-                best_adj = min(adjacent_targets, key=pressure)
+                best_adj = min(adjacent_targets, key=lambda tile: (
+                    -supply.quality(unit, tile) if supply and not is_convoy else 0, pressure(tile)))
 
                 # Let fast units pathfind deeper from the border!
                 path = [best_adj] + _extend_fast_unit_path(
@@ -1613,7 +1653,9 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                     lambda owner: (queries.is_hostile_territory(ai_name, owner, world_state.nation_data)
                                    or owner in c.UNOWNED_LAND_OWNERS))
 
-                if _order_move(context, ai_name, prov, unit, path):
+                if supply and not is_convoy:
+                    path = supply.advance(unit, path)
+                if assign(unit, prov, path):
                     claim(path[-1], from_tile=curr_id)
                     continue
 
@@ -1641,6 +1683,8 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             if not _attack_target_is_immediate_loss(
                 context, ai_name, target_id, unit,
                 survival_cache, attacker_signature)
+            and (supply is None or target_id not in land_battles
+                 or supply.improves_reinforcement(unit, world_state.id_to_province[target_id]))
         ]
 
         if not targets:
@@ -1693,7 +1737,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                         break
                     final_path.append(step_id)
 
-                if not _order_move(context, ai_name, prov, unit, final_path):
+                if not assign(unit, prov, final_path):
                     continue
 
             # Tell the system this unit is taking this target, reducing its
@@ -1860,6 +1904,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     active_battles = ctx["active_battles"]
     target_assignments = ctx["target_assignments"]
     havens = ctx["repair_havens"]
+    supply = ctx.get("supply")
     march_targets = _march_havens(havens, ctx)
     port_targets = _port_havens(context, ai_name, march_targets)
     leavers = _wounded_who_can_leave(context, ai_name, units_info)
@@ -1885,6 +1930,13 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         """
         if not targets:
             return None
+        if supply and not is_ship:
+            best_supply = max(supply.quality(unit, tile) for tile in targets)
+            best_targets = {tile for tile in targets if supply.quality(unit, tile) == best_supply}
+            if best_targets != targets:
+                best_path = route(unit, curr_id, best_targets, is_ship)
+                if best_path:
+                    return best_path
         path = _bfs_nearest_target(
             curr_id, set(targets), trip_tiles, world_state.id_to_province,
             target_assignments, is_ship=is_ship,
@@ -1926,6 +1978,8 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
             else:
                 path = route(unit, curr_id, {trip}, is_naval_combatant)
                 if path and _order_move(context, ai_name, prov, unit, path[:speed]):
+                    if supply:
+                        supply.book(unit, path[:speed])
                     continue
                 # The way home is cut. Fight where it stands.
                 unit.pop("repair_trip", None)
@@ -1935,8 +1989,10 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
             # Out of the fight first, then home from the retreat tile.
             if id(unit) in leavers and trips < trip_cap:
                 tile = _retreat_tile(context, ai_name, unit, prov, ctx["friendly_nations"],
-                                     ctx["unsafe_waters"], havens)
+                                     ctx["unsafe_waters"], havens, supply)
                 if tile is not None and _order_move(context, ai_name, prov, unit, [tile]):
+                    if supply:
+                        supply.book(unit, [tile])
                     home = route(unit, tile, trip_targets, is_naval_combatant)
                     if home or tile in havens:
                         unit["repair_trip"] = tile if tile in havens else home[-1]
@@ -1959,6 +2015,8 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
                 and _may_leave_the_line(context, ai_name, unit, prov, ctx)):
             path = route(unit, curr_id, trip_targets, is_naval_combatant)
             if path and _order_move(context, ai_name, prov, unit, path[:speed]):
+                if supply:
+                    supply.book(unit, path[:speed])
                 unit["repair_trip"] = path[-1]
                 trips += 1
                 continue
@@ -2114,6 +2172,7 @@ def _generate_unit_orders(context, *, countries=None):
     allowed_prov_ids_cache, water_ids, neighbor_ids = _build_shared_pathing_caches(context)
 
     nation_units, nation_provs = _reset_orders_and_collect_units(context, ai_nations)
+    actual_supply = queries.SupplySnapshot(context)
 
     # Every tile somebody is fighting over this turn, pooled across nations so
     # the anti-swap pass at the end can leave relief traffic alone.
@@ -2135,66 +2194,83 @@ def _generate_unit_orders(context, *, countries=None):
 
         my_provs = nation_provs[ai_name]
 
-        # Combine land and water IDs so BFS can route overseas
-        # Include ALL legally passable tiles so the AI isn't blind!
-        allowed_prov_ids = set(allowed_prov_ids_cache)
-        allowed_prov_ids.update(world.land_entry_ids(ai_name))
+        known_supply = queries.SupplySnapshot(context, visible_to=ai_name, visible_provinces=world.visible_provinces(ai_name), source=actual_supply)
+        supply = ai_supply.SupplyPlanner(actual_supply, known_supply, ai_name)
+        with queries.combat_supply(supply):
+            # Combine land and water IDs so BFS can route overseas
+            # Include ALL legally passable tiles so the AI isn't blind!
+            allowed_prov_ids = set(allowed_prov_ids_cache)
+            allowed_prov_ids.update(world.land_entry_ids(ai_name))
 
-        enemies = _gather_enemies(context, ai_name)
+            enemies = _gather_enemies(context, ai_name)
 
-        # --- NEW: IDENTIFY UNSAFE WATERS FOR NAVAL SURVIVAL ---
-        unsafe_waters = _compute_unsafe_waters(context, ai_name)
+            # --- NEW: IDENTIFY UNSAFE WATERS FOR NAVAL SURVIVAL ---
+            unsafe_waters = _compute_unsafe_waters(context, ai_name)
 
-        # --- Identify Friendly Nations for Expedition Logic ---
-        friendly_nations = queries.get_all_friendly_nations(ai_name, world_state.nation_data)
+            # --- Identify Friendly Nations for Expedition Logic ---
+            friendly_nations = queries.get_all_friendly_nations(ai_name, world_state.nation_data)
 
-        borders = _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_nations)
+            borders = _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_nations)
 
-        at_war = len(enemies) > 0 and (len(borders["enemy_targets"]) > 0 or len(borders["all_enemy_coasts"]) > 0 or len(borders["expedition_targets"]) > 0)
+            at_war = len(enemies) > 0 and (len(borders["enemy_targets"]) > 0 or len(borders["all_enemy_coasts"]) > 0 or len(borders["expedition_targets"]) > 0)
 
-        # Factory tiles this nation could repair on. Retreats prefer them, so
-        # they are known before the battles are read.
-        havens = _repair_havens(context, ai_name, my_provs)
+            # Factory tiles this nation could repair on. Retreats prefer them, so
+            # they are known before the battles are read.
+            havens = _repair_havens(context, ai_name, my_provs)
 
-        # --- FIND ACTIVE BATTLES, RETREATS & CONVOY STATUS ---
-        battles = _track_battles_and_convoys(context, ai_name, units_info, friendly_nations,
-                                             unsafe_waters, borders["all_enemy_coasts"],
-                                             borders["enemy_coastal_waters"], havens)
+            # --- FIND ACTIVE BATTLES, RETREATS & CONVOY STATUS ---
+            battles = _track_battles_and_convoys(context, ai_name, units_info, friendly_nations,
+                                                 unsafe_waters, borders["all_enemy_coasts"],
+                                                 borders["enemy_coastal_waters"], havens, supply)
 
-        # What each destination's fight can actually seat for us, asked of the
-        # combat rules rather than restated here. A tile splitting three ways
-        # gives us fewer slots than one where we face a single enemy.
-        capacity = {
-            t_id: combat_rules.nation_front_capacity(
-                ai_name, world_state.id_to_province[t_id], world_state.nation_data)
-            for t_id in battles["active_battles"]
-            if t_id in world_state.id_to_province
-        }
+            # What each destination's fight can actually seat for us, asked of the
+            # combat rules rather than restated here. A tile splitting three ways
+            # gives us fewer slots than one where we face a single enemy.
+            capacity = {
+                t_id: combat_rules.nation_front_capacity(
+                    ai_name, world_state.id_to_province[t_id], world_state.nation_data)
+                for t_id in battles["active_battles"]
+                if t_id in world_state.id_to_province
+            }
 
-        assignments = _build_target_assignments(units_info, borders, battles, at_war, capacity, water_ids=water_ids, context=context)
+            assignments = _build_target_assignments(units_info, borders, battles, at_war, capacity, water_ids=water_ids, context=context)
 
-        ctx = {
-            "unsafe_waters": unsafe_waters,
-            "friendly_nations": friendly_nations,
-            "at_war": at_war,
-            **borders,
-            **battles,
-            **assignments,
-        }
-        ctx["repair_havens"] = havens
+            relief = supply.relief_targets(borders["enemy_targets"] | borders["unclaimed_targets"])
+            for tile in supply.critical | relief:
+                if tile not in assignments["target_destinations"]:
+                    assignments["target_destinations"].append(tile)
+                counts = assignments["target_assignments"]
+                stacks = assignments["target_stacks"]
+                stacks.setdefault(tile, sum(1 for unit, province in units_info if province["id"] == tile))
+                counts.setdefault(tile, stacks[tile])
+                if not stacks[tile]:
+                    counts[tile] -= ai_tuning.AI_REINFORCE_COMBAT_WEIGHT
 
-        _assign_maintenance_orders(context, ai_name, units_info, ctx,
-                                   allowed_prov_ids, water_ids, neighbor_ids)
+            ctx = {
+                "supply": supply,
+                "relief_targets": relief,
+                "unsafe_waters": unsafe_waters,
+                "friendly_nations": friendly_nations,
+                "at_war": at_war,
+                **borders,
+                **battles,
+                **assignments,
+            }
+            ctx["repair_havens"] = havens
 
-        # Even without an offensive destination, units in a lost battle can retreat.
-        if not (assignments["target_destinations"] or assignments["naval_destinations"] or battles["lost_battles"]):
-            continue
+            _assign_maintenance_orders(context, ai_name, units_info, ctx,
+                                       allowed_prov_ids, water_ids, neighbor_ids)
 
-        _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
-        _rotate_damaged_units(context, ai_name, battles["active_battles"])
+            # Units can need to retreat or restore supply without an offensive target.
+            if not (assignments["target_destinations"] or assignments["naval_destinations"] or battles["lost_battles"]
+                    or ai_name in known_supply.land_units):
+                continue
 
-        contested |= set(battles["active_battles"])
-        contested |= set(battles["lost_battles"])
+            _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
+            _rotate_damaged_units(context, ai_name, battles["active_battles"])
+
+            contested |= set(battles["active_battles"])
+            contested |= set(battles["lost_battles"])
 
     # --- Anti-Swap Cleanup ---
     _cancel_opposing_transitions(ai_nations, nation_units, contested)

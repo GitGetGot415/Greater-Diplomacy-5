@@ -80,6 +80,7 @@ HIDDEN_IMPORTS = (
     "map_logic.system32.unit_events",
     "map_logic.system32.air_processor",
     "data.queries.supply",
+    "map_logic.ai.ai_supply",
     "data.migrations",
     "data.migrations.validation",
     "data.migrations.released_content",
