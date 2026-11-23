@@ -12,6 +12,7 @@ import data.constants as c
 from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
 from tests.research_fixtures import research_lock_cases
 from tests.migration_fixtures import malformed_records
+from tests.politics_fixtures import policy_fixtures
 from tests.tournament_fixtures import fast_tournament_crypto
 from data import queries
 from data.runtime_rules import RuntimeRules
@@ -1002,8 +1003,9 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.nation_data["Subject"].get("siphon_rates"), rates if allowed else None)
                 self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
 
+    @policy_fixtures({"id": "strategy_fixture", "min_strategy": 2, "effects": {}})
     def test_policy_activation_uses_host_timing_and_rejects_submitted_countdowns(self):
-        policy_id = "on_ne_passe_pas"
+        policy_id = "strategy_fixture"
         for inject_countdown in (False, True):
             with self.subTest(inject_countdown=inject_countdown), tempfile.TemporaryDirectory() as directory:
                 host = Host()

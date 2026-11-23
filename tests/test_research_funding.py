@@ -15,6 +15,7 @@ from map_logic import politics
 from map_logic.ai import ai_research
 from map_logic.system32 import turn_processor
 from map_logic.system32.time_handler import TimeHandler
+from tests.politics_fixtures import policy_fixtures
 from tests.stub_map_screen import map_double
 
 
@@ -100,12 +101,13 @@ class ResearchFundingTests(unittest.TestCase):
         queued = queries.calculate_all_economies(game.map_data, game.nation_data, context=game)["A"]
         self.assertEqual(queued["breakdown"], funded["breakdown"])
 
+    @policy_fixtures({"id": "research_fixture", "effects": {"research": 0.75}})
     def test_funding_preview_and_resolution_agree_after_upkeep_and_modifiers(self):
         tree = {"first": {"years": [1922]}, "second": {"years": [1920]}}
         for political_value in (c.POLITICS_MIN, c.POLITICS_MAX):
             with self.subTest(political_value=political_value):
-                policy_id = "prioritize_industrial_needs"
-                country = {"materials": 8, "research_funding_slider": 0.1, "political_value": political_value, "economic_value": -3,
+                policy_id = "research_fixture"
+                country = {"materials": 8, "research_funding_slider": 0.1, "political_value": political_value,
                            "research": {}, "research_queue": [project(tech, 1_000) for tech in tree],
                            politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_ACTIVE}}}
                 game = BackendState()

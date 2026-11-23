@@ -18,6 +18,7 @@ from screens.game.economy import Economy_Screen
 from tests.stub_map_screen import StubMapScreen as EconomyMap
 from tests.stub_map_screen import sample_map_screen
 from tests.combat_fixtures import StubBattleMap
+from tests.politics_fixtures import policy_fixtures
 from ui.panels.sidebar_info import unit_roster_row
 from ui.widgets.ui_elements import Slider
 
@@ -128,11 +129,12 @@ class ConscriptionCombatTests(unittest.TestCase):
                 self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
                 self.assertAlmostEqual(attacker["max_health"] - attacker["health"], defender["attack"])
 
+    @policy_fixtures({"id": "damage_fixture", "effects": {"damage": 1.25}})
     def test_bonus_multiplies_health_politics_and_policy_without_changing_raw_stats(self):
         game = self.game()
         country = game.nation_data["A"]
         country.update({"political_value": c.POLITICS_MAX, politics.QUALITY_VALUE_KEY: c.POLITICS_MAX,
-                        politics.POLICY_KEY: {"total_mobilisation": {"status": politics.POLICY_ACTIVE}}})
+                        politics.POLICY_KEY: {"damage_fixture": {"status": politics.POLICY_ACTIVE}}})
         attacker = fixture_unit("A")
         attacker["health"] /= 2
         original_attack = attacker["attack"]

@@ -24,6 +24,7 @@ from scripts.data import write_released_content
 from tests import add_test_cases
 from data.migrations import released_content
 from tests.migration_fixtures import malformed_records
+from tests.politics_fixtures import policy_fixtures
 
 ROOT = Path(__file__).resolve().parents[1]
 #: A stamp from an older release. Conversion does not depend on it.
@@ -153,12 +154,13 @@ class OlderFormatTests(unittest.TestCase):
         migrations.upgrade_save(reloaded, {})
         self.assertEqual(reloaded, saved)
 
+    @policy_fixtures({"id": "land_health_fixture", "effects": {"land_max_health": 0.5}})
     def test_quality_conversion_keeps_legacy_health_rounding(self):
         profession_health, numerous_health = 1.2, 0.8
         health = 250
         unit_library = {"Ground": {"health": health}}
         effects = c.POLITICS_AXIS_EFFECTS[politics.QUALITY]
-        policy_id = "bewegungskrieg"
+        policy_id = "land_health_fixture"
         land_health = politics.policy(policy_id)["effects"]["land_max_health"]
         with mock.patch.dict(effects, {"max_health": (numerous_health, profession_health)}):
             for old_quality in (0, 1):

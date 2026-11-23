@@ -35,6 +35,7 @@ from data.state_access import BackendState
 
 from tests.stub_map_screen import map_double
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
+from tests.politics_fixtures import policy_fixtures
 
 
 class StubTurnScreen:
@@ -134,7 +135,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
     def test_policy_activation_follows_current_position_while_drifting(self):
         policy = {"id": "eligibility_fixture", "name": "Eligibility Fixture", "effects": {}, "min_politics": 0}
-        with patch.object(politics, "POLICIES", (policy,)), patch.dict(politics.POLICIES_BY_ID, {policy["id"]: policy}):
+        with policy_fixtures(policy):
             screen = self.screen(False)
             self.button(screen, politics.POLITICAL, 1).callback()  # Centralise from the strict boundary.
             self.assertTrue(screen.elements[-1].disabled)
@@ -185,10 +186,12 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertEqual(screen.group, politics.MILITARY)
         self.assertEqual(self.drift_buttons(screen), [])
 
+    @policy_fixtures({"id": "civilian_fixture", "max_politics": 1, "effects": {"research": 1.25}},
+                     {"id": "military_fixture", "min_strategy": 0, "effects": {}})
     def test_tabs_show_only_their_policies_while_active_policies_keep_applying(self):
         screen = self.screen(False)
         nation_data = screen.map_screen.nation_data
-        active_id = "prioritize_civilian_needs"
+        active_id = "civilian_fixture"
         self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", active_id))
         for _ in range(politics.POLICY_ACTIVATION_TURNS):
             politics.tick(screen.map_screen)
@@ -196,20 +199,17 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
         with patch.object(screen, "_build_policy_card", wraps=screen._build_policy_card) as build_card:
             screen.refresh_ui()
-            self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], [
-                "research_subsidies", active_id, "prioritize_industrial_needs",
-                "recruitment_propaganda", "total_mobilisation",
-            ])
+            self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], [active_id])
             build_card.reset_mock()
 
             self.tab(screen, politics.MILITARY).callback()
 
-            self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], [
-                "siphon_military_funding", "quality_fuel", "on_ne_passe_pas", "endurance", "bewegungskrieg",
-            ])
+            self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], ["military_fixture"])
             self.assertEqual(politics.policy_state(nation_data, "A", active_id)["status"], politics.POLICY_ACTIVE)
             self.assertEqual(politics.research_multiplier(nation_data, "A"), research_before)
 
+    @policy_fixtures(*({"id": f"scroll_{requirement}_{index}", requirement: 0, "effects": {}}
+                      for requirement in ("min_politics", "min_strategy") for index in range(5)))
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)
         screen.policies_rect.width = 620
@@ -360,7 +360,7 @@ def axis_damage_multiplier(value):
 
 
 def policy_effect(policy_id, effect):
-    """Read a policy effect from the production definition, never a test literal."""
+    """Read a multiplier from the policy fixture."""
     return politics.policy(policy_id).get("effects", {}).get(effect, 1.0)
 
 
@@ -396,7 +396,6 @@ class MultiplierTests(unittest.TestCase):
                                    politics.QUALITY_VALUE_KEY: c.POLITICS_MAX}}
                 self.assertAlmostEqual(politics.damage_multiplier(quality, "A"), politics.effect_at("damage", value))
                 self.assertAlmostEqual(politics.research_multiplier(political, "A"), politics.effect_at("research", value))
-        self.assertEqual(politics.effect_at("research", c.POLITICS_MAX), 0.0)
 
     def test_a_nation_nobody_has_touched_is_centrist(self):
         """An old save has none of these keys, and must play exactly as before."""
@@ -534,6 +533,20 @@ class DriftTests(unittest.TestCase):
 # ============================================================================ #
 
 class PolicyTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(policy_fixtures(
+            {"id": "subsidy_fixture", "max_politics": -2, "effects": {"research": 1.4, "manpower": 0.8, "materials": 0.9, "fuel": 0.85}},
+            {"id": "civilian_fixture", "max_politics": 3, "effects": {"research": 1.2, "manpower": 0.9}},
+            {"id": "industry_fixture", "max_economics": -2, "effects": {"research": 0.75, "materials": 1.15, "manpower": 0.8}},
+            {"id": "recruitment_fixture", "min_politics": -3, "effects": {}},
+            {"id": "damage_fixture", "min_politics": 2, "effects": {"damage": 1.15}},
+            {"id": "quality_min_fixture", "min_quality": -3, "effects": {}},
+            {"id": "fuel_fixture", "max_quality": 3, "effects": {"fuel": 0.8}},
+            {"id": "fort_fixture", "min_strategy": 2, "effects": {"fort_cost": 0.8, "materials": 0.7, "defense": 1.15}},
+            {"id": "health_fixture", "min_strategy": 2, "effects": {"max_health": 1.3, "damage": 0.85}},
+            {"id": "land_stats_fixture", "min_quality": -2, "effects": {"land_speed": 1, "land_max_health": 0.6}},
+        ))
+
     def screen_at(self, political_value=0, economic_value=0):
         return StubTurnScreen({"A": {"political_value": political_value, "economic_value": economic_value}})
 
@@ -543,10 +556,10 @@ class PolicyTests(unittest.TestCase):
             politics.tick(screen)
 
     def test_policy_requirements_are_strict(self):
-        for policy_id, bound, eligible in (("research_subsidies", -2, -3),
-                                            ("prioritize_civilian_needs", 3, 2),
-                                            ("recruitment_propaganda", -3, -2),
-                                            ("total_mobilisation", 2, 3)):
+        for policy_id, bound, eligible in (("subsidy_fixture", -2, -3),
+                                            ("civilian_fixture", 3, 2),
+                                            ("recruitment_fixture", -3, -2),
+                                            ("damage_fixture", 2, 3)):
             for economic in (c.POLITICS_MIN, c.POLITICS_MAX):
                 with self.subTest(policy=policy_id, economic=economic):
                     screen = self.screen_at(political_value=bound, economic_value=economic)
@@ -555,7 +568,7 @@ class PolicyTests(unittest.TestCase):
                     self.assertTrue(politics.requirements_met(screen.nation_data, "A", policy_id))
 
     def test_losing_a_requirement_cancels_before_the_turn_uses_the_effect(self):
-        policy_id = "research_subsidies"
+        policy_id = "subsidy_fixture"
         screen = self.screen_at(political_value=-3, economic_value=c.POLITICS_MAX)
         self.activate_and_finish(screen, policy_id)
         politics.set_drift(screen.nation_data, "A", 1)
@@ -568,12 +581,12 @@ class PolicyTests(unittest.TestCase):
 
     def test_nonpolitical_policy_thresholds_are_strict(self):
         for policy_id, axis, bound, eligible_side in (
-            ("prioritize_industrial_needs", politics.ECONOMIC, -2, -1),
-            ("siphon_military_funding", politics.QUALITY, -3, 1),
-            ("quality_fuel", politics.QUALITY, 3, -1),
-            ("on_ne_passe_pas", politics.STRATEGY, 2, 1),
-            ("endurance", politics.STRATEGY, 2, 1),
-            ("bewegungskrieg", politics.QUALITY, -2, 1),
+            ("industry_fixture", politics.ECONOMIC, -2, -1),
+            ("quality_min_fixture", politics.QUALITY, -3, 1),
+            ("fuel_fixture", politics.QUALITY, 3, -1),
+            ("fort_fixture", politics.STRATEGY, 2, 1),
+            ("health_fixture", politics.STRATEGY, 2, 1),
+            ("land_stats_fixture", politics.QUALITY, -2, 1),
         ):
             with self.subTest(policy=policy_id):
                 screen = self.screen_at()
@@ -594,23 +607,23 @@ class PolicyTests(unittest.TestCase):
 
     def test_cancel_can_be_undone_before_the_next_processed_turn(self):
         screen = self.screen_at(0, -3)
-        self.activate_and_finish(screen, "prioritize_industrial_needs")
+        self.activate_and_finish(screen, "industry_fixture")
         self.assertTrue(politics.activate_or_cancel_policy(
-            screen.nation_data, "A", "prioritize_industrial_needs"))
+            screen.nation_data, "A", "industry_fixture"))
         self.assertEqual(politics.policy_state(screen.nation_data, "A")["status"],
                          politics.POLICY_CANCELLING)
 
         self.assertTrue(politics.activate_or_cancel_policy(
-            screen.nation_data, "A", "prioritize_industrial_needs"))
+            screen.nation_data, "A", "industry_fixture"))
         self.assertEqual(politics.policy_state(screen.nation_data, "A")["status"],
                          politics.POLICY_ACTIVE)
         self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "materials"),
-                               policy_effect("prioritize_industrial_needs", "materials"))
+                               policy_effect("industry_fixture", "materials"))
 
     def test_cancellation_finishes_on_the_next_processed_turn(self):
         screen = self.screen_at(0, -3)
-        self.activate_and_finish(screen, "prioritize_industrial_needs")
-        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+        self.activate_and_finish(screen, "industry_fixture")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "industry_fixture")
 
         politics.tick(screen)
 
@@ -618,33 +631,33 @@ class PolicyTests(unittest.TestCase):
 
     def test_unprocessed_activation_cancels_immediately(self):
         screen = self.screen_at(0, -3)
-        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "industry_fixture")
 
-        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "industry_fixture")
 
         self.assertIsNone(politics.policy_state(
-            screen.nation_data, "A", "prioritize_industrial_needs"))
+            screen.nation_data, "A", "industry_fixture"))
         self.assertNotIn(politics.POLICY_KEY, screen.nation_data["A"])
 
     def test_each_eligible_policy_has_its_own_activation_and_effect(self):
         screen = self.screen_at(economic_value=-3)
-        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_civilian_needs")
-        politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "civilian_fixture")
+        politics.activate_or_cancel_policy(screen.nation_data, "A", "industry_fixture")
 
         for _ in range(politics.POLICY_ACTIVATION_TURNS):
             politics.tick(screen)
 
-        self.assertEqual(politics.policy_state(screen.nation_data, "A", "prioritize_civilian_needs")["status"],
+        self.assertEqual(politics.policy_state(screen.nation_data, "A", "civilian_fixture")["status"],
                          politics.POLICY_ACTIVE)
-        self.assertEqual(politics.policy_state(screen.nation_data, "A", "prioritize_industrial_needs")["status"],
+        self.assertEqual(politics.policy_state(screen.nation_data, "A", "industry_fixture")["status"],
                          politics.POLICY_ACTIVE)
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
                                politics.effect_at("research", politics.value(screen.nation_data, "A"))
-                               * policy_effect("prioritize_civilian_needs", "research")
-                               * policy_effect("prioritize_industrial_needs", "research"))
+                               * policy_effect("civilian_fixture", "research")
+                               * policy_effect("industry_fixture", "research"))
         self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"),
-                               policy_effect("prioritize_civilian_needs", "manpower")
-                               * policy_effect("prioritize_industrial_needs", "manpower"))
+                               policy_effect("civilian_fixture", "manpower")
+                               * policy_effect("industry_fixture", "manpower"))
 
     def test_unit_stat_policies_stack_and_rescale_wounded_units(self):
         screen = self.screen_at()
@@ -657,7 +670,7 @@ class PolicyTests(unittest.TestCase):
         for member in units.values():
             member["health"] *= 0.4
         screen.map_data = {1: {"units": list(units.values())}}
-        for policy_id in ("endurance", "bewegungskrieg"):
+        for policy_id in ("health_fixture", "land_stats_fixture"):
             self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", policy_id))
         for _ in range(politics.POLICY_ACTIVATION_TURNS - 1):
             self.assertEqual(politics.tick(screen), set())
@@ -667,25 +680,25 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(owners, {"A"})
         queries.refresh_unit_stats(screen.map_data, nation_data, library, owners=owners)
 
-        endurance = policy_effect("endurance", "max_health")
+        health_multiplier = policy_effect("health_fixture", "max_health")
         for name, member in units.items():
             is_land = name == "Ground"
-            multiplier = endurance * (policy_effect("bewegungskrieg", "land_max_health") if is_land else 1)
-            speed_bonus = policy_effect("bewegungskrieg", "land_speed") if is_land else 0
+            multiplier = health_multiplier * (policy_effect("land_stats_fixture", "land_max_health") if is_land else 1)
+            speed_bonus = policy_effect("land_stats_fixture", "land_speed") if is_land else 0
             self.assertEqual(member["max_health"], round(original_health * multiplier))
             self.assertAlmostEqual(member["health"] / member["max_health"], 0.4)
             self.assertEqual(member["speed"], base["speed"] + speed_bonus)
             new_unit = queries.create_unit_dict(name, "A", library, nation_data)
             self.assertEqual((new_unit["max_health"], new_unit["speed"]), (member["max_health"], member["speed"]))
         self.assertAlmostEqual(politics.damage_multiplier(nation_data, "A"),
-                               politics.axis_effect(nation_data, "A", "damage") * policy_effect("endurance", "damage"))
+                               politics.axis_effect(nation_data, "A", "damage") * policy_effect("health_fixture", "damage"))
 
-        self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", "bewegungskrieg"))
+        self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", "land_stats_fixture"))
         owners = politics.tick(screen)
         self.assertEqual(owners, {"A"})
         queries.refresh_unit_stats(screen.map_data, nation_data, library, owners=owners)
         self.assertEqual(units["Ground"]["speed"], base["speed"])
-        self.assertEqual(units["Ground"]["max_health"], round(original_health * endurance))
+        self.assertEqual(units["Ground"]["max_health"], round(original_health * health_multiplier))
         self.assertAlmostEqual(units["Ground"]["health"] / units["Ground"]["max_health"], 0.4)
 
     def test_transport_uses_its_current_domain_and_restores_updated_land_stats(self):
@@ -697,7 +710,7 @@ class PolicyTests(unittest.TestCase):
         with patch.object(queries, "get_unit_library", return_value=library):
             queries.load_transport(member, "Convoy", context=screen)
             convoy_speed, convoy_health = member["speed"], member["max_health"]
-            self.activate_and_finish(screen, "bewegungskrieg")
+            self.activate_and_finish(screen, "land_stats_fixture")
             queries.apply_library_stats(member, library, nation_data)
             self.assertEqual((member["speed"], member["max_health"]), (convoy_speed, convoy_health))
             queries.revert_transport(member, context=screen)
@@ -705,7 +718,7 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual((member["speed"], member["max_health"]), (expected["speed"], expected["max_health"]))
         self.assertAlmostEqual(member["health"], expected["max_health"] * 0.5)
 
-    def test_bewegungskrieg_changes_movement_on_activation_and_cancellation_turns(self):
+    def test_land_speed_policy_changes_movement_on_activation_and_cancellation_turns(self):
         game = BackendState()
         game.player_country = "A"
         game.active_players = ["A"]
@@ -718,7 +731,7 @@ class PolicyTests(unittest.TestCase):
             game.map_data[index] = game.id_to_province[index] = province
         game.map_data[1]["units"] = [ground]
         ground["order"]["path"] = [2, 3]
-        self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", "bewegungskrieg"))
+        self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", "land_stats_fixture"))
         for _ in range(politics.POLICY_ACTIVATION_TURNS - 1):
             politics.tick(game)
 
@@ -726,7 +739,7 @@ class PolicyTests(unittest.TestCase):
             asyncio.run(turn_processor.resolve_turn_logic(game))
             self.assertIn(ground, game.map_data[3]["units"])
             ground["order"]["path"] = [2, 1]
-            self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", "bewegungskrieg"))
+            self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", "land_stats_fixture"))
             asyncio.run(turn_processor.resolve_turn_logic(game))
         self.assertIn(ground, game.map_data[2]["units"])
         self.assertEqual(ground["order"]["path"], [1])
@@ -734,9 +747,9 @@ class PolicyTests(unittest.TestCase):
     def test_resource_policy_changes_the_shared_economy_calculation(self):
         map_data = {"p": {"owner": "A", "cores": ["A"], "resources": {},
                           "buildings": [], "units": []}}
-        for policy_id, resources in (("research_subsidies", ("manpower", "materials", "fuel")),
-                                     ("quality_fuel", ("fuel",)),
-                                     ("on_ne_passe_pas", ("materials",))):
+        for policy_id, resources in (("subsidy_fixture", ("manpower", "materials", "fuel")),
+                                     ("fuel_fixture", ("fuel",)),
+                                     ("fort_fixture", ("materials",))):
             with self.subTest(policy=policy_id):
                 screen = self.screen_at(political_value=-3)
                 nation_data = screen.nation_data
@@ -749,8 +762,8 @@ class PolicyTests(unittest.TestCase):
                     self.assertGreater(before[resource], 0)
                     self.assertAlmostEqual(after[resource], before[resource] * policy_effect(policy_id, resource))
 
-    def test_on_ne_passe_pas_combines_with_strategy_for_defense_and_fort_prices(self):
-        policy_id = "on_ne_passe_pas"
+    def test_fort_policy_combines_with_strategy_for_defense_and_fort_prices(self):
+        policy_id = "fort_fixture"
         screen = self.screen_at()
         nation_data = screen.nation_data
         strategy = politics.policy(policy_id)["min_strategy"] + 1
@@ -775,8 +788,8 @@ class PolicyTests(unittest.TestCase):
                                                      * policy_effect(policy_id, "fort_cost")))
         self.assertEqual(queries.get_building_cost("Fixture Building", "A", {}, library, nation_data), baseline_building)
 
-    def test_total_mobilisation_stacks_its_damage_bonus_on_the_axis_bonus(self):
-        policy_id = "total_mobilisation"
+    def test_policy_stacks_its_damage_bonus_on_the_axis_bonus(self):
+        policy_id = "damage_fixture"
         screen = self.screen_at(political_value=politics.policy(policy_id)["min_politics"] + 1)
         self.activate_and_finish(screen, policy_id)
         quality = politics.axis_value(screen.nation_data, "A", politics.QUALITY)
@@ -1055,8 +1068,8 @@ class ResearchTests(unittest.TestCase):
         screen.scenario_settings = {}
         screen.player_country = "A"
         screen.nation_data = {
-            "A": {"research": {"infantry_type": 0},
-                  "research_queue": [{"tech_name": "infantry_type",
+            "A": {"research": {},
+                  "research_queue": [{"tech_name": "fixture",
                                       "points_remaining": 100000}],
                   "political_value": political_value, "economic_value": economic_value},
         }
@@ -1068,7 +1081,8 @@ class ResearchTests(unittest.TestCase):
         screen.show_feedback = lambda *_a, **_k: None
 
         before = screen.nation_data["A"]["research_queue"][0]["points_remaining"]
-        research_processor.process_national_research(screen)
+        with patch.object(queries, "get_tech_tree", return_value={"fixture": {"years": [1900]}}):
+            research_processor.process_national_research(screen)
         after = screen.nation_data["A"]["research_queue"][0]["points_remaining"]
         return before - after
 
@@ -1077,13 +1091,11 @@ class ResearchTests(unittest.TestCase):
         self.assertGreater(base, 0)
         self.assertEqual(self.points_after_one_turn(c.POLITICS_START, c.POLITICS_MAX), base)
 
-    def test_fully_libertarian_research_reaches_the_table_maximum(self):
-        base = self.points_after_one_turn(c.POLITICS_START)
-        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MIN),
-                               base * c.POLITICS_AXIS_EFFECTS[politics.POLITICAL]["research"][0])
-
-    def test_fully_authoritarian_research_stops(self):
-        self.assertEqual(self.points_after_one_turn(c.POLITICS_MAX), 0)
+    def test_research_at_each_political_endpoint_uses_the_configured_multiplier(self):
+        base = queries.get_unmodified_research_points(queries.get_days_per_turn({}))
+        for position in (c.POLITICS_MIN, c.POLITICS_MAX):
+            with self.subTest(position=position):
+                self.assertAlmostEqual(self.points_after_one_turn(position), base * politics.effect_at("research", position))
 
 
 class QualityResearchYearTests(unittest.TestCase):

@@ -59,3 +59,15 @@ jobs:
           SDL_VIDEODRIVER: "dummy"
           SDL_AUDIODRIVER: "dummy"
         run: python -m unittest tests.test_data_migrations tests.test_historical_infantry tests.test_tournament_moves
+
+      - name: Check policy tuning independence
+        run: >-
+          python scripts/checks/tuning_stress.py --variant policies --details --tests
+          tests.test_politics
+          tests.test_data_migrations
+          tests.test_tournament_moves
+          tests.test_realtime_multiplayer.RealtimeStrategicCommandCoverageTests
+          tests.test_air_mechanics
+          tests.test_research_funding
+          tests.test_country_summary
+          tests.test_conscription_damage

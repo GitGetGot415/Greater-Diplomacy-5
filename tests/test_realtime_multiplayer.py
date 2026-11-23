@@ -36,6 +36,7 @@ from data.multiplayer.realtime.session import (
     GameVersionError,
 )
 import data.constants as c
+from tests.politics_fixtures import policy_fixtures
 from tests.research_fixtures import research_lock_cases
 import json
 from data import migrations
@@ -1565,9 +1566,11 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [offer])
 
+    @policy_fixtures({"id": "political_fixture", "max_politics": -2, "effects": {}})
     def test_policy_drafts_are_authoritative_and_keep_same_turn_cancels_empty(self):
         from map_logic import politics
 
+        policy_id = "political_fixture"
         map_ref = map_double(
             map_data={}, id_to_province={}, player_country="None",
             nation_data={"A": {"political_value": -3, "economic_value": c.POLITICS_MIN, "research": {}}})
@@ -1576,10 +1579,10 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             "type": "country_preferences", "political_drift": 0,
             "automation": {}, "conscription_slider": 1.0,
             "mat_to_fuel_slider": 0.0, "custom_production_units": [],
-            politics.POLICY_KEY: {"research_subsidies": {"status": politics.POLICY_ACTIVATING}},
+            politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_ACTIVATING}},
         }
         canonical = driver.validate_draft("A", [preferences])[0]
-        self.assertEqual(canonical[politics.POLICY_KEY]["research_subsidies"]["turns_remaining"],
+        self.assertEqual(canonical[politics.POLICY_KEY][policy_id]["turns_remaining"],
                          politics.POLICY_ACTIVATION_TURNS)
 
         async def no_op(*_args, **_kwargs):
@@ -1589,11 +1592,11 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                 mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op):
             driver.process_turn({"A": [canonical]})
 
-        self.assertEqual(politics.policy_state(map_ref.nation_data, "A", "research_subsidies")["status"],
+        self.assertEqual(politics.policy_state(map_ref.nation_data, "A", policy_id)["status"],
                          politics.POLICY_ACTIVATING)
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [{**preferences, politics.POLICY_KEY: {
-                "research_subsidies": {"status": politics.POLICY_ACTIVE}}}])
+                policy_id: {"status": politics.POLICY_ACTIVE}}}])
 
         # Activating and cancelling before submission serializes as no policy
         # choice, so the authoritative server creates no countdown at all.

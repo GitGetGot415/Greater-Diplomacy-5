@@ -14,6 +14,7 @@ from map_logic import politics
 from map_logic.system32 import combat_rules
 from map_logic.system32.time_handler import TimeHandler
 from screens.game.country_summary import CountrySummaryScreen, open_country_summary
+from tests.politics_fixtures import policy_fixtures
 from tests.stub_map_screen import StubMapScreen
 from screens.game import map_input
 from ui.navigation import modal_stack
@@ -59,12 +60,13 @@ class CountrySummaryTests(unittest.TestCase):
         self.library.start()
         self.addCleanup(self.library.stop)
 
+    @policy_fixtures({"id": "damage_fixture", "effects": {"damage": 1.25, "manpower": 0.85}})
     def test_own_summary_matches_shared_damage_and_economy_rules(self):
         game = world()
         game.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
         politics.set_economic_value(game.nation_data, "A", -4)
         game.nation_data["A"][politics.POLICY_KEY] = {
-            "total_mobilisation": {"status": politics.POLICY_ACTIVE}}
+            "damage_fixture": {"status": politics.POLICY_ACTIVE}}
         summary = queries.get_country_summary(game, "A")
         troops = game.home_of("A")["units"]
         expected_damage = sum(troop["attack"] * combat_rules.effective_damage_multiplier(

@@ -27,6 +27,7 @@ from screens.game.orders import Orders_Screen
 from screens.game.map import Map
 from tests.stub_map_screen import synchronous_progress
 from tests.air_fixtures import install_air_fixture, patrol_world, runtime_map, tile, wing, world
+from tests.politics_fixtures import policy_fixtures
 from tests.stub_map_screen import bare_orders_screen
 from tests.tournament_fixtures import fast_tournament_crypto
 
@@ -932,8 +933,9 @@ class AirIntegrationTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [command, command])
 
-    def test_quality_fuel_extends_strike_range_until_cancellation(self):
-        policy_id = "quality_fuel"
+    @policy_fixtures({"id": "range_fixture", "effects": {"aircraft_range": 1.25}})
+    def test_range_policy_extends_strike_range_until_cancellation(self):
+        policy_id = "range_fixture"
         nation_data = self.game.nation_data
         politics.set_axis_value(nation_data, "A", politics.STRATEGY, 3)
         kind = "AIR_ATTACK"
@@ -962,8 +964,9 @@ class AirIntegrationTests(unittest.TestCase):
         air_processor.process_air_orders(self.game)
         self.assertEqual(self.plane["order"]["type"], "MOVE")
 
-    def test_realtime_cancelling_bewegungskrieg_refreshes_host_unit_stats(self):
-        policy_id = "bewegungskrieg"
+    @policy_fixtures({"id": "land_speed_fixture", "effects": {"land_speed": 2}})
+    def test_realtime_cancelling_land_speed_policy_refreshes_host_unit_stats(self):
+        policy_id = "land_speed_fixture"
         nation_data = self.game.nation_data
         infantry = wing(self.base, "Infantry Type 1910")
         baseline_speed = infantry["speed"]
@@ -1978,18 +1981,22 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(restored["order"], bomber["order"])
             self.assertEqual(restored["order"], queries.canonical_air_order(loaded, restored, base, restored["order"]))
 
-    def test_new_policies_survive_save_load_and_selected_history(self):
+    @policy_fixtures({"id": "range_fixture", "max_quality": 4, "effects": {"aircraft_range": 1.25}},
+                     {"id": "defense_fixture", "min_strategy": 1, "effects": {"defense": 1.15}},
+                     {"id": "health_fixture", "min_strategy": 1, "effects": {"max_health": 1.3}},
+                     {"id": "land_stats_fixture", "min_quality": 0, "effects": {"land_speed": 2, "land_max_health": 0.6}})
+    def test_policies_survive_save_load_and_selected_history(self):
         from data.map import save_map
         from map_logic.system32 import turn_processor
 
         game = runtime_map()
-        policies = ("quality_fuel", "on_ne_passe_pas", "endurance", "bewegungskrieg")
+        policy_ids = tuple(politics.POLICIES_BY_ID)
         base_id = 1
         infantry = wing(game.id_to_province[base_id], "Infantry Type 1910")
         original_speed = infantry["speed"]
         politics.set_axis_value(game.nation_data, "A", politics.QUALITY, 1)
         politics.set_axis_value(game.nation_data, "A", politics.STRATEGY, 3)
-        for policy_id in policies:
+        for policy_id in policy_ids:
             self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", policy_id))
         turn_processor.snapshot_history(game)
         history_turn = game.time_manager.total_turns
@@ -2009,7 +2016,7 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(politics.axis_value(loaded.nation_data, "A", politics.QUALITY), 1)
             self.assertEqual(politics.axis_value(historical.nation_data, "A", politics.QUALITY), 1)
             self.assertEqual(politics.axis_drift(historical.nation_data, "A", politics.QUALITY), -1)
-            for policy_id in policies:
+            for policy_id in policy_ids:
                 self.assertEqual(politics.policy_state(loaded.nation_data, "A", policy_id)["status"],
                                  politics.POLICY_ACTIVE)
                 self.assertEqual(politics.policy_state(historical.nation_data, "A", policy_id)["status"],
@@ -2018,7 +2025,8 @@ class AirAppSmokeTests(unittest.TestCase):
                                   if member["unit_id"] == infantry["unit_id"])
             historical_ground = next(member for member in historical.id_to_province[base_id]["units"]
                                      if member["unit_id"] == infantry["unit_id"])
-            self.assertEqual(current_ground["speed"], original_speed + politics.policy("bewegungskrieg")["effects"]["land_speed"])
+            land_speed_bonus = politics.policy("land_stats_fixture")["effects"]["land_speed"]
+            self.assertEqual(current_ground["speed"], original_speed + land_speed_bonus)
             self.assertEqual(current_ground["max_health"], infantry["max_health"])
             self.assertEqual(historical_ground["speed"], original_speed)
 

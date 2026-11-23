@@ -1,11 +1,12 @@
-"""Find tests that depend on current unit, building, research, and constants values.
+"""Find tests that depend on current unit, building, research, and policy tuning.
 
 Usage:
     python scripts/checks/tuning_stress.py
     python scripts/checks/tuning_stress.py --variant stats --show-all
 
 Each variant runs the test suite on changed copies of the data in a temporary folder.
-The constants variant loads a changed copy of data/constants.py in memory instead.
+The constants variant loads changed constants in memory. The policies variant
+changes eligibility cutoffs and effect values in memory.
 Source data files do not change. A failure outside EXPECTED_FAILURES means that a test
 depends on current tuning. Rewrite that test around its rule.
 """
@@ -22,7 +23,7 @@ import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-VARIANTS = ("stats", "no_prereqs", "prereq_levels", "years", "bonuses", "constants")
+VARIANTS = ("stats", "no_prereqs", "prereq_levels", "years", "bonuses", "constants", "policies")
 CONSTANTS_PATH = os.path.join(ROOT, "data", "constants.py")
 # constants.py numbers that are not gameplay tuning. The constants variant leaves them unchanged.
 FIXED_CONSTANTS = {
@@ -124,6 +125,23 @@ def install_scaled_constants():
     data.constants = module
 
 
+def perturb_policies():
+    """Change the policy definitions after the child process sets its import path."""
+    from data import constants as c
+    from map_logic import politics
+
+    # The policy list and ID index both reference these definitions.
+    for definition in politics.POLICIES:
+        for key, (_, comparison) in politics.POLICY_REQUIREMENTS.items():
+            if key in definition:
+                bound = definition[key]
+                change = 3 if comparison == ">" else -3
+                moved = bound + change
+                definition[key] = moved if c.POLITICS_MIN < moved < c.POLITICS_MAX else bound - change
+        for effect, value in definition["effects"].items():
+            definition["effects"][effect] = value + 1 if isinstance(value, int) else value * 1.15
+
+
 def shift_years(units, tree, end_year):
     moved = {}
     for key, entry in tree.items():
@@ -176,7 +194,7 @@ def perturb(variant, units, buildings, tree, end_year):
             entry.pop("building_output_bonuses", None)
 
 
-def run_variant(variant, output):
+def run_variant(variant, output, tests):
     """Run the suite in this process with the data paths pointed at changed copies."""
     os.chdir(ROOT)
     sys.path.insert(0, ROOT)
@@ -193,7 +211,9 @@ def run_variant(variant, output):
 
     attributes = ("UNIT_DATA_PATH", "BUILDING_DATA_PATH", "RESEARCH_TEMPLATE_PATH")
     with tempfile.TemporaryDirectory() as directory:
-        if variant != "constants":
+        if variant == "policies":
+            perturb_policies()
+        elif variant != "constants":
             data = {}
             for attribute in attributes:
                 with open(getattr(c, attribute), encoding="utf-8") as handle:
@@ -204,7 +224,8 @@ def run_variant(variant, output):
                 with open(path, "w", encoding="utf-8") as handle:
                     json.dump(data[attribute], handle)
                 setattr(c, attribute, path)
-        suite = unittest.defaultTestLoader.discover(start_dir="tests", top_level_dir=ROOT)
+        loader = unittest.defaultTestLoader
+        suite = loader.loadTestsFromNames(tests) if tests else loader.discover(start_dir="tests", top_level_dir=ROOT)
         with open(os.devnull, "w", encoding="utf-8") as sink:
             result = unittest.TextTestRunner(stream=sink, verbosity=0).run(suite)
     details = {}
@@ -218,23 +239,25 @@ def run_variant(variant, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--variant", action="append", choices=VARIANTS)
+    parser.add_argument("--tests", nargs="+", metavar="TEST", help="Run these unittest names instead of discovering the full suite.")
     parser.add_argument("--show-all", action="store_true", help="Also list the expected recipe and constant rule failures.")
     parser.add_argument("--details", action="store_true", help="Print the error line under each failing test.")
     parser.add_argument("--child", help=argparse.SUPPRESS)
     parser.add_argument("--output", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.child:
-        run_variant(args.child, args.output)
+        run_variant(args.child, args.output, args.tests)
         return 0
 
     environment = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy")
     unexpected = 0
     with tempfile.TemporaryDirectory() as directory:
         running = []
+        test_args = ["--tests", *args.tests] if args.tests else []
         for variant in args.variant or VARIANTS:
             path = os.path.join(directory, f"{variant}.json")
             running.append((variant, path, subprocess.Popen(
-                [sys.executable, os.path.abspath(__file__), "--child", variant, "--output", path],
+                [sys.executable, os.path.abspath(__file__), "--child", variant, "--output", path, *test_args],
                 env=environment, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)))
         for variant, path, process in running:
             if process.wait():
