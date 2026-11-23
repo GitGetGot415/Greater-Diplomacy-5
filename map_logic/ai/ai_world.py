@@ -109,7 +109,7 @@ class AIWorld:
         #: or claims. Unfiltered: get_relation_score's claim penalty counts
         #: every owner, while core_claim_targets drops the unplayable ones.
         self.claim_pressure = collections.Counter()
-        #: nation -> province ids that touch water / touch another nation
+        #: nation -> province ids that touch water / touch another living nation
         self.coast_tiles = collections.defaultdict(set)
         self.land_border_tiles = collections.defaultdict(set)
         #: province ids where mutually hostile units are stacked
@@ -194,7 +194,6 @@ class AIWorld:
                 if not n_owner or n_owner == owner:
                     continue
 
-                self.land_border_tiles[owner].add(prov_id)
                 # Both sides of the adjacency, matching get_border_strength's
                 # zone. Adding the far tile is redundant while neighbour lists
                 # are symmetric -- the sweep reaches it from its own side too --
@@ -205,6 +204,7 @@ class AIWorld:
                 self.border_tiles[pair].add(n_id)
 
                 if n_owner not in c.UNPLAYABLE_NATIONS:
+                    self.land_border_tiles[owner].add(prov_id)
                     self.neighbors[owner].add(n_owner)
 
         # Claims are stored per nation as province id lists, so they are

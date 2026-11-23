@@ -15,7 +15,7 @@ from unittest.mock import patch
 import data.constants as c
 from map_logic.ai import ai_tuning
 from tests.stub_map_screen import fill_state_defaults
-from map_logic.ai import ai_movement
+from map_logic.ai import ai_movement, ai_world
 
 
 class FakeScreen:
@@ -443,6 +443,16 @@ class WoundedUnitsDoNotChargeTests(unittest.TestCase):
 class LoneGuardTests(unittest.TestCase):
     """One guard stays on each quiet border, war or no war."""
 
+    def test_a_lone_guard_leaves_a_rot_border_for_a_living_neighbor(self):
+        screen = GridScreen({1: ("Avaria", [2, 3]), 2: ("The Rot", [1, 3]),
+                             3: ("Avaria", [1, 2, 4]), 4: ("Cirenia", [3])})
+        guard = fixture_unit()
+        screen.place(1, guard)
+
+        self.assertEqual(ai_world.build(screen).land_border_tiles["Avaria"], {3})
+        ai_movement.process_ai_unit_orders(screen, countries=["Avaria"])
+        self.assertEqual(guard["order"]["path"], [3])
+
     def test_a_lone_guard_holds_its_peace_border_in_wartime(self):
         # 1 and 3 border neutral Cirenia; 4 joins them. A guard stands on 1.
         screen = GridScreen({1: ("Avaria", [2, 4]), 2: ("Cirenia", [1]),
@@ -561,10 +571,13 @@ class CoastThreatTests(unittest.TestCase):
                                       "cost_manpower": 10, "cost_fuel": 0}
         self.enterContext(patch.object(queries, "get_unit_library", return_value=library))
 
-    def screen(self, shore_owner="Bruland", fog=False):
-        screen = GridScreen({1: ("Avaria", [10]), 10: ("Ocean", [1, 11]),
-                             11: ("Ocean", [10, 20]), 20: (shore_owner, [11])},
-                            {"fog_of_war": fog})
+    def screen(self, shore_owner="Bruland", fog=False, rot_border=False):
+        layout = {1: ("Avaria", [10]), 10: ("Ocean", [1, 11]),
+                  11: ("Ocean", [10, 20]), 20: (shore_owner, [11])}
+        if rot_border:
+            layout[1][1].append(2)
+            layout[2] = ("The Rot", [1])
+        screen = GridScreen(layout, {"fog_of_war": fog})
         for pid in (10, 11):
             screen.id_to_province[pid]["terrain"] = "ocean"
         for pid in (1, 20):
@@ -613,6 +626,17 @@ class CoastThreatTests(unittest.TestCase):
         borders = ai_movement._discover_borders_and_targets(
             screen, "Avaria", [screen.id_to_province[1]], ["Bruland"], {"Avaria"})
         self.assertEqual(borders["coastal_borders"], set())
+
+    def test_rot_border_uses_the_existing_coastal_threat_rule(self):
+        for shore_owner, expected in (("Bruland", {1}), ("Cirenia", set())):
+            with self.subTest(shore_owner=shore_owner):
+                screen = self.screen(shore_owner=shore_owner, rot_border=True)
+                borders = ai_movement._discover_borders_and_targets(
+                    screen, "Avaria", [screen.id_to_province[1]], ["Bruland", "The Rot"], {"Avaria"})
+                self.assertEqual(borders["war_borders"], set())
+                self.assertEqual(borders["peace_borders"], set())
+                self.assertEqual(borders["unclaimed_targets"], set())
+                self.assertEqual(borders["coastal_borders"], expected)
 
 
 if __name__ == "__main__":

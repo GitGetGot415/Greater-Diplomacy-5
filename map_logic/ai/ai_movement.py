@@ -915,6 +915,7 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
     island hopping and distant-ally expeditions) and classifies each of this
     nation's own border provinces as a war, peace, or coastal border."""
     world_state = world_for(context)
+    enemies = set(enemies).difference(c.UNPLAYABLE_NATIONS)
     war_borders = set()
     peace_borders = set()
     coastal_borders = set()
@@ -985,7 +986,7 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
                 enemy_targets.add(n_id)
             elif n_owner in c.UNOWNED_LAND_OWNERS:
                 unclaimed_targets.add(n_id)
-            elif n_owner != ai_name and n_owner not in c.WATER_NATIONS and not queries.are_in_same_faction(ai_name, n_owner, world_state.nation_data):
+            elif n_owner != ai_name and n_owner not in c.UNPLAYABLE_NATIONS and not queries.are_in_same_faction(ai_name, n_owner, world_state.nation_data):
                 is_peace_border = True
 
         if is_war_border:
