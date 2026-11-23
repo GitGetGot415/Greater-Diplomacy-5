@@ -2,6 +2,13 @@
 
 ## Uncategorized
 
+- SUPPLY LINES
+- `(can the territory that a unit can move to support it?)`
+- `(if a unit is encircled, the resources it might be getting from those territories might not be enough)`
+- `(if a valid naval connection can be found between two areas that isn't blocked, those can count as connected)`
+- `(potential lag issues? hopefully its not too bad...)`
+- LET THE AI TRY USING TRANSPORT PLANES
+
 - check how pypeople lets you choose an llm to run and see if it might be useful `https://github.com/GitGetGot415/pypeople`
 - rework how mods work so it's less... weird `consider -> https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51`
 - make it so that in tactical mode you can get other units to make simmilar movement orders to you to coordinate attacks n such
