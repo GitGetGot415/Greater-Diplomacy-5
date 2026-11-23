@@ -60,10 +60,10 @@ def prepare_unit_roster(map_screen, province):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
             row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
-            fractions = queries.unit_supply_details(supply, unit)
-            if fractions is not None:
-                manpower, materials, fuel = fractions
-                row["supply"] = (f"Supply {queries.supply_fraction(fractions):.0%}   "
+            status = queries.unit_supply_status(supply, unit)
+            if status is not None:
+                manpower, materials, fuel = status.fractions
+                row["supply"] = (f"Supply {status.readiness:.0%}   "
                                  f"Manpower {manpower:.0%}   Materials {materials:.0%}")
                 if queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0:
                     row["supply"] += f"   Fuel {fuel:.0%}"

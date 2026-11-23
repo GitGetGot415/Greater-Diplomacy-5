@@ -63,9 +63,9 @@ class SupplyTests(SupplyFixture):
         tile = province(1, "A", output=(15, 20, 25))
         unit = division(tile, health=50)
         world = game(tile)
-        fractions = queries.SupplySnapshot(world).fractions(unit)
-        self.assertEqual(fractions, (0.3, 0.4, 0.5))
-        self.assertAlmostEqual(queries.supply_fraction(fractions), 0.35)
+        status = queries.SupplySnapshot(world).status(unit)
+        self.assertEqual(status.fractions, (0.3, 0.4, 0.5))
+        self.assertAlmostEqual(status.readiness, 0.35)
         queries.apply_supply_attrition(world)
         self.assertAlmostEqual(unit["health"], 46.75)
         unit["health"] = 0.5
@@ -73,6 +73,20 @@ class SupplyTests(SupplyFixture):
         for _ in range(12):
             queries.apply_supply_attrition(world)
         self.assertAlmostEqual(unit["health"], 0.5 * 0.9 ** 12)
+
+    def test_readiness_weights_live_upkeep_and_attrition_scales_with_health(self):
+        modifiers = {"manpower": 0.5, "materials": 1, "fuel": 1}
+        with patch.object(c, "UPKEEP_MODIFIERS", modifiers):
+            for manpower, materials, readiness in ((1000, 9000, 0.10), (2000, 1000, 2 / 3),
+                                                    (1000, 0, 1), (0, 1000, 0), (0, 0, 1)):
+                with self.subTest(manpower=manpower, materials=materials):
+                    self.library["Supply Test Division"].update(cost_manpower=2 * manpower, cost_materials=materials)
+                    tile = province(1, "A", output=(manpower * 2, 0, 0))
+                    unit = division(tile, health=50)
+                    world = game(tile)
+                    self.assertAlmostEqual(queries.SupplySnapshot(world).status(unit).readiness, readiness)
+                    queries.apply_supply_attrition(world)
+                    self.assertAlmostEqual(unit["health"], 50 - 5 * (1 - readiness))
 
     def test_fuel_speed_tiers_use_strict_fractional_cutoffs(self):
         for base in (0, 1, 2, 3, 4, 5, 6):
@@ -214,6 +228,18 @@ class SupplyTests(SupplyFixture):
         division(sea, "B", kind="Supply Test Ship")
         self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (0, 0, 0))
 
+    def test_contested_group_chooses_the_route_that_covers_more_of_its_upkeep(self):
+        self.library["Supply Test Division"].update(cost_manpower=100, cost_materials=900, cost_fuel=0)
+        manpower = province(1, "A", [3], output=(100, 0, 0))
+        materials = province(2, "A", [3], output=(0, 900, 0))
+        contested = province(3, "B", [1, 2])
+        unit = division(contested)
+        division(contested, "B")
+        snapshot = queries.SupplySnapshot(game(manpower, materials, contested))
+
+        self.assertEqual(snapshot.fractions(unit), (0, 1, 1))
+        self.assertAlmostEqual(snapshot.status(unit).readiness, 0.9)
+
     def test_turn_cut_and_reopening_use_frozen_combat_and_resolved_attrition(self):
         front = province(1, "A", [2])
         bridge = province(2, "A", [1, 3, 4])
@@ -241,19 +267,20 @@ class SupplyTests(SupplyFixture):
         self.assertEqual(multipliers, [1, 0])
 
     def test_forecast_profile_tactical_roster_and_unit_panel_read_supply(self):
-        tile = province(1, "A", output=(30, 40, 50))
+        self.library["Supply Test Division"].update(cost_materials=900)
+        tile = province(1, "A", output=(100, 0, 50))
         unit = division(tile)
         world = game(tile)
         queries.prepare_presentation_supply(world)
         sidebar_info.prepare_unit_roster(world, tile)
         row = world._unit_roster_cache[1][2][id(unit)]
         full_supply = sidebar_info.unit_roster_row(unit, tile, world.nation_data, False)
-        self.assertIn("35%", row["supply"])
-        self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.35)
+        self.assertIn("10%", row["supply"])
+        self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.1)
         with queries.combat_supply(queries.freeze_combat_supply(world)):
-            self.assertAlmostEqual(combat_rules.effective_damage_multiplier(queries.supply_combat_profile(unit)), 0.35)
+            self.assertAlmostEqual(combat_rules.effective_damage_multiplier(queries.supply_combat_profile(unit)), 0.1)
             roster = custom_battle.campaign_roster([unit], self.library, tile["terrain"])
-        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.35)
+        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.1)
         self.assertNotIn("_supply_multiplier", unit)
 
     def test_sidebar_draws_available_unit_supply_in_garrison_and_combat(self):
@@ -283,17 +310,23 @@ class SupplyTests(SupplyFixture):
                     self.assertEqual(rendered.count(rows[id(foreign)]["supply"]), 1)
 
     def test_sidebar_uses_the_player_supply_projection(self):
-        tile = province(1, "A")
+        self.library["Supply Test Division"].update(cost_materials=900)
+        tile = province(1, "A", output=(100, 0, 50))
         unit = division(tile, speed=5)
-        foreign = division(tile, "B", speed=5)
+        foreign = division(tile, "C", speed=5)
         world = game(tile)
-        world.player_supply_projection = {unit["unit_id"]: (0.5, 0.5, 0.5)}
+        world.scenario_settings["fog_of_war"] = True
+        snapshot = queries.player_snapshot_projection(world, queries.build_save_dict(world), "A")
+        world.player_supply_projection = queries.normalize_supply_projection(snapshot["player_supply"])
 
         queries.prepare_presentation_supply(world)
         sidebar_info.prepare_unit_roster(world, tile)
 
         rows = world._unit_roster_cache[tile["id"]][2]
-        self.assertIn("supply", rows[id(unit)])
+        self.assertEqual(world.player_supply_projection, {unit["unit_id"]: (1, 0, 0.5)})
+        self.assertIn("10%", rows[id(unit)]["supply"])
+        with queries.combat_supply(queries.presentation_supply(world)):
+            self.assertAlmostEqual(queries.unit_supply_multiplier(unit), 0.1)
         self.assertNotIn("supply", rows[id(foreign)])
         self.assertEqual(queries.presentation_move_speed(world, unit), 2)
         self.assertEqual(queries.presentation_move_speed(world, foreign), 5)

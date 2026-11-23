@@ -116,6 +116,24 @@ class AISupplyTests(SupplyFixture):
 
         self.assertEqual(relief["order"]["path"], [2])
 
+    def test_naval_relief_prioritizes_the_shortage_with_more_upkeep(self):
+        self.library["Supply Test Division"].update(cost_materials=900, cost_fuel=0)
+        front = province(1, "A", [2, 3], coast=True)
+        north = province(2, "Ocean", [1, 4, 6], sea=True)
+        south = province(3, "Ocean", [1, 5, 6], sea=True)
+        manpower = province(4, "A", [2], coast=True, output=(100, 0, 0))
+        materials = province(5, "A", [3], coast=True, output=(0, 900, 0))
+        sea = province(6, "Ocean", [2, 3], sea=True)
+        division(front)
+        for opening in (north, south):
+            division(opening, "B", kind="Supply Test Ship", attack=1)
+        relief = division(sea, kind="Supply Test Ship", speed=1, attack=1000)
+        world = game(front, north, south, manpower, materials, sea)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+
+        self.assertEqual(relief["order"]["path"], [3])
+
     def test_a_ship_scouts_a_plausible_cut_when_the_blocker_is_hidden(self):
         front = province(1, "A", [2], coast=True)
         strait = province(2, "Ocean", [1, 3, 4], sea=True)

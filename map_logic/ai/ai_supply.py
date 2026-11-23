@@ -54,22 +54,22 @@ class SupplyPlanner:
         self.enemies = set(queries.get_enemies(country, known.nations))
         self.critical = self._critical_corridors() if self.enemies else set()
 
-    def fractions(self, unit):
+    def status(self, unit):
         if unit.get("owner") == self.country:
-            return self.actual.fractions(unit)
+            return self.actual.status(unit)
         if self.known.visible_provinces is None:
-            return self.known.fractions(unit)
+            return self.known.status(unit)
         # Unknown enemy production and force size make foreign supply uncertain.
         return None
 
     def current(self, unit):
-        return self._conditions(unit, self.fractions(unit))
+        return self._conditions(unit, self.status(unit))
 
-    def _conditions(self, unit, fractions):
+    def _conditions(self, unit, status):
         speed = unit.get("speed", c.DEFAULT_UNIT_SPD)
-        if fractions is None:
+        if status is None:
             return 1.0, speed
-        return queries.supply_fraction(fractions), queries.fuel_movement_speed(speed, fractions[2])
+        return status.readiness, queries.fuel_movement_speed(speed, status.fractions[2])
 
     def _unit(self, unit):
         return self.known.unit_data.get(queries.supply_unit_key(unit))
@@ -134,9 +134,11 @@ class SupplyPlanner:
             return self._conditions(unit, None)
         demand = data.demand
         if area is None:
-            return self._conditions(unit, tuple(0.0 if demand[key] else 1.0 for key in c.ECON_RESOURCE_KEYS))
-        added = {key: total + (demand[key] if area != origin else 0.0) for key, total in self.demand[area].items()}
-        return self._conditions(unit, queries.supply_fractions(self.network.areas[area].production, added, demand))
+            fractions = tuple(0.0 if demand[key] else 1.0 for key in c.ECON_RESOURCE_KEYS)
+        else:
+            added = {key: total + (demand[key] if area != origin else 0.0) for key, total in self.demand[area].items()}
+            fractions = queries.supply_fractions(self.network.areas[area].production, added, demand)
+        return self._conditions(unit, queries.SupplyStatus.from_fractions(fractions, demand))
 
     def quality(self, unit, tile):
         origin = self._area(unit)
@@ -200,8 +202,8 @@ class SupplyPlanner:
         for group in self.known.land_units[country].values():
             for identity in group:
                 unit = self.known.unit_data[identity].unit
-                readiness_before, speed_before = self._conditions(unit, self.known.fractions(unit, network=before))
-                readiness_after, speed_after = self._conditions(unit, self.known.fractions(unit, network=after))
+                readiness_before, speed_before = self._conditions(unit, self.known.status(unit, network=before))
+                readiness_after, speed_after = self._conditions(unit, self.known.status(unit, network=after))
                 impact += unit["health"] * (readiness_after - readiness_before
                                            + (speed_after - speed_before) / max(1, unit.get("speed", c.DEFAULT_UNIT_SPD)))
         return impact
@@ -226,7 +228,7 @@ class SupplyPlanner:
                     objectives.append(("relief", gain, (tile,), self.country))
             unexplained = any(self.current(self.known.unit_data[identity].unit)
                               < self._conditions(self.known.unit_data[identity].unit,
-                                                 self.known.fractions(self.known.unit_data[identity].unit, network=home))
+                                                 self.known.status(self.known.unit_data[identity].unit, network=home))
                               for group in self.known.land_units[self.country].values() for identity in group)
             if unexplained or enemy_reach:
                 candidates = sea & home.province_area.keys()
@@ -334,10 +336,12 @@ class SupplyPlanner:
             profiles = []
             for participant in participants:
                 row = self._unit(participant)
-                values = queries.supply_fractions(production, totals, row.demand) if row else self.fractions(participant)
                 profile = queries.supply_combat_profile(participant)
-                if values is not None:
-                    profile["_supply_multiplier"] = queries.supply_fraction(values)
+                if row is not None:
+                    fractions = queries.supply_fractions(production, totals, row.demand)
+                    profile["_supply_multiplier"] = queries.supply_fraction(fractions, row.demand)
+                elif (status := self.status(participant)) is not None:
+                    profile["_supply_multiplier"] = status.readiness
                 profiles.append(profile)
             battle = combat_rules.build_battle([profiles, enemies], self.known.nations,
                                                terrain=province.get("terrain"), tiles=(province, province))

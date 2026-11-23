@@ -29,10 +29,23 @@ def supply_fractions(production, demand, unit_demand):
                  for resource in c.ECON_RESOURCE_KEYS)
 
 
-def supply_fraction(fractions):
-    """Combat output and attrition depend on Manpower and Materials."""
+def supply_fraction(fractions, unit_demand):
+    """Share of the unit's Manpower and Materials upkeep covered by supply."""
     manpower, materials, _fuel = fractions
-    return (manpower + materials) / 2
+    manpower_demand = unit_demand["manpower"]
+    materials_demand = unit_demand["materials"]
+    total = manpower_demand + materials_demand
+    return (manpower * manpower_demand + materials * materials_demand) / total if total else 1.0
+
+
+@dataclass(frozen=True)
+class SupplyStatus:
+    fractions: tuple
+    readiness: float
+
+    @classmethod
+    def from_fractions(cls, fractions, unit_demand):
+        return cls(fractions, supply_fraction(fractions, unit_demand))
 
 
 def fuel_movement_speed(speed, fuel):
@@ -234,10 +247,14 @@ class SupplySnapshot:
             def score(area_id):
                 area = network.areas[area_id]
                 demand = {resource: area.demand[resource] + extra[resource] for resource in c.ECON_RESOURCE_KEYS}
-                ratios = [supply_fractions(area.production, demand, self.unit_data[identity].demand) for identity in group]
-                return (sum(supply_fraction(fractions) for fractions in ratios),
-                        sum(fuel_movement_speed(self.unit_data[identity].unit.get("speed", 1), fractions[2])
-                            for identity, fractions in zip(group, ratios)))
+                readiness = 0.0
+                speed = 0
+                for identity in group:
+                    data = self.unit_data[identity]
+                    fractions = supply_fractions(area.production, demand, data.demand)
+                    readiness += supply_fraction(fractions, data.demand)
+                    speed += fuel_movement_speed(data.unit.get("speed", 1), fractions[2])
+                return readiness, speed
 
             best = max(sorted(choices), key=score)
             _add_resources(network.areas[best].demand, extra)
@@ -255,6 +272,12 @@ class SupplySnapshot:
         area = network.areas.get(network.unit_area.get(identity))
         return supply_fractions(area.production, area.demand, demand) if area else tuple(
             0.0 if demand[resource] else 1.0 for resource in c.ECON_RESOURCE_KEYS)
+
+    def status(self, unit, *, network=None):
+        fractions = self.fractions(unit, network=network)
+        if fractions is None:
+            return None
+        return SupplyStatus.from_fractions(fractions, self.unit_data[supply_unit_key(unit)].demand)
 
     def player_summary(self, player):
         return {identity: self.fractions(data.unit) for identity, data in self.unit_data.items()
@@ -276,8 +299,8 @@ def unit_supply_multiplier(unit):
     if "_supply_multiplier" in unit:
         return unit["_supply_multiplier"]
     supply = _COMBAT_SUPPLY.get()
-    fractions = unit_supply_details(supply, unit) if supply is not None else None
-    return supply_fraction(fractions) if fractions is not None else 1.0
+    status = unit_supply_status(supply, unit)
+    return status.readiness if status is not None else 1.0
 
 
 def unit_movement_speed(unit, *, supply=None):
@@ -287,8 +310,8 @@ def unit_movement_speed(unit, *, supply=None):
         return speed
     if supply is None:
         supply = _COMBAT_SUPPLY.get()
-    fractions = unit_supply_details(supply, unit) if supply is not None else None
-    return fuel_movement_speed(speed, fractions[2]) if fractions is not None else speed
+    status = unit_supply_status(supply, unit)
+    return fuel_movement_speed(speed, status.fractions[2]) if status is not None else speed
 
 
 def supply_combat_profile(unit):
@@ -297,13 +320,13 @@ def supply_combat_profile(unit):
 
 def freeze_combat_supply(context):
     snapshot = SupplySnapshot(context)
-    return {identity: snapshot.fractions(data.unit) for identity, data in snapshot.unit_data.items()}
+    return {identity: snapshot.status(data.unit) for identity, data in snapshot.unit_data.items()}
 
 
 def apply_supply_attrition(context):
     snapshot = SupplySnapshot(context)
     # Resolve all rates before changing upkeep demand through HP loss.
-    losses = [(data, data.unit["health"] * _ATTRITION_RATE * (1.0 - supply_fraction(snapshot.fractions(data.unit))))
+    losses = [(data, data.unit["health"] * _ATTRITION_RATE * (1.0 - snapshot.status(data.unit).readiness))
               for data in snapshot.unit_data.values()]
     for data, loss in losses:
         if loss > 0:
@@ -313,33 +336,36 @@ def apply_supply_attrition(context):
 def prepare_presentation_supply(context):
     """Resolve supply at a presentation boundary so drawing only reads values."""
     projection = getattr(context, "player_supply_projection", None)
+    context._supply_presentation = {}
     context._movement_speed_presentation = {}
     if getattr(context, "is_editor", False):
         return
     if projection is not None:
-        ratios = projection
-        units = ((supply_unit_key(unit), unit) for province in world_for(context).map_data.values()
-                 for unit in province.get("units", ()))
+        # The host sends per-resource coverage. The local upkeep rules supply the weights.
+        world = world_for(context)
+        library = queries.get_unit_library(context)
+        units = {identity: unit for province in world.map_data.values() for unit in province.get("units", ())
+                 if (identity := supply_unit_key(unit)) in projection}
+        statuses = {identity: SupplyStatus.from_fractions(projection[identity], queries.get_live_unit_upkeep(unit, library, world.nation_data))
+                    for identity, unit in units.items()}
     else:
         snapshot = SupplySnapshot(context)
         player = session_for(context).player_country
         scenario = world_for(context).scenario_settings
         can_see_all = (player not in snapshot.nations and player != c.TOURNAMENT_SPECTATOR
                        or not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, scenario))
-        ratios = context._supply_presentation = {
-            identity: snapshot.fractions(data.unit)
+        statuses = {
+            identity: snapshot.status(data.unit)
             for identity, data in snapshot.unit_data.items() if data.owner == player or can_see_all
         }
-        units = ((identity, snapshot.unit_data[identity].unit) for identity in ratios)
-    if ratios:
-        context._movement_speed_presentation = {identity: unit_movement_speed(unit, supply=ratios)
-                                                 for identity, unit in units if identity in ratios}
+        units = {identity: snapshot.unit_data[identity].unit for identity in statuses}
+    context._supply_presentation = statuses
+    context._movement_speed_presentation = {identity: unit_movement_speed(unit, supply=statuses) for identity, unit in units.items()}
 
 
 def presentation_supply(context):
     """The cached local view, or the host's private player projection."""
-    projection = getattr(context, "player_supply_projection", None)
-    return projection if projection is not None else getattr(context, "_supply_presentation", None) or {}
+    return getattr(context, "_supply_presentation", None) or {}
 
 
 def presentation_move_speed(context, unit):
@@ -347,8 +373,10 @@ def presentation_move_speed(context, unit):
     return speeds.get(supply_unit_key(unit), unit.get("speed", c.DEFAULT_UNIT_SPD))
 
 
-def unit_supply_details(supply, unit):
-    return supply.get(supply_unit_key(unit)) if isinstance(supply, dict) else supply.fractions(unit)
+def unit_supply_status(supply, unit):
+    if supply is None:
+        return None
+    return supply.get(supply_unit_key(unit)) if isinstance(supply, dict) else supply.status(unit)
 
 
 def normalize_supply_projection(value):
