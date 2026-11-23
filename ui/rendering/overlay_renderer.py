@@ -420,8 +420,8 @@ def combat_bubble_records(map_screen):
         battle_unit_ids = {id(unit) for side in sides for unit in side}
         actual_battle = queries.is_province_in_active_combat(
             province, map_screen.nation_data)
-        combat_estimate = _simulate_combat(
-            sides, map_screen.nation_data, province=province)
+        with queries.combat_supply(queries.presentation_supply(map_screen)):
+            combat_estimate = _simulate_combat(sides, map_screen.nation_data, province=province)
         information_available = _combat_information_available(
             map_screen, province["id"])
         winner_nation = combat_estimate["winner_nation"]
@@ -766,10 +766,11 @@ def midpoint_bounce_outcomes(map_screen):
             origin, target = ((prov_a, prov_b) if tactical_side == 0 else (prov_b, prov_a))
             outcomes.append({"pair": pair, "origin_id": origin["id"], "target_id": target["id"], "overrun": True})
             continue
-        estimate = estimated_combat_outcome(
-            [side_a, side_b], map_screen.nation_data,
-            grounded_sides={index for index, province in enumerate((prov_a, prov_b))
-                            if not queries.is_water_province(province)})
+        with queries.combat_supply(queries.presentation_supply(map_screen)):
+            estimate = estimated_combat_outcome(
+                [side_a, side_b], map_screen.nation_data,
+                grounded_sides={index for index, province in enumerate((prov_a, prov_b))
+                                if not queries.is_water_province(province)})
         winner_side = estimate.get("winner_side")
         is_overrun = (winner_side in (0, 1)
                       and estimate.get("turns") in (0, 1))

@@ -46,7 +46,7 @@ def estimated_combat_outcome(sides, nation_data, province=None, max_turns=100, g
 def simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_sides=None):
     """Run the non-mutating combat estimate and retain its survivors."""
     simulated_sides = [
-        [dict(unit) for unit in side if unit.get("health", 0) > 0]
+        [queries.supply_combat_profile(unit) for unit in side if unit.get("health", 0) > 0]
         for side in sides
     ]
     if grounded_sides is None:

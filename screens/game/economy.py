@@ -96,9 +96,7 @@ def expense_table_rows(units, unit_library, nation_data=None):
     individual = []
     grouped = {}
     for unit, prov in units:
-        # Use base unit type to properly account for converted units like Convoys and Trucks.
-        u_type = queries.get_base_unit_type(unit)
-        upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}), nation_data, unit.get("owner"))
+        upkeep = queries.get_live_unit_upkeep(unit, unit_library, nation_data)
         unit_name = unit.get("type")
         label = queries.get_unit_display_name(unit_name, unit_library)
         individual.append({"unit": label, "location": prov["id"], **upkeep})

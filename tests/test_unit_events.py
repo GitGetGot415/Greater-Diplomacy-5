@@ -355,6 +355,7 @@ class UnitEventRulesTests(unittest.TestCase):
         unit(game, "B", attack=100)
         with ExitStack() as stack:
             stack.enter_context(patch.object(c, "RECORD_HISTORY", False))
+            stack.enter_context(patch.object(queries, "get_live_unit_upkeep", return_value=dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)))
             stack.enter_context(patch.object(turn_processor.politics, "tick"))
             stack.enter_context(patch.object(turn_processor.economy_processor, "process_economy"))
             stack.enter_context(patch.object(turn_processor.research_processor, "process_national_research"))

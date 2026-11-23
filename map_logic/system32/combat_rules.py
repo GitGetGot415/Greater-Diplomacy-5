@@ -547,7 +547,7 @@ def single_attacker_signature(unit):
             unit.get("attack", c.DEFAULT_UNIT_ATK), unit.get("defense", 0),
             unit.get("health"), unit.get("max_health") or c.DEFAULT_UNIT_HP,
             unit.get("combat_stance"), unit.get("lane_target"),
-            queries.unit_is_air_drop_recovering(unit))
+            queries.unit_is_air_drop_recovering(unit), queries.unit_supply_multiplier(unit))
 
 
 def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=None, air_combat=False,
@@ -806,7 +806,7 @@ def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True, he
     if nation_data and province is not None:
         national *= politics.territory_damage_multiplier(nation_data, unit.get("owner"), province)
     health = health_damage_multiplier(unit, nation_data, health_floor=health_floor) if scale_health else 1.0
-    return health * national
+    return health * national * queries.unit_supply_multiplier(unit)
 
 
 def battle_tile(battle, side):

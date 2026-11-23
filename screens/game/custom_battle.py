@@ -636,8 +636,11 @@ class CustomBattleScreen(Screen):
         self.campaign = CampaignBattle(map_screen, province, friendly + enemy, self.rosters, self.columns)
         self.library = queries.get_unit_library(map_screen)
         self.country_data = map_screen.nation_data
-        self.rosters = [combat.campaign_roster(friendly, self.library, province.get("terrain")),
-                        combat.campaign_roster(enemy, self.library, province.get("terrain"))]
+        turn, frozen_supply = getattr(map_screen, "tactical_combat_supply", (None, None))
+        if turn != map_screen.time_manager.total_turns:
+            frozen_supply = queries.SupplySnapshot(map_screen)
+        with queries.combat_supply(frozen_supply):
+            self.rosters = [combat.campaign_roster(side, self.library, province.get("terrain")) for side in (friendly, enemy)]
         self.columns = [combat.paired_columns(len(roster)) for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]

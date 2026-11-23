@@ -134,7 +134,8 @@ def strip_sensitive_data_for_player(context, country_id):
     session_state.player_country = country_id
     session_state.active_players = [country_id]
     session_state.current_player_index = 0
-    snapshot = queries.player_snapshot_projection(context, queries.build_save_dict(context), country_id)
+    snapshot = queries.player_snapshot_projection(context, queries.build_save_dict(context), country_id,
+                                                  player_supply=getattr(context, "player_supply_projection", None))
     load_map.apply_authoritative_snapshot(context, snapshot)
 
 
@@ -419,10 +420,15 @@ def export_tournament(context, file_path, master_key, keys_dict):
         run_with_progress(tasks_to_encrypt, _encrypt_player,
                           "Encrypting Player Keys...", _record)
 
+    supply = queries.SupplySnapshot(context)
     for entry in verification_table.values():
         cid = entry.get("country_id")
         if cid in peace_choices:
             entry["enc_peace_choices"] = encrypt_dict(peace_choices[cid], keys_dict[cid])
+        if entry.get("role") == "PLAYER":
+            summary = supply.player_summary(cid)
+            if summary:
+                entry["enc_player_supply"] = encrypt_dict(summary, keys_dict[cid], compress=True)
 
     context.multiplayer_player_enc_cache = player_enc_cache
             
@@ -529,6 +535,11 @@ def load_tournament(file_path, key):
         if not isinstance(choices, dict) or not isinstance(country_data.get(cid), dict):
             return False, None, None, None, None, "Invalid tournament peace choices"
         country_data[cid]["peace_choices"] = choices
+    if role == "PLAYER" and "enc_player_supply" in entry:
+        summary = decrypt_dict(entry["enc_player_supply"], key)
+        if not isinstance(summary, dict):
+            return False, None, None, None, None, "Invalid tournament supply data"
+        game_data["player_supply"] = queries.normalize_supply_projection(summary)
     try:
         # An older game cannot read a newer tournament. Older tournaments upgrade on load.
         migrations.check_version(game_data.get("version"), "This tournament")

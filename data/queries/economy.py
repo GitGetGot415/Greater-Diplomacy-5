@@ -41,15 +41,24 @@ def has_turn_economy(name, economies):
     return name in economies and name not in c.UNPLAYABLE_NATIONS
 
 
-def get_unit_upkeep(stats, nation_data=None, owner=None):
+def get_unit_upkeep(stats, nation_data=None, owner=None, *, unit=None):
     """Calculates dynamically modified unit upkeep costs.
 
     Pass ``nation_data`` and ``owner`` to apply that country's Quality upkeep
-    multiplier. Omit them to price a unit type rather than one country's unit.
+    multiplier. Pass a live unit to scale upkeep by its remaining health.
     """
     multiplier = politics.axis_effect(nation_data, owner, "unit_upkeep") if nation_data is not None else 1.0
+    if unit is not None:
+        maximum = unit.get("max_health") or stats.get("health") or c.DEFAULT_UNIT_HP
+        multiplier *= min(1.0, max(0.0, unit.get("health", maximum) / maximum))
     return {res: stats.get(f"cost_{res}", 0) * c.UPKEEP_MODIFIERS[res] * multiplier
             for res in c.ECON_RESOURCE_KEYS}
+
+
+def get_live_unit_upkeep(unit, unit_library, nation_data):
+    """Charge the underlying type even while the unit is transported."""
+    stats = unit_library.get(queries.get_base_unit_type(unit), {})
+    return get_unit_upkeep(stats, nation_data, unit.get("owner"), unit=unit)
 
 
 def get_max_fuel_conversion(nation_data_block):
@@ -733,90 +742,85 @@ def get_province_building_output(province, research, building_library=None, *, c
     return output
 
 
+class ProvinceProduction:
+    """Gross province output shared by national income and local supply."""
+
+    def __init__(self, nation_data, context):
+        self.nation_data = nation_data
+        self.context = context
+        self.library = queries.get_building_library(context)
+        self.countries = {}
+        self.buildings = {}
+        self.country_buildings = {}
+
+    def country(self, owner):
+        if owner not in self.countries:
+            research = self.nation_data[owner].get("research", {})
+            self.countries[owner] = {
+                "dynamic_yields": {**c.BASE_YIELDS, "manpower": c.BASE_YIELDS["manpower"] + research.get("general_recruitment", 0) * c.GENERAL_RECRUITMENT_BONUS},
+                "resource_mult": 1.0 + research.get("resource_refining", 0) * c.RESOURCE_REFINING_BONUS_PER_LVL,
+                "tile_manpower_multiplier": politics.axis_effect(self.nation_data, owner, "tile_manpower"),
+                "non_core_province_multiplier": politics.axis_effect(self.nation_data, owner, "non_core_province_output"),
+                "deposit_multiplier": politics.axis_effect(self.nation_data, owner, "deposit_output"),
+                "non_core_building_multiplier": politics.axis_effect(self.nation_data, owner, "non_core_building_output"),
+                "factory_multiplier": politics.factory_output_multiplier(self.nation_data, owner),
+            }
+        return self.countries[owner]
+
+    def breakdown(self, province):
+        owner = province["owner"]
+        economy = self.country(owner)
+        is_core = queries.has_core(owner, province)
+        territory = {resource: 1.0 if is_core else c.NON_CORE_MULTIPLIERS[resource] * economy["non_core_province_multiplier"]
+                     for resource in c.ECON_RESOURCE_KEYS}
+        yields = {resource: territory[resource] * economy["dynamic_yields"][resource] for resource in c.ECON_RESOURCE_KEYS}
+        yields["manpower"] *= economy["tile_manpower_multiplier"]
+
+        deposits = dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)
+        resources = province.get("resources", {})
+        if isinstance(resources, dict):
+            refining = economy["resource_mult"] * economy["deposit_multiplier"]
+            for deposit, resource in c.NATURAL_RESOURCE_OUTPUTS.items():
+                deposits[resource] += int(resources.get(deposit, 0)) * territory[resource] * refining
+
+        research = self.nation_data[owner].get("research", {})
+        if owner not in self.country_buildings:
+            self.country_buildings[owner] = get_building_output_modifiers(research, self.library, context=self.context, cache=self.buildings)
+        buildings = queries.get_province_building_output(
+            province, research, self.library, modifiers=self.country_buildings[owner], factory_multiplier=economy["factory_multiplier"],
+            non_core_multiplier=economy["non_core_building_multiplier"])
+        return {"core" if is_core else "non_core": yields, "resources": deposits, "buildings": buildings}
+
+
 def calculate_all_economies(map_data, nation_data, *, context=None):
     """Standardized economy calculator. Single source of truth for UI and Turn Processor."""
     if context is None:
         context = nation_data
-    unit_lib = queries.get_unit_library(context)
-    bldg_lib = queries.get_building_library(context)
-    # Filled for province owners only. Most nations share their output research,
-    # so each different table is built once per sweep.
-    building_modifiers = {}
-    modifier_cache = {}
-
-    # Initialize data structure for all active nations
+    unit_library = queries.get_unit_library(context)
+    production = ProvinceProduction(nation_data, context)
     econ_data = {}
     for name, n_data in list(nation_data.items()):
-        res_data = n_data.get("research", {})
-        bergius_bonus = c.BERGIUS_FUEL_BONUS if res_data.get("bergius_process", 0) > 0 else 0
-        manpower_bonus = res_data.get("general_recruitment", 0) * c.GENERAL_RECRUITMENT_BONUS
-        resource_refining_mult = 1.0 + res_data.get("resource_refining", 0) * c.RESOURCE_REFINING_BONUS_PER_LVL
-
-        dyn_yields = {
-            "manpower": c.BASE_YIELDS["manpower"] + manpower_bonus,
-            "materials": c.BASE_YIELDS["materials"],
-            "fuel": c.BASE_YIELDS["fuel"] 
-        }
-        
+        research = n_data.get("research", {})
+        bergius_bonus = c.BERGIUS_FUEL_BONUS if research.get("bergius_process", 0) > 0 else 0
         breakdown = empty_income_breakdown()
-        for res in c.ECON_RESOURCE_KEYS:
-            breakdown[res]["base"] = c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0)
+        for resource in c.ECON_RESOURCE_KEYS:
+            breakdown[resource]["base"] = c.COUNTRY_BASE_YIELDS[resource] + (bergius_bonus if resource == "fuel" else 0)
+        econ_data[name] = {**production.country(name), "breakdown": breakdown, "upkeep": dict.fromkeys(c.ECON_RESOURCE_KEYS, 0),
+                           "total_inc": dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
 
-        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult,
-                           "tile_manpower_multiplier": politics.axis_effect(nation_data, name, "tile_manpower"),
-                           "non_core_province_multiplier": politics.axis_effect(nation_data, name, "non_core_province_output"),
-                           "deposit_multiplier": politics.axis_effect(nation_data, name, "deposit_output"),
-                           "non_core_building_multiplier": politics.axis_effect(nation_data, name, "non_core_building_output"),
-                           "factory_multiplier": politics.factory_output_multiplier(nation_data, name)}
-
-    # Single efficient pass over the map
     for province in map_data.values():
         owner = province.get("owner")
-        
-        # --- INCOME LOGIC ---
-        if owner and owner in econ_data and owner not in c.UNPLAYABLE_NATIONS:
-            is_core = queries.has_core(owner, province)
-            cat = "core" if is_core else "non_core"
-            economy = econ_data[owner]
-            bd = economy["breakdown"]
-            dyn_yields = economy["dynamic_yields"]
+        if owner in econ_data and owner not in c.UNPLAYABLE_NATIONS:
+            breakdown = econ_data[owner]["breakdown"]
+            for category, yields in production.breakdown(province).items():
+                for resource, amount in yields.items():
+                    breakdown[resource][category] += amount
 
-            # Base tile yields based on ownership tier
-            for res in c.ECON_RESOURCE_KEYS:
-                mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[res] * economy["non_core_province_multiplier"]
-                if res == "manpower":
-                    mult *= economy["tile_manpower_multiplier"]
-                bd[res][cat] += mult * dyn_yields[res]
-
-            # Natural Resources
-            res = province.get("resources", {})
-            if isinstance(res, dict):
-                refining_mult = economy["resource_mult"] * economy["deposit_multiplier"]
-                for deposit, econ_res in c.NATURAL_RESOURCE_OUTPUTS.items():
-                    territory_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[econ_res] * economy["non_core_province_multiplier"]
-                    bd[econ_res]["resources"] += int(res.get(deposit, 0)) * territory_mult * refining_mult
-
-            # Buildings
-            owner_research = nation_data[owner].get("research", {})
-            modifiers = building_modifiers.get(owner)
-            if modifiers is None:
-                modifiers = building_modifiers[owner] = get_building_output_modifiers(
-                    owner_research, bldg_lib, context=context, cache=modifier_cache)
-            building_output = queries.get_province_building_output(
-                province, owner_research, bldg_lib, modifiers=modifiers, factory_multiplier=economy["factory_multiplier"],
-                non_core_multiplier=economy["non_core_building_multiplier"])
-            for res in c.ECON_RESOURCE_KEYS:
-                bd[res]["buildings"] += building_output[res]
-
-        # --- UPKEEP LOGIC ---
         for unit in units_with_air_cargo(province.get("units", [])):
-            u_owner = unit.get("owner")
-            if u_owner in econ_data:
-                # FETCH ORIGINAL TYPE SO WE KEEP CHARGING UPKEEP DURING TRANSIT
-                u_type = queries.get_base_unit_type(unit)
-                upkeep = get_unit_upkeep(unit_lib.get(u_type, {}), nation_data, u_owner)
-                for res in c.ECON_RESOURCE_KEYS:
-                    econ_data[u_owner]["upkeep"][res] += upkeep[res]
+            owner = unit.get("owner")
+            if owner in econ_data:
+                for resource, amount in get_live_unit_upkeep(unit, unit_library, nation_data).items():
+                    econ_data[owner]["upkeep"][resource] += amount
 
     # Helper for converting one resource to another via the dynamic sliders
     def _process_conversion(data, src, tgt, tag, rate, ratio):

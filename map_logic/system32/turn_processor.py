@@ -227,15 +227,17 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     unit_events.run_step(context, "Deployments", economy_processor.process_queues)
     await asyncio.sleep(0)
 
-    # Pre-Movement Combat Mechanics
-    unit_events.run_step(context, "Air missions", air_processor.process_air_orders)
-    unit_events.run_step(context, "Bombardment", combat_processor.process_bombardments)
-    unit_events.run_step(context, "Pinning", combat_processor.process_pinning)
-    unit_events.run_step(context, "Meeting engagements", combat_processor.process_meeting_engagements)
-
-    unit_events.run_step(context, "Movement", movement_processor.process_movement)
-    unit_events.run_step(context, "Ground combat", combat_processor.process_combat)
-    combat_processor.check_for_post_combat_captures(context)
+    frozen_supply = queries.freeze_combat_supply(context)
+    if session_state.tactical_mode:
+        context.tactical_combat_supply = (world_state.time_manager.total_turns, frozen_supply)
+    with queries.combat_supply(frozen_supply):
+        unit_events.run_step(context, "Air missions", air_processor.process_air_orders)
+        unit_events.run_step(context, "Bombardment", combat_processor.process_bombardments)
+        unit_events.run_step(context, "Pinning", combat_processor.process_pinning)
+        unit_events.run_step(context, "Meeting engagements", combat_processor.process_meeting_engagements)
+        unit_events.run_step(context, "Movement", movement_processor.process_movement)
+        unit_events.run_step(context, "Ground combat", combat_processor.process_combat)
+        combat_processor.check_for_post_combat_captures(context)
     await asyncio.sleep(0)
 
     # Exile any units left standing on foreign soil without a legal right to be there
@@ -257,6 +259,7 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     # Kill orphaned units and ghost wars
     unit_events.run_step(context, "Country removal", movement_processor.process_dead_nations)
     treaty_effects.expire_obsolete_peace(world_state.nation_data)
+    unit_events.run_step(context, "Supply attrition", queries.apply_supply_attrition)
     # Disbands, combat losses, captures, and nation death can all change the
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.

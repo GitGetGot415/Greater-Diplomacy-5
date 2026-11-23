@@ -108,6 +108,25 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertFalse(io.load_tournament(str(path), "invalid-key")[0])
 
     @fast_tournament_crypto()
+    def test_host_supply_is_delivered_only_to_the_unit_owner(self):
+        owner, other = list(self.keys)[:2]
+        province = next(row for row in self.host.map_data.values() if row["owner"] == owner)
+        unit = {"type": "Supply fixture", "owner": owner, "unit_id": "supply-fixture", "health": 100, "max_health": 100}
+        province["units"].append(unit)
+        with mock.patch.object(queries, "get_live_unit_upkeep", return_value=dict.fromkeys(c.ECON_RESOURCE_KEYS, 100)):
+            expected = queries.SupplySnapshot(self.host).player_summary(owner)
+            path, payload = self.export()
+        entry = payload["verification_table"][io.hash_key(self.keys[owner])]
+        self.assertEqual(queries.normalize_supply_projection(io.decrypt_dict(entry["enc_player_supply"], self.keys[owner])), expected)
+        self.assertIsNone(io.decrypt_dict(entry["enc_player_supply"], self.keys[other]))
+        _, restored = self.load_snapshot(path, self.keys[owner])
+        self.assertEqual(queries.normalize_supply_projection(restored["player_supply"]), expected)
+        _, restored = self.load_snapshot(path, self.keys[other])
+        self.assertNotIn("player_supply", restored)
+        _, restored = self.load_snapshot(path, "host-key")
+        self.assertNotIn("player_supply", restored)
+
+    @fast_tournament_crypto()
     def test_snapshot_stores_current_provinces_once_and_regenerates_overlays(self):
         path, payload = self.export()
         snapshot = io.decrypt_dict(payload["game_data"], self.host.multiplayer_session_key)
