@@ -89,7 +89,7 @@ POLICIES = (
         "id": "research_subsidies",
         "name": "Research Subsidies",
         "max_politics": -2,
-        "effects": {"research": 1.50, "manpower": 0.80, "materials": 0.90, "fuel": 0.90},
+        "effects": {"research": 1.60, "manpower": 0.80, "materials": 0.90, "fuel": 0.90},
     },
     {
         "id": "prioritize_civilian_needs",
@@ -113,7 +113,7 @@ POLICIES = (
         "id": "total_mobilisation",
         "name": "Total Mobilisation",
         "min_politics": 2,
-        "effects": {"damage": 1.10, "research": 0.50, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
+        "effects": {"damage": 1.20, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
     },
     {
         "id": "siphon_military_funding",
