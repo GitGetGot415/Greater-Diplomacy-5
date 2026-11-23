@@ -2,8 +2,9 @@
 
 import asyncio
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
+import pygame
 import data.constants as c
 from data import queries
 from map_logic import custom_battle, politics
@@ -173,3 +174,29 @@ class SupplyTests(SupplyFixture):
             roster = custom_battle.campaign_roster([unit], self.library, tile["terrain"])
         self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.4)
         self.assertNotIn("_supply_multiplier", unit)
+
+    def test_sidebar_draws_owned_unit_supply_in_garrison_and_combat(self):
+        surface = pygame.Surface((400, 300))
+        font = Mock()
+        font.render.return_value = pygame.Surface((10, 15))
+        font.get_height.return_value = 15
+        with (patch.object(sidebar_info.flag_icons, "draw_flag_centered", return_value=10),
+              patch.object(sidebar_info, "draw_combat_stats")):
+            for in_combat in (False, True):
+                with self.subTest(in_combat=in_combat):
+                    tile = province(1, "A")
+                    unit = division(tile)
+                    if in_combat:
+                        division(tile, "B")
+                    world = game(tile)
+                    world.font = world.small_font = font
+                    world.nation_colors = {}
+                    queries.prepare_presentation_supply(world)
+                    sidebar_info.prepare_unit_roster(world, tile)
+                    _, battle, rows = world._unit_roster_cache[tile["id"]]
+                    self.assertEqual(bool(battle.lanes), in_combat)
+
+                    font.render.reset_mock()
+                    sidebar_info.draw_unit_roster(world, surface, tile, tile["units"], True, 0, 0, surface.get_width())
+                    rendered = [call.args[0] for call in font.render.call_args_list]
+                    self.assertEqual(rendered.count(rows[id(unit)]["supply"]), 1)

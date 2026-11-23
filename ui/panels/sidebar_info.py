@@ -217,7 +217,6 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 f"  of {lane.slots}", True, c.UI_TEXT_MUTED)
             surface.blit(heading, (text_x, current_y))
             current_y += 20
-            current_y += draw_supply(row, text_x + 15, current_y)
 
             for lane_side in (lane.a, lane.b):
                 for member in lane_side.members:
@@ -268,6 +267,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             )
 
             current_y += 20
+            current_y += draw_supply(row, text_x + 15, current_y)
 
             # Bombardment stats on their own indented line, only for units that can bombard
             if row["bombard"] is not None:
