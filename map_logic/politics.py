@@ -105,6 +105,11 @@ POLICIES = (
         "min_politics": 2,
         "effects": {"damage": 1.10, "research": 0.50, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
     },
+    {
+        "id": "siphon_military_funding",
+        "name": "Siphon Military Funding",
+        "effects": {"materials": 1.10, "fuel": 1.10, "damage": 0.80},
+    },
 
     # maybe more stuff related to conscription...
     # also maybe a description for each item
