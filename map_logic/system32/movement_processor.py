@@ -156,7 +156,7 @@ def process_conversions(context):
     """Processes the timer for transferring units into Convoys/Trucks and back."""
     process_unit_maintenance_orders(context, order_types={"CONVERT"})
 
-def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units, *, eligible_ids=None):
+def _resolve_step_swaps(context, moving_units, step, pinned_units, *, eligible_ids=None):
     """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.
 
     That check only compares turn-start positions against a unit's very first
@@ -178,7 +178,7 @@ def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units
         and id(u) not in pinned_units
         and (eligible_ids is None or id(u) in eligible_ids)
         and u.get("order", {}).get("path")
-        and step < get_eff_speed(u)
+        and step < queries.unit_movement_speed(u)
     ]
     by_origin = {}
     for u in eligible:
@@ -404,15 +404,12 @@ def process_movement(context):
     if not hasattr(context, 'cached_unit_library'):
         context.cached_unit_library = queries.get_unit_library(context)
 
-    def get_eff_speed(u):
-        return u.get("speed", 1)
-
-    max_speed = max(get_eff_speed(u) for u in moving_units)
+    max_speed = max(queries.unit_movement_speed(unit) for unit in moving_units)
 
     for step in range(max_speed):
         pinned = queries.find_movement_pins(context, ((unit, world_state.id_to_province[unit["_current_province_id"]]) for unit in moving_units), step=step)
         while True:
-            moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned)
+            moving_units = _resolve_step_swaps(context, moving_units, step, pinned)
             remaining_pins = queries.find_movement_pins(context, ((unit, world_state.id_to_province[unit["_current_province_id"]]) for unit in moving_units), step=step)
             if remaining_pins == pinned:
                 break
@@ -442,7 +439,7 @@ def process_movement(context):
         if released:
             # A failed arrival costs the defender no movement. Use the same
             # crossing and movement rules for the released units on this step.
-            moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed, set(), eligible_ids=released)
+            moving_units = _resolve_step_swaps(context, moving_units, step, set(), eligible_ids=released)
             active_ids = {id(unit) for unit, _province in queries.ground_move_records(context, ((unit, world_state.id_to_province[unit["_current_province_id"]]) for unit in moving_units), step=step) if id(unit) in released}
             _move_step(context, moving_units, step, active_ids)
 

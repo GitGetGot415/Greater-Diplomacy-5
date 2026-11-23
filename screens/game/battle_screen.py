@@ -167,7 +167,7 @@ class Battle_Screen(ModalScreen):
                 fit_size=unit_icon_size)
             row["entries"] = get_combat_stat_entries(
                 row["attack"], row["defense"], int(profile.get("health", 0)),
-                profile.get("speed", 0), labeled=False, defense_bonus=row["fort"])
+                row["speed"], labeled=False, defense_bonus=row["fort"])
             if row["bombard"] is not None:
                 row["entries"].extend(get_bombardment_stat_entries(*row["bombard"], labeled=False))
             self.combat_row_data[id(unit)] = row

@@ -1667,7 +1667,7 @@ class UnitCommandControls:
             if path:
                 overlay_renderer.draw_split_movement_path(
                     surface, self.map_screen, origin, path,
-                    unit.get("speed", 1), owner_color, force_visible=True)
+                    queries.presentation_move_speed(self.map_screen, unit), owner_color, force_visible=True)
             elif order.get("type") == "BOMBARD":
                 target_id = order.get("target_id")
                 bomb_range = queries.get_bombardment_range(unit.get("type", ""), context=self.map_screen)

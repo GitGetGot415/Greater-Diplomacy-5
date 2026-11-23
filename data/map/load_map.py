@@ -165,6 +165,7 @@ def _apply_history_snapshot(save_meta, history, history_turn):
 
 def _clear_loaded_world(context):
     context._supply_presentation = None
+    context._movement_speed_presentation = {}
     context.player_supply_projection = None
     context.tactical_combat_supply = (None, None)
     world_state = world_for(context)
@@ -692,6 +693,7 @@ def apply_authoritative_snapshot(context, snapshot):
     if not isinstance(snapshot, dict):
         return
     context._supply_presentation = None
+    context._movement_speed_presentation = {}
     context.player_supply_projection = queries.normalize_supply_projection(snapshot.get("player_supply"))
     world_state.scenario_metadata = queries.normalized_scenario_metadata(snapshot.get("scenario_metadata", {}))
     settings = snapshot.get("scenario_settings")

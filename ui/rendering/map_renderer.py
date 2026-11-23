@@ -295,7 +295,7 @@ def draw_map_screen(map_screen, surface):
                 elif order.get("type") == "MOVE":
                     path = order.get("path", [])
                     if path:
-                        speed = unit.get("speed", 1)
+                        speed = queries.presentation_move_speed(map_screen, unit)
 
                         # If we are resolving global turns (viewing_ai_moves), hide future queued moves
                         # by truncating the path to only what happens this turn to prevent hotseat leaks

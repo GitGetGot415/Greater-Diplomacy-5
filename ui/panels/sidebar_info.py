@@ -37,6 +37,7 @@ def unit_roster_row(profile, province, nation_data, is_combat):
         "profile": profile,
         "attack": profile.get("attack", 0) * damage,
         "defense": profile.get("defense", 0) * defense,
+        "speed": queries.unit_movement_speed(profile),
         "fort": queries.get_fort_defense_bonus(
             province, profile, nation_data, combat_active=is_combat),
         "bombard": (profile.get("bombard_attack", stats.get("bombard_attack", 0)) * damage,
@@ -54,6 +55,7 @@ def prepare_unit_roster(map_screen, province):
         [units], map_screen.nation_data, terrain=province.get("terrain"), tiles=(province,))
     rows = {}
     supply = queries.presentation_supply(map_screen)
+    library = queries.get_unit_library(map_screen)
     with queries.combat_supply(supply):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
@@ -62,7 +64,9 @@ def prepare_unit_roster(map_screen, province):
             if fractions is not None:
                 manpower, materials, fuel = fractions
                 row["supply"] = (f"Supply {queries.supply_fraction(fractions):.0%}   "
-                                 f"Manpower {manpower:.0%}   Materials {materials:.0%}   Fuel {fuel:.0%}")
+                                 f"Manpower {manpower:.0%}   Materials {materials:.0%}")
+                if queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0:
+                    row["supply"] += f"   Fuel {fuel:.0%}"
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:
@@ -186,7 +190,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 draw_combat_stats(
                     surface, map_screen.small_font, "",
                     row["attack"], row["defense"],
-                    int(profile.get("health", 0)), profile.get("speed", 0),
+                    int(profile.get("health", 0)), row["speed"],
                     row_x, current_y, (200, 200, 200), labeled=False,
                     defense_bonus=row["fort"]
                 )
@@ -261,7 +265,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             # Condensed, icon-based combat stats, matching the production tab's style
             draw_combat_stats(
                 surface, map_screen.small_font, "",
-                row["attack"], row["defense"], int(profile.get("health", 0)), profile.get("speed", 0),
+                row["attack"], row["defense"], int(profile.get("health", 0)), row["speed"],
                 row_x, current_y, (200, 200, 200), labeled=False
             )
 

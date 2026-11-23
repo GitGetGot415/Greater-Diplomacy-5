@@ -17,8 +17,20 @@ class AISupplyTests(SupplyFixture):
         snapshot = queries.SupplySnapshot(world)
         planner = ai_supply.SupplyPlanner(snapshot, snapshot, "A")
 
-        self.assertEqual(planner.current(unit), 0)
-        self.assertEqual(planner.quality(unit, beach["id"]), 1)
+        self.assertEqual(planner.current(unit), (0, 1))
+        self.assertEqual(planner.quality(unit, beach["id"]), (1, unit["speed"]))
+
+    def test_ai_caps_fast_advances_at_the_units_fuel_speed(self):
+        tiles = [province(key, "A" if key == 1 else "B",
+                          [neighbor for neighbor in (key - 1, key + 1) if 1 <= neighbor <= 6])
+                 for key in range(1, 7)]
+        tiles[0]["test_output"] = (100, 100, 50)
+        unit = division(tiles[0], speed=5)
+        world = game(*tiles)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+
+        self.assertEqual(unit["order"], {"type": "MOVE", "path": [2, 3]})
 
     def test_ai_uses_existing_move_order_to_escape_an_isolated_area(self):
         front = province(1, "A", [2])
@@ -75,6 +87,6 @@ class AISupplyTests(SupplyFixture):
         actual = queries.SupplySnapshot(world)
         known = queries.SupplySnapshot(world, visible_to="A", visible_provinces={1, 2, 3}, source=actual)
         planner = ai_supply.SupplyPlanner(actual, known, "A")
-        self.assertEqual(planner.current(unit), 0)
+        self.assertEqual(planner.current(unit), (0, 1))
         self.assertNotIn(2, known.occupants)
         self.assertEqual(known.fractions(unit), (1, 1, 1))

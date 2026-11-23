@@ -62,8 +62,13 @@ class SupplyPlanner:
         return None
 
     def current(self, unit):
-        fractions = self.fractions(unit)
-        return queries.supply_fraction(fractions) if fractions is not None else 1.0
+        return self._conditions(unit, self.fractions(unit))
+
+    def _conditions(self, unit, fractions):
+        speed = unit.get("speed", c.DEFAULT_UNIT_SPD)
+        if fractions is None:
+            return 1.0, speed
+        return queries.supply_fraction(fractions), queries.fuel_movement_speed(speed, fractions[2])
 
     def _unit(self, unit):
         return self.known.unit_data.get(queries.supply_unit_key(unit))
@@ -125,12 +130,12 @@ class SupplyPlanner:
     def _quality(self, unit, area, origin=None):
         data = self._unit(unit)
         if data is None:
-            return 1.0
+            return self._conditions(unit, None)
         demand = data.demand
         if area is None:
-            return queries.supply_fraction(tuple(0.0 if demand[key] else 1.0 for key in c.ECON_RESOURCE_KEYS))
+            return self._conditions(unit, tuple(0.0 if demand[key] else 1.0 for key in c.ECON_RESOURCE_KEYS))
         added = {key: total + (demand[key] if area != origin else 0.0) for key, total in self.demand[area].items()}
-        return queries.supply_fraction(queries.supply_fractions(self.network.areas[area].production, added, demand))
+        return self._conditions(unit, queries.supply_fractions(self.network.areas[area].production, added, demand))
 
     def quality(self, unit, tile):
         origin = self._area(unit)

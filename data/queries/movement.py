@@ -96,7 +96,7 @@ def ground_move_records(context, records=None, *, step=0):
         records = ((unit, province) for province in world_for(context).map_data.values()
                    for unit in province.get("units", []))
     return [(unit, province) for unit, province in records
-            if unit.get("health", 0) > 0 and unit.get("speed", 1) > step
+            if unit.get("health", 0) > 0 and queries.unit_movement_speed(unit) > step
             and not unit.get("_combat_locked") and not unit.get("_skip_remaining_steps")
             and isinstance(unit.get("order"), dict) and unit["order"].get("type") == "MOVE"
             and unit["order"].get("path")
@@ -116,7 +116,7 @@ def move_route_enters_combat(context, unit, *, step=0, viewer=None):
     side = get_unit_combat_owner(unit)
     friendly = friendly_nations_view(side, world.nation_data)
     path = unit.get("order", {}).get("path", [])
-    for province_id in path[:max(0, unit.get("speed", 1) - step)]:
+    for province_id in path[:max(0, queries.unit_movement_speed(unit) - step)]:
         province = world.id_to_province.get(province_id)
         if province is None:
             continue

@@ -730,7 +730,8 @@ def _midpoint_meetings(map_screen):
     records = [(unit, province) for province in map_screen.map_data.values()
                for unit in province.get("units", [])
                if visible_to is None or unit.get("owner") in visible_to]
-    pinned = queries.find_movement_pins(map_screen, records)
+    with queries.combat_supply(queries.presentation_supply(map_screen)):
+        pinned = queries.find_movement_pins(map_screen, records)
     meetings = []
     for pair in combat_rules.find_meeting_pairs(
             map_screen.map_data, map_screen.nation_data, visible_to):

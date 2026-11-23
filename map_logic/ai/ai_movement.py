@@ -89,7 +89,7 @@ def _air_base_threats(context, country, visible):
                 continue
             reached = {province["id"]}
             frontier = [province]
-            for _step in range(unit.get("speed", c.DEFAULT_UNIT_SPD)):
+            for _step in range(queries.unit_movement_speed(unit)):
                 next_frontier = []
                 for current in frontier:
                     for target_id in current.get("neighbors", []):
@@ -1075,9 +1075,9 @@ def _retreat_tile(context, ai_name, unit, prov, friendly_nations, unsafe_waters,
     Chosen per unit, because a ship, a convoy and a division standing on the
     same tile cannot all use the same neighbour. A tile qualifies when the unit
     may legally step there, it is not hostile land, nothing visible is fighting
-    there, and no visible enemy fleet patrols it. Among those: a repair haven
-    first, then friendly land, then the tile with the fewest visible threats
-    next to it. Ties go to the lowest id so the choice is reproducible.
+    there, and no visible enemy fleet patrols it. Prefer better combat supply
+    and movement speed, then repair havens, friendly land, and fewer visible
+    threats. Ties go to the lowest id so the choice is reproducible.
     """
     world_state = world_for(context)
     nation_data = world_state.nation_data
@@ -1103,7 +1103,8 @@ def _retreat_tile(context, ai_name, unit, prov, friendly_nations, unsafe_waters,
                     _visible_hostiles(context, ai_name, far)
                     or queries.are_at_war(ai_name, far.get("owner"), nation_data)):
                 danger += 1
-        choices.append((-supply.quality(unit, n_id) if supply else 0, n_id not in havens, n_prov.get("owner") not in friendly_nations,
+        readiness, speed = supply.quality(unit, n_id) if supply else (1.0, 1)
+        choices.append((-readiness, -speed, n_id not in havens, n_prov.get("owner") not in friendly_nations,
                         danger, n_id))
     return min(choices)[-1] if choices else None
 
@@ -1408,7 +1409,7 @@ def _extend_fast_unit_path(context, unit, first_step, start_id, is_convoy, unsaf
     the extra steps only; the caller issues the whole path and claims its end.
     """
     world_state = world_for(context)
-    speed = unit.get("speed", 1)
+    speed = queries.unit_movement_speed(unit)
     steps = []
     if speed <= 1:
         return steps
@@ -1504,6 +1505,10 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     def pressure(tile):
         return _tile_pressure(target_assignments, target_stacks, tile, target_capacity)
 
+    def supplied_pressure(unit, tile):
+        readiness, speed = supply.quality(unit, tile) if supply else (1.0, 1)
+        return -readiness, -speed, pressure(tile)
+
     def retreat(unit, prov):
         """Falls back one step to the unit's own best tile. True if ordered."""
         tile = _retreat_tile(context, ai_name, unit, prov, friendly_nations,
@@ -1527,7 +1532,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                       if tile in world_state.id_to_province and tile not in water_ids]
         candidates = [(tile, quality) for tile, quality in candidates
                       if quality > current or (not wounded and tile in relief)]
-        for tile, _ in sorted(candidates, key=lambda choice: (-choice[1], choice[0] not in havens, pressure(choice[0]), choice[0])):
+        for tile, _ in sorted(candidates, key=lambda choice: (-choice[1][0], -choice[1][1], choice[0] not in havens, pressure(choice[0]), choice[0])):
             visible_enemy = supply.known.occupants.get(tile, set()) & supply.enemies
             if visible_enemy and _attack_target_is_immediate_loss(context, ai_name, tile, unit, survival_cache, signature):
                 continue
@@ -1609,8 +1614,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             adjacent_unclaimed = [n for n in adjacent_unclaimed if queries.can_convoy_enter(prov, world_state.id_to_province.get(n)) and n not in unsafe_waters]
 
         if adjacent_unclaimed and not is_naval_combatant:
-            best_adj = min(adjacent_unclaimed, key=lambda tile: (
-                -supply.quality(unit, tile) if supply and not is_convoy else 0, pressure(tile)))
+            best_adj = min(adjacent_unclaimed, key=lambda tile: supplied_pressure(unit, tile))
 
             # Let fast units pathfind deeper into unclaimed territory!
             path = [best_adj] + _extend_fast_unit_path(
@@ -1644,8 +1648,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                 ]
             if adjacent_targets:
                 # Pick the adjacent enemy with the least attackers currently assigned
-                best_adj = min(adjacent_targets, key=lambda tile: (
-                    -supply.quality(unit, tile) if supply and not is_convoy else 0, pressure(tile)))
+                best_adj = min(adjacent_targets, key=lambda tile: supplied_pressure(unit, tile))
 
                 # Let fast units pathfind deeper from the border!
                 path = [best_adj] + _extend_fast_unit_path(
@@ -1709,7 +1712,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             is_ship=is_naval_combatant,
             moving_nation=ai_name,
             nation_data=world_state.nation_data,
-            unit_speed=unit.get("speed", 1),
+            unit_speed=queries.unit_movement_speed(unit),
             water_ids=water_ids,
             neighbor_ids=neighbor_ids,
             target_stacks=stacks,
@@ -1727,7 +1730,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                 unit_actions.apply_action(context, ai_name, prov, unit, {"type": "CONVERT", "turns_left": 1, "to": "Convoy"}, authority="ai")
             else:
                 # Truncate the AI's path to match its actual movement speed
-                speed = unit.get("speed", 1)
+                speed = queries.unit_movement_speed(unit)
 
                 # PREVENT LAND UNITS QUEUEING INTO OCEAN MID-MOVE
                 final_path = []
@@ -1941,7 +1944,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
             curr_id, set(targets), trip_tiles, world_state.id_to_province,
             target_assignments, is_ship=is_ship,
             moving_nation=ai_name, nation_data=world_state.nation_data,
-            unit_speed=unit.get("speed", 1),
+            unit_speed=queries.unit_movement_speed(unit),
             water_ids=water_ids, neighbor_ids=neighbor_ids, path_cache=path_cache)
         if not path or (not is_ship and any(step in water_ids for step in path)):
             return None
@@ -1956,7 +1959,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     for unit, prov in units_info:
         curr_id = prov["id"]
         in_combat = queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data)
-        speed = unit.get("speed", 1)
+        speed = queries.unit_movement_speed(unit)
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
         is_naval_combatant = _is_combat_ship(u_type, context=context)
@@ -2185,7 +2188,10 @@ def _generate_unit_orders(context, *, countries=None):
         if not units_info:
             continue
 
-        _assign_air_orders(context, ai_name, units_info)
+        visible = world.visible_provinces(ai_name)
+        known_supply = queries.SupplySnapshot(context, visible_to=ai_name, visible_provinces=visible, source=actual_supply)
+        with queries.combat_supply(known_supply if visible is None else None):
+            _assign_air_orders(context, ai_name, units_info)
         units_info = [(unit, base) for unit, base in units_info
                       if not queries.is_air_unit(unit, context=context) and not queries.is_air_transport(unit, context=context)
                       and any(current is unit for current in base.get("units", []))]
@@ -2194,7 +2200,6 @@ def _generate_unit_orders(context, *, countries=None):
 
         my_provs = nation_provs[ai_name]
 
-        known_supply = queries.SupplySnapshot(context, visible_to=ai_name, visible_provinces=world.visible_provinces(ai_name), source=actual_supply)
         supply = ai_supply.SupplyPlanner(actual_supply, known_supply, ai_name)
         with queries.combat_supply(supply):
             # Combine land and water IDs so BFS can route overseas

@@ -1,6 +1,7 @@
 """Supply, upkeep, and order regressions on small artificial maps."""
 
 import asyncio
+from math import nextafter
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
@@ -64,14 +65,78 @@ class SupplyTests(SupplyFixture):
         world = game(tile)
         fractions = queries.SupplySnapshot(world).fractions(unit)
         self.assertEqual(fractions, (0.3, 0.4, 0.5))
-        self.assertAlmostEqual(queries.supply_fraction(fractions), 0.4)
+        self.assertAlmostEqual(queries.supply_fraction(fractions), 0.35)
         queries.apply_supply_attrition(world)
-        self.assertAlmostEqual(unit["health"], 47)
+        self.assertAlmostEqual(unit["health"], 46.75)
         unit["health"] = 0.5
         tile["test_output"] = (0, 0, 0)
         for _ in range(12):
             queries.apply_supply_attrition(world)
         self.assertAlmostEqual(unit["health"], 0.5 * 0.9 ** 12)
+
+    def test_fuel_speed_tiers_use_strict_fractional_cutoffs(self):
+        for base in (0, 1, 2, 3, 4, 5, 6):
+            with self.subTest(base=base):
+                self.assertEqual(queries.fuel_movement_speed(base, 1.0), base)
+                self.assertEqual(queries.fuel_movement_speed(base, 0.0), min(base, 1))
+                self.assertEqual(queries.fuel_movement_speed(base, nextafter(1.0, 0.0)), max(1, base - 1) if base else 0)
+                for speed in range(1, base - 1):
+                    threshold = speed / (base - 1)
+                    self.assertEqual(queries.fuel_movement_speed(base, threshold), speed)
+                    self.assertEqual(queries.fuel_movement_speed(base, nextafter(threshold, 1.0)), speed + 1)
+
+    def test_only_fuel_users_lose_speed_and_fuel_never_counts_toward_combat(self):
+        tile = province(1, "A", output=(200, 0, 0))
+        fuel_user = division(tile, speed=5)
+        infantry = division(tile, speed=5, kind="Supply Test Infantry")
+        world = game(tile)
+        queries.prepare_presentation_supply(world)
+        sidebar_info.prepare_unit_roster(world, tile)
+
+        rows = world._unit_roster_cache[1][2]
+        with queries.combat_supply(queries.presentation_supply(world)):
+            for unit, speed in ((fuel_user, 1), (infantry, 5)):
+                self.assertEqual(queries.unit_supply_multiplier(unit), 0.5)
+                self.assertEqual(queries.unit_movement_speed(unit), speed)
+                self.assertEqual(queries.presentation_move_speed(world, unit), speed)
+                self.assertEqual(rows[id(unit)]["speed"], speed)
+        self.assertIn("Fuel", rows[id(fuel_user)]["supply"])
+        self.assertNotIn("Fuel", rows[id(infantry)]["supply"])
+
+    def test_fuel_caps_turn_movement_and_preserves_the_queued_route(self):
+        tiles = [province(key, "Unclaimed" if key == 2 else "A",
+                          [neighbor for neighbor in (key - 1, key + 1) if 1 <= neighbor <= 6])
+                 for key in range(1, 7)]
+        tiles[0]["test_output"] = (100, 100, 50)
+        tiles[1]["test_output"] = (0, 0, 50)
+        unit = division(tiles[0], speed=5, order={"type": "MOVE", "path": [2, 3, 4, 5, 6]})
+        world = game(*tiles)
+
+        with (patch.object(c, "RECORD_HISTORY", False),
+              patch.object(turn_processor.politics, "tick", return_value=None),
+              patch.object(turn_processor.research_processor, "process_national_research")):
+            asyncio.run(turn_processor.resolve_turn_logic(world))
+            self.assertEqual(tiles[1]["owner"], "A")
+            self.assertIn(unit, tiles[2]["units"])
+            self.assertEqual(unit["order"]["path"], [4, 5, 6])
+            self.assertEqual((unit["speed"], unit["health"]), (5, 100))
+
+            asyncio.run(turn_processor.resolve_turn_logic(world))
+            self.assertIn(unit, tiles[-1]["units"])
+            self.assertEqual(unit["order"]["path"], [])
+
+    def test_pin_checks_only_steps_the_units_fuel_allows_this_turn(self):
+        origin = province(1, "A", [2, 4], output=(100, 100, 0))
+        safe = province(2, "A", [1, 3])
+        enemy_target = province(3, "B", [2])
+        enemy_origin = province(4, "B", [1])
+        unit = division(origin, speed=2, order={"type": "MOVE", "path": [2, 3]})
+        division(enemy_origin, "B", order={"type": "MOVE", "path": [1]})
+        world = game(origin, safe, enemy_target, enemy_origin)
+
+        self.assertIn(id(unit), queries.find_movement_pins(world))
+        with queries.combat_supply(queries.freeze_combat_supply(world)):
+            self.assertNotIn(id(unit), queries.find_movement_pins(world))
 
     def test_hp_based_upkeep_applies_on_land_at_sea_and_in_air_cargo(self):
         land = province(1, "A")
@@ -183,12 +248,12 @@ class SupplyTests(SupplyFixture):
         sidebar_info.prepare_unit_roster(world, tile)
         row = world._unit_roster_cache[1][2][id(unit)]
         full_supply = sidebar_info.unit_roster_row(unit, tile, world.nation_data, False)
-        self.assertIn("40%", row["supply"])
-        self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.4)
+        self.assertIn("35%", row["supply"])
+        self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.35)
         with queries.combat_supply(queries.freeze_combat_supply(world)):
-            self.assertAlmostEqual(combat_rules.effective_damage_multiplier(queries.supply_combat_profile(unit)), 0.4)
+            self.assertAlmostEqual(combat_rules.effective_damage_multiplier(queries.supply_combat_profile(unit)), 0.35)
             roster = custom_battle.campaign_roster([unit], self.library, tile["terrain"])
-        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.4)
+        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.35)
         self.assertNotIn("_supply_multiplier", unit)
 
     def test_sidebar_draws_available_unit_supply_in_garrison_and_combat(self):
@@ -219,8 +284,8 @@ class SupplyTests(SupplyFixture):
 
     def test_sidebar_uses_the_player_supply_projection(self):
         tile = province(1, "A")
-        unit = division(tile)
-        foreign = division(tile, "B")
+        unit = division(tile, speed=5)
+        foreign = division(tile, "B", speed=5)
         world = game(tile)
         world.player_supply_projection = {unit["unit_id"]: (0.5, 0.5, 0.5)}
 
@@ -230,3 +295,5 @@ class SupplyTests(SupplyFixture):
         rows = world._unit_roster_cache[tile["id"]][2]
         self.assertIn("supply", rows[id(unit)])
         self.assertNotIn("supply", rows[id(foreign)])
+        self.assertEqual(queries.presentation_move_speed(world, unit), 2)
+        self.assertEqual(queries.presentation_move_speed(world, foreign), 5)

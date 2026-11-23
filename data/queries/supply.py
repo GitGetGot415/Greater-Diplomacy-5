@@ -30,7 +30,16 @@ def supply_fractions(production, demand, unit_demand):
 
 
 def supply_fraction(fractions):
-    return sum(fractions) / len(c.ECON_RESOURCE_KEYS)
+    """Combat output and attrition depend on Manpower and Materials."""
+    manpower, materials, _fuel = fractions
+    return (manpower + materials) / 2
+
+
+def fuel_movement_speed(speed, fuel):
+    """Partial fuel unlocks higher speeds only above each exact threshold."""
+    if speed <= 1 or fuel >= 1.0:
+        return speed
+    return 1 + sum(fuel > step / (speed - 1) for step in range(1, speed - 1))
 
 
 def supply_unit_key(unit):
@@ -189,8 +198,10 @@ class SupplySnapshot:
             def score(area_id):
                 area = network.areas[area_id]
                 demand = {resource: area.demand[resource] + extra[resource] for resource in c.ECON_RESOURCE_KEYS}
-                return sum(supply_fraction(supply_fractions(area.production, demand, self.unit_data[identity].demand))
-                           for identity in group)
+                ratios = [supply_fractions(area.production, demand, self.unit_data[identity].demand) for identity in group]
+                return (sum(supply_fraction(fractions) for fractions in ratios),
+                        sum(fuel_movement_speed(self.unit_data[identity].unit.get("speed", 1), fractions[2])
+                            for identity, fractions in zip(group, ratios)))
 
             best = max(sorted(choices), key=score)
             _add_resources(network.areas[best].demand, extra)
@@ -232,6 +243,17 @@ def unit_supply_multiplier(unit):
     return supply_fraction(fractions) if fractions is not None else 1.0
 
 
+def unit_movement_speed(unit, *, supply=None):
+    """Campaign movement allowance from the same supply ratios as combat."""
+    speed = unit.get("speed", c.DEFAULT_UNIT_SPD)
+    if speed <= 1:
+        return speed
+    if supply is None:
+        supply = _COMBAT_SUPPLY.get()
+    fractions = unit_supply_details(supply, unit) if supply is not None else None
+    return fuel_movement_speed(speed, fractions[2]) if fractions is not None else speed
+
+
 def supply_combat_profile(unit):
     return dict(unit, _supply_multiplier=unit_supply_multiplier(unit))
 
@@ -254,23 +276,38 @@ def apply_supply_attrition(context):
 def prepare_presentation_supply(context):
     """Resolve supply at a presentation boundary so drawing only reads values."""
     projection = getattr(context, "player_supply_projection", None)
-    if projection is not None or getattr(context, "is_editor", False):
+    context._movement_speed_presentation = {}
+    if getattr(context, "is_editor", False):
         return
-    snapshot = SupplySnapshot(context)
-    player = session_for(context).player_country
-    scenario = world_for(context).scenario_settings
-    can_see_all = (player not in snapshot.nations and player != c.TOURNAMENT_SPECTATOR
-                   or not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, scenario))
-    context._supply_presentation = {
-        identity: snapshot.fractions(data.unit)
-        for identity, data in snapshot.unit_data.items() if data.owner == player or can_see_all
-    }
+    if projection is not None:
+        ratios = projection
+        units = ((supply_unit_key(unit), unit) for province in world_for(context).map_data.values()
+                 for unit in province.get("units", ()))
+    else:
+        snapshot = SupplySnapshot(context)
+        player = session_for(context).player_country
+        scenario = world_for(context).scenario_settings
+        can_see_all = (player not in snapshot.nations and player != c.TOURNAMENT_SPECTATOR
+                       or not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, scenario))
+        ratios = context._supply_presentation = {
+            identity: snapshot.fractions(data.unit)
+            for identity, data in snapshot.unit_data.items() if data.owner == player or can_see_all
+        }
+        units = ((identity, snapshot.unit_data[identity].unit) for identity in ratios)
+    if ratios:
+        context._movement_speed_presentation = {identity: unit_movement_speed(unit, supply=ratios)
+                                                 for identity, unit in units if identity in ratios}
 
 
 def presentation_supply(context):
     """The cached local view, or the host's private player projection."""
     projection = getattr(context, "player_supply_projection", None)
     return projection if projection is not None else getattr(context, "_supply_presentation", None) or {}
+
+
+def presentation_move_speed(context, unit):
+    speeds = getattr(context, "_movement_speed_presentation", {})
+    return speeds.get(supply_unit_key(unit), unit.get("speed", c.DEFAULT_UNIT_SPD))
 
 
 def unit_supply_details(supply, unit):
