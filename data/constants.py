@@ -1050,7 +1050,7 @@ POLITICS_AXIS_EFFECTS = {
         "damage": (1.3, 0.7),
         "tile_manpower": (0.5, 1.5),        # core and non-core province tiles only
         "unit_upkeep": (1.5, 0.5),          # the whole upkeep bill: manpower, materials and fuel
-        "max_health": (1.2, 0.8),
+        "max_health": (1.1, 0.9),
         "research_year_months": (10, -10),  # the ahead-of-time penalty treats the date as this many months later
     },
     "strategy": {
@@ -1059,8 +1059,8 @@ POLITICS_AXIS_EFFECTS = {
         # strategies each keep their own modifier in either one's territory.
         "core_territory_damage": (1.0, 1.2),
         "non_core_territory_damage": (1.0, 0.8),
-        "defense": (0.8, 1.2),              # unit defense and fort defense
-        "fort_cost": (1.2, 0.8),
+        "defense": (0.9, 1.1),              # unit defense and fort defense
+        "fort_cost": (1.5, 0.5),
     },
 }
 # ==========================================
