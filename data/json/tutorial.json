@@ -90,7 +90,7 @@
                             "items": [
                                 {"icon": "terrain", "heading": "Terrain", "text": "Shows the terrain map."},
                                 {"icon": "political", "heading": "Political", "text": "Shows the actual countries on the map."},
-                                {"icon": "relations", "heading": "Relations", "text": "Hover over a country to see its relations, including over gaps between its provinces. Move off the country to see your own relations."},
+                                {"icon": "relations", "heading": "Relations", "text": "Shows your relations with other countries on the map."},
                                 {"icon": "core", "heading": "Cores", "text": "Shows the territory each country has cores on."},
                                 {"icon": "faction", "heading": "Factions", "text": "Shows factions."},
                                 {"icon": "resource", "heading": "Resources", "text": "Shows province resources."},
