@@ -114,7 +114,7 @@ POLICIES = (
         "id": "total_mobilisation",
         "name": "Total Mobilisation",
         "min_politics": 2,
-        "effects": {"damage": 1.20, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
+        "effects": {"damage": 1.10, "manpower": 0.80, "materials": 0.80, "fuel": 0.80},
     },
     {
         "id": "siphon_military_funding",
