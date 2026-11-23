@@ -6,7 +6,7 @@ import data.constants as c
 from data import queries
 from ui.background_styles import POLITICS_PANEL_STYLES
 from ui.widgets import ui_elements
-from ui.widgets.text_utils import render_inline_text, wrap_text
+from ui.widgets.text_utils import wrap_text
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering import symbol_loader
@@ -88,33 +88,31 @@ def effect_text(effect, value):
 
 POLICY_VIEWPORT_MARGIN_X = 20
 POLICY_VIEWPORT_TOP_OFFSET_Y = 62
-POLICY_CARD_WIDTH = 152
-POLICY_CARD_HEIGHT = 110
+POLICY_CARD_WIDTH = 228
+POLICY_CARD_HEIGHT = 196
 POLICY_CARD_GAP = 8
-POLICY_COLUMNS = 6
-POLICY_ROWS = 2
 POLICY_SCROLL_WHEEL_STEP = 90
 POLICY_SCROLLBAR_HEIGHT = 14
 POLICY_SCROLLBAR_GAP = 6
-POLICY_CARD_PADDING = 6
+POLICY_CARD_PADDING = 10
 POLICY_TITLE_CENTER_Y = 19
-POLICY_EFFECT_FIRST_Y = 42
-POLICY_EFFECT_ROW_GAP = 16
-POLICY_EFFECT_COLUMNS = 3
-POLICY_EFFECT_ICON_SIZE = (14, 14)
-POLICY_STATUS_CENTER_Y = 74
+POLICY_EFFECT_FIRST_Y = 43
+POLICY_EFFECT_ROW_GAP = 21
+POLICY_EFFECT_ICON_SIZE = (16, 16)
+POLICY_EFFECT_LABEL_GAP = 6
+POLICY_STATUS_CENTER_Y = 151
 POLICY_BUTTON_WIDTH = POLICY_CARD_WIDTH - 2 * POLICY_CARD_PADDING
 POLICY_BUTTON_HEIGHT = 24
 POLICY_BUTTON_BOTTOM_GAP = 5
-POLICY_EFFECT_SYMBOLS = {
-    "research": "Research",
-    "manpower": "Infantry",
-    "materials": "Iron",
-    "fuel": "Oil",
-    "damage": "Attack",
-    "aircraft_range": "Biplane Fighter",
-    "fort_cost": "Fort Lvl 1",
-    "defense": c.ICON_DEFENSE,
+POLICY_EFFECT_DISPLAY = {
+    "research": ("Normal research", "Research"),
+    "manpower": ("Manpower production", "Infantry"),
+    "materials": ("Materials production", "Iron"),
+    "fuel": ("Fuel production", "Oil"),
+    "damage": ("Unit damage", "Attack"),
+    "aircraft_range": ("Air range", "Biplane Fighter"),
+    "fort_cost": ("Fort construction cost", "Fort Lvl 1"),
+    "defense": ("Unit & fort defense", c.ICON_DEFENSE),
 }
 
 
@@ -270,22 +268,17 @@ class Politics_Screen(Screen):
                 button.click_guard = scroll_guard
                 self.elements.append(button)
 
-    def _policy_columns(self):
-        return max(POLICY_COLUMNS, (len(politics.POLICIES) + POLICY_ROWS - 1) // POLICY_ROWS)
-
     def _policy_viewport_rect(self):
-        columns = self._policy_columns()
-        rows = max(1, (len(politics.POLICIES) + columns - 1) // columns)
         return pygame.Rect(
             self.policies_rect.x + POLICY_VIEWPORT_MARGIN_X,
             self.policies_rect.y + POLICY_VIEWPORT_TOP_OFFSET_Y,
             self.policies_rect.width - 2 * POLICY_VIEWPORT_MARGIN_X,
-            rows * POLICY_CARD_HEIGHT + (rows - 1) * POLICY_CARD_GAP,
+            POLICY_CARD_HEIGHT,
         )
 
     def _policy_content_width(self):
-        columns = min(len(politics.POLICIES), self._policy_columns())
-        return columns * POLICY_CARD_WIDTH + max(0, columns - 1) * POLICY_CARD_GAP
+        count = len(politics.POLICIES)
+        return count * POLICY_CARD_WIDTH + max(0, count - 1) * POLICY_CARD_GAP
 
     def _update_policy_scroll_bounds(self):
         self.policy_scroll_min_x = min(0, self.scroll_content_rect.width - self._policy_content_width())
@@ -293,10 +286,8 @@ class Politics_Screen(Screen):
 
     def _policy_card_rect(self, index):
         viewport = self.scroll_content_rect
-        row, column = divmod(index, self._policy_columns())
-        return pygame.Rect(viewport.x + self.policy_scroll_x
-                           + column * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
-                           viewport.y + row * (POLICY_CARD_HEIGHT + POLICY_CARD_GAP),
+        return pygame.Rect(viewport.x + self.policy_scroll_x + index * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
+                           viewport.y,
                            POLICY_CARD_WIDTH, POLICY_CARD_HEIGHT)
 
     def _make_policy_button(self, card, policy_id, state, eligible):
@@ -462,19 +453,22 @@ class Politics_Screen(Screen):
             face.blit(heading, heading.get_rect(midtop=(card.width // 2, title_y)))
             title_y += title_font.get_height()
 
-        font = fonts.get("tiny")
-        cell_width = POLICY_BUTTON_WIDTH // POLICY_EFFECT_COLUMNS
-        for index, (effect, multiplier) in enumerate(definition["effects"].items()):
-            value = f"{multiplier - 1.0:+.0%}"
-            symbol = POLICY_EFFECT_SYMBOLS[effect]
+        font = fonts.get("small")
+        label_x = POLICY_CARD_PADDING + POLICY_EFFECT_ICON_SIZE[0] + POLICY_EFFECT_LABEL_GAP
+        value_x = card.width - POLICY_CARD_PADDING
+        for row, (effect, multiplier) in enumerate(definition["effects"].items()):
+            label, symbol = POLICY_EFFECT_DISPLAY[effect]
+            y = POLICY_EFFECT_FIRST_Y + row * POLICY_EFFECT_ROW_GAP
             icon = symbol_loader.get_symbol(symbol, 1, style="classic", fit_size=POLICY_EFFECT_ICON_SIZE)
+            if icon is not None:
+                icon_center_x = POLICY_CARD_PADDING + POLICY_EFFECT_ICON_SIZE[0] // 2
+                face.blit(icon, icon.get_rect(center=(icon_center_x, y)))
+            label_surf = font.render(label, True, c.UI_TEXT_LIGHT)
+            face.blit(label_surf, label_surf.get_rect(midleft=(label_x, y)))
             is_benefit = multiplier < 1.0 if effect == "fort_cost" else multiplier > 1.0
             color = c.COLOR_SUCCESS_GREEN if is_benefit else DECREASE_COLOR
-            entry, = render_inline_text([(value, icon)], font, cell_width, color, icon_gap=2)
-            row, column = divmod(index, POLICY_EFFECT_COLUMNS)
-            x = POLICY_CARD_PADDING + column * cell_width + cell_width // 2
-            y = POLICY_EFFECT_FIRST_Y + row * POLICY_EFFECT_ROW_GAP
-            face.blit(entry, entry.get_rect(center=(x, y)))
+            value = font.render(f"{multiplier - 1.0:+.0%}", True, color)
+            face.blit(value, value.get_rect(midright=(value_x, y)))
 
         if state:
             status = Politics_Screen._policy_status_text(state)
@@ -482,7 +476,7 @@ class Politics_Screen(Screen):
         else:
             status = politics.requirement_text(definition["id"], compact=True)
             status_color = c.UI_TEXT_DIM if eligible else DECREASE_COLOR
-        status_surf = font.render(status, True, status_color)
+        status_surf = fonts.get("tiny").render(status, True, status_color)
         face.blit(status_surf, status_surf.get_rect(center=(card.width // 2, POLICY_STATUS_CENTER_Y)))
 
         return _PolicyCard(card, face)
