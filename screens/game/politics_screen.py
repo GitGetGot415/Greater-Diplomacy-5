@@ -88,7 +88,7 @@ def effect_text(effect, value):
 
 POLICY_VIEWPORT_MARGIN_X = 20
 POLICY_VIEWPORT_TOP_OFFSET_Y = 62
-POLICY_CARD_WIDTH = 228
+POLICY_CARD_WIDTH = 184
 POLICY_CARD_HEIGHT = 196
 POLICY_CARD_GAP = 8
 POLICY_SCROLL_WHEEL_STEP = 90
@@ -105,14 +105,14 @@ POLICY_BUTTON_WIDTH = POLICY_CARD_WIDTH - 2 * POLICY_CARD_PADDING
 POLICY_BUTTON_HEIGHT = 24
 POLICY_BUTTON_BOTTOM_GAP = 5
 POLICY_EFFECT_DISPLAY = {
-    "research": ("Normal research", "Research"),
-    "manpower": ("Manpower production", "Infantry"),
-    "materials": ("Materials production", "Iron"),
-    "fuel": ("Fuel production", "Oil"),
-    "damage": ("Unit damage", "Attack"),
+    "research": ("Research", "Research"),
+    "manpower": ("Manpower prod", "Infantry"),
+    "materials": ("Materials prod", "Iron"),
+    "fuel": ("Fuel prod", "Oil"),
+    "damage": ("Unit dmg", "Attack"),
     "aircraft_range": ("Air range", "Biplane Fighter"),
-    "fort_cost": ("Fort construction cost", "Fort Lvl 1"),
-    "defense": ("Unit & fort defense", c.ICON_DEFENSE),
+    "fort_cost": ("Fort cost", "Fort Lvl 1"),
+    "defense": ("Unit & fort def", c.ICON_DEFENSE),
 }
 
 
