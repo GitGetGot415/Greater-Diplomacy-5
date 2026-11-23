@@ -357,11 +357,13 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
     return save_dict
 
 
-def player_snapshot_projection(context, snapshot, country_id):
+def player_snapshot_projection(context, snapshot, country_id, *, player_supply=None):
     """Filter a network save before transmission, including raw map geometry."""
     world_state = world_for(context)
     result = copy.deepcopy(snapshot)
     result.pop("tactical_player_unit_id", None)
+    result["player_supply"] = (queries.SupplySnapshot(context).player_summary(country_id)
+                               if player_supply is None else player_supply)
     # Only the map editor uses these settings, and a background image can be large.
     result.pop("standalone_export_settings", None)
     from map_logic.system32 import unit_events

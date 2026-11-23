@@ -53,9 +53,17 @@ def prepare_unit_roster(map_screen, province):
     battle = combat_rules.build_battle(
         [units], map_screen.nation_data, terrain=province.get("terrain"), tiles=(province,))
     rows = {}
-    for unit in units:
-        profile = battle.profiles.get(id(unit), unit)
-        rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
+    supply = queries.presentation_supply(map_screen)
+    with queries.combat_supply(supply):
+        for unit in units:
+            profile = battle.profiles.get(id(unit), unit)
+            row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
+            if unit.get("owner") == map_screen.player_country:
+                fractions = queries.unit_supply_details(supply, unit)
+                if fractions is not None:
+                    manpower, materials, fuel = fractions
+                    row["supply"] = (f"Supply {queries.supply_fraction(fractions):.0%}   "
+                                     f"Manpower {manpower:.0%}   Materials {materials:.0%}   Fuel {fuel:.0%}")
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:
@@ -81,6 +89,14 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
     # access without being in it, and listing it as a side -- with its top
     # units highlighted as the ones dealing damage -- was simply untrue.
     is_combat, battle, rows = map_screen._unit_roster_cache[province["id"]]
+
+    def draw_supply(row, row_x, y):
+        supply = row.get("supply")
+        if supply:
+            text = map_screen.small_font.render(supply, True, c.UI_TEXT_MUTED)
+            surface.blit(text, (row_x, y))
+            return text.get_height()
+        return 0
 
     # --- Active Garrison / Combat Zone ---
     # While a fight is active, the Combat Zone display (grouped by side) fully
@@ -145,7 +161,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 profile = row["profile"]
                 u_name = queries.get_condensed_unit_name(profile.get("type", "Unit"))
                 has_bombard = row["bombard"] is not None
-                row_height = 20 + (18 if has_bombard else 0)
+                row_height = 20 + (18 if has_bombard else 0) + (map_screen.small_font.get_height() if "supply" in row else 0)
 
                 in_front = id(u) in engaged_ids
                 if in_front:
@@ -177,6 +193,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 )
 
                 current_y += 20
+                current_y += draw_supply(row, text_x + 20, current_y)
 
                 # Bombardment stats on their own indented line, only for units that can bombard
                 if has_bombard:
@@ -200,6 +217,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 f"  of {lane.slots}", True, c.UI_TEXT_MUTED)
             surface.blit(heading, (text_x, current_y))
             current_y += 20
+            current_y += draw_supply(row, text_x + 15, current_y)
 
             for lane_side in (lane.a, lane.b):
                 for member in lane_side.members:

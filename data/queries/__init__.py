@@ -18,6 +18,7 @@ The submodules are layered. A module imports only from modules earlier in this l
     air             Aircraft rules: missions, ranges, transport cargo, air drops, and ground-combat interaction.
     tech            Technology and research queries, unit unlock lookups, and research-edit previews.
     economy         Resources, costs, production output, administrative actions, and economy projections.
+    supply          Connected province production and unit supply.
     forts           Fort levels, fort defense bonuses, and fort damage.
     movement        Unit move steps, path-finding, and air move orders.
     strength        Military and economic strength, attacker ranking, and combat predictions.
@@ -66,6 +67,7 @@ from data.queries.units import *
 from data.queries.air import *
 from data.queries.tech import *
 from data.queries.economy import *
+from data.queries.supply import *
 from data.queries.forts import *
 from data.queries.movement import *
 from data.queries.strength import *

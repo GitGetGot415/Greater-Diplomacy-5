@@ -155,6 +155,7 @@ class Map(StateAccess, Screen):
             ui_info_popup.prepare_relation_indicators(self)
 
     def on_enter(self, app, previous):
+        queries.prepare_presentation_supply(self)
         ui_info_popup.prepare_relation_indicators(self)
         self._resource_hud_economy_key = None
         self._refresh_resource_hud_economy()
@@ -916,6 +917,7 @@ class Map(StateAccess, Screen):
         self._unit_roster_cache = {}
         army_panel.prepare(self)
         unit_events.refresh_presentation(self)
+        queries.prepare_presentation_supply(self)
         # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
         if self.selected_province is not None:

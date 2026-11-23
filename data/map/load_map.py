@@ -164,6 +164,9 @@ def _apply_history_snapshot(save_meta, history, history_turn):
 
 
 def _clear_loaded_world(context):
+    context._supply_presentation = None
+    context.player_supply_projection = None
+    context.tactical_combat_supply = (None, None)
     world_state = world_for(context)
     session_state = session_for(context)
     # Ensure no residual data from a previous map persists during the load
@@ -406,6 +409,8 @@ def _restore_session_properties(context, save_meta):
         world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
     local_metadata = {} if session_state.selection_mode or session_state.is_editor else save_meta or {}
+    if "player_supply" in local_metadata:
+        context.player_supply_projection = queries.normalize_supply_projection(local_metadata["player_supply"])
     session_state.conversation_colors = queries.normalized_conversation_colors(local_metadata.get("conversation_colors"))
     unit_events.restore(context, local_metadata)
 
@@ -686,6 +691,8 @@ def apply_authoritative_snapshot(context, snapshot):
     world_state = world_for(context)
     if not isinstance(snapshot, dict):
         return
+    context._supply_presentation = None
+    context.player_supply_projection = queries.normalize_supply_projection(snapshot.get("player_supply"))
     world_state.scenario_metadata = queries.normalized_scenario_metadata(snapshot.get("scenario_metadata", {}))
     settings = snapshot.get("scenario_settings")
     if isinstance(settings, dict):

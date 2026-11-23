@@ -158,7 +158,8 @@ class Battle_Screen(ModalScreen):
         self.combat_row_data = {}
         for unit in self.province.get("units", []):
             profile = self.battle.profiles.get(id(unit), unit)
-            row = sidebar_info.unit_roster_row(profile, self.province, self.map_screen.nation_data, True)
+            with queries.combat_supply(queries.presentation_supply(self.map_screen)):
+                row = sidebar_info.unit_roster_row(profile, self.province, self.map_screen.nation_data, True)
             combat_owner = queries.get_unit_combat_owner(unit)
             row["unit_icon"] = symbol_loader.get_symbol(
                 unit["type"], zoom=1, country=combat_owner,
@@ -658,8 +659,9 @@ class Battle_Screen(ModalScreen):
             list(lane.a.front) + list(lane.a.reserve),
             list(lane.b.front) + list(lane.b.reserve),
         ]
-        return overlay_renderer.estimated_combat_outcome(
-            sides, self.map_screen.nation_data, province=self.province)
+        with queries.combat_supply(queries.presentation_supply(self.map_screen)):
+            return overlay_renderer.estimated_combat_outcome(
+                sides, self.map_screen.nation_data, province=self.province)
 
     def _paint_outcome(self, surface, lane, *, rect=None, outcome=None):
         """Shared outlook display for the overview and editor's narrow column."""

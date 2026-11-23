@@ -376,6 +376,7 @@ def campaign_roster(units, library, terrain=None):
         # Packed ships already carry their current transport stats, including damage.
         entry = dict(unit) if packed_ship_type(unit["type"], library) else create_battle_unit(unit["type"], unit["owner"], library, terrain)
         entry["health"] = unit["health"] / unit["max_health"] * entry["max_health"]
+        entry["_supply_multiplier"] = queries.unit_supply_multiplier(unit)
         roster.append(entry)
     return roster
 
@@ -878,6 +879,8 @@ class BattleSimulation:
                     if not valid_starting_health(entry["health"], source_max):
                         raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
                     data["health"] = entry["health"] / source_max * data["max_health"]
+                    if "_supply_multiplier" in entry:
+                        data["_supply_multiplier"] = entry["_supply_multiplier"]
                 members = self._deploy_division(data, side, x, unit_shape(data["type"], self.library),
                                                 self.arena_size[1] / 2 + height)
                 # Each column approaches in its own lane; a stacked division keeps its height within it.
@@ -1192,7 +1195,7 @@ class BattleSimulation:
 
     def _can_hurt(self, shooter, target):
         """Cache full attack per type pair, then account for the shooter's current wounds."""
-        key = (shooter.data["type"], target.data["type"])
+        key = (shooter.data["type"], target.data["type"], queries.unit_supply_multiplier(shooter.data))
         if key not in self._full_attacks:
             full = dict(shooter.data, health=shooter.data["max_health"])
             self._full_attacks[key] = self._attack(full, target.data)
