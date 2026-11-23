@@ -530,9 +530,13 @@ class PolicyTests(unittest.TestCase):
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
                                politics.effect_at("research", politics.value(screen.nation_data, "A")))
 
-    def test_policies_require_economics_or_quality_below_their_bound(self):
-        for policy_id, axis, bound in (("prioritize_industrial_needs", politics.ECONOMIC, -2),
-                                       ("siphon_military_funding", politics.QUALITY, 3)):
+    def test_nonpolitical_policy_thresholds_are_strict(self):
+        for policy_id, axis, bound, eligible_side in (
+            ("prioritize_industrial_needs", politics.ECONOMIC, -2, -1),
+            ("siphon_military_funding", politics.QUALITY, 3, -1),
+            ("quality_fuel", politics.QUALITY, -3, 1),
+            ("on_ne_passe_pas", politics.STRATEGY, 2, 1),
+        ):
             with self.subTest(policy=policy_id):
                 screen = self.screen_at()
                 nation_data = screen.nation_data
@@ -543,10 +547,10 @@ class PolicyTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     politics.canonicalize_policy_draft(nation_data, "A", draft)
 
-                politics.set_axis_value(nation_data, "A", axis, bound - 1)
+                politics.set_axis_value(nation_data, "A", axis, bound + eligible_side)
                 self.assertIn(policy_id, politics.canonicalize_policy_draft(nation_data, "A", draft))
                 self.activate_and_finish(screen, policy_id)
-                politics.set_axis_drift(nation_data, "A", axis, 1)
+                politics.set_axis_drift(nation_data, "A", axis, -eligible_side)
                 politics.tick(screen)
                 self.assertIsNone(politics.policy_state(nation_data, "A", policy_id))
 
@@ -605,21 +609,48 @@ class PolicyTests(unittest.TestCase):
                                * policy_effect("prioritize_industrial_needs", "manpower"))
 
     def test_resource_policy_changes_the_shared_economy_calculation(self):
-        from data import queries
-
-        policy_id = "research_subsidies"
-        screen = self.screen_at(political_value=-3)
-        screen.nation_data["A"]["research"] = {}
         map_data = {"p": {"owner": "A", "cores": ["A"], "resources": {},
                           "buildings": [], "units": []}}
-        before = queries.calculate_all_economies(map_data, screen.nation_data)["A"]["total_inc"]
+        for policy_id, resources in (("research_subsidies", ("manpower", "materials", "fuel")),
+                                     ("quality_fuel", ("fuel",)),
+                                     ("on_ne_passe_pas", ("materials",))):
+            with self.subTest(policy=policy_id):
+                screen = self.screen_at(political_value=-3)
+                nation_data = screen.nation_data
+                nation_data["A"]["research"] = {}
+                politics.set_axis_value(nation_data, "A", politics.STRATEGY, 3)
+                before = queries.calculate_all_economies(map_data, nation_data)["A"]["total_inc"]
+                self.activate_and_finish(screen, policy_id)
+                after = queries.calculate_all_economies(map_data, nation_data)["A"]["total_inc"]
+                for resource in resources:
+                    self.assertGreater(before[resource], 0)
+                    self.assertAlmostEqual(after[resource], before[resource] * policy_effect(policy_id, resource))
+
+    def test_on_ne_passe_pas_combines_with_strategy_for_defense_and_fort_prices(self):
+        policy_id = "on_ne_passe_pas"
+        screen = self.screen_at()
+        nation_data = screen.nation_data
+        strategy = politics.policy(policy_id)["min_strategy"] + 1
+        politics.set_axis_value(nation_data, "A", politics.STRATEGY, strategy)
+        defender = unit("A", defense=50)
+        fort = "Fort Lvl 1"
+        province = {"owner": "A", "buildings": [fort]}
+        library = {fort: {"group": "fortification", "cost_materials": 300},
+                   "Fixture Building": {"group": "recruitment", "cost_materials": 300}}
+        baseline_fort_defense = queries.get_fort_defense_bonus(province, defender, nation_data, combat_active=True)
+        self.assertGreater(baseline_fort_defense, 0)
+        baseline_building = queries.get_building_cost("Fixture Building", "A", {}, library, nation_data)
 
         self.activate_and_finish(screen, policy_id)
-        after = queries.calculate_all_economies(map_data, screen.nation_data)["A"]["total_inc"]
 
-        for resource in ("manpower", "materials", "fuel"):
-            self.assertAlmostEqual(after[resource], before[resource]
-                                   * policy_effect(policy_id, resource))
+        multiplier = politics.effect_at("defense", strategy) * policy_effect(policy_id, "defense")
+        self.assertAlmostEqual(combat_rules.damage_after_defense(defender, 200, nation_data), 200 - 50 * multiplier)
+        self.assertAlmostEqual(queries.get_fort_defense_bonus(province, defender, nation_data, combat_active=True),
+                               baseline_fort_defense * policy_effect(policy_id, "defense"))
+        cost = queries.get_building_cost(fort, "A", {}, library, nation_data)
+        self.assertEqual(cost["cost_materials"], round(300 * politics.effect_at("fort_cost", strategy)
+                                                     * policy_effect(policy_id, "fort_cost")))
+        self.assertEqual(queries.get_building_cost("Fixture Building", "A", {}, library, nation_data), baseline_building)
 
     def test_total_mobilisation_stacks_its_damage_bonus_on_the_axis_bonus(self):
         policy_id = "total_mobilisation"

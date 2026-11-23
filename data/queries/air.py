@@ -288,8 +288,7 @@ def air_range_preview_kind(context, unit, destination=None):
 def air_order_radius(unit, kind, *, context=None):
     """Air drops reserve half the transport's listed movement range for the return.
 
-    The owner's Strategy scales the listed range before any mission rule, so
-    every mission kind scales with it.
+    Strategy and active policies scale the listed range before mission rules.
     """
     stats = air_unit_stats(unit, context=context)
     # Type-level callers pass a library context or none, and read the type's
@@ -297,7 +296,7 @@ def air_order_radius(unit, kind, *, context=None):
     nation_data = getattr(world_for(context), "nation_data", None)
     radius = stats.get("air_range_px", 0)
     if nation_data is not None and unit.get("owner"):
-        radius *= politics.axis_effect(nation_data, unit["owner"], "aircraft_range")
+        radius *= politics.axis_policy_multiplier(nation_data, unit["owner"], "aircraft_range")
     if kind == "AIR_DROP":
         return radius / 2
     if kind == "AIR_REPOSITION" and not air_unit_can_transport(unit, context=context):

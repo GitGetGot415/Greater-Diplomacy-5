@@ -772,15 +772,15 @@ def health_defense_multiplier(unit, nation_data=None):
 
 
 def defense_multiplier(unit, nation_data=None):
-    """Scale unit defense by health and, with country data, the owner's Strategy."""
+    """Scale unit defense by health, Strategy, and active policies."""
     multiplier = health_defense_multiplier(unit, nation_data)
     if nation_data:
-        multiplier *= politics.axis_effect(nation_data, unit.get("owner"), "defense")
+        multiplier *= politics.axis_policy_multiplier(nation_data, unit.get("owner"), "defense")
     return multiplier
 
 
 def damage_after_defense(unit, attack_per_target, nation_data=None, defense_bonus=0):
-    """Apply health- and Strategy-scaled unit defense and a flat situational defense bonus."""
+    """Apply effective unit defense and add the situational defense bonus."""
     defense = unit.get("defense", 0) * defense_multiplier(unit, nation_data) + defense_bonus
     return max(0, attack_per_target - defense)
 

@@ -112,6 +112,9 @@ POLICY_EFFECT_SYMBOLS = {
     "materials": "Iron",
     "fuel": "Oil",
     "damage": "Attack",
+    "aircraft_range": "Biplane Fighter",
+    "fort_cost": "Fort Lvl 1",
+    "defense": c.ICON_DEFENSE,
 }
 
 
@@ -465,7 +468,8 @@ class Politics_Screen(Screen):
             value = f"{multiplier - 1.0:+.0%}"
             symbol = POLICY_EFFECT_SYMBOLS[effect]
             icon = symbol_loader.get_symbol(symbol, 1, style="classic", fit_size=POLICY_EFFECT_ICON_SIZE)
-            color = c.COLOR_SUCCESS_GREEN if multiplier > 1.0 else DECREASE_COLOR
+            is_benefit = multiplier < 1.0 if effect == "fort_cost" else multiplier > 1.0
+            color = c.COLOR_SUCCESS_GREEN if is_benefit else DECREASE_COLOR
             entry, = render_inline_text([(value, icon)], font, cell_width, color, icon_gap=2)
             row, column = divmod(index, POLICY_EFFECT_COLUMNS)
             x = POLICY_CARD_PADDING + column * cell_width + cell_width // 2

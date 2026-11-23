@@ -932,6 +932,36 @@ class AirIntegrationTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [command, command])
 
+    def test_quality_fuel_extends_strike_range_until_cancellation(self):
+        policy_id = "quality_fuel"
+        nation_data = self.game.nation_data
+        politics.set_axis_value(nation_data, "A", politics.STRATEGY, 3)
+        kind = "AIR_ATTACK"
+        normal_radius = queries.air_order_radius(self.plane, kind, context=self.game)
+        boost = politics.policy(policy_id)["effects"]["aircraft_range"]
+        target = tile(self.game, 3, int(self.base["center"][0] + normal_radius * (1 + boost) / 2), owner="B")
+        order = {"type": kind, "target_id": target["id"]}
+        command = {"type": "unit_order", "province_id": 1, "unit_index": 0, "order": order}
+        driver = MapRealtimeDriver(self.game)
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [command])
+
+        self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", policy_id))
+        self.assertEqual(queries.air_order_radius(self.plane, kind, context=self.game), normal_radius)
+        for _ in range(politics.POLICY_ACTIVATION_TURNS):
+            politics.tick(self.game)
+        self.assertAlmostEqual(queries.air_order_radius(self.plane, kind, context=self.game), normal_radius * boost)
+        self.assertIn(target["id"], queries.get_air_targets(self.game, self.plane, self.base, kind))
+
+        cancel = {"type": "country_preferences", "political_drift": 0,
+                  politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_CANCELLING}}}
+        draft = driver.validate_draft("A", [cancel, command])
+        driver.apply_validated_drafts({"A": draft})
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
+        politics.tick(self.game)
+        air_processor.process_air_orders(self.game)
+        self.assertEqual(self.plane["order"]["type"], "MOVE")
+
     def test_realtime_strike_return_fire_occurs_only_at_server_resolution(self):
         from map_logic.system32 import turn_processor
         self.target["buildings"] = ["Fort Lvl 5"]
@@ -1925,6 +1955,31 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(restored["unit_id"], bomber["unit_id"])
             self.assertEqual(restored["order"], bomber["order"])
             self.assertEqual(restored["order"], queries.canonical_air_order(loaded, restored, base, restored["order"]))
+
+    def test_new_policies_survive_save_load_and_selected_history(self):
+        from data.map import save_map
+        from map_logic.system32 import turn_processor
+
+        game = runtime_map()
+        policies = ("quality_fuel", "on_ne_passe_pas")
+        politics.set_axis_value(game.nation_data, "A", politics.STRATEGY, 3)
+        for policy_id in policies:
+            self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", policy_id))
+        turn_processor.snapshot_history(game)
+        history_turn = game.time_manager.total_turns
+        for _ in range(politics.POLICY_ACTIVATION_TURNS):
+            politics.tick(game)
+
+        with tempfile.TemporaryDirectory() as directory, patch.object(c, "SAVES_DIR", directory):
+            asyncio.run(save_map.save_map_data(game, "policy-roundtrip"))
+            path = os.path.join(directory, "policy-roundtrip")
+            loaded = Map(load_path=path, skip_initial_income=True)
+            historical = Map(load_path=path, history_turn=history_turn, skip_initial_income=True)
+            for policy_id in policies:
+                self.assertEqual(politics.policy_state(loaded.nation_data, "A", policy_id)["status"],
+                                 politics.POLICY_ACTIVE)
+                self.assertEqual(politics.policy_state(historical.nation_data, "A", policy_id)["status"],
+                                 politics.POLICY_ACTIVATING)
 
     def test_numbered_aircraft_and_legacy_names_survive_actual_save_load(self):
         from data.map import save_map

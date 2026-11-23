@@ -429,9 +429,8 @@ def generate_rebellion_name(cores_on_tile, nation_data):
 def get_building_cost(b_name, nation, map_data, bldg_lib, nation_data):
     """Dynamically scales the building cost, bypassing the JSON for Basic Factories.
 
-    Politics scales the price: Strategy for forts, the economic system for every
-    other building. Orders record what they paid, so a later shift on either
-    axis never changes a refund.
+    Strategy and active policies scale fort prices. The Economic axis scales
+    other building prices. Orders record what they paid for refunds.
 
     Time is left untouched -- it comes straight from bldg_lib, so it already
     reflects both the recipes.py default and any construction turns override from Edit Unit / Building Stats.
@@ -443,8 +442,10 @@ def get_building_cost(b_name, nation, map_data, bldg_lib, nation_data):
         stats["cost_materials"] = x * 2
         stats["cost_manpower"] = x
         stats["cost_fuel"] = 0
-    effect = "fort_cost" if stats.get("group") == "fortification" else "building_cost"
-    multiplier = politics.axis_effect(nation_data, nation, effect)
+    if stats.get("group") == "fortification":
+        multiplier = politics.axis_policy_multiplier(nation_data, nation, "fort_cost")
+    else:
+        multiplier = politics.axis_effect(nation_data, nation, "building_cost")
     for res in c.ECON_RESOURCE_KEYS:
         if f"cost_{res}" in stats:
             stats[f"cost_{res}"] = int(round(stats[f"cost_{res}"] * multiplier))

@@ -111,6 +111,18 @@ POLICIES = (
         "max_quality": 3,
         "effects": {"materials": 1.10, "fuel": 1.10, "damage": 0.90},
     },
+    {
+        "id": "quality_fuel",
+        "name": "Quality Fuel",
+        "min_quality": -3,
+        "effects": {"aircraft_range": 1.10, "fuel": 0.90},
+    },
+    {
+        "id": "on_ne_passe_pas",
+        "name": "On ne passe pas",
+        "min_strategy": 2,
+        "effects": {"fort_cost": 0.85, "materials": 0.90, "defense": 1.10},
+    },
 
     # maybe more stuff related to conscription...
     # also maybe a description for each item
@@ -247,7 +259,9 @@ def requirements_met(nation_data, nation, policy_id, *, political_value=None):
     return (("max_politics" not in definition or political_value < definition["max_politics"])
             and ("min_politics" not in definition or political_value > definition["min_politics"])
             and ("max_economics" not in definition or economic_value(nation_data, nation) < definition["max_economics"])
-            and ("max_quality" not in definition or axis_value(nation_data, nation, QUALITY) < definition["max_quality"]))
+            and ("max_quality" not in definition or axis_value(nation_data, nation, QUALITY) < definition["max_quality"])
+            and ("min_quality" not in definition or axis_value(nation_data, nation, QUALITY) > definition["min_quality"])
+            and ("min_strategy" not in definition or axis_value(nation_data, nation, STRATEGY) > definition["min_strategy"]))
 
 
 def requirement_text(policy_id, *, compact=False):
@@ -266,6 +280,12 @@ def requirement_text(policy_id, *, compact=False):
     if "max_quality" in definition:
         prefix = "Quality" if compact else "Requires quality"
         return f"{prefix} < {definition['max_quality']:+d}"
+    if "min_quality" in definition:
+        prefix = "Quality" if compact else "Requires quality"
+        return f"{prefix} > {definition['min_quality']:+d}"
+    if "min_strategy" in definition:
+        prefix = "Strategy" if compact else "Requires strategy"
+        return f"{prefix} > {definition['min_strategy']:+d}"
     return "No political requirement"
 
 
@@ -434,6 +454,11 @@ def axis_effect(nation_data, nation, effect):
     return effect_at(effect, axis_value(nation_data, nation, EFFECT_AXES[effect]))
 
 
+def axis_policy_multiplier(nation_data, nation, effect):
+    """Combine an axis multiplier with the country's active policies."""
+    return axis_effect(nation_data, nation, effect) * effect_multiplier(nation_data, nation, effect)
+
+
 def territory_damage_multiplier(nation_data, nation, province):
     """Strategy's damage modifier for this nation's units fighting on one tile.
 
@@ -455,7 +480,7 @@ def factory_output_multiplier(nation_data, nation):
 
 def damage_multiplier(nation_data, nation):
     """What this nation's units multiply their damage by: Quality, then policy."""
-    return axis_effect(nation_data, nation, "damage") * effect_multiplier(nation_data, nation, "damage")
+    return axis_policy_multiplier(nation_data, nation, "damage")
 
 
 def research_multiplier(nation_data, nation):
@@ -464,7 +489,7 @@ def research_multiplier(nation_data, nation):
     Fully authoritarian countries pause normal research. Funded research points
     bypass this multiplier.
     """
-    return axis_effect(nation_data, nation, "research") * effect_multiplier(nation_data, nation, "research")
+    return axis_policy_multiplier(nation_data, nation, "research")
 
 
 def resource_multiplier(nation_data, nation, resource):

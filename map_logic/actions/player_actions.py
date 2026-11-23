@@ -981,6 +981,9 @@ class PlayerActions:
                 command = self._validate_queue(country_id, command)
             refreshed.append(command)
         self._validate_queue_budget(country_id, refreshed)
+        # Apply orders against the same policy state used to check range and prices.
+        # The turn then resolves any policy cancellations before executing orders.
+        refreshed.sort(key=lambda command: command["type"] == "country_preferences")
         return refreshed
 
 

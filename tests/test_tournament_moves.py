@@ -1003,18 +1003,19 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
 
     def test_policy_activation_uses_host_timing_and_rejects_submitted_countdowns(self):
+        policy_id = "on_ne_passe_pas"
         for inject_countdown in (False, True):
             with self.subTest(inject_countdown=inject_countdown), tempfile.TemporaryDirectory() as directory:
                 host = Host()
-                host.nation_data["Leader"][politics.VALUE_KEY] = -3
+                host.nation_data["Leader"][politics.STRATEGY_VALUE_KEY] = 3
                 requested = {"status": politics.POLICY_ACTIVATING}
                 if inject_countdown:
                     requested["turns_remaining"] = 999
-                command = {"type": "country_preferences", politics.POLICY_KEY: {"research_subsidies": requested}}
+                command = {"type": "country_preferences", politics.POLICY_KEY: {policy_id: requested}}
                 move = self.player_data(host, player_intents=[command])
                 path = self.write_move(directory, "policy.gd5move", "Leader", move)
                 summary = self.import_moves(host, [path])
-                state = politics.policy_state(host.nation_data, "Leader", "research_subsidies")
+                state = politics.policy_state(host.nation_data, "Leader", policy_id)
                 self.assertEqual(summary["loaded"], int(not inject_countdown), summary["rejections"])
                 if inject_countdown:
                     self.assertIsNone(state)

@@ -143,5 +143,5 @@ def get_fort_defense_bonus(province, unit, nation_data, combat_active=None):
 
     if not is_fort_defended_territory(province, unit.get("owner"), nation_data):
         return 0
-    # The defending unit's Strategy scales the fort as it scales unit defense.
-    return level * c.FORT_DEFENSE_PER_LEVEL * politics.axis_effect(nation_data, unit.get("owner"), "defense")
+    # Apply the defending unit's national defense modifier to the fort bonus too.
+    return level * c.FORT_DEFENSE_PER_LEVEL * politics.axis_policy_multiplier(nation_data, unit.get("owner"), "defense")
