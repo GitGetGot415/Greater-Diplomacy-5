@@ -226,6 +226,7 @@ def get_combat_predictions(context):
     #    alliance membership does not disclose another nation's plans.
     from map_logic.system32 import combat_rules
     visible_to = None if is_spectator else {player_country}
+    viewer = None if is_spectator else player_country
 
     # Layers hidden submarines out of the bubble the same way the map/sidebar
     # do. Spectators and the editor keep the full, unfiltered truth.
@@ -267,7 +268,9 @@ def get_combat_predictions(context):
     for prov in map_data.values():
         prov_id = prov["id"]
         defenders = sub_visible([unit for unit in prov.get("units", [])
-                                 if id(unit) not in meeting_unit_ids], prov)
+                                 if id(unit) not in meeting_unit_ids
+                                 and not ((visible_to is None or unit.get("owner") in visible_to)
+                                          and queries.warship_withdraws_to_sea(context, unit, prov, viewer=viewer))], prov)
         attackers = [u for u, o in incoming.get(prov_id, [])]
         
         forces_by_owner = {}

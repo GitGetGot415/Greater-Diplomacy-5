@@ -157,7 +157,9 @@ def process_pinning(context):
         dest_prov = world_state.id_to_province.get(dest_id)
         if not dest_prov: continue
 
-        defenders = dest_prov.get("units", [])
+        # Warships withdrawing to sea leave on the same step the charge enters.
+        defenders = [unit for unit in dest_prov.get("units", [])
+                     if not queries.warship_withdraws_to_sea(context, unit, dest_prov)]
         if not defenders: continue
 
         # Recognize the encounter before preparing aircraft, building a battle,

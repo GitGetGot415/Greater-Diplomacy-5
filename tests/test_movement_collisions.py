@@ -25,6 +25,7 @@ import unittest
 from unittest.mock import patch
 
 
+from data import queries
 from tests.combat_fixtures import StubBattleMap
 
 from map_logic.system32 import combat_processor, movement_processor
@@ -539,6 +540,58 @@ class TacticalSwapTests(unittest.TestCase):
                     self.assertTrue(any(unit is attacker for unit in origin["units"]))
                     self.assertFalse(any(unit is player for unit in origin["units"]))
                     self.assertEqual(player["order"]["path"], [])
+
+    def test_warship_can_leave_port_before_a_doomed_charge(self):
+        self.library["Fixture Ship I"] = {"naval_unit": True}
+        for sea_occupied, garrison in ((False, False), (False, True), (True, False)):
+            with self.subTest(sea_occupied=sea_occupied, garrison=garrison):
+                screen = self.screen()
+                screen.tactical_mode = False
+                ship = self.mover("A", ["sea"], health=30, attack=800, defense=0)
+                ship["type"] = "Fixture Ship I"
+                invader = self.mover("B", ["port"], health=20, attack=400, defense=0)
+                defenders = [ship]
+                if garrison:
+                    defenders.append(self.mover("A", [], health=1000, attack=800, defense=0))
+                port = screen.add_province("port", "A", units=defenders, neighbors=["sea", "inland"])
+                port["is_coastal"] = True
+                enemy_ship = self.mover("B", [])
+                enemy_ship["type"] = "Fixture Ship I"
+                sea = screen.add_province("sea", "Ocean", terrain="ocean", neighbors=["port"],
+                                          units=[enemy_ship] if sea_occupied else [])
+                screen.add_province("inland", "B", units=[invader], neighbors=["port"])
+                screen.add_province("reserve", "A")
+
+                combat_processor.process_pinning(screen)
+                self.assertEqual(ship["health"], 0 if sea_occupied else 30)
+                self.assertEqual(invader["health"], 0 if garrison or sea_occupied else 20)
+                combat_processor.process_meeting_engagements(screen)
+                movement_processor.process_movement(screen)
+                combat_processor.process_combat(screen)
+
+                self.assertEqual(ship in sea["units"], not sea_occupied)
+                self.assertEqual(port["owner"], "A" if garrison or sea_occupied else "B")
+
+    def test_port_forecast_only_accounts_for_known_warship_withdrawals(self):
+        self.library["Fixture Ship I"] = {"naval_unit": True}
+        self.library["Submarine Fixture I"] = {"naval_unit": True}
+        screen = self.screen()
+        screen.tactical_mode = False
+        ship = self.mover("A", ["sea"])
+        ship["type"] = "Fixture Ship I"
+        guard = self.mover("A", [])
+        invader = self.mover("B", [])
+        port = screen.add_province("port", "A", units=[ship, guard, invader], neighbors=["sea"])
+        port["is_coastal"] = True
+        submarine = self.mover("B", [])
+        submarine["type"] = "Submarine Fixture I"
+        screen.add_province("sea", "Ocean", units=[submarine], terrain="ocean", neighbors=["port"])
+
+        self.assertFalse(queries.warship_withdraws_to_sea(screen, ship, port))
+        screen.player_country = "A"
+        self.assertEqual(queries.get_combat_predictions(screen)[0]["forces"]["A"], [guard])
+        screen.player_country = "B"
+        self.assertEqual(queries.get_combat_predictions(screen)[0]["forces"]["A"], [ship, guard])
 
     def test_an_attack_queued_for_a_later_turn_does_not_block_withdrawal(self):
         screen = self.screen()

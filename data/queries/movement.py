@@ -104,12 +104,13 @@ def ground_move_records(context, records=None, *, step=0):
                      and not air_unit_can_move_on_ground(unit, context=context))]
 
 
-def move_route_enters_combat(context, unit, *, step=0):
+def move_route_enters_combat(context, unit, *, step=0, viewer=None):
     """Whether this turn's remaining route attacks outside friendly territory.
 
     A friendly first step cannot disguise an attack later in the same turn.
     Steps queued for a later turn do not prevent a withdrawal this turn.
     Fighting on friendly land does not turn a withdrawal into an offensive route.
+    A preview viewer considers only hostile units the viewer can see.
     """
     world = world_for(context)
     side = get_unit_combat_owner(unit)
@@ -122,11 +123,25 @@ def move_route_enters_combat(context, unit, *, step=0):
         owner = province.get("owner", "Unclaimed")
         if is_hostile_territory(side, owner, world.nation_data):
             return True
-        if owner not in friendly and any(other.get("health", 0) > 0 and are_at_war(
-                side, get_unit_combat_owner(other), world.nation_data)
+        if owner not in friendly and (viewer is None or queries.is_province_visible(context, province_id)) and any(
+                other.get("health", 0) > 0 and are_at_war(side, get_unit_combat_owner(other), world.nation_data)
+                and (viewer is None or queries.is_unit_visible_to(other, viewer, province, world.nation_data))
                 for other in province.get("units", [])):
             return True
     return False
+
+
+def warship_withdraws_to_sea(context, unit, province, *, viewer=None):
+    """A warship with an executable first step from land into water."""
+    if is_water_province(province) or not queries.is_warship(unit.get("type", ""), context=context):
+        return False
+    if not ground_move_records(context, [(unit, province)]):
+        return False
+    world = world_for(context)
+    destination = world.id_to_province.get(unit["order"]["path"][0])
+    return (destination is not None and is_water_province(destination)
+            and can_unit_move_step(unit, province, destination, world.nation_data, context=context)
+            and not move_route_enters_combat(context, unit, viewer=viewer))
 
 
 def can_unit_leave_current_combat(context, unit, province, *, step=0):
