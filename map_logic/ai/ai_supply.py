@@ -50,6 +50,7 @@ class SupplyPlanner:
         self.country = country
         self.network = known.for_country(country) if country in known.land_units else queries.SupplyNetwork()
         self.demand = {key: area.demand.copy() for key, area in self.network.areas.items()}
+        self.projections = {}
         self.incoming = defaultdict(list)
         self.enemies = set(queries.get_enemies(country, known.nations))
         self.critical = self._critical_corridors() if self.enemies else set()
@@ -87,36 +88,29 @@ class SupplyPlanner:
             return set()
         cuts = _articulation_tiles(neighbors, areas) & threats
         critical = set()
+        units = [(self.known.unit_data[identity], area_id) for identity, area_id in self.network.unit_area.items()]
         for tile in cuts:
             area_id = areas[tile]
-            before = self.network.areas[area_id]
-            if not any(before.demand.values()):
+            exposed = [data.unit for data, area in units if area == area_id and data.province != tile]
+            if not exposed:
                 continue
-            baseline = queries.supply_fractions(before.production, before.demand, before.demand)
-            visited = {tile}
-            for start in neighbors[tile]:
-                if start in visited or areas.get(start) != area_id:
-                    continue
-                supply = queries.SupplyArea()
-                pending = [start]
-                visited.add(start)
-                while pending:
-                    here = pending.pop()
-                    if here not in self.known.water and self.known.provinces[here].get("owner") == self.country:
-                        for resource, amount in self.known.province_output(here).items():
-                            supply.production[resource] += amount
-                    for identity in self.known.land_units[self.country].get(here, ()):
-                        for resource, amount in self.known.unit_data[identity].demand.items():
-                            supply.demand[resource] += amount
-                    for near in neighbors[here]:
-                        if near not in visited and areas.get(near) == area_id:
-                            visited.add(near)
-                            pending.append(near)
-                after = queries.supply_fractions(supply.production, supply.demand, supply.demand)
-                if any(new < old for new, old in zip(after, baseline)):
-                    critical.add(tile)
-                    break
+            projected = self.known.land_projection(self.country, tile)
+            if any(any(new < old for new, old in zip(self.known.fractions(unit, network=projected),
+                                                    self.known.fractions(unit, network=self.network))) for unit in exposed):
+                critical.add(tile)
         return critical
+
+    def _projected_demand(self, area=None, origin=None, upkeep=None):
+        key = (area, origin, tuple(upkeep.values()) if upkeep else ())
+        if key not in self.projections:
+            demand = self.demand.copy()
+            if upkeep is not None and area != origin:
+                for area_id, direction in ((origin, -1), (area, 1)):
+                    if area_id is not None:
+                        demand[area_id] = {resource: amount + direction * upkeep[resource]
+                                           for resource, amount in self.demand[area_id].items()}
+            self.projections[key] = self.known.demand_projection(self.country, demand)
+        return self.projections[key]
 
     def destination_area(self, unit, tile, connected=None):
         own_area = self._area(unit)
@@ -136,8 +130,8 @@ class SupplyPlanner:
         if area is None:
             fractions = tuple(0.0 if demand[key] else 1.0 for key in c.ECON_RESOURCE_KEYS)
         else:
-            added = {key: total + (demand[key] if area != origin else 0.0) for key, total in self.demand[area].items()}
-            fractions = queries.supply_fractions(self.network.areas[area].production, added, demand)
+            projected = self._projected_demand(area, origin, demand)
+            fractions = queries.supply_fractions(projected.available(area), projected.areas[area].demand, demand)
         return self._conditions(unit, queries.SupplyStatus.from_fractions(fractions, demand))
 
     def quality(self, unit, tile):
@@ -172,9 +166,10 @@ class SupplyPlanner:
             areas = self.known.neighboring_areas(self.network, tile)
             if len(areas) < 2:
                 continue
+            projected = self._projected_demand()
             for key in areas:
-                area = self.network.areas[key]
-                if any(area.production[resource] < self.demand[key][resource] for resource in c.ECON_RESOURCE_KEYS):
+                available = projected.available(key)
+                if any(available[resource] < projected.areas[key].demand[resource] for resource in c.ECON_RESOURCE_KEYS):
                     targets.add(tile)
                     break
         return targets
@@ -262,18 +257,14 @@ class SupplyPlanner:
         for enemy in sorted(self.enemies & self.known.land_units.keys()):
             # Ships available for reassignment can leave their starting tile.
             # Count a blockade by those ships only if they are assigned to hold it.
-            hostile_to_enemy = set(queries.get_enemies(enemy, self.known.nations))
-            vacating = {tile for tile, ships in vacating_ships.items() if tile in self.known.sea and not any(
-                id(unit) not in ships and queries.get_unit_combat_owner(unit) in hostile_to_enemy
-                for unit in self.known.visible_units.get(tile, ()))}
-            base = self.known.sea_projection(enemy, block=stations, reopen=vacating)
+            base = self.known.sea_projection(enemy, block=stations, blocker=self.country, departing=vacating_ships)
             candidates = self._naval_shortlist(enemy, sea & base.province_area.keys(), base)
             if not candidates:
                 continue
             quiet = []
             for tile in candidates:
                 cut = (tile,)
-                after = self.known.sea_projection(enemy, block=stations | {tile}, reopen=vacating)
+                after = self.known.sea_projection(enemy, block=stations | {tile}, blocker=self.country, departing=vacating_ships)
                 loss = -self._naval_impact(enemy, base, after)
                 if loss > 0:
                     objectives.append(("blockade", loss, cut, enemy))
@@ -285,7 +276,7 @@ class SupplyPlanner:
             for index, first in enumerate(quiet):
                 for second in quiet[index + 1:]:
                     cut = (first, second)
-                    after = self.known.sea_projection(enemy, block=stations | set(cut), reopen=vacating)
+                    after = self.known.sea_projection(enemy, block=stations | set(cut), blocker=self.country, departing=vacating_ships)
                     loss = -self._naval_impact(enemy, base, after)
                     if loss > 0:
                         objectives.append(("blockade", loss, cut, enemy))
@@ -305,6 +296,7 @@ class SupplyPlanner:
                     self.demand[start][resource] -= amount
                 if end is not None:
                     self.demand[end][resource] += amount
+            self.projections.clear()
         self.incoming[path[-1]].append(unit)
 
     def improves_reinforcement(self, unit, province):
@@ -313,9 +305,9 @@ class SupplyPlanner:
         area = self.destination_area(unit, province["id"])
         if data is None or area is None or area == self._area(unit):
             return True
-        production = self.network.areas[area].production
-        demand = self.demand[area]
-        extra = {key: demand[key] + data.demand[key] for key in c.ECON_RESOURCE_KEYS}
+        current = self._projected_demand()
+        projected = self._projected_demand(area, self._area(unit), data.demand)
+        production, extra = projected.available(area), projected.areas[area].demand
         if all(extra[key] <= production[key] or data.demand[key] == 0 for key in extra):
             return True
         friends = list(self.incoming[province["id"]])
@@ -332,7 +324,7 @@ class SupplyPlanner:
         if not friends or not enemies:
             return True
 
-        def exchange(participants, totals):
+        def exchange(participants, production, totals):
             profiles = []
             for participant in participants:
                 row = self._unit(participant)
@@ -349,4 +341,4 @@ class SupplyPlanner:
             return (sum(min(enemy["health"], incoming.get(id(enemy), 0.0)) for enemy in enemies)
                     - sum(min(friend["health"], incoming.get(id(friend), 0.0)) for friend in profiles))
 
-        return exchange([*friends, unit], extra) > exchange(friends, demand)
+        return exchange([*friends, unit], production, extra) > exchange(friends, current.available(area), current.areas[area].demand)

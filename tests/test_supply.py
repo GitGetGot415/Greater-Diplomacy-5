@@ -179,6 +179,104 @@ class SupplyTests(SupplyFixture):
         world.nation_data["C"]["military_access"] = ["A"]
         self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (0.3, 0.4, 0.5))
 
+    def test_allies_share_only_surplus_after_domestic_upkeep(self):
+        donor = province(1, "A", [2, 3], output=(250, 190, 100))
+        first = province(2, "C", [1])
+        second = province(3, "D", [1])
+        domestic = division(donor)
+        ally = division(first, "C")
+        wounded_ally = division(second, "D", health=50)
+        world = game(donor, first, second)
+        world.nation_data["D"] = {}
+        for member in ("A", "C", "D"):
+            world.nation_data[member]["faction"] = "Test Faction"
+        for order in ((ally, wounded_ally), (wounded_ally, ally)):
+            snapshot = queries.SupplySnapshot(world)
+            for unit in order:
+                self.assertEqual(snapshot.fractions(unit), (1, 0.6, 0))
+            self.assertEqual(snapshot.fractions(domestic), (1, 1, 1))
+
+    def test_surplus_with_a_dedicated_route_frees_shared_production_for_another_ally(self):
+        shared = province(1, "E", [2, 3], output=(100, 100, 100))
+        first = province(2, "A", [1, 4])
+        second = province(3, "D", [1])
+        transit = province(4, "F", [2, 5])
+        dedicated = province(5, "C", [4], output=(100, 100, 100))
+        first_unit = division(first)
+        second_unit = division(second, "D")
+        world = game(shared, first, second, transit, dedicated)
+        world.nation_data.update({"D": {}, "E": {}, "F": {"military_access": ["A"]}})
+        for member in ("A", "C", "D", "E"):
+            world.nation_data[member]["faction"] = "Test Faction"
+        snapshot = queries.SupplySnapshot(world)
+
+        self.assertEqual(snapshot.fractions(first_unit), (1, 1, 1))
+        self.assertEqual(snapshot.fractions(second_unit), (1, 1, 1))
+
+    def test_subject_draws_from_its_masters_connected_production(self):
+        front = province(1, "A", [2])
+        source = province(2, "C", [1], output=(100, 100, 100))
+        unit = division(front)
+        world = game(front, source)
+        world.nation_data["A"]["master"] = "C"
+        world.nation_data["C"]["puppets"] = ["A"]
+        snapshot = queries.SupplySnapshot(world)
+        self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
+
+    def test_ally_must_be_able_to_reach_the_actual_source_of_surplus(self):
+        front = province(1, "A", [2])
+        allied_border = province(2, "C", [1, 3])
+        bridge = province(3, "D", [2, 4])
+        source = province(4, "C", [3], output=(100, 100, 100))
+        unit = division(front)
+        world = game(front, allied_border, bridge, source)
+        world.nation_data["D"] = {"military_access": ["C"]}
+        for member in ("A", "C"):
+            world.nation_data[member]["faction"] = "Test Faction"
+        snapshot = queries.SupplySnapshot(world)
+        donor = snapshot.for_country("C")
+        self.assertEqual(donor.province_area[2], donor.province_area[4])
+        self.assertEqual(snapshot.fractions(unit), (0, 0, 0))
+
+        world.nation_data["D"]["military_access"].append("A")
+        self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (1, 1, 1))
+
+    def test_contested_group_can_choose_allied_supply_without_joining_areas(self):
+        stranded = province(1, "A", [2])
+        contested = province(2, "B", [1, 3])
+        source = province(3, "C", [2], output=(100, 100, 100))
+        unit = division(contested)
+        division(contested, "B")
+        world = game(stranded, contested, source)
+        for member in ("A", "C"):
+            world.nation_data[member]["faction"] = "Test Faction"
+        snapshot = queries.SupplySnapshot(world)
+        network = snapshot.for_country("A")
+
+        self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
+        self.assertNotIn(2, network.province_area)
+        self.assertNotEqual(network.province_area[1], network.province_area[3])
+        self.assertEqual(network.unit_area[unit["unit_id"]], network.province_area[3])
+
+    def test_blocking_the_last_sea_route_cuts_allied_supply(self):
+        front = province(1, "A", [2, 3], coast=True)
+        north = province(2, "Ocean", [1, 4], sea=True)
+        south = province(3, "Ocean", [1, 4], sea=True)
+        source = province(4, "C", [2, 3], coast=True, output=(100, 100, 100))
+        unit = division(front)
+        division(north, "B", kind="Supply Test Ship")
+        world = game(front, north, south, source)
+        for member in ("A", "C"):
+            world.nation_data[member]["faction"] = "Test Faction"
+        snapshot = queries.SupplySnapshot(world)
+        self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
+        self.assertEqual(snapshot.fractions(unit, network=snapshot.sea_projection("A", block=(3,), blocker="B")), (0, 0, 0))
+
+        division(south, "B", kind="Supply Test Ship")
+        snapshot = queries.SupplySnapshot(world)
+        self.assertEqual(snapshot.fractions(unit), (0, 0, 0))
+        self.assertEqual(snapshot.fractions(unit, network=snapshot.sea_projection("A", reopen=(3,))), (1, 1, 1))
+
     def test_sea_blockade_takes_both_routes_and_exposes_only_owned_summary(self):
         front = province(1, "A", [2, 3], coast=True)
         north = province(2, "Ocean", [1, 4], sea=True)

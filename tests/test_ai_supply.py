@@ -134,6 +134,43 @@ class AISupplyTests(SupplyFixture):
 
         self.assertEqual(relief["order"]["path"], [3])
 
+    def test_ai_reopens_sea_supply_from_an_ally(self):
+        front = province(1, "A", [2], coast=True)
+        strait = province(2, "Ocean", [1, 3, 4], sea=True)
+        source = province(3, "C", [2], coast=True, output=(100, 100, 100))
+        sea = province(4, "Ocean", [2, 5], sea=True)
+        distraction = province(5, "B", [4], coast=True)
+        division(front)
+        division(strait, "B", kind="Supply Test Ship", attack=1)
+        relief = division(sea, kind="Supply Test Ship", attack=1000)
+        world = game(front, strait, source, sea, distraction)
+        for member in ("A", "C"):
+            world.nation_data[member]["faction"] = "Test Faction"
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+
+        self.assertEqual(relief["order"]["path"], [2])
+
+    def test_ai_recalculates_allied_upkeep_coverage_when_booking_reinforcements(self):
+        front = province(1, "A", [2, 3])
+        source = province(2, "C", [1], output=(100, 100, 100))
+        blocked = province(3, "B", [1, 4])
+        rear = province(4, "A", [3])
+        division(front)
+        incoming = division(rear)
+        next_unit = division(rear)
+        world = game(front, source, blocked, rear)
+        for member in ("A", "C"):
+            world.nation_data[member]["faction"] = "Test Faction"
+        snapshot = queries.SupplySnapshot(world)
+        planner = ai_supply.SupplyPlanner(snapshot, snapshot, "A")
+
+        self.assertEqual(planner.quality(incoming, 1), (0.5, 1))
+        planner.book(incoming, [1])
+        readiness, speed = planner.quality(next_unit, 1)
+        self.assertAlmostEqual(readiness, 1 / 3)
+        self.assertEqual(speed, 1)
+
     def test_a_ship_scouts_a_plausible_cut_when_the_blocker_is_hidden(self):
         front = province(1, "A", [2], coast=True)
         strait = province(2, "Ocean", [1, 3, 4], sea=True)
