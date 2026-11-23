@@ -6,6 +6,10 @@
 - `(can the territory that a unit can move to support it?)`
 - `(if a unit is encircled, the resources it might be getting from those territories might not be enough)`
 - `(if a valid naval connection can be found between two areas that isn't blocked, those can count as connected)`
+- `(if the resources the unit gets from it's tiles aren't enough to support it, then it's damage output is decreased, so if it only has enough resources in that area to support 100% of it's manpower, 100% of it's materials, but 0% of it's fuel, then it gets 66% damage output. it it has 30% manpower, 40% materials, and 50% fuel, then it gets 40% damage output.)`
+- `(the unit should also take some damage when low on supply, so for example if a unit has 30% manpower, 40% materials, and 50% fuel, and gets 40% damage output, then it's health decreases by (100 - 40) / ((% of max hp remaining) * 0.1) = 6%, assuming it's at max HP)`
+- `(a unit's upkeep should be reduced by how much hp it has left, so if it only has 50% of it's max hp remaining then it only requires 50% upkeep)`
+- `(note that encirclement penalties don't apply to naval units or air units, just land units)`
 - `(potential lag issues? hopefully its not too bad...)`
 
 - check how pypeople lets you choose an llm to run and see if it might be useful `https://github.com/GitGetGot415/pypeople`
