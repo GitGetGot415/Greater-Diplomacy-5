@@ -35,8 +35,8 @@ VALUE_KEY = "political_value"
 DRIFT_KEY = "political_drift"
 ECONOMIC_VALUE_KEY = "economic_value"
 ECONOMIC_DRIFT_KEY = "economic_drift"
-QUALITY_VALUE_KEY = "quality_value"
-QUALITY_DRIFT_KEY = "quality_drift"
+QUALITY_VALUE_KEY = "quality_position"
+QUALITY_DRIFT_KEY = "quality_direction"
 STRATEGY_VALUE_KEY = "strategy_value"
 STRATEGY_DRIFT_KEY = "strategy_drift"
 
@@ -50,8 +50,8 @@ AXES = (
      "ends": ("Planned", "Market"),
      "bands": ("Planned", "Planned-leaning", "Mixed", "Market-leaning", "Market")},
     {"id": QUALITY, "group": MILITARY, "name": "Quality", "value_key": QUALITY_VALUE_KEY, "drift_key": QUALITY_DRIFT_KEY,
-     "ends": ("Professional", "Numerous"),
-     "bands": ("Professional", "Professional-leaning", "Balanced", "Numerous-leaning", "Numerous")},
+     "ends": ("Numerous", "Professional"),
+     "bands": ("Numerous", "Numerous-leaning", "Balanced", "Professional-leaning", "Professional")},
     {"id": STRATEGY, "group": MILITARY, "name": "Strategy", "value_key": STRATEGY_VALUE_KEY, "drift_key": STRATEGY_DRIFT_KEY,
      "ends": ("Offensive", "Defensive"),
      "bands": ("Offensive", "Offensive-leaning", "Balanced", "Defensive-leaning", "Defensive")},
@@ -119,13 +119,13 @@ POLICIES = (
     {
         "id": "siphon_military_funding",
         "name": "Siphon Military Funding",
-        "max_quality": 3,
+        "min_quality": -3,
         "effects": {"materials": 1.10, "fuel": 1.10, "damage": 0.90},
     },
     {
         "id": "quality_fuel",
         "name": "Quality Fuel",
-        "min_quality": -3,
+        "max_quality": 3,
         "effects": {"aircraft_range": 1.10, "fuel": 0.90},
     },
     {
@@ -143,7 +143,7 @@ POLICIES = (
     {
         "id": "bewegungskrieg",
         "name": "Bewegungskrieg",
-        "max_quality": 2,
+        "min_quality": 2,
         "effects": {"land_speed": 1, "land_max_health": 0.50},
     },
 
@@ -480,8 +480,15 @@ def effect_at(effect, position):
     Previews use this for a projected position; ``axis_effect`` reads a
     country's current one.
     """
-    low, high = c.POLITICS_AXIS_EFFECTS[EFFECT_AXES[effect]][effect]
-    fraction = (clamp(position) - c.POLITICS_MIN) / float(c.POLITICS_MAX - c.POLITICS_MIN)
+    axis = EFFECT_AXES[effect]
+    low, high = c.POLITICS_AXIS_EFFECTS[axis][effect]
+    position = clamp(position)
+    offset = position - c.POLITICS_MIN
+    if axis == QUALITY:
+        # Keep the old interpolation order so mirrored values round to the same unit stats.
+        low, high = high, low
+        offset = c.POLITICS_MAX - position
+    fraction = offset / float(c.POLITICS_MAX - c.POLITICS_MIN)
     return low * (1.0 - fraction) + high * fraction
 
 

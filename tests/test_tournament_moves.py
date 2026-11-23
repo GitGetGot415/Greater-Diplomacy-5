@@ -1070,6 +1070,27 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(politics.drift(host.nation_data, "Leader"), 1)
         self.assertEqual(host.nation_data["Leader"]["research_funding_slider"], 0.2)
 
+    def test_legacy_quality_move_mirrors_drift_and_validates_both_projections(self):
+        for case in ("valid", "malformed", "conflicting", "position"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                politics.set_axis_value(host.nation_data, "Leader", politics.QUALITY, 4)
+                preferences = {"type": "country_preferences", "quality_drift": -1}
+                projection = {"quality_drift": -1}
+                if case == "malformed":
+                    preferences["quality_drift"] = True
+                elif case == "conflicting":
+                    projection["quality_drift"] = 1
+                elif case == "position":
+                    preferences["quality_value"] = -8
+                move = self.player_data(host, player_intents=[preferences], nation_data=projection)
+                path = self.write_move(directory, "legacy-quality.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path])
+
+                self.assertEqual(summary["loaded"], int(case == "valid"), summary["rejections"])
+                self.assertEqual(politics.axis_value(host.nation_data, "Leader", politics.QUALITY), 4)
+                self.assertEqual(politics.axis_drift(host.nation_data, "Leader", politics.QUALITY), int(case == "valid"))
+
     def test_tournament_rejects_malformed_unauthorized_or_stale_economic_intents(self):
         for axis in politics.AXES:
             for failure in ("malformed", "position", "edge", "funding", "stale"):

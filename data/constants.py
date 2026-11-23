@@ -1021,10 +1021,10 @@ AI_NEARBY_SEA_TILES = 3 # Longest water crossing considered nearby for AI claims
 # ==========================================
 # Four axes in two groups, each moving independently once per processed turn:
 #   Civilian: Political (libertarian / authoritarian), Economic (planned / market)
-#   Military: Quality (professional / numerous), Strategy (offensive / defensive)
+#   Military: Quality (numerous / professional), Strategy (offensive / defensive)
 
-POLITICS_MIN = -10              # libertarian / planned / professional / offensive
-POLITICS_MAX = 10               # authoritarian / market / numerous / defensive
+POLITICS_MIN = -10              # libertarian / planned / numerous / offensive
+POLITICS_MAX = 10               # authoritarian / market / professional / defensive
 POLITICS_START = 0              # the centre of every axis
 POLITICS_STEP = 1               # distance per processed turn on each axis
 
@@ -1047,11 +1047,11 @@ POLITICS_AXIS_EFFECTS = {
         "non_core_building_output": (0.6, 0.4),  # every building's output on non-core territory
     },
     "quality": {
-        "damage": (1.2, 0.8),
-        "tile_manpower": (0.5, 1.5),        # core and non-core province tiles only
-        "unit_upkeep": (1.5, 0.5),          # the whole upkeep bill: manpower, materials and fuel
-        "max_health": (1.2, 0.8),
-        "research_year_months": (10, -10),  # the ahead-of-time penalty treats the date as this many months later
+        "damage": (0.8, 1.2),
+        "tile_manpower": (1.5, 0.5),        # core and non-core province tiles only
+        "unit_upkeep": (0.5, 1.5),          # the whole upkeep bill: manpower, materials and fuel
+        "max_health": (0.8, 1.2),
+        "research_year_months": (-10, 10),  # the ahead-of-time penalty treats the date as this many months later
     },
     "strategy": {
         "aircraft_range": (1.2, 0.8),

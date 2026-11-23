@@ -18,6 +18,7 @@ import pygame
 
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map
+from map_logic import politics
 from map_logic.diplomacy import diplomacy_lifecycle
 from scripts.data import write_released_content
 from tests import add_test_cases
@@ -134,6 +135,41 @@ class GameVersionTests(unittest.TestCase):
 
 
 class OlderFormatTests(unittest.TestCase):
+    def test_quality_axis_mirrors_legacy_positions_and_drift_once(self):
+        saved_country = {"quality_value": -4, "quality_drift": -1, "future_field": True}
+        historical_country = {"quality_value": 6, "quality_drift": 1}
+        current_country = {politics.QUALITY_VALUE_KEY: 7, politics.QUALITY_DRIFT_KEY: 0}
+        saved = {"nation_data": {"A": saved_country, "B": current_country}}
+        snapshot = {"nation_data": {"A": historical_country}}
+
+        migrations.upgrade_save(saved, {})
+        self.assertEqual(saved_country, {politics.QUALITY_VALUE_KEY: 4, politics.QUALITY_DRIFT_KEY: 1, "future_field": True})
+        self.assertEqual(current_country, {politics.QUALITY_VALUE_KEY: 7, politics.QUALITY_DRIFT_KEY: 0})
+        self.assertEqual(historical_country, {"quality_value": 6, "quality_drift": 1})
+        migrations.upgrade_history_turn(snapshot, {})
+        self.assertEqual(historical_country, {politics.QUALITY_VALUE_KEY: -6, politics.QUALITY_DRIFT_KEY: -1})
+
+        reloaded = round_trip(saved)
+        migrations.upgrade_save(reloaded, {})
+        self.assertEqual(reloaded, saved)
+
+    def test_quality_conversion_keeps_legacy_health_rounding(self):
+        profession_health, numerous_health = 1.2, 0.8
+        health = 250
+        unit_library = {"Ground": {"health": health}}
+        effects = c.POLITICS_AXIS_EFFECTS[politics.QUALITY]
+        policy_id = "bewegungskrieg"
+        land_health = politics.policy(policy_id)["effects"]["land_max_health"]
+        with mock.patch.dict(effects, {"max_health": (numerous_health, profession_health)}):
+            for old_quality in (0, 1):
+                saved = {"nation_data": {"A": {"quality_value": old_quality,
+                         politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_ACTIVE}}}}}
+                migrations.upgrade_save(saved, {})
+                unit = queries.create_unit_dict("Ground", "A", unit_library, saved["nation_data"])
+                fraction = (old_quality - c.POLITICS_MIN) / (c.POLITICS_MAX - c.POLITICS_MIN)
+                legacy_multiplier = profession_health * (1 - fraction) + numerous_health * fraction
+                self.assertEqual(unit["max_health"], round(health * (legacy_multiplier * land_health)))
+
     def test_older_unit_names_convert_in_all_saved_references_and_repeat_safely(self):
         for older, current in migrations.LEGACY_UNIT_NAMES.items():
             with self.subTest(unit=older):

@@ -1987,11 +1987,15 @@ class AirAppSmokeTests(unittest.TestCase):
         base_id = 1
         infantry = wing(game.id_to_province[base_id], "Infantry Type 1910")
         original_speed = infantry["speed"]
+        politics.set_axis_value(game.nation_data, "A", politics.QUALITY, 1)
         politics.set_axis_value(game.nation_data, "A", politics.STRATEGY, 3)
         for policy_id in policies:
             self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", policy_id))
         turn_processor.snapshot_history(game)
         history_turn = game.time_manager.total_turns
+        past = game.history[str(history_turn)]["nation_data"]["A"]
+        past["quality_value"] = -past.pop(politics.QUALITY_VALUE_KEY)
+        past["quality_drift"] = 1
         for _ in range(politics.POLICY_ACTIVATION_TURNS):
             owners = politics.tick(game)
             if owners:
@@ -2002,6 +2006,9 @@ class AirAppSmokeTests(unittest.TestCase):
             path = os.path.join(directory, "policy-roundtrip")
             loaded = Map(load_path=path, skip_initial_income=True)
             historical = Map(load_path=path, history_turn=history_turn, skip_initial_income=True)
+            self.assertEqual(politics.axis_value(loaded.nation_data, "A", politics.QUALITY), 1)
+            self.assertEqual(politics.axis_value(historical.nation_data, "A", politics.QUALITY), 1)
+            self.assertEqual(politics.axis_drift(historical.nation_data, "A", politics.QUALITY), -1)
             for policy_id in policies:
                 self.assertEqual(politics.policy_state(loaded.nation_data, "A", policy_id)["status"],
                                  politics.POLICY_ACTIVE)

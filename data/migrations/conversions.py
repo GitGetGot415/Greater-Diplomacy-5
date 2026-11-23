@@ -14,6 +14,7 @@ import uuid
 import data.constants as c
 from data.migrations.units import LEGACY_UNIT_NAMES, equipment_stage_aliases
 from data.migrations.validation import container, expect, number, numeric_fields, records, repaired, research_country, text_fields
+from map_logic import politics
 
 
 LEGACY_RESEARCH_DEFAULT_DAYS = 30
@@ -177,6 +178,7 @@ def convert_move(player_data):
                 if command.get("queue") == "unit_queue":
                     _unit_queue_entry(entry, aliases)
         elif kind == "country_preferences":
+            _reverse_quality_axis(command, command_path, player_input=True)
             _custom_production_units(command, aliases, command_path, player_input=True)
         elif kind == "country_appearance":
             convert_appearance_images(container(command, "appearance", dict, command_path))
@@ -188,6 +190,29 @@ def convert_move(player_data):
 
 
 # --- Countries ---
+
+def _reverse_quality_axis(record, path, *, player_input=False):
+    """Mirror the old Quality fields so the same posture and drift survive the reversal."""
+    for old, new in (("quality_value", politics.QUALITY_VALUE_KEY), ("quality_drift", politics.QUALITY_DRIFT_KEY)):
+        if old not in record:
+            continue
+        value = record.pop(old)
+        if player_input:
+            converted = -number(value, f"{path}.{old}")
+            if new in record and (type(record[new]) is not type(converted) or record[new] != converted):
+                raise ValueError(f"{path}.{new}: conflicting Quality fields.")
+        elif new in record:
+            continue
+        elif new == politics.QUALITY_VALUE_KEY:
+            converted = -politics.clamp(value)
+        else:
+            try:
+                converted = max(-1, min(1, -int(value or 0)))
+            except (TypeError, ValueError, OverflowError):
+                converted = 0
+                repaired(f"{path}.{old}")
+        record[new] = converted
+
 
 def _nations(nation_data, aliases, path="meta.nation_data"):
     for name, country in nation_data.items():
@@ -201,6 +226,7 @@ def _nations(nation_data, aliases, path="meta.nation_data"):
 
 def _country(country, aliases, path, *, player_input=False):
     """Convert one country record."""
+    _reverse_quality_axis(country, path, player_input=player_input)
     research_country(country, path, repair=not player_input)
     convert_appearance_images(country)
     country.pop("allied_with", None)

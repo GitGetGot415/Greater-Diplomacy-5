@@ -124,7 +124,7 @@ def desired_quality_value(world, nation):
     """Quality target: professional, moving toward numerous under the strongest pressure."""
     enemies = _enemies(world, nation)
     danger = _danger(world, nation, enemies) if enemies else 0.0
-    return _position(max(danger, _border_shortfall(world, nation), _upkeep_pressure(world, nation)))
+    return -_position(max(danger, _border_shortfall(world, nation), _upkeep_pressure(world, nation)))
 
 
 def desired_strategy_value(world, nation):

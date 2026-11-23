@@ -205,6 +205,9 @@ class OutputBonusTests(unittest.TestCase):
 
     def test_compass_changes_each_income_source_at_the_shared_source(self):
         """Quality scales tile manpower; the economy scales factories, deposits and non-core land."""
+        def relative_effect(effect, position):
+            return politics.effect_at(effect, position) / politics.effect_at(effect, c.POLITICS_START)
+
         self.library["Basic Factory"] = building(40, 20, 60, "industry")
         research = {"first": 1}
         with patch.object(c, "DISABLE_CORES", False):
@@ -214,16 +217,16 @@ class OutputBonusTests(unittest.TestCase):
                 centre = queries.calculate_all_economies({1: province}, {"A": {"research": research}})["A"]["breakdown"]
                 for position in (c.POLITICS_MIN, c.POLITICS_MAX):
                     with self.subTest(core=core, position=position):
-                        nation_data = {"A": {"research": research, "quality_value": position, "economic_value": position}}
+                        nation_data = {"A": {"research": research, politics.QUALITY_VALUE_KEY: position, "economic_value": position}}
                         report = queries.calculate_all_economies({1: province}, nation_data)["A"]["breakdown"]
-                        territory = 1.0 if core else politics.effect_at("non_core_province_output", position)
+                        territory = 1.0 if core else relative_effect("non_core_province_output", position)
                         building_territory = 1.0 if core else politics.effect_at("non_core_building_output", position)
                         factory = politics.effect_at("factory_output", position)
                         for res in c.ECON_RESOURCE_KEYS:
-                            manpower = politics.effect_at("tile_manpower", position) if res == "manpower" else 1.0
+                            manpower = relative_effect("tile_manpower", position) if res == "manpower" else 1.0
                             self.assertAlmostEqual(report[res][tier], centre[res][tier] * territory * manpower)
                             self.assertAlmostEqual(report[res]["resources"], centre[res]["resources"] * territory
-                                                   * politics.effect_at("deposit_output", position))
+                                                   * relative_effect("deposit_output", position))
                             self.assertEqual(report[res]["base"], centre[res]["base"])
                             # Factory output reaches factories only; recruitment keeps its yield.
                             self.assertEqual(report[res]["buildings"], sum(
@@ -238,13 +241,15 @@ class OutputBonusTests(unittest.TestCase):
         province = {"id": 1, "owner": "A", "cores": ["A"], "buildings": [], "units": [unit]}
         with patch.object(queries, "get_unit_library", return_value=library):
             centre = queries.calculate_all_economies({1: province}, {"A": {}})["A"]["upkeep"]
+            centre_multiplier = politics.effect_at("unit_upkeep", c.POLITICS_START)
             for position in (c.POLITICS_MIN, c.POLITICS_MAX):
                 with self.subTest(position=position):
-                    nation_data = {"A": {"quality_value": position}}
+                    nation_data = {"A": {politics.QUALITY_VALUE_KEY: position}}
                     upkeep = queries.calculate_all_economies({1: province}, nation_data)["A"]["upkeep"]
                     rows, _grouped = expense_table_rows([(unit, province)], library, nation_data)
+                    multiplier = politics.effect_at("unit_upkeep", position) / centre_multiplier
                     for res in c.ECON_RESOURCE_KEYS:
-                        self.assertAlmostEqual(upkeep[res], centre[res] * politics.effect_at("unit_upkeep", position))
+                        self.assertAlmostEqual(upkeep[res], centre[res] * multiplier)
                         self.assertAlmostEqual(rows[0][res], upkeep[res])
 
     def test_building_prices_follow_the_economy_and_forts_follow_strategy(self):
