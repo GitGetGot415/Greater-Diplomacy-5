@@ -71,11 +71,6 @@ class SupplyPlanner:
     def _area(self, unit):
         return self.network.unit_area.get(queries.supply_unit_key(unit))
 
-    def _neighbor_areas(self, tile):
-        areas = self.network.province_area
-        return {areas[neighbor] for neighbor in self.known.neighbors.get(tile, ())
-                if neighbor in areas and neighbor not in self.known.water}
-
     def _critical_corridors(self):
         areas = self.network.province_area
         neighbors = self.known.neighbors
@@ -122,7 +117,7 @@ class SupplyPlanner:
         area = self.network.province_area.get(tile)
         if area is not None:
             return area
-        choices = self._neighbor_areas(tile)
+        choices = self.known.neighboring_areas(self.network, tile)
         if connected is not None:
             choices.add(connected)
         return max(sorted(choices), key=lambda choice: self._quality(unit, choice, own_area), default=None)
@@ -149,7 +144,7 @@ class SupplyPlanner:
         vulnerable = False
         for tile in path:
             next_area = self.destination_area(unit, tile, area)
-            exposed = (tile not in self.network.province_area and len(self._neighbor_areas(tile)) <= 1
+            exposed = (tile not in self.network.province_area and len(self.known.neighboring_areas(self.network, tile)) <= 1
                        and any(self.known.occupants.get(near, set()) & self.enemies
                                for near in self.known.neighbors.get(tile, ())))
             if result and (self._quality(unit, next_area, self._area(unit)) < self.current(unit) or vulnerable and exposed):
@@ -166,7 +161,7 @@ class SupplyPlanner:
         for tile in tiles:
             if tile in self.network.province_area or tile in self.known.water:
                 continue
-            areas = self._neighbor_areas(tile)
+            areas = self.known.neighboring_areas(self.network, tile)
             if len(areas) < 2:
                 continue
             for key in areas:

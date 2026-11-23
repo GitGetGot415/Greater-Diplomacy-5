@@ -146,6 +146,10 @@ class SupplySnapshot:
             self.networks[country] = self._build_network(country)
         return self.networks[country]
 
+    def neighboring_areas(self, network, tile):
+        """Supply areas reachable by one land or sea edge."""
+        return {network.province_area[neighbor] for neighbor in self.neighbors.get(tile, ()) if neighbor in network.province_area}
+
     def _build_network(self, country):
         network = SupplyNetwork()
         accessible = self._traversable(country)
@@ -174,8 +178,7 @@ class SupplySnapshot:
         for key in sorted(land_units):
             if key in network.province_area:
                 continue
-            choices = {network.province_area[neighbor] for neighbor in self.neighbors[key]
-                       if neighbor not in self.water and neighbor in network.province_area}
+            choices = self.neighboring_areas(network, key)
             if not choices:
                 continue
             group = land_units[key]

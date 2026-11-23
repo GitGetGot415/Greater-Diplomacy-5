@@ -6,6 +6,20 @@ from tests.test_supply import SupplyFixture, division, game, province
 
 
 class AISupplyTests(SupplyFixture):
+    def test_ai_projects_supply_from_open_sea_for_a_contested_coast(self):
+        beach = province(1, "B", [2, 4], coast=True)
+        sea = province(2, "Ocean", [1, 3], sea=True)
+        home = province(3, "A", [2], coast=True, output=(100, 100, 100))
+        pocket = province(4, "A", [1])
+        unit = division(pocket)
+        division(beach, "B")
+        world = game(beach, sea, home, pocket)
+        snapshot = queries.SupplySnapshot(world)
+        planner = ai_supply.SupplyPlanner(snapshot, snapshot, "A")
+
+        self.assertEqual(planner.current(unit), 0)
+        self.assertEqual(planner.quality(unit, beach["id"]), 1)
+
     def test_ai_uses_existing_move_order_to_escape_an_isolated_area(self):
         front = province(1, "A", [2])
         bridge = province(2, "B", [1, 3])

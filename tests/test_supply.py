@@ -133,6 +133,22 @@ class SupplyTests(SupplyFixture):
         self.assertEqual(network.unit_area[unit["unit_id"]], network.unit_area[rear_unit["unit_id"]])
         self.assertEqual(network.areas[network.province_area[3]].demand["fuel"], 200)
 
+    def test_contested_coast_draws_supply_through_open_sea(self):
+        beach = province(1, "B", [2], coast=True)
+        sea = province(2, "Ocean", [1, 3], sea=True)
+        home = province(3, "A", [2], coast=True, output=(100, 100, 100))
+        unit = division(beach)
+        division(beach, "B")
+        world = game(beach, sea, home)
+
+        snapshot = queries.SupplySnapshot(world)
+        network = snapshot.for_country("A")
+        self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
+        self.assertNotIn(beach["id"], network.province_area)
+
+        division(sea, "B", kind="Supply Test Ship")
+        self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (0, 0, 0))
+
     def test_turn_cut_and_reopening_use_frozen_combat_and_resolved_attrition(self):
         front = province(1, "A", [2])
         bridge = province(2, "A", [1, 3, 4])
