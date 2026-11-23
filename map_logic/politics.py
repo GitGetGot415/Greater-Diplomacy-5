@@ -108,7 +108,8 @@ POLICIES = (
     {
         "id": "siphon_military_funding",
         "name": "Siphon Military Funding",
-        "effects": {"materials": 1.10, "fuel": 1.10, "damage": 0.80},
+        "max_quality": 3,
+        "effects": {"materials": 1.10, "fuel": 1.10, "damage": 0.90},
     },
 
     # maybe more stuff related to conscription...
@@ -245,7 +246,8 @@ def requirements_met(nation_data, nation, policy_id, *, political_value=None):
         political_value = value(nation_data, nation)
     return (("max_politics" not in definition or political_value < definition["max_politics"])
             and ("min_politics" not in definition or political_value > definition["min_politics"])
-            and ("max_economics" not in definition or economic_value(nation_data, nation) < definition["max_economics"]))
+            and ("max_economics" not in definition or economic_value(nation_data, nation) < definition["max_economics"])
+            and ("max_quality" not in definition or axis_value(nation_data, nation, QUALITY) < definition["max_quality"]))
 
 
 def requirement_text(policy_id, *, compact=False):
@@ -261,6 +263,9 @@ def requirement_text(policy_id, *, compact=False):
     if "max_economics" in definition:
         prefix = "Economics" if compact else "Requires economics"
         return f"{prefix} < {definition['max_economics']:+d}"
+    if "max_quality" in definition:
+        prefix = "Quality" if compact else "Requires quality"
+        return f"{prefix} < {definition['max_quality']:+d}"
     return "No political requirement"
 
 
@@ -542,7 +547,7 @@ def tick(context):
                 if at_limit(position):
                     stats[axis["drift_key"]] = 0
 
-    # Do this after political drift, before combat/economy/research resolve.
+    # Do this after all four axes drift, before combat/economy/research resolve.
     # An activated policy becomes effective on the third processed turn; a
     # cancellation completes on the next one.  Losing eligibility is immediate
     # and removes the effects before any phase of that turn can use them.

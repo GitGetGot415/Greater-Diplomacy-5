@@ -530,18 +530,25 @@ class PolicyTests(unittest.TestCase):
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
                                politics.effect_at("research", politics.value(screen.nation_data, "A")))
 
-    def test_industrial_policy_requires_economics_below_minus_two(self):
-        policy_id = "prioritize_industrial_needs"
-        screen = self.screen_at(economic_value=-2)
-        self.assertFalse(politics.requirements_met(screen.nation_data, "A", policy_id))
-        self.assertFalse(politics.activate_or_cancel_policy(screen.nation_data, "A", policy_id))
-        with self.assertRaises(ValueError):
-            politics.canonicalize_policy_draft(screen.nation_data, "A", {policy_id: {"status": politics.POLICY_ACTIVATING}})
-        politics.set_economic_value(screen.nation_data, "A", -3)
-        self.activate_and_finish(screen, policy_id)
-        politics.set_economic_drift(screen.nation_data, "A", 1)
-        politics.tick(screen)
-        self.assertIsNone(politics.policy_state(screen.nation_data, "A", policy_id))
+    def test_policies_require_economics_or_quality_below_their_bound(self):
+        for policy_id, axis, bound in (("prioritize_industrial_needs", politics.ECONOMIC, -2),
+                                       ("siphon_military_funding", politics.QUALITY, 3)):
+            with self.subTest(policy=policy_id):
+                screen = self.screen_at()
+                nation_data = screen.nation_data
+                politics.set_axis_value(nation_data, "A", axis, bound)
+                self.assertFalse(politics.requirements_met(nation_data, "A", policy_id))
+                self.assertFalse(politics.activate_or_cancel_policy(nation_data, "A", policy_id))
+                draft = {policy_id: {"status": politics.POLICY_ACTIVATING}}
+                with self.assertRaises(ValueError):
+                    politics.canonicalize_policy_draft(nation_data, "A", draft)
+
+                politics.set_axis_value(nation_data, "A", axis, bound - 1)
+                self.assertIn(policy_id, politics.canonicalize_policy_draft(nation_data, "A", draft))
+                self.activate_and_finish(screen, policy_id)
+                politics.set_axis_drift(nation_data, "A", axis, 1)
+                politics.tick(screen)
+                self.assertIsNone(politics.policy_state(nation_data, "A", policy_id))
 
     def test_cancel_can_be_undone_before_the_next_processed_turn(self):
         screen = self.screen_at(0, -3)
