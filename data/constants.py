@@ -1047,10 +1047,10 @@ POLITICS_AXIS_EFFECTS = {
         "non_core_building_output": (0.6, 0.4),  # every building's output on non-core territory
     },
     "quality": {
-        "damage": (1.3, 0.7),
+        "damage": (1.2, 0.8),
         "tile_manpower": (0.5, 1.5),        # core and non-core province tiles only
         "unit_upkeep": (1.5, 0.5),          # the whole upkeep bill: manpower, materials and fuel
-        "max_health": (1.1, 0.9),
+        "max_health": (1.2, 0.8),
         "research_year_months": (10, -10),  # the ahead-of-time penalty treats the date as this many months later
     },
     "strategy": {
