@@ -185,7 +185,13 @@ class Politics_Screen(Screen):
         return queries.realtime_turn_open(self.map_screen)
 
     def select_group(self, group):
-        """Show the Civilian or Military axes. Viewing never needs edit rights."""
+        """Show the selected axes and their policy cards."""
+        if group != self.group:
+            self.cancel_active_drags()
+            self.policy_scroll_x = 0
+            self.policy_scrollbar_dragging = False
+            self.policy_scroll_track_rect = None
+            self.policy_scroll_handle_rect = None
         self.group = group
         self.refresh_ui()
 
@@ -207,8 +213,9 @@ class Politics_Screen(Screen):
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
         self._policy_cards = []
+        policies = politics.policies_for_group(self.group)
         self.scroll_content_rect = self._policy_viewport_rect()
-        self._update_policy_scroll_bounds()
+        self._update_policy_scroll_bounds(len(policies))
 
         if not self.is_valid_player:
             return
@@ -256,7 +263,7 @@ class Politics_Screen(Screen):
                     self.elements.append(button)
 
         scroll_guard = self.content_hover_guard() if self.policy_scroll_min_x < 0 else None
-        for index, definition in enumerate(politics.POLICIES):
+        for index, definition in enumerate(policies):
             policy_id = definition["id"]
             state = politics.policy_state(nation_data, self.player, policy_id)
             eligible = politics.requirements_met(nation_data, self.player, policy_id)
@@ -276,12 +283,9 @@ class Politics_Screen(Screen):
             POLICY_CARD_HEIGHT,
         )
 
-    def _policy_content_width(self):
-        count = len(politics.POLICIES)
-        return count * POLICY_CARD_WIDTH + max(0, count - 1) * POLICY_CARD_GAP
-
-    def _update_policy_scroll_bounds(self):
-        self.policy_scroll_min_x = min(0, self.scroll_content_rect.width - self._policy_content_width())
+    def _update_policy_scroll_bounds(self, count):
+        content_width = count * POLICY_CARD_WIDTH + max(0, count - 1) * POLICY_CARD_GAP
+        self.policy_scroll_min_x = min(0, self.scroll_content_rect.width - content_width)
         self.policy_scroll_x = max(self.policy_scroll_min_x, min(0, self.policy_scroll_x))
 
     def _policy_card_rect(self, index):

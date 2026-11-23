@@ -71,6 +71,16 @@ POLICY_CANCELLING = "CANCELLING"
 POLICY_ACTIVATION_TURNS = 2
 POLICY_CANCELLATION_TURNS = 1
 
+POLICY_REQUIREMENTS = {
+    "max_politics": (POLITICAL, "<"),
+    "min_politics": (POLITICAL, ">"),
+    "max_economics": (ECONOMIC, "<"),
+    "max_quality": (QUALITY, "<"),
+    "min_quality": (QUALITY, ">"),
+    "min_strategy": (STRATEGY, ">"),
+}
+POLICY_REQUIREMENT_LABELS = {POLITICAL: "Politics", ECONOMIC: "Economics"}
+
 # In Politics panel display order.
 # Requirements are strict: e.g. max_politics=-2 means the country must be at
 # -3 or further left.  Effects are multiplicative and apply only when ACTIVE.
@@ -229,6 +239,21 @@ def policy(policy_id):
     return POLICIES_BY_ID.get(policy_id)
 
 
+def _policy_requirements(definition):
+    return ((axis, comparison, definition[key]) for key, (axis, comparison) in POLICY_REQUIREMENTS.items()
+            if key in definition)
+
+
+def policies_for_group(group):
+    """Return cards for a tab in policy order, grouped by their displayed requirement."""
+    policies = []
+    for definition in POLICIES:
+        axis, _, _ = next(_policy_requirements(definition), (POLITICAL, None, None))
+        if AXES_BY_ID[axis]["group"] == group:
+            policies.append(definition)
+    return policies
+
+
 def policy_states(nation_data, nation):
     """The country's valid policy states, keyed by policy id."""
     states = nation_data.get(nation, {}).get(POLICY_KEY, {}) if nation_data else {}
@@ -254,14 +279,12 @@ def requirements_met(nation_data, nation, policy_id, *, political_value=None):
     definition = policy(policy_id)
     if definition is None:
         return False
-    if political_value is None:
-        political_value = value(nation_data, nation)
-    return (("max_politics" not in definition or political_value < definition["max_politics"])
-            and ("min_politics" not in definition or political_value > definition["min_politics"])
-            and ("max_economics" not in definition or economic_value(nation_data, nation) < definition["max_economics"])
-            and ("max_quality" not in definition or axis_value(nation_data, nation, QUALITY) < definition["max_quality"])
-            and ("min_quality" not in definition or axis_value(nation_data, nation, QUALITY) > definition["min_quality"])
-            and ("min_strategy" not in definition or axis_value(nation_data, nation, STRATEGY) > definition["min_strategy"]))
+    for axis, comparison, bound in _policy_requirements(definition):
+        position = political_value if axis == POLITICAL and political_value is not None else axis_value(nation_data, nation, axis)
+        meets_bound = position < bound if comparison == "<" else position > bound
+        if not meets_bound:
+            return False
+    return True
 
 
 def requirement_text(policy_id, *, compact=False):
@@ -269,24 +292,13 @@ def requirement_text(policy_id, *, compact=False):
     definition = policy(policy_id)
     if definition is None:
         return "Unavailable"
-    prefix = "Politics" if compact else "Requires politics"
-    if "max_politics" in definition:
-        return f"{prefix} < {definition['max_politics']:+d}"
-    if "min_politics" in definition:
-        return f"{prefix} > {definition['min_politics']:+d}"
-    if "max_economics" in definition:
-        prefix = "Economics" if compact else "Requires economics"
-        return f"{prefix} < {definition['max_economics']:+d}"
-    if "max_quality" in definition:
-        prefix = "Quality" if compact else "Requires quality"
-        return f"{prefix} < {definition['max_quality']:+d}"
-    if "min_quality" in definition:
-        prefix = "Quality" if compact else "Requires quality"
-        return f"{prefix} > {definition['min_quality']:+d}"
-    if "min_strategy" in definition:
-        prefix = "Strategy" if compact else "Requires strategy"
-        return f"{prefix} > {definition['min_strategy']:+d}"
-    return "No political requirement"
+    requirement = next(_policy_requirements(definition), None)
+    if requirement is None:
+        return "No political requirement"
+    axis, comparison, bound = requirement
+    label = POLICY_REQUIREMENT_LABELS.get(axis, AXES_BY_ID[axis]["name"])
+    prefix = label if compact else f"Requires {label.lower()}"
+    return f"{prefix} {comparison} {bound:+d}"
 
 
 def activate_or_cancel_policy(nation_data, nation, policy_id):

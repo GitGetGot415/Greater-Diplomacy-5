@@ -181,9 +181,34 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertEqual(screen.group, politics.MILITARY)
         self.assertEqual(self.drift_buttons(screen), [])
 
+    def test_tabs_show_only_their_policies_while_active_policies_keep_applying(self):
+        screen = self.screen(False)
+        nation_data = screen.map_screen.nation_data
+        active_id = "prioritize_civilian_needs"
+        self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", active_id))
+        for _ in range(politics.POLICY_ACTIVATION_TURNS):
+            politics.tick(screen.map_screen)
+        research_before = politics.research_multiplier(nation_data, "A")
+
+        with patch.object(screen, "_build_policy_card", wraps=screen._build_policy_card) as build_card:
+            screen.refresh_ui()
+            self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], [
+                "research_subsidies", active_id, "prioritize_industrial_needs",
+                "recruitment_propaganda", "total_mobilisation",
+            ])
+            build_card.reset_mock()
+
+            self.tab(screen, politics.MILITARY).callback()
+
+            self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], [
+                "siphon_military_funding", "quality_fuel", "on_ne_passe_pas",
+            ])
+            self.assertEqual(politics.policy_state(nation_data, "A", active_id)["status"], politics.POLICY_ACTIVE)
+            self.assertEqual(politics.research_multiplier(nation_data, "A"), research_before)
+
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)
-        screen.policies_rect.width = 500
+        screen.policies_rect.width = 620
         screen.refresh_ui()
         self.assertLess(screen.policy_scroll_min_x, 0)
         screen.policy_scroll_track_rect = pygame.Rect(100, 100, 500, 14)
@@ -206,6 +231,12 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEMOTION, pos=(start[0] - 20, start[1]), rel=(-20, 0)))
         self.assertEqual(screen.policy_scroll_x, -120)
+
+        self.tab(screen, politics.MILITARY).callback()
+        self.assertEqual(screen.policy_scroll_x, 0)
+        self.assertEqual(screen.policy_scroll_min_x, 0)
+        self.assertIsNone(screen.content_drag_state)
+        self.assertIsNone(screen.policy_scroll_track_rect)
 
     def test_starting_economic_slider_saves_both_coordinates_and_clears_drift(self):
         from screens.editors.politics_editor import Politics_Edit_Screen
