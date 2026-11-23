@@ -1,9 +1,10 @@
 """Supply information and projected assignments for one country's order pass."""
 
-from collections import defaultdict
+from collections import defaultdict, deque
 
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_tuning
 from map_logic.system32 import combat_rules
 
 
@@ -175,6 +176,118 @@ class SupplyPlanner:
                     targets.add(tile)
                     break
         return targets
+
+    def _naval_shortlist(self, country, tiles, network):
+        """Prefer sea approaches close to forces that could lose supply."""
+        if not tiles:
+            return []
+        pending = deque(sorted(self.known.land_units[country]))
+        seen = set(pending)
+        ranked = []
+        while pending and len(ranked) < ai_tuning.AI_SUPPLY_SEA_CANDIDATES:
+            here = pending.popleft()
+            if here in tiles:
+                ranked.append(here)
+            for near in self.known.neighbors[here]:
+                if near not in seen and (near in self.known.sea or near in network.province_area):
+                    seen.add(near)
+                    pending.append(near)
+        return ranked
+
+    def _naval_impact(self, country, before, after):
+        """Measure the change in effective health and movement of observed forces."""
+        impact = 0.0
+        for group in self.known.land_units[country].values():
+            for identity in group:
+                unit = self.known.unit_data[identity].unit
+                readiness_before, speed_before = self._conditions(unit, self.known.fractions(unit, network=before))
+                readiness_after, speed_after = self._conditions(unit, self.known.fractions(unit, network=after))
+                impact += unit["health"] * (readiness_after - readiness_before
+                                           + (speed_after - speed_before) / max(1, unit.get("speed", c.DEFAULT_UNIT_SPD)))
+        return impact
+
+    def naval_supply_objectives(self, reachable, enemy_reach, vacating_ships, stations, available_ships):
+        """Score sea occupations and clearances with the actual supply network rules.
+
+        A two-tile blockade is one objective: a partial assignment is worth
+        nothing if it leaves the other route open.
+        """
+        sea = self.known.sea & reachable
+        if not self.enemies or not sea:
+            return []
+        objectives = []
+        visible_blockers = {tile for tile in sea if self.known.occupants.get(tile, set()) & self.enemies}
+        if self.country in self.known.land_units:
+            home = self.known.sea_projection(self.country)
+            for tile in self._naval_shortlist(self.country, visible_blockers, home):
+                opened = self.known.sea_projection(self.country, reopen=(tile,))
+                gain = self._naval_impact(self.country, home, opened)
+                if gain > 0:
+                    objectives.append(("relief", gain, (tile,), self.country))
+            unexplained = any(self.current(self.known.unit_data[identity].unit)
+                              < self._conditions(self.known.unit_data[identity].unit,
+                                                 self.known.fractions(self.known.unit_data[identity].unit, network=home))
+                              for group in self.known.land_units[self.country].values() for identity in group)
+            if unexplained or enemy_reach:
+                candidates = sea & home.province_area.keys()
+                if not unexplained:
+                    candidates &= enemy_reach.keys()
+                quiet = []
+                for tile in self._naval_shortlist(self.country, candidates, home):
+                    closed = self.known.sea_projection(self.country, block=(tile,))
+                    loss = -self._naval_impact(self.country, home, closed)
+                    if loss > 0:
+                        kind = "guard" if tile in enemy_reach else "scout"
+                        objectives.append((kind, loss, (tile,), self.country))
+                    elif unexplained or tile in enemy_reach:
+                        quiet.append(tile)
+
+                # One guarded or scouted opening can be useful when the
+                # garrison can draw through either of two threatened routes.
+                for index, first in enumerate(quiet):
+                    for second in quiet[index + 1:]:
+                        threaten_both = any(a is not b for _, a in enemy_reach.get(first, ()) for _, b in enemy_reach.get(second, ()))
+                        if not unexplained and not threaten_both:
+                            continue
+                        closed = self.known.sea_projection(self.country, block=(first, second))
+                        loss = -self._naval_impact(self.country, home, closed)
+                        if loss > 0:
+                            if threaten_both:
+                                objectives.append(("guard_one", loss, (first, second), self.country))
+                            else:
+                                objectives.extend(("scout", loss, (tile,), self.country) for tile in (first, second))
+
+        for enemy in sorted(self.enemies & self.known.land_units.keys()):
+            # Ships available for reassignment can leave their starting tile.
+            # Count a blockade by those ships only if they are assigned to hold it.
+            hostile_to_enemy = set(queries.get_enemies(enemy, self.known.nations))
+            vacating = {tile for tile, ships in vacating_ships.items() if tile in self.known.sea and not any(
+                id(unit) not in ships and queries.get_unit_combat_owner(unit) in hostile_to_enemy
+                for unit in self.known.visible_units.get(tile, ()))}
+            base = self.known.sea_projection(enemy, block=stations, reopen=vacating)
+            candidates = self._naval_shortlist(enemy, sea & base.province_area.keys(), base)
+            if not candidates:
+                continue
+            quiet = []
+            for tile in candidates:
+                cut = (tile,)
+                after = self.known.sea_projection(enemy, block=stations | {tile}, reopen=vacating)
+                loss = -self._naval_impact(enemy, base, after)
+                if loss > 0:
+                    objectives.append(("blockade", loss, cut, enemy))
+                else:
+                    quiet.append(tile)
+
+            if available_ships < 2:
+                continue
+            for index, first in enumerate(quiet):
+                for second in quiet[index + 1:]:
+                    cut = (first, second)
+                    after = self.known.sea_projection(enemy, block=stations | set(cut), reopen=vacating)
+                    loss = -self._naval_impact(enemy, base, after)
+                    if loss > 0:
+                        objectives.append(("blockade", loss, cut, enemy))
+        return objectives
 
     def book(self, unit, path):
         data = self._unit(unit)

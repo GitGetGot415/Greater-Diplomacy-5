@@ -585,7 +585,7 @@ class CoastThreatTests(unittest.TestCase):
         return screen
 
     def threatened(self, screen, enemies=("Bruland",)):
-        return ai_movement._threatened_coasts(screen, "Avaria", {1}, list(enemies), {"Avaria"})
+        return set(ai_movement._threatened_coasts(screen, "Avaria", {1}, list(enemies)))
 
     def ship(self, owner, kind="Fixture Warship"):
         return {"type": kind, "owner": owner, "attack": 500, "defense": 100,
@@ -600,10 +600,10 @@ class CoastThreatTests(unittest.TestCase):
     def test_at_peace_no_coast_is_guarded(self):
         self.assertEqual(self.threatened(self.screen(), enemies=()), set())
 
-    def test_naval_supremacy_removes_the_threat(self):
+    def test_a_nearby_warship_does_not_remove_the_threat(self):
         screen = self.screen()
         screen.place(10, self.ship("Avaria"))
-        self.assertEqual(self.threatened(screen), set())
+        self.assertEqual(self.threatened(screen), {1})
 
     def test_but_not_against_an_equal_enemy_fleet(self):
         screen = self.screen()
@@ -625,7 +625,7 @@ class CoastThreatTests(unittest.TestCase):
         screen = self.screen(shore_owner="Cirenia")
         borders = ai_movement._discover_borders_and_targets(
             screen, "Avaria", [screen.id_to_province[1]], ["Bruland"], {"Avaria"})
-        self.assertEqual(borders["coastal_borders"], set())
+        self.assertEqual(borders["coastal_approaches"], {})
 
     def test_rot_border_uses_the_existing_coastal_threat_rule(self):
         for shore_owner, expected in (("Bruland", {1}), ("Cirenia", set())):
@@ -636,7 +636,7 @@ class CoastThreatTests(unittest.TestCase):
                 self.assertEqual(borders["war_borders"], set())
                 self.assertEqual(borders["peace_borders"], set())
                 self.assertEqual(borders["unclaimed_targets"], set())
-                self.assertEqual(borders["coastal_borders"], expected)
+                self.assertEqual(set(borders["coastal_approaches"]), expected)
 
 
 if __name__ == "__main__":

@@ -526,11 +526,8 @@ AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea
 
 AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls eligible units toward active battles
 AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
-# A coast with no land border is guarded only when an enemy shore or visible
-# enemy ship is within AI_NEARBY_SEA_TILES of water -- unless friendly warships
-# there outweigh the visible enemy ones by this ratio, so no landing would get
-# through. See ai_movement._threatened_coasts.
-AI_COAST_SUPREMACY_RATIO = 1.5
+AI_COAST_GARRISON_TURNS = 3  # Stage a guard from this many turns away by land.
+AI_SUPPLY_SEA_CANDIDATES = 12  # Limit alternate-route projections per country and order pass.
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 

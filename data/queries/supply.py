@@ -74,6 +74,7 @@ class SupplySnapshot:
     def __init__(self, context, *, visible_to=None, visible_provinces=None, source=None):
         world = world_for(context)
         self.nations = world.nation_data
+        self.visible_to = visible_to
         self.visible_provinces = visible_provinces
         if source is None:
             self.provinces = {province["id"]: province for province in world.map_data.values() if "id" in province}
@@ -97,9 +98,13 @@ class SupplySnapshot:
             self.yields = source.yields
             self.production = source.production
         self.occupants = {}
+        self.visible_units = {}
+        self.estimated_output = {}
+        self.estimated_production = None
         self.land_units = defaultdict(lambda: defaultdict(list))
         self.unit_data = {}
         self.networks = {}
+        self.accessible = {}
         library = queries.get_unit_library(context)
         player_unit = getattr(session_for(context), "player_unit", None)
         for key in self.occupied:
@@ -118,6 +123,7 @@ class SupplySnapshot:
                     if not queries.is_unit_visible_to(unit, visible_to, province, self.nations):
                         continue
                 occupants.add(owner)
+                self.visible_units.setdefault(key, []).append(unit)
                 unit_type = unit.get("type", "")
                 stats = library.get(unit_type, {})
                 base_stats = library.get(queries.get_base_unit_type(unit), stats)
@@ -127,7 +133,10 @@ class SupplySnapshot:
                     continue
                 identity = supply_unit_key(unit)
                 existing = source.unit_data.get(identity) if source is not None else None
-                demand = existing.demand if existing else queries.get_live_unit_upkeep(unit, library, self.nations)
+                if visible_provinces is not None and display_owner != visible_to:
+                    demand = queries.get_unit_upkeep(base_stats, unit=unit)
+                else:
+                    demand = existing.demand if existing else queries.get_live_unit_upkeep(unit, library, self.nations)
                 self.land_units[owner][key].append(identity)
                 self.unit_data[identity] = SupplyUnit(unit, owner, display_owner, key, demand)
             if occupants:
@@ -142,26 +151,53 @@ class SupplySnapshot:
         return self.yields[key]
 
     def _traversable(self, country):
+        if country in self.accessible:
+            return self.accessible[country]
         permitted = {country} | set(queries.friendly_nations_view(country, self.nations))
         permitted.update(owner for owner in self.nations if queries.has_military_access(country, owner, self.nations))
         enemies = set(queries.get_enemies(country, self.nations))
         permitted.difference_update(enemies, c.OWNERLESS_OWNERS)
         blocked = {key for key, occupants in self.occupants.items() if enemies & occupants}
         land = {key for key, province in self.provinces.items() if key not in self.water and province.get("owner") in permitted}
-        return (land | self.sea) - blocked
+        self.accessible[country] = (land | self.sea) - blocked
+        return self.accessible[country]
 
     def for_country(self, country):
         if country not in self.networks:
             self.networks[country] = self._build_network(country)
         return self.networks[country]
 
+    def sea_projection(self, country, *, block=(), reopen=()):
+        """Recalculate hypothetical sea occupancy using the viewer's information."""
+        accessible = (self._traversable(country) | (self.sea & set(reopen))) - (self.sea & set(block))
+        output = self.province_output
+        if self.visible_provinces is not None and country != self.visible_to:
+            output = self._estimate_province_output
+        return self._build_network(country, accessible, output=output)
+
+    def _estimate_province_output(self, key):
+        if key not in self.visible_provinces:
+            return c.BASE_YIELDS
+        if key not in self.estimated_output:
+            if self.estimated_production is None:
+                # Use visible province contents and default national multipliers.
+                self.estimated_production = queries.ProvinceProduction({owner: {} for owner in self.nations}, self.production.context)
+            output = _resources()
+            for amounts in self.estimated_production.breakdown(self.provinces[key]).values():
+                _add_resources(output, amounts)
+            self.estimated_output[key] = output
+        return self.estimated_output[key]
+
     def neighboring_areas(self, network, tile):
         """Supply areas reachable by one land or sea edge."""
         return {network.province_area[neighbor] for neighbor in self.neighbors.get(tile, ()) if neighbor in network.province_area}
 
-    def _build_network(self, country):
+    def _build_network(self, country, accessible=None, *, output=None):
         network = SupplyNetwork()
-        accessible = self._traversable(country)
+        if accessible is None:
+            accessible = self._traversable(country)
+        if output is None:
+            output = self.province_output
         land_units = self.land_units.get(country, {})
         # Traverse each component once. A deterministic tile ID names the component.
         for start in sorted(accessible - self.sea):
@@ -173,7 +209,7 @@ class SupplySnapshot:
             while queue:
                 key = queue.popleft()
                 if key not in self.water and self.provinces[key].get("owner") == country:
-                    _add_resources(area.production, self.province_output(key))
+                    _add_resources(area.production, output(key))
                 for identity in land_units.get(key, ()):
                     network.unit_area[identity] = start
                     _add_resources(area.demand, self.unit_data[identity].demand)
@@ -208,13 +244,14 @@ class SupplySnapshot:
             network.unit_area.update(dict.fromkeys(group, best))
         return network
 
-    def fractions(self, unit):
+    def fractions(self, unit, *, network=None):
         identity = supply_unit_key(unit)
         data = self.unit_data.get(identity)
         if data is None:
             return None
         demand = data.demand
-        network = self.for_country(data.country)
+        if network is None:
+            network = self.for_country(data.country)
         area = network.areas.get(network.unit_area.get(identity))
         return supply_fractions(area.production, area.demand, demand) if area else tuple(
             0.0 if demand[resource] else 1.0 for resource in c.ECON_RESOURCE_KEYS)
