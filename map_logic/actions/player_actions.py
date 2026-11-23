@@ -239,10 +239,12 @@ class PlayerActions:
         if "research_funding_slider" in command:
             country_data["research_funding_slider"] = command["research_funding_slider"]
         country_data["custom_production_units"] = copy.deepcopy(command["custom_production_units"])
+        stat_policies = politics.unit_stat_policies(self.world.nation_data, country_id)
         if command[politics.POLICY_KEY]:
             country_data[politics.POLICY_KEY] = copy.deepcopy(command[politics.POLICY_KEY])
         else:
             country_data.pop(politics.POLICY_KEY, None)
+        queries.refresh_policy_unit_stats(self.context, country_id, stat_policies)
 
     def _validate_country_preferences(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate politics, automation, economy, and custom unit choices."""

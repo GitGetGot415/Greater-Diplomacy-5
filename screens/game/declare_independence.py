@@ -156,7 +156,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
                             prov["cores"].insert(0, new_tag)
                 
         # 3. Reassign ownership
-        queries.set_unit_owner(unit, new_tag)
+        queries.set_unit_owner(unit, new_tag, context=self.map_screen)
         
         # 4. Filter queued moves, retaining systemic conversions/repairs
         order = unit.get("order", {})

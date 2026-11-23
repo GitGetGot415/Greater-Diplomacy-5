@@ -962,6 +962,28 @@ class AirIntegrationTests(unittest.TestCase):
         air_processor.process_air_orders(self.game)
         self.assertEqual(self.plane["order"]["type"], "MOVE")
 
+    def test_realtime_cancelling_bewegungskrieg_refreshes_host_unit_stats(self):
+        policy_id = "bewegungskrieg"
+        nation_data = self.game.nation_data
+        infantry = wing(self.base, "Infantry Type 1910")
+        baseline_speed = infantry["speed"]
+        self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", policy_id))
+        for _ in range(politics.POLICY_ACTIVATION_TURNS):
+            politics.tick(self.game)
+        queries.apply_library_stats(infantry, queries.get_unit_library(), nation_data)
+        infantry["health"] = infantry["max_health"] * 0.5
+
+        driver = MapRealtimeDriver(self.game)
+        command = {"type": "country_preferences", "political_drift": 0,
+                   politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_CANCELLING}}}
+        draft = driver.validate_draft("A", [command])
+        self.assertGreater(infantry["speed"], baseline_speed)
+        driver.apply_validated_drafts({"A": draft})
+
+        self.assertEqual(infantry["speed"], baseline_speed)
+        self.assertEqual(politics.policy_state(nation_data, "A", policy_id)["status"], politics.POLICY_CANCELLING)
+        self.assertAlmostEqual(infantry["health"] / infantry["max_health"], 0.5)
+
     def test_realtime_strike_return_fire_occurs_only_at_server_resolution(self):
         from map_logic.system32 import turn_processor
         self.target["buildings"] = ["Fort Lvl 5"]
@@ -1961,14 +1983,19 @@ class AirAppSmokeTests(unittest.TestCase):
         from map_logic.system32 import turn_processor
 
         game = runtime_map()
-        policies = ("quality_fuel", "on_ne_passe_pas")
+        policies = ("quality_fuel", "on_ne_passe_pas", "endurance", "bewegungskrieg")
+        base_id = 1
+        infantry = wing(game.id_to_province[base_id], "Infantry Type 1910")
+        original_speed = infantry["speed"]
         politics.set_axis_value(game.nation_data, "A", politics.STRATEGY, 3)
         for policy_id in policies:
             self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", policy_id))
         turn_processor.snapshot_history(game)
         history_turn = game.time_manager.total_turns
         for _ in range(politics.POLICY_ACTIVATION_TURNS):
-            politics.tick(game)
+            owners = politics.tick(game)
+            if owners:
+                queries.refresh_unit_stats(game.map_data, game.nation_data, queries.get_unit_library(game), owners=owners)
 
         with tempfile.TemporaryDirectory() as directory, patch.object(c, "SAVES_DIR", directory):
             asyncio.run(save_map.save_map_data(game, "policy-roundtrip"))
@@ -1980,6 +2007,13 @@ class AirAppSmokeTests(unittest.TestCase):
                                  politics.POLICY_ACTIVE)
                 self.assertEqual(politics.policy_state(historical.nation_data, "A", policy_id)["status"],
                                  politics.POLICY_ACTIVATING)
+            current_ground = next(member for member in loaded.id_to_province[base_id]["units"]
+                                  if member["unit_id"] == infantry["unit_id"])
+            historical_ground = next(member for member in historical.id_to_province[base_id]["units"]
+                                     if member["unit_id"] == infantry["unit_id"])
+            self.assertEqual(current_ground["speed"], original_speed + politics.policy("bewegungskrieg")["effects"]["land_speed"])
+            self.assertEqual(current_ground["max_health"], infantry["max_health"])
+            self.assertEqual(historical_ground["speed"], original_speed)
 
     def test_numbered_aircraft_and_legacy_names_survive_actual_save_load(self):
         from data.map import save_map

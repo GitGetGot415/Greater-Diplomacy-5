@@ -247,7 +247,7 @@ def end_country_missions(context, country, successor=None):
                 if donor == country:
                     if successor is None:
                         continue
-                    queries.set_unit_owner(entry["unit"], successor)
+                    queries.set_unit_owner(entry["unit"], successor, context=context)
                     _restore_to_origin(context, successor, entry)
                 else:
                     _restore_to_origin(context, donor, entry)

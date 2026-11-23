@@ -80,10 +80,11 @@ POLICY_REQUIREMENTS = {
     "min_strategy": (STRATEGY, ">"),
 }
 POLICY_REQUIREMENT_LABELS = {POLITICAL: "Politics", ECONOMIC: "Economics"}
+UNIT_STAT_POLICY_EFFECTS = {"max_health", "land_max_health", "land_speed"}
 
 # In Politics panel display order.
 # Requirements are strict: e.g. max_politics=-2 means the country must be at
-# -3 or further left.  Effects are multiplicative and apply only when ACTIVE.
+# -3 or further left. Effects apply only when ACTIVE. Land speed is additive.
 POLICIES = (
     {
         "id": "research_subsidies",
@@ -132,6 +133,18 @@ POLICIES = (
         "name": "On ne passe pas",
         "min_strategy": 2,
         "effects": {"fort_cost": 0.90, "materials": 0.80, "defense": 1.10},
+    },
+    {
+        "id": "endurance",
+        "name": "Endurance",
+        "min_strategy": 2,
+        "effects": {"max_health": 1.20, "damage": 0.90},
+    },
+    {
+        "id": "bewegungskrieg",
+        "name": "Bewegungskrieg",
+        "max_quality": 2,
+        "effects": {"land_speed": 1, "land_max_health": 0.50},
     },
 
     # maybe more stuff related to conscription...
@@ -450,6 +463,17 @@ def effect_multiplier(nation_data, nation, effect):
     return result
 
 
+def effect_bonus(nation_data, nation, effect):
+    """Additive bonus from the country's active policies."""
+    return sum(current["effects"].get(effect, 0) for current in active_policies(nation_data, nation))
+
+
+def unit_stat_policies(nation_data, nation):
+    """Active policies that affect a unit record's maximum health or speed."""
+    return {current["id"] for current in active_policies(nation_data, nation)
+            if UNIT_STAT_POLICY_EFFECTS.intersection(current["effects"])}
+
+
 def effect_at(effect, position):
     """An axis effect's value at a position, interpolated between the axis ends.
 
@@ -564,11 +588,10 @@ def at_limit(political_value):
 def tick(context):
     """Advance each axis and clear its direction when it reaches an end.
 
-    Returns the countries whose Quality position moved, whose units' maximum
-    health the turn then rescales.
+    Return countries whose units need fresh health or speed stats.
     """
     world_state = world_for(context)
-    quality_moved = set()
+    unit_stats_changed = set()
     for name, stats in world_state.nation_data.items():
         if name in c.UNPLAYABLE_NATIONS:
             continue
@@ -580,17 +603,19 @@ def tick(context):
                 position = advance(before, direction)
                 stats[axis["value_key"]] = position
                 if axis["id"] == QUALITY and position != before:
-                    quality_moved.add(name)
+                    unit_stats_changed.add(name)
                 if at_limit(position):
                     stats[axis["drift_key"]] = 0
 
     # Do this after all four axes drift, before combat/economy/research resolve.
-    # An activated policy becomes effective on the third processed turn; a
-    # cancellation completes on the next one.  Losing eligibility is immediate
-    # and removes the effects before any phase of that turn can use them.
+    # Losing eligibility removes the effects before any phase can use them.
     for name, stats in world_state.nation_data.items():
-        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS:
+        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or POLICY_KEY not in stats:
             continue
+        # Include active policies that just lost eligibility and submitted cancellations.
+        previous = {policy_id for policy_id, state in policy_states(world_state.nation_data, name).items()
+                    if POLICY_ACTIVE in (state["status"], state.get("resume_status"))
+                    and UNIT_STAT_POLICY_EFFECTS.intersection(policy(policy_id)["effects"])}
         reconcile_policy(world_state.nation_data, name)
         for policy_id, state in tuple(policy_states(world_state.nation_data, name).items()):
             if state["status"] == POLICY_ACTIVE:
@@ -604,4 +629,6 @@ def tick(context):
                 stats[POLICY_KEY][policy_id]["turns_remaining"] = turns_left
         if not stats.get(POLICY_KEY):
             stats.pop(POLICY_KEY, None)
-    return quality_moved
+        if previous != unit_stat_policies(world_state.nation_data, name):
+            unit_stats_changed.add(name)
+    return unit_stats_changed

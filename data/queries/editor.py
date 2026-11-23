@@ -252,7 +252,7 @@ def set_editor_units(context, mode, value):
                 unit["type"] = f"{transport} ({target})"
             else:
                 unit["type"] = target
-            apply_library_stats(unit, library)
+            apply_library_stats(unit, library, world_for(context).nation_data)
             unit["order"] = {}
         context.queue_editor_visual_refresh()
     return len(changes), skipped
@@ -277,7 +277,7 @@ def transfer_editor_units(context, units, country_id):
     if country_id not in world_state.nation_data or country_id in c.UNPLAYABLE_NATIONS:
         raise ValueError("Select a country that can own units.")
     for unit in units:
-        queries.set_unit_owner(unit, country_id)
+        queries.set_unit_owner(unit, country_id, context=context)
         unit["order"] = {}
     queries.normalize_armies(world_state.nation_data, world_state.map_data)
     context.queue_editor_visual_refresh()

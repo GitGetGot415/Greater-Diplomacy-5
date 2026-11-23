@@ -19,6 +19,7 @@ The AI half is a target position rather than a direction, which is what stops
 every country at war from ending up at +10 together.
 """
 
+import asyncio
 import unittest
 from unittest.mock import Mock, patch
 
@@ -29,7 +30,8 @@ import pygame
 from data import queries
 from data.queries import relations
 from map_logic import politics
-from map_logic.system32 import combat_processor, combat_rules
+from map_logic.system32 import combat_processor, combat_rules, turn_processor
+from data.state_access import BackendState
 
 from tests.stub_map_screen import map_double
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
@@ -201,7 +203,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
             self.tab(screen, politics.MILITARY).callback()
 
             self.assertEqual([call.args[1]["id"] for call in build_card.call_args_list], [
-                "siphon_military_funding", "quality_fuel", "on_ne_passe_pas",
+                "siphon_military_funding", "quality_fuel", "on_ne_passe_pas", "endurance", "bewegungskrieg",
             ])
             self.assertEqual(politics.policy_state(nation_data, "A", active_id)["status"], politics.POLICY_ACTIVE)
             self.assertEqual(politics.research_multiplier(nation_data, "A"), research_before)
@@ -232,9 +234,10 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
             pygame.MOUSEMOTION, pos=(start[0] - 20, start[1]), rel=(-20, 0)))
         self.assertEqual(screen.policy_scroll_x, -120)
 
+        previous_limit = screen.policy_scroll_min_x
         self.tab(screen, politics.MILITARY).callback()
         self.assertEqual(screen.policy_scroll_x, 0)
-        self.assertEqual(screen.policy_scroll_min_x, 0)
+        self.assertEqual(screen.policy_scroll_min_x, previous_limit)
         self.assertIsNone(screen.content_drag_state)
         self.assertIsNone(screen.policy_scroll_track_rect)
 
@@ -567,6 +570,8 @@ class PolicyTests(unittest.TestCase):
             ("siphon_military_funding", politics.QUALITY, 3, -1),
             ("quality_fuel", politics.QUALITY, -3, 1),
             ("on_ne_passe_pas", politics.STRATEGY, 2, 1),
+            ("endurance", politics.STRATEGY, 2, 1),
+            ("bewegungskrieg", politics.QUALITY, 2, -1),
         ):
             with self.subTest(policy=policy_id):
                 screen = self.screen_at()
@@ -638,6 +643,91 @@ class PolicyTests(unittest.TestCase):
         self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"),
                                policy_effect("prioritize_civilian_needs", "manpower")
                                * policy_effect("prioritize_industrial_needs", "manpower"))
+
+    def test_unit_stat_policies_stack_and_rescale_wounded_units(self):
+        screen = self.screen_at()
+        nation_data = screen.nation_data
+        politics.set_axis_value(nation_data, "A", politics.STRATEGY, 3)
+        base = {"health": 1000, "attack": 10, "defense": 5, "speed": 2}
+        library = {"Ground": base, "Ship": {**base, "naval_unit": True}, "Plane": {**base, "air_role": "fighter"}}
+        units = {name: queries.create_unit_dict(name, "A", library, nation_data) for name in library}
+        original_health = units["Ground"]["max_health"]
+        for member in units.values():
+            member["health"] *= 0.4
+        screen.map_data = {1: {"units": list(units.values())}}
+        for policy_id in ("endurance", "bewegungskrieg"):
+            self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", policy_id))
+        for _ in range(politics.POLICY_ACTIVATION_TURNS - 1):
+            self.assertEqual(politics.tick(screen), set())
+        self.assertEqual(queries.create_unit_dict("Ground", "A", library, nation_data)["speed"], base["speed"])
+
+        owners = politics.tick(screen)
+        self.assertEqual(owners, {"A"})
+        queries.refresh_unit_stats(screen.map_data, nation_data, library, owners=owners)
+
+        endurance = policy_effect("endurance", "max_health")
+        for name, member in units.items():
+            is_land = name == "Ground"
+            multiplier = endurance * (policy_effect("bewegungskrieg", "land_max_health") if is_land else 1)
+            speed_bonus = policy_effect("bewegungskrieg", "land_speed") if is_land else 0
+            self.assertEqual(member["max_health"], round(original_health * multiplier))
+            self.assertAlmostEqual(member["health"] / member["max_health"], 0.4)
+            self.assertEqual(member["speed"], base["speed"] + speed_bonus)
+            new_unit = queries.create_unit_dict(name, "A", library, nation_data)
+            self.assertEqual((new_unit["max_health"], new_unit["speed"]), (member["max_health"], member["speed"]))
+        self.assertAlmostEqual(politics.damage_multiplier(nation_data, "A"),
+                               politics.axis_effect(nation_data, "A", "damage") * policy_effect("endurance", "damage"))
+
+        self.assertTrue(politics.activate_or_cancel_policy(nation_data, "A", "bewegungskrieg"))
+        owners = politics.tick(screen)
+        self.assertEqual(owners, {"A"})
+        queries.refresh_unit_stats(screen.map_data, nation_data, library, owners=owners)
+        self.assertEqual(units["Ground"]["speed"], base["speed"])
+        self.assertEqual(units["Ground"]["max_health"], round(original_health * endurance))
+        self.assertAlmostEqual(units["Ground"]["health"] / units["Ground"]["max_health"], 0.4)
+
+    def test_transport_uses_its_current_domain_and_restores_updated_land_stats(self):
+        screen = self.screen_at()
+        nation_data = screen.nation_data
+        library = {"Ground": {"health": 1000, "speed": 2, "attack": 10, "defense": 5}}
+        member = queries.create_unit_dict("Ground", "A", library, nation_data)
+        member["health"] *= 0.5
+        with patch.object(queries, "get_unit_library", return_value=library):
+            queries.load_transport(member, "Convoy", context=screen)
+            convoy_speed, convoy_health = member["speed"], member["max_health"]
+            self.activate_and_finish(screen, "bewegungskrieg")
+            queries.apply_library_stats(member, library, nation_data)
+            self.assertEqual((member["speed"], member["max_health"]), (convoy_speed, convoy_health))
+            queries.revert_transport(member, context=screen)
+        expected = queries.create_unit_dict("Ground", "A", library, nation_data)
+        self.assertEqual((member["speed"], member["max_health"]), (expected["speed"], expected["max_health"]))
+        self.assertAlmostEqual(member["health"], expected["max_health"] * 0.5)
+
+    def test_bewegungskrieg_changes_movement_on_activation_and_cancellation_turns(self):
+        game = BackendState()
+        game.player_country = "A"
+        game.active_players = ["A"]
+        game.nation_data["A"] = {"is_playable": True, "research": {}}
+        library = {"Ground": {"health": 1000, "speed": 1, "attack": 10, "defense": 5}}
+        ground = queries.create_unit_dict("Ground", "A", library, game.nation_data)
+        for index, neighbors in ((1, [2]), (2, [1, 3]), (3, [2])):
+            province = {"id": index, "json_key": str(index), "terrain": "Plains", "neighbors": neighbors,
+                        "owner": "A", "cores": ["A"], "units": []}
+            game.map_data[index] = game.id_to_province[index] = province
+        game.map_data[1]["units"] = [ground]
+        ground["order"]["path"] = [2, 3]
+        self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", "bewegungskrieg"))
+        for _ in range(politics.POLICY_ACTIVATION_TURNS - 1):
+            politics.tick(game)
+
+        with patch.object(queries, "get_unit_library", return_value=library):
+            asyncio.run(turn_processor.resolve_turn_logic(game))
+            self.assertIn(ground, game.map_data[3]["units"])
+            ground["order"]["path"] = [2, 1]
+            self.assertTrue(politics.activate_or_cancel_policy(game.nation_data, "A", "bewegungskrieg"))
+            asyncio.run(turn_processor.resolve_turn_logic(game))
+        self.assertIn(ground, game.map_data[2]["units"])
+        self.assertEqual(ground["order"]["path"], [1])
 
     def test_resource_policy_changes_the_shared_economy_calculation(self):
         map_data = {"p": {"owner": "A", "cores": ["A"], "resources": {},

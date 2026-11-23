@@ -3,6 +3,7 @@
 import re
 
 import data.constants as c
+from data.state_access import world_for
 from data.queries.unit_info import (
     UNIT_GROUP_TANKS,
     air_unit_mission_icon,
@@ -189,26 +190,20 @@ def load_transport(unit, target, *, context=None):
     pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
 
     unit["type"] = f"{target} ({base_type})"
-    unit["speed"] = 1
-
-    if target == "Convoy":
-        unit["naval_unit"] = True
-        unit["max_health"] = c.CONVOY_MAX_HP
-        unit["attack"] = c.CONVOY_ATK
-        unit["defense"] = c.CONVOY_DEF
-    else:
-        unit["naval_unit"] = False
-        unit["max_health"] = c.TRUCK_MAX_HP
-        unit["attack"] = c.TRUCK_ATK
-        unit["defense"] = c.TRUCK_DEF
-
+    nation_data = getattr(world_for(context), "nation_data", None)
+    unit.update(_transport_stats(target, nation_data, unit.get("owner")))
     unit["health"] = unit["max_health"] * pct
 
 
-def set_unit_owner(unit, country_id):
+def set_unit_owner(unit, country_id, *, context=None):
     """Transfer a unit and all its cargo to the same country."""
     for member in units_with_air_cargo([unit]):
+        old_owner = member.get("owner")
         member["owner"] = country_id
+        if context is not None and country_id != old_owner:
+            nation_data = world_for(context).nation_data
+            if politics.unit_stat_policies(nation_data, old_owner) or politics.unit_stat_policies(nation_data, country_id):
+                apply_library_stats(member, queries.get_unit_library(context), nation_data)
 
 
 def apply_unit_health_loss(unit, damage, *, sources=None, tile=None):
@@ -299,8 +294,7 @@ def revert_transport(unit, *, context=None):
 def refresh_unit_stats(map_data, nation_data, unit_library, owners=None):
     """Apply library stats to every map unit, carried unit, and held volunteer unit.
 
-    Runs on load for every unit. A turn's politics step passes ``owners``, the
-    countries whose Quality moved, so their units' maximum health follows it.
+    Runs on load for every unit. The politics step limits refreshes to affected owners.
     """
     units = [unit for province in map_data.values() for unit in units_with_air_cargo(province.get("units", []))]
     for unit in units + list(held_volunteer_units(nation_data)):
@@ -308,26 +302,55 @@ def refresh_unit_stats(map_data, nation_data, unit_library, owners=None):
             apply_library_stats(unit, unit_library, nation_data)
 
 
-def max_health_multiplier(nation_data, owner):
-    """Quality's maximum health multiplier for one country's units; 1.0 without country data."""
-    return politics.axis_effect(nation_data, owner, "max_health") if nation_data is not None else 1.0
+def refresh_policy_unit_stats(context, owner, previous):
+    """Refresh stored stats when a planning change alters the owner's active stat policies."""
+    world = world_for(context)
+    if previous != politics.unit_stat_policies(world.nation_data, owner):
+        refresh_unit_stats(world.map_data, world.nation_data, queries.get_unit_library(context), owners={owner})
 
 
 def library_unit_stats(stats, health_multiplier=1.0):
     """Return the combat fields a unit record copies from its library entry."""
     health = stats.get("health", c.DEFAULT_UNIT_HP)
-    return {"max_health": health if health_multiplier == 1.0 else round(health * health_multiplier),
+    return {"max_health": health if health_multiplier == 1.0 or health <= 0 else max(1, round(health * health_multiplier)),
             "attack": stats.get("attack", c.DEFAULT_UNIT_ATK),
             "defense": stats.get("defense", c.DEFAULT_UNIT_DEF),
             "speed": stats.get("speed", c.DEFAULT_UNIT_SPD)}
 
 
+def max_health_multiplier(nation_data, owner):
+    """Maximum health from Quality and any policies that cover every domain."""
+    return politics.axis_policy_multiplier(nation_data, owner, "max_health") if nation_data is not None else 1.0
+
+
+def country_unit_stats(stats, nation_data, owner, *, transport=False):
+    """Derive effective record stats from the library or a transport's own base stats."""
+    land = not (stats.get("naval_unit") or stats.get("air_role"))
+    multiplier = (politics.effect_multiplier(nation_data, owner, "max_health") if transport
+                  else max_health_multiplier(nation_data, owner))
+    if land:
+        multiplier *= politics.effect_multiplier(nation_data, owner, "land_max_health")
+    values = library_unit_stats(stats, multiplier)
+    if land:
+        values["speed"] += politics.effect_bonus(nation_data, owner, "land_speed")
+    return values
+
+
+def _transport_stats(carrier, nation_data, owner):
+    naval = carrier == "Convoy"
+    if naval:
+        stats = {"health": c.CONVOY_MAX_HP, "attack": c.CONVOY_ATK, "defense": c.CONVOY_DEF, "speed": 1, "naval_unit": True}
+    else:
+        stats = {"health": c.TRUCK_MAX_HP, "attack": c.TRUCK_ATK, "defense": c.TRUCK_DEF, "speed": 1}
+    return {**country_unit_stats(stats, nation_data, owner, transport=True), "naval_unit": naval}
+
+
 def apply_library_stats(unit, unit_library, nation_data=None):
     """Set a unit's combat stats from the unit library and keep its health fraction.
 
-    The library is the only source of unit stats. Unit records hold a copy for
-    their readers. Every load and every type change refreshes that copy.
-    With ``nation_data``, the owner's Quality scales the library health.
+    Library entries supply the base stats. Unit records hold the effective
+    values and refresh on load, type changes, and relevant politics changes.
+    With ``nation_data``, Quality and active policies modify the combat stats.
     A Convoy or Truck takes its own stats from the shared constants and keeps
     the carried unit's library stats in its original_* fields.
     Return False for a type that is not in the library, and leave the unit unchanged.
@@ -338,15 +361,11 @@ def apply_library_stats(unit, unit_library, nation_data=None):
     if stats is None:
         return False
     old_max = unit.get("max_health")
-    values = library_unit_stats(stats, max_health_multiplier(nation_data, unit.get("owner")))
-    if carrier == "Convoy":
+    owner = unit.get("owner")
+    values = country_unit_stats(stats, nation_data, owner)
+    if carrier:
         unit.update({"original_" + field: value for field, value in values.items()})
-        values = {"max_health": c.CONVOY_MAX_HP, "attack": c.CONVOY_ATK,
-                  "defense": c.CONVOY_DEF, "speed": 1, "naval_unit": True}
-    elif carrier == "Truck":
-        unit.update({"original_" + field: value for field, value in values.items()})
-        values = {"max_health": c.TRUCK_MAX_HP, "attack": c.TRUCK_ATK,
-                  "defense": c.TRUCK_DEF, "speed": 1, "naval_unit": False}
+        values = _transport_stats(carrier, nation_data, owner)
     else:
         values["naval_unit"] = bool(stats.get("naval_unit", False))
     # Rescale only a changed maximum. Repeated loads keep exact health values.

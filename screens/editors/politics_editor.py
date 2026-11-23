@@ -103,10 +103,18 @@ class Politics_Edit_Screen(EditorSliderScreen):
         if not self.can_edit():
             return
         nation_data = self.map_screen.nation_data
+        quality_changed = self.values[politics.QUALITY] != politics.axis_value(nation_data, self.country_id, politics.QUALITY)
+        stat_policies = politics.unit_stat_policies(nation_data, self.country_id)
         for axis in politics.AXES:
             politics.set_axis_value(nation_data, self.country_id, axis["id"], self.values[axis["id"]])
             # A scenario starts with every direction on Hold.
             politics.set_axis_drift(nation_data, self.country_id, axis["id"], 0)
+        politics.reconcile_policy(nation_data, self.country_id)
+        if quality_changed:
+            queries.refresh_unit_stats(self.map_screen.map_data, nation_data, queries.get_unit_library(self.map_screen),
+                                       owners={self.country_id})
+        else:
+            queries.refresh_policy_unit_stats(self.map_screen, self.country_id, stat_policies)
         self.map_screen.refresh_map_layers("relations")
         name = queries.get_country_display_name(self.country_id, nation_data)
         positions = ", ".join(f"{politics.axis_label(axis['id'], self.values[axis['id']])} "

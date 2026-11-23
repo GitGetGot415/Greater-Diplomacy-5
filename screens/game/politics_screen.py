@@ -113,6 +113,9 @@ POLICY_EFFECT_DISPLAY = {
     "aircraft_range": ("Air range", "Biplane Fighter"),
     "fort_cost": ("Fort cost", "Fort Lvl 1"),
     "defense": ("Unit & fort def", c.ICON_DEFENSE),
+    "max_health": ("Unit max HP", c.ICON_HEALTH),
+    "land_max_health": ("Land max HP", c.ICON_HEALTH),
+    "land_speed": ("Land spd", ui_elements.ICON_SPEED),
 }
 
 
@@ -317,10 +320,12 @@ class Politics_Screen(Screen):
         definition = politics.policy(policy_id)
         if not definition or not self.can_edit:
             return
+        stat_policies = politics.unit_stat_policies(self.map_screen.nation_data, self.player)
         if not politics.activate_or_cancel_policy(self.map_screen.nation_data, self.player, policy_id):
             self.map_screen.show_feedback(politics.requirement_text(policy_id))
             return
 
+        queries.refresh_policy_unit_stats(self.map_screen, self.player, stat_policies)
         after = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)
         if before and before["status"] == politics.POLICY_CANCELLING:
             message = "%s cancellation undone." % definition["name"]
@@ -460,7 +465,7 @@ class Politics_Screen(Screen):
         font = fonts.get("small")
         label_x = POLICY_CARD_PADDING + POLICY_EFFECT_ICON_SIZE[0] + POLICY_EFFECT_LABEL_GAP
         value_x = card.width - POLICY_CARD_PADDING
-        for row, (effect, multiplier) in enumerate(definition["effects"].items()):
+        for row, (effect, amount) in enumerate(definition["effects"].items()):
             label, symbol = POLICY_EFFECT_DISPLAY[effect]
             y = POLICY_EFFECT_FIRST_Y + row * POLICY_EFFECT_ROW_GAP
             icon = symbol_loader.get_symbol(symbol, 1, style="classic", fit_size=POLICY_EFFECT_ICON_SIZE)
@@ -469,9 +474,11 @@ class Politics_Screen(Screen):
                 face.blit(icon, icon.get_rect(center=(icon_center_x, y)))
             label_surf = font.render(label, True, c.UI_TEXT_LIGHT)
             face.blit(label_surf, label_surf.get_rect(midleft=(label_x, y)))
-            is_benefit = multiplier < 1.0 if effect == "fort_cost" else multiplier > 1.0
+            additive = effect == "land_speed"
+            change = amount if additive else amount - 1.0
+            is_benefit = change < 0 if effect == "fort_cost" else change > 0
             color = c.COLOR_SUCCESS_GREEN if is_benefit else DECREASE_COLOR
-            value = font.render(f"{multiplier - 1.0:+.0%}", True, color)
+            value = font.render(f"{change:+d}" if additive else f"{change:+.0%}", True, color)
             face.blit(value, value.get_rect(midright=(value_x, y)))
 
         if state:

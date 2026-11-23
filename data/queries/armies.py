@@ -11,7 +11,7 @@ from data.queries.unit_info import (
     unit_is_air_drop_recovering,
     units_with_air_cargo,
 )
-from data.queries.units import held_volunteer_units, library_unit_stats, max_health_multiplier
+from data.queries.units import country_unit_stats, held_volunteer_units
 from data.queries.economy import get_conversion_turns
 from data.queries.movement import find_unit_move_path
 from data import queries
@@ -20,10 +20,10 @@ from data import queries
 def create_unit_dict(unit_type, owner, unit_library, nation_data=None):
     """Generates a standard base unit dictionary to avoid redundant stat parsing.
 
-    Pass ``nation_data`` so the owner's Quality sets the new unit's maximum health.
+    Pass ``nation_data`` to apply the owner's Quality and policies.
     """
     stats = unit_library.get(unit_type, {})
-    combat = library_unit_stats(stats, max_health_multiplier(nation_data, owner))
+    combat = country_unit_stats(stats, nation_data, owner)
     return {
         # Unlike Python's ``id()``, this survives save/load, tournament files,
         # and authoritative real-time snapshots.  UI selection remains local,

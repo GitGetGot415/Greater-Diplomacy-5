@@ -191,7 +191,7 @@ def finalize_annexation(map_data, nation_data, master, puppet, context, *, force
                 check_landless=not force, apply_capture_rules=not force)
         for unit in prov.get("units", []):
             if unit.get("owner") == puppet:
-                queries.set_unit_owner(unit, master)
+                queries.set_unit_owner(unit, master, context=context)
 
     # Every province above went through conquer_province, which retires the
     # loser once its last one changes hands -- but a puppet that already held
@@ -302,13 +302,13 @@ def finalize_spectator_country_removal(context, country, annexer=None):
             if unit.get("owner") == country:
                 if annexer is None:
                     continue
-                queries.set_unit_owner(unit, annexer)
+                queries.set_unit_owner(unit, annexer, context=context)
             if "air_cargo" in unit:
                 unit["air_cargo"] = [cargo for cargo in unit["air_cargo"]
                                       if annexer is not None or cargo.get("owner") != country]
             for member in queries.units_with_air_cargo([unit]):
                 if member.get("owner") == country and annexer is not None:
-                    queries.set_unit_owner(member, annexer)
+                    queries.set_unit_owner(member, annexer, context=context)
                 if member.get("volunteer_host") == country:
                     member.pop("volunteer_host", None)
                     member.pop("volunteer_origin_id", None)

@@ -213,11 +213,10 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     # Resolve every axis before combat, income, and research so all three use
     # the same new compass position. Players choose directions in Politics.
     # AI countries choose them in prepare_turn.
-    quality_moved = politics.tick(context)
-    # Quality sets maximum health, so rescale the units of every country it moved.
-    if quality_moved:
+    unit_stats_changed = politics.tick(context)
+    if unit_stats_changed:
         queries.refresh_unit_stats(world_state.map_data, world_state.nation_data,
-                                   queries.get_unit_library(context), owners=quality_moved)
+                                   queries.get_unit_library(context), owners=unit_stats_changed)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
     unit_events.run_step(context, "Unit maintenance", movement_processor.process_unit_maintenance_orders)
