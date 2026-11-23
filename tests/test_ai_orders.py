@@ -9,6 +9,7 @@ obsolete-unit cull never ran once.
 """
 
 import unittest
+from unittest.mock import patch
 
 
 import data.constants as c
@@ -196,9 +197,9 @@ class CtxFixtureTests(unittest.TestCase):
                  "unclaimed_targets": set(), "all_unclaimed_coasts": set(),
                  "enemy_targets": set(), "all_enemy_coasts": set(),
                  "enemy_coastal_waters": set(), "expedition_targets": set()},
-            {"active_battles": set(), "friendly_convoys": set(), "convoy_in_combat": set(),
+            {"active_battles": set(), "lost_battles": set(), "friendly_convoys": set(), "convoy_in_combat": set(),
              "convoy_near_ship": set(), "convoy_near_coast": set()},
-            at_war=True)
+            at_war=True, water_ids=set(), context=None)
         self.assertEqual(set(built), set(ASSIGNMENT_KEYS))
 
 
@@ -332,6 +333,92 @@ class GridScreen:
         return [(unit, self.id_to_province[pid]) for unit in units]
 
 
+class NavalReinforcementTests(unittest.TestCase):
+    def setUp(self):
+        library = {"Fixture Warship": {"naval_unit": True}, "Fixture Rifles": {"naval_unit": False}}
+        self.enterContext(patch.object(ai_movement.queries, "get_unit_library", return_value=library))
+
+    def board(self, layout):
+        screen = GridScreen(layout)
+        for province in screen.id_to_province.values():
+            if province["owner"] == "Ocean":
+                province["terrain"] = "coastal_sea"
+            else:
+                province["is_coastal"] = any(screen.id_to_province[n]["owner"] == "Ocean" for n in province["neighbors"])
+        return screen
+
+    def ship(self, owner="Avaria"):
+        return dict(fixture_unit(owner, attack=10, health=200), type="Fixture Warship")
+
+    def convoy(self):
+        return dict(fixture_unit(attack=1), type="Convoy (Fixture Rifles)")
+
+    def plan(self, screen):
+        ai_movement.process_ai_unit_orders(screen, countries=["Avaria"])
+
+    def test_combat_ship_reinforces_an_offshore_battle_without_land_targets(self):
+        screen = self.board({1: ("Ocean", [2]), 2: ("Ocean", [1, 3]), 3: ("Ocean", [2])})
+        reserve = self.ship()
+        convoy = self.convoy()
+        reinforcement = screen.place(1, reserve)
+        screen.place(2, self.ship(), self.ship("Bruland"))
+        reinforcement += screen.place(3, convoy)
+
+        self.assertEqual(ai_movement._available_reinforcements(screen, "Avaria", screen.id_to_province[2], reinforcement), [reserve])
+
+        self.plan(screen)
+
+        self.assertEqual(reserve["order"]["path"], [2])
+        self.assertEqual(convoy["order"]["path"], [])
+
+    def test_convoy_withdraws_to_shore_while_ships_reinforce(self):
+        screen = self.board({1: ("Avaria", [2]), 2: ("Ocean", [1, 3]), 3: ("Ocean", [2])})
+        guard = fixture_unit()
+        convoy = self.convoy()
+        reserve = self.ship()
+        screen.place(1, guard)
+        screen.place(2, convoy, self.ship(), self.ship("Bruland"))
+        screen.place(3, reserve)
+
+        self.plan(screen)
+
+        self.assertEqual(convoy["order"]["path"], [1])
+        self.assertEqual(reserve["order"]["path"], [2])
+        self.assertEqual(guard["order"], {"type": "MOVE", "path": []})
+
+    def test_ships_reinforce_allied_naval_battles_against_a_shared_enemy(self):
+        for mutual_enemy in (True, False):
+            with self.subTest(mutual_enemy=mutual_enemy):
+                screen = self.board({1: ("Ocean", [2]), 2: ("Ocean", [1])})
+                enemy_owner = "Bruland" if mutual_enemy else "Dornia"
+                screen.nation_data["Avaria"]["faction"] = "Fixture Faction"
+                screen.nation_data["Cirenia"].update(faction="Fixture Faction", at_war_with=[enemy_owner])
+                screen.nation_data.setdefault(enemy_owner, {"at_war_with": []})["at_war_with"].append("Cirenia")
+                reserve = self.ship()
+                screen.place(1, reserve)
+                screen.place(2, self.ship("Cirenia"), self.ship(enemy_owner))
+
+                self.plan(screen)
+
+                self.assertEqual(reserve["order"]["path"], [2] if mutual_enemy else [])
+
+    def test_amphibious_route_uses_clear_water_to_reinforce_coastal_land(self):
+        screen = self.board({1: ("Avaria", [2, 3]), 2: ("Ocean", [1, 4]),
+                             3: ("Ocean", [1, 5]), 4: ("Avaria", [2, 5, 6]),
+                             5: ("Ocean", [3, 4]), 6: ("Bruland", [4])})
+        division = fixture_unit()
+        convoy = self.convoy()
+        screen.place(1, division, convoy, fixture_unit())
+        screen.place(2, self.ship(), self.ship("Bruland"))
+        screen.place(4, fixture_unit(), fixture_unit("Bruland", attack=1))
+
+        self.plan(screen)
+
+        self.assertEqual(convoy["order"]["path"], [3])
+        self.assertEqual(division["order"]["type"], "CONVERT")
+        self.assertEqual(division["order"]["to"], "Convoy")
+
+
 class WoundedUnitsDoNotChargeTests(unittest.TestCase):
     """A routed stack used to walk straight back into the tile it fled."""
 
@@ -369,7 +456,7 @@ class LoneGuardTests(unittest.TestCase):
         battles = {"active_battles": set(), "lost_battles": set(), "friendly_convoys": set(),
                    "convoy_in_combat": set(), "convoy_near_ship": set(),
                    "convoy_near_coast": set()}
-        built = ai_movement._build_target_assignments(units_info, borders, battles, at_war=True)
+        built = ai_movement._build_target_assignments(units_info, borders, battles, at_war=True, water_ids=set(), context=screen)
         # The weighted count carries the rear-guard penalty; the unit count does not.
         self.assertGreater(built["target_assignments"][1], 1)
         ctx = empty_ctx(**borders, **battles, **built)

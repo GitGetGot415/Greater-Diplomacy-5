@@ -524,7 +524,7 @@ AI_CONVOY_DANGER_COAST_WEIGHT = 10 # Priority for convoys near enemy borders/coa
 
 AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea is this much faster (2.0 = 2x faster)
 
-AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls pathing land units toward active battles
+AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls eligible units toward active battles
 AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
 # A coast with no land border is guarded only when an enemy shore or visible
 # enemy ship is within AI_NEARBY_SEA_TILES of water -- unless friendly warships

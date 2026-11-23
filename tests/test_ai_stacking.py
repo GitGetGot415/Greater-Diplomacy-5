@@ -97,9 +97,9 @@ class BuilderTests(WidthTestCase):
         empty.update(borders)
         return ai_movement._build_target_assignments(
             units_info, empty,
-            {"active_battles": set(active_battles), "friendly_convoys": set(),
+            {"active_battles": set(active_battles), "lost_battles": set(), "friendly_convoys": set(),
              "convoy_in_combat": set(), "convoy_near_ship": set(), "convoy_near_coast": set()},
-            at_war=True, capacity=capacity)
+            at_war=True, capacity=capacity, water_ids=set(), context=None)
 
     def test_the_headcount_is_free_of_the_weights(self):
         """A quiet border with one guard carries +AI_REAR_GUARD_PENALTY, which

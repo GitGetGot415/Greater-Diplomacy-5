@@ -18,6 +18,10 @@ def _is_wounded(unit):
     return _health_fraction(unit) < ai_tuning.AI_REPAIR_HEALTH_FRACTION
 
 
+def _is_combat_ship(unit_type, *, context):
+    return not unit_type.startswith("Convoy") and queries.is_naval_unit(unit_type, context=context)
+
+
 def _order_move(context, ai_name, prov, unit, path):
     """Issue a MOVE through the shared order owner. False if the rules refuse it.
 
@@ -681,10 +685,8 @@ def _search_target_paths(start_id, target_ids, allowed_prov_ids, id_to_province,
     return tuple(valid_paths)
 
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unsafe_waters=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None, path_cache=None):
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None, path_cache=None):
     """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
-    if unsafe_waters is None:
-        unsafe_waters = {}
     if target_stacks is None:
         target_stacks = {}
     if target_capacity is None:
@@ -951,6 +953,9 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
         for prov in world.combat_provinces:
             units_here = prov.get("units", [])
             if any(u.get("owner") in friendly_nations for u in units_here):
+                # Ships join allies at sea only where they share an active enemy.
+                if queries.is_water_province(prov) and not any(queries.are_at_war(ai_name, queries.get_unit_combat_owner(u), world_state.nation_data) for u in units_here):
+                    continue
                 expedition_targets.add(prov["id"])
 
         # 2. Reinforce allied borders touching mutual enemies.  The owner
@@ -1050,13 +1055,15 @@ def _tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements=()):
 
 
 def _available_reinforcements(context, ai_name, prov, units_info):
-    """This nation's healthy units next door that could legally step onto `prov`."""
+    """Healthy battle reinforcements that can reach `prov` this turn."""
     world_state = world_for(context)
     nation_data = world_state.nation_data
     neighbors = set(prov.get("neighbors", ()))
+    naval_battle = queries.is_water_province(prov)
     return [unit for unit, here in units_info
             if here["id"] in neighbors
             and not _is_wounded(unit)
+            and _is_combat_ship(unit.get("type", ""), context=context) == naval_battle
             and not queries.is_nation_in_combat_here(ai_name, here, nation_data)
             and queries.can_unit_move_step(unit, here, prov, nation_data, context=context)]
 
@@ -1233,7 +1240,7 @@ def _track_battles_and_convoys(context, ai_name, units_info, friendly_nations, u
     }
 
 
-def _build_target_assignments(units_info, borders, battles, at_war, capacity=None):
+def _build_target_assignments(units_info, borders, battles, at_war, capacity=None, *, water_ids, context):
     """Picks the destination sets (land and naval) this nation's units can be
     routed to, and tallies + weights how many units are already assigned to
     each one so orders spread out rather than piling onto one tile."""
@@ -1248,27 +1255,25 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
     expedition_targets = borders["expedition_targets"]
 
     active_battles = battles["active_battles"]
+    land_battles = active_battles - water_ids
+    naval_expeditions = expedition_targets.intersection(water_ids).difference(active_battles, battles["lost_battles"]) if at_war else set()
+    naval_battles = (active_battles & water_ids) | naval_expeditions
     friendly_convoys = battles["friendly_convoys"]
     convoy_in_combat = battles["convoy_in_combat"]
     convoy_near_ship = battles["convoy_near_ship"]
     convoy_near_coast = battles["convoy_near_coast"]
 
-    # --- FIX: UNIVERSAL TARGETS ---
-    # ALWAYS include peace and coastal borders to prevent abandonment
-    target_destinations = list(set(list(unclaimed_targets) + list(all_unclaimed_coasts) + list(peace_borders) + list(coastal_borders) + list(active_battles)))
-
+    # Ground units and convoys aim for land. Allied battles can also enter
+    # through expedition_targets, so apply the restriction after combining them.
+    ground_targets = unclaimed_targets | all_unclaimed_coasts | peace_borders | coastal_borders | land_battles
     if at_war:
-        # Inject expedition_targets so distant armies mobilize!
-        target_destinations = list(set(target_destinations + list(enemy_targets) + list(all_enemy_coasts) + list(expedition_targets)))
-
-    # If no targets (e.g. island with no neighbors), fall back to coastal borders.
-    if not target_destinations:
-        target_destinations = list(coastal_borders)
+        ground_targets |= enemy_targets | all_enemy_coasts | expedition_targets
+    target_destinations = list(ground_targets - water_ids)
 
     # Keep track of how many units are assigned to each target so we can spread them evenly
     target_assignments = {t_id: 0 for t_id in target_destinations}
 
-    naval_destinations = list(set(list(enemy_coastal_waters) + list(friendly_convoys)))
+    naval_destinations = list((enemy_coastal_waters | friendly_convoys | naval_battles) - land_battles)
     naval_assignments = {t_id: 0 for t_id in naval_destinations}
 
     # Convoy Escort Priority
@@ -1295,7 +1300,7 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
         if prov["id"] in target_assignments:
             target_assignments[prov["id"]] += 1
             target_stacks[prov["id"]] += 1
-        if prov["id"] in naval_assignments:
+        if prov["id"] in naval_assignments and _is_combat_ship(unit.get("type", ""), context=context):
             naval_assignments[prov["id"]] += 1
             naval_stacks[prov["id"]] += 1
 
@@ -1309,11 +1314,11 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
     # being able to use another body: at a front rank plus one relief rank. Same
     # strength as before on an empty tile, so a battle still outranks a quiet
     # border by the same margin it always did.
-    for b_id in active_battles:
-        if b_id in target_assignments:
-            depth = _tile_depth(capacity, b_id)
-            room = max(0, depth - target_stacks.get(b_id, 0)) / depth
-            target_assignments[b_id] -= ai_tuning.AI_REINFORCE_COMBAT_WEIGHT * room
+    for b_id in land_battles | naval_battles:
+        assignments, stacks = (naval_assignments, naval_stacks) if b_id in naval_battles else (target_assignments, target_stacks)
+        depth = _tile_depth(capacity, b_id)
+        room = max(0, depth - stacks[b_id]) / depth
+        assignments[b_id] -= ai_tuning.AI_REINFORCE_COMBAT_WEIGHT * room
 
     # --- STRATEGIC WEIGHTING FIX ---
     # 1. Coasts are low priority. Inflate their count so units prefer land borders.
@@ -1334,7 +1339,9 @@ def _build_target_assignments(units_info, borders, battles, at_war, capacity=Non
 
     # 3. Penalize expedition targets so the AI defends its homeland fronts FIRST.
     for e_id in expedition_targets:
-        if e_id in target_assignments and e_id not in enemy_targets and e_id not in war_borders:
+        if e_id in naval_expeditions:
+            naval_assignments[e_id] += ai_tuning.AI_EXPEDITION_WEIGHT
+        elif e_id in target_assignments and e_id not in enemy_targets and e_id not in war_borders:
             target_assignments[e_id] += ai_tuning.AI_EXPEDITION_WEIGHT
 
     return {
@@ -1457,6 +1464,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     coastal_borders = ctx["coastal_borders"]
     unclaimed_targets = ctx["unclaimed_targets"]
     active_battles = ctx["active_battles"]
+    land_battles = active_battles - water_ids
     lost_battles = ctx["lost_battles"]
     at_war = ctx["at_war"]
     target_destinations = ctx["target_destinations"]
@@ -1471,6 +1479,9 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     combat_destinations = (set(active_battles) | set(ctx.get("enemy_targets", ()))
                            | set(ctx.get("expedition_targets", ()))
                            | set(ctx.get("all_enemy_coasts", ())))
+    # Amphibious routes can cross open water, but transports avoid visible
+    # hostile fleets on the way to a landing.
+    ground_route_ids = allowed_prov_ids.difference(unsafe_waters)
     path_cache = {}
     survival_cache = {}
 
@@ -1502,7 +1513,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
         attacker_signature = combat_rules.single_attacker_signature(unit)
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
-        is_naval_combatant = queries.is_naval_unit(u_type, context=context) and not is_convoy
+        is_naval_combatant = _is_combat_ship(u_type, context=context)
         wounded = _is_wounded(unit)
 
         curr_id = prov["id"]
@@ -1544,7 +1555,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
 
         # Break the hold if there's an active battle literally 1 tile away!
         # A wounded unit is not going to that battle, so it keeps the hold.
-        is_near_battle = any(n in active_battles for n in prov.get("neighbors", []))
+        is_near_battle = any(n in land_battles for n in prov.get("neighbors", []))
         if is_near_battle and not wounded:
             is_defensive_hold = False
 
@@ -1646,14 +1657,13 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
         path = _bfs_nearest_target(
             curr_id,
             set(search_targets),
-            allowed_prov_ids,
+            allowed_prov_ids if is_naval_combatant else ground_route_ids,
             world_state.id_to_province,
             assignments,
             is_convoy=is_convoy,
             is_ship=is_naval_combatant,
             moving_nation=ai_name,
             nation_data=world_state.nation_data,
-            unsafe_waters=unsafe_waters,
             unit_speed=unit.get("speed", 1),
             water_ids=water_ids,
             neighbor_ids=neighbor_ids,
@@ -1896,7 +1906,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         speed = unit.get("speed", 1)
         u_type = unit.get("type", "")
         is_convoy = u_type.startswith("Convoy")
-        is_naval_combatant = queries.is_naval_unit(u_type, context=context) and not is_convoy
+        is_naval_combatant = _is_combat_ship(u_type, context=context)
         travels = not is_convoy
         trip_targets = port_targets if is_naval_combatant else march_targets
 
@@ -2160,7 +2170,7 @@ def _generate_unit_orders(context, *, countries=None):
             if t_id in world_state.id_to_province
         }
 
-        assignments = _build_target_assignments(units_info, borders, battles, at_war, capacity)
+        assignments = _build_target_assignments(units_info, borders, battles, at_war, capacity, water_ids=water_ids, context=context)
 
         ctx = {
             "unsafe_waters": unsafe_waters,
@@ -2175,12 +2185,8 @@ def _generate_unit_orders(context, *, countries=None):
         _assign_maintenance_orders(context, ai_name, units_info, ctx,
                                    allowed_prov_ids, water_ids, neighbor_ids)
 
-        # If no targets at all (e.g. an island with no neighbours), there is
-        # nothing to march toward. Maintenance runs before this rather than
-        # after it: a garrison sitting on its own factory with no front to walk
-        # to is the unit with the most to gain from a repair or an upgrade, and
-        # skipping the nation here is what stopped it ever getting one.
-        if not assignments["target_destinations"]:
+        # Even without an offensive destination, units in a lost battle can retreat.
+        if not (assignments["target_destinations"] or assignments["naval_destinations"] or battles["lost_battles"]):
             continue
 
         _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, water_ids, neighbor_ids)
