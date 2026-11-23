@@ -101,7 +101,7 @@ POLICIES = (
         "id": "prioritize_industrial_needs",
         "name": "Prioritize Industrial Needs",
         "max_economics": -2,
-        "effects": {"materials": 1.10, "fuel": 1.10, "research": 0.80, "manpower": 0.80},
+        "effects": {"materials": 1.10, "fuel": 1.10, "manpower": 0.80},
     },
     {
         "id": "recruitment_propaganda",
