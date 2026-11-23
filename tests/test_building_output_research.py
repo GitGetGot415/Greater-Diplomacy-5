@@ -13,6 +13,7 @@ from data import queries
 from data.runtime_rules import ActiveLibrary, RuntimeRules
 from data.state_access import BackendState
 from map_logic import politics
+from map_logic.actions import production_actions
 from map_logic.ai import ai_tech_eval
 from map_logic.system32 import economy_processor, research_processor, turn_processor
 from tests.stub_map_screen import map_double, sample_map_screen
@@ -390,6 +391,82 @@ class OutputBonusTests(unittest.TestCase):
                                          research={}, provinces=[self.province()])
         self.assertGreater(value, 0)
         self.assertLessEqual(value, 13)
+
+
+class FactoryCostResearchTests(unittest.TestCase):
+    def setUp(self):
+        self.runtime = RuntimeRules()
+        factory = dict(building(30, 0, 0, "industry"), cost_materials=200, cost_manpower=103, cost_fuel=40)
+        for name, contents in {
+            "unit_library": {},
+            "building_library": {"Basic Factory": factory, "Factory Lvl 1": factory,
+                                 "Factory Lvl 3": factory, "Workshop": factory},
+            "tech_tree": {
+                "first": {"max_lvl": 2, "building_cost_modifiers": [
+                    {"building_families": ["Basic Factory", "Factory"], "increase": 0.25}]},
+                "second": {"max_lvl": 1, "building_cost_modifiers": [
+                    {"building_families": ["Basic Factory", "Factory"], "increase": 0.1}]},
+            },
+        }.items():
+            self.runtime.libraries[name] = ActiveLibrary(self.runtime)
+            self.runtime.libraries[name].update(contents)
+        self.library = self.runtime.libraries["building_library"]
+        self.enterContext(patch.object(c, "BASIC_FACTORY_BASE_COST_X", 100))
+        self.enterContext(patch.object(politics, "axis_effect", return_value=0.8))
+
+    def price(self, name, research):
+        stats = queries.get_building_cost(name, "A", {}, self.library, {"A": {"research": research}})
+        return {key: stats[key] for key in production_actions.COST_KEYS}
+
+    def test_factory_cost_increases_stack_before_rounding_and_only_apply_to_matching_families(self):
+        research = {"first": 4, "second": 1, "legacy": 1}
+        for name in self.library:
+            with self.subTest(name=name):
+                baseline = ({"cost_materials": 200, "cost_manpower": 100, "cost_fuel": 0} if name == "Basic Factory"
+                            else {key: self.library[name][key] for key in production_actions.COST_KEYS})
+                increase = 0 if name == "Workshop" else 0.25 * 2 + 0.1
+                self.assertEqual(self.price(name, research),
+                                 {key: round(cost * 0.8 * (1 + increase)) for key, cost in baseline.items()})
+        self.assertEqual(self.price("Factory Lvl 1", {"first": 0}), self.price("Factory Lvl 1", {}))
+
+    def test_new_construction_uses_the_preview_price_and_refunds_the_original_payment(self):
+        game = BackendState()
+        game.world.runtime_rules = self.runtime
+        game.player_country = "A"
+        province = {"id": 1, "owner": "A", "cores": ["A"], "buildings": ["Basic Factory"]}
+        game.map_data = game.id_to_province = {1: province}
+        stockpile = {"materials": 500, "manpower": 500, "fuel": 500}
+        country = game.nation_data["A"] = dict(stockpile, research={"factory": 1},
+                                               research_queue=[{"tech_name": "first"}])
+        queue = "building_queue"
+        name = "Factory Lvl 1"
+        intent = {"item_name": name, "order_type": "BUILDING"}
+        original = production_actions.submit_production(game, "A", province, queue, intent)
+        self.assertEqual(original.cost, self.price(name, {}))
+
+        country["research"]["first"] = 1
+        preview_price = self.price(name, country["research"])
+        draft = production_actions.reconstruct_queue(game, "A", province, queue, [original.order, intent])
+        self.assertEqual(draft["items"][0], original.order)
+        self.assertEqual(draft["new_costs"], [preview_price])
+
+        new = production_actions.submit_production(game, "A", province, queue, intent)
+        self.assertEqual(new.cost, preview_price)
+        production_actions.cancel_production(game, "A", province, queue, 0)
+        self.assertEqual({res: country[res] for res in stockpile},
+                         {res: amount - preview_price[f"cost_{res}"] for res, amount in stockpile.items()})
+
+        legacy = dict(original.order)
+        legacy.pop("refund")
+        province[queue].append(legacy)
+        before = {res: country[res] for res in stockpile}
+        production_actions.cancel_production(game, "A", province, queue, 1)
+        self.assertEqual({res: country[res] - before[res] for res in before},
+                         {res: original.cost[f"cost_{res}"] for res in before})
+
+    def test_research_details_show_the_construction_cost_increase(self):
+        effects = queries.get_tech_unlocks("first", 1, context=self.library)
+        self.assertTrue(any("+25%" in text and "Basic Factory" in text and "Construction Cost" in text for text in effects))
 
 
 class ResearchGraphRuleTests(unittest.TestCase):

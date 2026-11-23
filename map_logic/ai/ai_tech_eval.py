@@ -107,19 +107,10 @@ def _replaced_building(name, building_library):
     return req
 
 
-def _build_cost(name, stats, prices):
-    """What putting this building up costs, in the same scarcity terms."""
-    if name == "Basic Factory":
-        # Its JSON costs are zeros standing in for a figure worked out per
-        # nation by queries.get_building_cost, which scales with how many
-        # factories the nation already has. Taken at face value it read as a
-        # free building. Nothing here has map access, so the base is the
-        # honest floor.
-        base = float(c.BASIC_FACTORY_BASE_COST_X)
-        costs = {"materials": base * 2, "manpower": base, "fuel": 0.0}
-    else:
-        costs = {res: float(stats.get(f"cost_{res}", 0)) for res in ai_unit_eval.RESOURCES}
-    return sum(prices[res] * costs[res] for res in ai_unit_eval.RESOURCES)
+def _build_cost(name, building_library, prices, *, research=None, context=None):
+    """Price the first build in a neutral economy with the given research."""
+    stats = queries.get_building_cost(name, None, {}, building_library, {}, context=context, research=research)
+    return sum(prices[res] * stats.get(f"cost_{res}", 0) for res in ai_unit_eval.RESOURCES)
 
 
 def _conversion_gain(level, prices, income):
@@ -275,8 +266,6 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
 
     best = 0.0
     for name in buildings_unlocked_by(tech_key, level, building_library):
-        stats = building_library.get(name, {})
-
         # What the province gains, net of what the level below it stops
         # producing the moment this one is built on top.
         output = queries.get_building_output(name, research, building_library, context=context, factory_multiplier=factory_multiplier)
@@ -289,7 +278,8 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
         # Net of what it costs to put up, spread over the period a building is
         # given to earn that back -- it keeps producing long after the twenty
         # turns a division is costed against.
-        best = max(best, gain - _build_cost(name, stats, prices) / ai_tuning.AI_BUILDING_PAYBACK_TURNS)
+        cost = _build_cost(name, building_library, prices, research=research, context=context)
+        best = max(best, gain - cost / ai_tuning.AI_BUILDING_PAYBACK_TURNS)
 
     # A gate has value when it enables the next reachable building research.
     tree = queries.get_tech_tree(context)

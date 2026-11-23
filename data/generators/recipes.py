@@ -606,9 +606,16 @@ def flat_building_bonus(families, resource, amount):
     return [{"building_families": families, "flat_outputs": {resource: amount}}]
 
 
-def proportional_building_bonus(families, resource, amount):
-    """Build a proportional output bonus for the specified building families."""
-    return [{"building_families": families, "outputs": {resource: amount}}]
+def factory_research_options(name, output_bonus, *, cost_increase):
+    """Record the output and construction cost effects of a factory technology."""
+    families = ["Basic Factory", "Factory"]
+    options = {
+        "NAME": name,
+        "BONUS": [{"building_families": families, "outputs": {"materials": output_bonus}}],
+    }
+    if cost_increase:
+        options["building_cost_modifiers"] = [{"building_families": families, "increase": cost_increase}]
+    return options
 
 
 # Sections separated by a blank spacer line, matching the current file.
@@ -696,19 +703,19 @@ RESEARCH_RECIPES = [
         ([1880],                                     "lightbulb",                  "INDUSTRY", 1200, {"electricity": 1},       {"NAME": "Lightbulb", "BONUS": flat_building_bonus(["Basic Factory"], "materials", 40)}),
         ([1890],                                     "industrial_air_compressor",  "INDUSTRY", 1200, {"lightbulb": 1},         {"NAME": "Industrial Air Compressor", "BONUS": flat_building_bonus(["Basic Factory"], "materials", 50)}),
         ([1895],                                     "diesel_engine",              "INDUSTRY", 1200, IAC,                      {"NAME": "Diesel Engine", "BONUS": flat_building_bonus(["Basic Factory"], "materials", 60)}),
-        ([1905],                                     "assembly_line",              "INDUSTRY", 1200, {"factory": 1},           {"NAME": "Assembly Line", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1915],                                     "conveyor_belt",              "INDUSTRY", 1200, {"factory": 2},           {"NAME": "Conveyor Belt", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1925],                                     "continuous_assembly_line",   "INDUSTRY", 1200, {"factory": 3},           {"NAME": "Continuous Assembly Line", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1935],                                     "machine_tools",              "INDUSTRY", 1200, {"factory": 4},           {"NAME": "Machine Tools", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1945],                                     "just_in_time_manufacturing", "INDUSTRY", 1200, {"factory": 5},           {"NAME": "Just In Time Manufacturing", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1955],                                     "industrial_robot",           "INDUSTRY", 1200, {"factory": 6},           {"NAME": "Industrial Robot", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1965],                                     "stanford_arm",               "INDUSTRY", 1200, {"factory": 7},           {"NAME": "Stanford Arm", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1975],                                     "asea_irb_6",                 "INDUSTRY", 1200, {"factory": 8},           {"NAME": "ASEA IRB 6", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1985],                                     "computer_numerical_control", "INDUSTRY", 1200, {"factory": 9},           {"NAME": "Computer Numerical Control", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([1995],                                     "3d_printing",                "INDUSTRY", 1200, {"factory": 10},          {"NAME": "3D Printing", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([2005],                                     "internet_of_things",         "INDUSTRY", 1200, {"factory": 11},          {"NAME": "Internet of Things", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.05)}),
-        ([2015],                                     "industry_4_0",               "INDUSTRY", 1200, {"factory": 12},          {"NAME": "Industry 4.0", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.05)}),
-        ([2025],                                     "industry_5_0",               "INDUSTRY", 1200, {"factory": 13},          {"NAME": "Industry 5.0", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.05)}),
+        ([1905],                                     "assembly_line",              "INDUSTRY", 1200, {"factory": 1},           factory_research_options("Assembly Line", 0.1, cost_increase=0.05)),
+        ([1915],                                     "conveyor_belt",              "INDUSTRY", 1200, {"factory": 2},           factory_research_options("Conveyor Belt", 0.1, cost_increase=0.05)),
+        ([1925],                                     "continuous_assembly_line",   "INDUSTRY", 1200, {"factory": 3},           factory_research_options("Continuous Assembly Line", 0.1, cost_increase=0.05)),
+        ([1935],                                     "machine_tools",              "INDUSTRY", 1200, {"factory": 4},           factory_research_options("Machine Tools", 0.1, cost_increase=0.05)),
+        ([1945],                                     "just_in_time_manufacturing", "INDUSTRY", 1200, {"factory": 5},           factory_research_options("Just In Time Manufacturing", 0.1, cost_increase=0.05)),
+        ([1955],                                     "industrial_robot",           "INDUSTRY", 1200, {"factory": 6},           factory_research_options("Industrial Robot", 0.1, cost_increase=0.05)),
+        ([1965],                                     "stanford_arm",               "INDUSTRY", 1200, {"factory": 7},           factory_research_options("Stanford Arm", 0.1, cost_increase=0.05)),
+        ([1975],                                     "asea_irb_6",                 "INDUSTRY", 1200, {"factory": 8},           factory_research_options("ASEA IRB 6", 0.1, cost_increase=0.05)),
+        ([1985],                                     "computer_numerical_control", "INDUSTRY", 1200, {"factory": 9},           factory_research_options("Computer Numerical Control", 0.1, cost_increase=0.05)),
+        ([1995],                                     "3d_printing",                "INDUSTRY", 1200, {"factory": 10},          factory_research_options("3D Printing", 0.1, cost_increase=0.05)),
+        ([2005],                                     "internet_of_things",         "INDUSTRY", 1200, {"factory": 11},          factory_research_options("Internet of Things", 0.1, cost_increase=0.05)),
+        ([2015],                                     "industry_4_0",               "INDUSTRY", 1200, {"factory": 12},          factory_research_options("Industry 4.0", 0.1, cost_increase=0.05)),
+        ([2025],                                     "industry_5_0",               "INDUSTRY", 1200, {"factory": 13},          factory_research_options("Industry 5.0", 0.1, cost_increase=0.05)),
         (building_years("Factory Lvl"),              "factory",                    "INDUSTRY", 1200, {"diesel_engine": 1},     {"GATES": FACTORY_LEVEL_GATES}),
         ([1910],                                     "bergius_process",            "INDUSTRY", 1200, {},                       {}),
         (yr(1912, 2, 50),                            "fuel_refining",              "INDUSTRY", 1200, {"bergius_process": 1},   {}),

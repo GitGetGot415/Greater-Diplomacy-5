@@ -2,6 +2,7 @@
 
 import data.constants as c
 import json
+from math import fsum
 import random
 from data.state_access import session_for, world_for
 from map_logic import politics
@@ -426,11 +427,13 @@ def generate_rebellion_name(cores_on_tile, nation_data):
     return rebel_id, final_name
 
 
-def get_building_cost(b_name, nation, map_data, bldg_lib, nation_data):
+def get_building_cost(b_name, nation, map_data, bldg_lib, nation_data, *, context=None, research=None):
     """Dynamically scales the building cost, bypassing the JSON for Basic Factories.
 
     Strategy and active policies scale fort prices. The Economic axis scales
-    other building prices. Orders record what they paid for refunds.
+    other building prices. Research adds building-specific increases.
+    Pass a nation to include its political effects. An explicit research mapping
+    prices hypothetical research levels. Orders record what they paid for refunds.
 
     Time is left untouched -- it comes straight from bldg_lib, so it already
     reflects both the recipes.py default and any construction turns override from Edit Unit / Building Stats.
@@ -442,10 +445,22 @@ def get_building_cost(b_name, nation, map_data, bldg_lib, nation_data):
         stats["cost_materials"] = x * 2
         stats["cost_manpower"] = x
         stats["cost_fuel"] = 0
-    if stats.get("group") == "fortification":
+    if nation is None:
+        multiplier = 1.0
+    elif stats.get("group") == "fortification":
         multiplier = politics.axis_policy_multiplier(nation_data, nation, "fort_cost")
     else:
         multiplier = politics.axis_effect(nation_data, nation, "building_cost")
+    if research is None:
+        research = (nation_data or {}).get(nation, {}).get("research", {})
+    if stats and research:
+        tree = queries.get_tech_tree(bldg_lib if context is None else context)
+        family = base_item_name_from_text(b_name)
+        levels = _building_research_levels(research, tree, "building_cost_modifiers")
+        increase = fsum(modifier["increase"] * level for tech, level in levels
+                        for modifier in tree[tech]["building_cost_modifiers"]
+                        if family in modifier["building_families"])
+        multiplier *= 1.0 + increase
     for res in c.ECON_RESOURCE_KEYS:
         if f"cost_{res}" in stats:
             stats[f"cost_{res}"] = int(round(stats[f"cost_{res}"] * multiplier))
@@ -484,8 +499,9 @@ def refund_queue_item(nation_data_block, item, owner=None, map_data=None, *, con
 
     stats = {}
     if item.get("order_type") == "BUILDING":
+        # Queues without recorded payments predate research-based surcharges.
         stats = queries.get_building_cost(item.get("item_name"), owner, map_data, queries.get_building_library(context),
-                                          world_for(context).nation_data)
+                                          world_for(context).nation_data, research={})
     elif "unit_type" in item:
         stats = queries.get_unit_library(context).get(item["unit_type"], {})
     refund_resources(nation_data_block, stats)
@@ -528,14 +544,14 @@ def get_siphon_rates(nation_data_block):
     return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})
 
 
-def _building_output_bonus_levels(research, tree):
-    """Return (tech, capped level) for each researched tech that changes building output.
+def _building_research_levels(research, tree, effect):
+    """Return (tech, capped level) for each completed building research effect.
 
-    Research order is kept, so the bonuses multiply in the same order for every caller.
+    Keep research order so output bonuses multiply in the same order for every caller.
     """
     return tuple((tech, min(level, tree[tech]["max_lvl"]))
                  for tech, level in research.items()
-                 if level > 0 and tech in tree and tree[tech].get("building_output_bonuses"))
+                 if level > 0 and tech in tree and tree[tech].get(effect))
 
 
 def get_building_output_modifiers(research, building_library=None, *, context=None, cache=None):
@@ -549,7 +565,7 @@ def get_building_output_modifiers(research, building_library=None, *, context=No
     if building_library is None:
         building_library = queries.get_building_library(context)
     tree = queries.get_tech_tree(context)
-    levels = _building_output_bonus_levels(research, tree)
+    levels = _building_research_levels(research, tree, "building_output_bonuses")
     if cache is not None and levels in cache:
         return cache[levels]
     bonuses = [(bonus, level) for tech, level in levels

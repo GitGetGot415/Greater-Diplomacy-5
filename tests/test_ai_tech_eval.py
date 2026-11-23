@@ -123,7 +123,17 @@ class EconomyValueTests(unittest.TestCase):
     def test_the_basic_factory_is_not_scored_as_free(self):
         """The shared cost rule replaces placeholder costs."""
         self.assertGreater(
-            te._build_cost("Basic Factory", self.blib["Basic Factory"], prices()), 0.0)
+            te._build_cost("Basic Factory", self.blib, prices()), 0.0)
+
+    def test_factory_upgrade_value_accounts_for_researched_construction_costs(self):
+        tree = {"fixture_cost": {"max_lvl": 1, "building_cost_modifiers": [
+            {"building_families": ["Factory"], "increase": 0.25}]}}
+        with patch.object(queries, "get_tech_tree", return_value=tree):
+            base = te.economy_gain("factory", 2, prices(), self.blib, self.income)
+            increased = te.economy_gain("factory", 2, prices(), self.blib, self.income,
+                                        research={"fixture_cost": 1})
+        self.assertAlmostEqual(base - increased,
+                               self.blib["Factory Lvl 2"]["cost_materials"] * 0.25 / ai_tuning.AI_BUILDING_PAYBACK_TURNS)
 
     def test_an_upgrade_is_worth_only_what_it_adds(self):
         """The fixture's first upgrade costs more than its marginal yield."""
@@ -152,7 +162,7 @@ class EconomyValueTests(unittest.TestCase):
         lvl8 = self.blib["Factory Lvl 8"]
         lvl7 = self.blib["Factory Lvl 7"]
         gain = (te._yield_value(lvl8, cheap_build) - te._yield_value(lvl7, cheap_build))
-        cost = te._build_cost("Factory Lvl 8", lvl8, cheap_build) / ai_tuning.AI_BUILDING_PAYBACK_TURNS
+        cost = te._build_cost("Factory Lvl 8", self.blib, cheap_build) / ai_tuning.AI_BUILDING_PAYBACK_TURNS
         self.assertAlmostEqual(value, gain - cost)
         self.assertLess(value, te._yield_value(lvl8, cheap_build),
                         "must not be the absolute output")

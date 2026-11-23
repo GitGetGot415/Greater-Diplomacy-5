@@ -99,7 +99,8 @@ def get_tech_unlocks(tech_key, level, *, context=None, unit_unlocks=None):
     for target_key, target_level in get_tech_level_gate_unlocks(tech_key, level, context=context):
         name = get_tech_display_name(target_key, context=context)
         unlocks.append(f"Research prerequisite: {name}, level {target_level}")
-    for bonus in queries.get_tech_tree(context).get(tech_key, {}).get("building_output_bonuses", []):
+    tech = queries.get_tech_tree(context).get(tech_key, {})
+    for bonus in tech.get("building_output_bonuses", []):
         targets = list(bonus.get("building_families", []))
         targets.extend(group.replace("_", " ").title() for group in bonus.get("building_groups", []))
         for resource, amount in bonus.get("outputs", {}).items():
@@ -107,6 +108,9 @@ def get_tech_unlocks(tech_key, level, *, context=None, unit_unlocks=None):
             unlocks.append(f"+{increase:g}% {resource.title()} Output: {', '.join(targets)}")
         for resource, amount in bonus.get("flat_outputs", {}).items():
             unlocks.append(f"+{amount * level:g} {resource.title()} Output: {', '.join(targets)}")
+    for modifier in tech.get("building_cost_modifiers", []):
+        increase = modifier["increase"] * level * 100
+        unlocks.append(f"{increase:+g}% Construction Cost for {', '.join(modifier['building_families'])}")
     bldg_lib = queries.get_building_library(context)
     for b_name in bldg_lib.keys():
         req_tech, req_lvl = queries.get_building_required_tech(b_name)
