@@ -58,12 +58,11 @@ def prepare_unit_roster(map_screen, province):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
             row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
-            if unit.get("owner") == map_screen.player_country:
-                fractions = queries.unit_supply_details(supply, unit)
-                if fractions is not None:
-                    manpower, materials, fuel = fractions
-                    row["supply"] = (f"Supply {queries.supply_fraction(fractions):.0%}   "
-                                     f"Manpower {manpower:.0%}   Materials {materials:.0%}   Fuel {fuel:.0%}")
+            fractions = queries.unit_supply_details(supply, unit)
+            if fractions is not None:
+                manpower, materials, fuel = fractions
+                row["supply"] = (f"Supply {queries.supply_fraction(fractions):.0%}   "
+                                 f"Manpower {manpower:.0%}   Materials {materials:.0%}   Fuel {fuel:.0%}")
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:

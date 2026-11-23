@@ -175,7 +175,7 @@ class SupplyTests(SupplyFixture):
         self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.4)
         self.assertNotIn("_supply_multiplier", unit)
 
-    def test_sidebar_draws_owned_unit_supply_in_garrison_and_combat(self):
+    def test_sidebar_draws_available_unit_supply_in_garrison_and_combat(self):
         surface = pygame.Surface((400, 300))
         font = Mock()
         font.render.return_value = pygame.Surface((10, 15))
@@ -186,8 +186,7 @@ class SupplyTests(SupplyFixture):
                 with self.subTest(in_combat=in_combat):
                     tile = province(1, "A")
                     unit = division(tile)
-                    if in_combat:
-                        division(tile, "B")
+                    foreign = division(tile, "B" if in_combat else "C", kind="Supply Test Infantry")
                     world = game(tile)
                     world.font = world.small_font = font
                     world.nation_colors = {}
@@ -200,3 +199,18 @@ class SupplyTests(SupplyFixture):
                     sidebar_info.draw_unit_roster(world, surface, tile, tile["units"], True, 0, 0, surface.get_width())
                     rendered = [call.args[0] for call in font.render.call_args_list]
                     self.assertEqual(rendered.count(rows[id(unit)]["supply"]), 1)
+                    self.assertEqual(rendered.count(rows[id(foreign)]["supply"]), 1)
+
+    def test_sidebar_uses_the_player_supply_projection(self):
+        tile = province(1, "A")
+        unit = division(tile)
+        foreign = division(tile, "B")
+        world = game(tile)
+        world.player_supply_projection = {unit["unit_id"]: (0.5, 0.5, 0.5)}
+
+        queries.prepare_presentation_supply(world)
+        sidebar_info.prepare_unit_roster(world, tile)
+
+        rows = world._unit_roster_cache[tile["id"]][2]
+        self.assertIn("supply", rows[id(unit)])
+        self.assertNotIn("supply", rows[id(foreign)])
