@@ -418,7 +418,7 @@ AI_RETREAT_FORECAST_TURNS = 3
 #    more than its stats suggest
 # Offense and durability each count once, measured against the mean of the
 # units on offer. The weights below are relative to that.
-AI_W_TRANSPORT = 0.1  # Cargo capacity and flight reach determine transport utility.
+AI_W_TRANSPORT = 1.0  # Cargo capacity and flight reach determine transport utility.
 # Flat, not scaled by health: damage is divided by the number of defenders in the
 # lane, so every body in the front rank thins the volley for that rank by the
 # same amount whatever it is made of. A body PAST the front thins nothing at all
