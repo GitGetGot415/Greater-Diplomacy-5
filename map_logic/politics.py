@@ -90,6 +90,7 @@ POLICIES = (
     {
         "id": "prioritize_industrial_needs",
         "name": "Prioritize Industrial Needs",
+        "max_economics": -2,
         "effects": {"materials": 1.10, "fuel": 1.10, "research": 0.80, "manpower": 0.80},
     },
     {
@@ -238,11 +239,12 @@ def requirements_met(nation_data, nation, policy_id, *, political_value=None):
     if political_value is None:
         political_value = value(nation_data, nation)
     return (("max_politics" not in definition or political_value < definition["max_politics"])
-            and ("min_politics" not in definition or political_value > definition["min_politics"]))
+            and ("min_politics" not in definition or political_value > definition["min_politics"])
+            and ("max_economics" not in definition or economic_value(nation_data, nation) < definition["max_economics"]))
 
 
 def requirement_text(policy_id, *, compact=False):
-    """A short, exact explanation of a policy's political requirement."""
+    """A short, exact explanation of a policy's requirement."""
     definition = policy(policy_id)
     if definition is None:
         return "Unavailable"
@@ -251,6 +253,9 @@ def requirement_text(policy_id, *, compact=False):
         return f"{prefix} < {definition['max_politics']:+d}"
     if "min_politics" in definition:
         return f"{prefix} > {definition['min_politics']:+d}"
+    if "max_economics" in definition:
+        prefix = "Economics" if compact else "Requires economics"
+        return f"{prefix} < {definition['max_economics']:+d}"
     return "No political requirement"
 
 
@@ -380,7 +385,7 @@ def active_policies(nation_data, nation):
 
 
 def reconcile_policy(nation_data, nation):
-    """Immediately remove every policy whose political requirement was lost."""
+    """Immediately remove every policy whose requirement was lost."""
     stats = nation_data.get(nation, {})
     states = stats.get(POLICY_KEY, {})
     if not isinstance(states, dict):

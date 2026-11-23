@@ -105,7 +105,7 @@ class ResearchFundingTests(unittest.TestCase):
         for political_value in (c.POLITICS_MIN, c.POLITICS_MAX):
             with self.subTest(political_value=political_value):
                 policy_id = "prioritize_industrial_needs"
-                country = {"materials": 8, "research_funding_slider": 0.1, "political_value": political_value,
+                country = {"materials": 8, "research_funding_slider": 0.1, "political_value": political_value, "economic_value": -3,
                            "research": {}, "research_queue": [project(tech, 1_000) for tech in tree],
                            politics.POLICY_KEY: {policy_id: {"status": politics.POLICY_ACTIVE}}}
                 game = BackendState()
