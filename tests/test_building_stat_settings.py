@@ -237,10 +237,10 @@ class BuildingStatEditorTests(unittest.TestCase):
                 self.assertTrue(self.use_defaults_toggle(screen).is_scrollable)
         screen.select_category("buildings")
         top = self.use_defaults_toggle(screen).rect.y
-        screen.scroll_y = -10
+        screen.scroll.value = -10
         screen.refresh_ui()
         self.assertEqual(self.use_defaults_toggle(screen).rect.y, top - 10)
-        screen.scroll_y = 0
+        screen.scroll.value = 0
         screen.refresh_ui()
         self.use_defaults_toggle(screen).callback()
         self.assertFalse(screen.use_defaults["buildings"])

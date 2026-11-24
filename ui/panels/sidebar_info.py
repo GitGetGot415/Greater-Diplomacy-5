@@ -344,7 +344,7 @@ def draw_sidebar_info(map_screen, surface):
     # 2. Extract Province Data
     province = map_screen.selected_province
     if not province:
-        map_screen.sidebar_scroll_rect = None
+        map_screen.scroll_state("sidebar").content_rect = None
         return
 
     # --- FOG OF WAR VISIBILITY CHECK ---
@@ -403,10 +403,10 @@ def draw_sidebar_info(map_screen, surface):
     # and scrolled with the mouse wheel instead of being truncated with a
     # "+N more" line.
     scroll_rect = pygame.Rect(info_rect.x, current_y, info_rect.width, info_rect.bottom - current_y)
-    map_screen.sidebar_scroll_rect = scroll_rect
+    map_screen.scroll_state("sidebar").content_rect = scroll_rect
 
     scroll_max = map_screen.sidebar_scroll_max
-    scroll_offset = max(0, min(map_screen.sidebar_scroll_y, scroll_max))
+    scroll_offset = max(0, min(map_screen.scroll_state("sidebar").value, scroll_max))
 
     scroll_top = current_y
     current_y -= scroll_offset
@@ -446,7 +446,7 @@ def draw_sidebar_info(map_screen, surface):
     # leave the view stuck scrolled past the new bottom.
     content_height = (current_y + scroll_offset) - scroll_top
     map_screen.sidebar_scroll_max = max(0, content_height - scroll_rect.height)
-    map_screen.sidebar_scroll_y = min(scroll_offset, map_screen.sidebar_scroll_max)
+    map_screen.scroll_state("sidebar").value = min(scroll_offset, map_screen.sidebar_scroll_max)
 
 # --- MODIFIED FUNCTION FOR PORTRAIT ---
 def draw_owner_portrait(map_screen, surface):

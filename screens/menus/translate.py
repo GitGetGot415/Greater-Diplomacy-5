@@ -279,7 +279,7 @@ class Translate(Screen):
         self.direction = direction
         self.notes = []
         self.status = ""
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     # -------------------------------------------------------------------- ui
@@ -360,7 +360,7 @@ class Translate(Screen):
                            "Choose folder...", self.choose_od_folder, font_preset="small"))
 
         items = self._items()
-        self.scroll_content_rect = pygame.Rect(0, 110, self.LIST_WIDTH,
+        self.scroll.content_rect = pygame.Rect(0, 110, self.LIST_WIDTH,
                                                (c.SCREEN_HEIGHT - 60) - 110)
         for i, row_y in self.layout_list_rows(len(items), self.ROW_HEIGHT, self.ROW_TOP,
                                               cull_bottom=c.SCREEN_HEIGHT - 60):

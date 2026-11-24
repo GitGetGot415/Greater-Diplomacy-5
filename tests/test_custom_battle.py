@@ -2193,46 +2193,46 @@ class CustomBattleScreenTests(unittest.TestCase):
             screen._record_kill(source, victim, "shot")
         self.assertEqual(len(screen.kill_feed), battle_screen.KILL_FEED_VISIBLE_ROWS + 3)
         zoom, camera = screen.zoom_index, list(screen.camera)
-        with patch("pygame.mouse.get_pos", return_value=screen.kill_feed_content.center):
+        with patch("pygame.mouse.get_pos", return_value=screen.kill_feed_pane.content_rect.center):
             screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-2)])
-        self.assertEqual(screen.kill_feed_scroll, -2 * battle_screen.KILL_FEED_ROW_HEIGHT)
+        self.assertEqual(screen.kill_feed_pane.value, -2 * battle_screen.KILL_FEED_ROW_HEIGHT)
         self.assertEqual(screen.zoom_index, zoom)
         self.assertEqual(screen.camera, camera)
         previous_entry = screen.kill_feed[2]
         screen._record_kill(source, target, "ram")
         self.assertIs(screen.kill_feed[3], previous_entry)
-        self.assertEqual(screen.kill_feed_scroll, -3 * battle_screen.KILL_FEED_ROW_HEIGHT)
+        self.assertEqual(screen.kill_feed_pane.value, -3 * battle_screen.KILL_FEED_ROW_HEIGHT)
 
         # Dragging the content down moves toward newer kills and never fires the controlled gun.
-        point = screen.kill_feed_content.center
-        before = screen.kill_feed_scroll
+        point = screen.kill_feed_pane.content_rect.center
+        before = screen.kill_feed_pane.value
         screen.handle_events([
             pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
             pygame.event.Event(pygame.MOUSEMOTION, pos=(point[0], point[1] + 20),
                                rel=(0, 20), buttons=(1, 0, 0)),
             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(point[0], point[1] + 20))])
-        self.assertEqual(screen.kill_feed_scroll, before + 20)
+        self.assertEqual(screen.kill_feed_pane.value, before + 20)
         self.assertFalse(screen.firing)
         self.assertIsNone(screen.pan_drag)
-        self.assertFalse(screen.is_content_dragging("kill_feed_scroll"))
+        self.assertFalse(screen.is_content_dragging(screen.kill_feed_pane))
 
         # The shared scrollbar can reach the oldest kill and releases outside the feed.
-        track = screen.kill_feed_track.copy()
+        track = screen.kill_feed_pane.track.copy()
         screen.handle_events([
             pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(track.centerx, track.bottom - 1)),
             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(300, 300))])
-        self.assertEqual(screen.kill_feed_scroll, screen.kill_feed_limit)
-        self.assertFalse(screen.kill_feed_dragging)
+        self.assertEqual(screen.kill_feed_pane.value, screen.kill_feed_pane.limit)
+        self.assertFalse(screen.kill_feed_pane.bar_drag)
 
         # Mobile drags use the same content direction.
         touch = TouchInput()
-        before = screen.kill_feed_scroll
+        before = screen.kill_feed_pane.value
         for kind, y in ((pygame.FINGERDOWN, point[1]), (pygame.FINGERMOTION, point[1] + 20),
                         (pygame.FINGERUP, point[1] + 20)):
             event = pygame.event.Event(kind, touch_id=1, finger_id=1,
                                        x=point[0] / c.SCREEN_WIDTH, y=y / c.SCREEN_HEIGHT)
             screen.handle_events(touch.process_events([event], screen, "MOBILE"))
-        self.assertGreater(screen.kill_feed_scroll, before)
+        self.assertGreater(screen.kill_feed_pane.value, before)
         self.assertFalse(screen.firing)
         self.assertEqual(screen.zoom_index, zoom)
         self.assertEqual(screen.camera, camera)
@@ -2241,9 +2241,9 @@ class CustomBattleScreenTests(unittest.TestCase):
         screen.simulation.winner = 0
         screen.update()
         self.assertEqual(screen.mode, "result")
-        with patch("pygame.mouse.get_pos", return_value=screen.kill_feed_content.center):
+        with patch("pygame.mouse.get_pos", return_value=screen.kill_feed_pane.content_rect.center):
             screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=100)])
-        self.assertEqual(screen.kill_feed_scroll, 0)
+        self.assertEqual(screen.kill_feed_pane.value, 0)
         self.assertEqual(screen.zoom_index, zoom)
         with patch("pygame.mouse.get_pos", return_value=(300, 300)):
             screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
@@ -2263,17 +2263,17 @@ class CustomBattleScreenTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 screen.mode = mode
                 screen.simulation.winner = 0 if mode == "result" else None
-                screen.kill_feed_scroll = 0
+                screen.kill_feed_pane.value = 0
                 screen._refresh_kill_feed()
                 screen.refresh_ui()
-                handle, track = screen.kill_feed_handle.copy(), screen.kill_feed_track.copy()
+                handle, track = screen.kill_feed_pane.handle.copy(), screen.kill_feed_pane.track.copy()
                 point = (track.centerx, track.centery + 1)
                 screen.handle_events([
                     pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=handle.center),
                     pygame.event.Event(pygame.MOUSEMOTION, pos=point,
                                        rel=(0, point[1] - handle.centery), buttons=(1, 0, 0))])
-                self.assertLess(screen.kill_feed_scroll, 0)
-                self.assertGreater(screen.kill_feed_scroll, screen.kill_feed_limit)
+                self.assertLess(screen.kill_feed_pane.value, 0)
+                self.assertGreater(screen.kill_feed_pane.value, screen.kill_feed_pane.limit)
                 # A kill arriving mid-drag must also render from the scrollbar's offset.
                 screen._record_kill(source, target, "ram")
                 bottom = (track.centerx, track.bottom + 20)
@@ -2281,9 +2281,9 @@ class CustomBattleScreenTests(unittest.TestCase):
                     pygame.event.Event(pygame.MOUSEMOTION, pos=bottom,
                                        rel=(0, bottom[1] - point[1]), buttons=(1, 0, 0)),
                     pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=bottom)])
-                self.assertEqual(screen.kill_feed_scroll, screen.kill_feed_limit)
-                self.assertFalse(screen.kill_feed_dragging)
-                self.assertFalse(screen.is_content_dragging("kill_feed_scroll"))
+                self.assertEqual(screen.kill_feed_pane.value, screen.kill_feed_pane.limit)
+                self.assertFalse(screen.kill_feed_pane.bar_drag)
+                self.assertFalse(screen.is_content_dragging(screen.kill_feed_pane))
                 self.assertFalse(screen.firing)
                 self.assertIsNone(screen.pan_drag)
                 self.assertEqual(screen.zoom_index, zoom)
@@ -3025,7 +3025,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.group[0], [0, 1])
         self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
         self.assertEqual(self.screen.group[0], [0, 1])
-        self.assertEqual(self.screen.roster_0_scroll, 0)
+        self.assertEqual(self.screen._roster_scroll(0).value, 0)
         with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened:
             self.click_card_settings(0, 1)
         editor = opened.call_args.args[1]
@@ -3045,7 +3045,7 @@ class CustomBattleScreenTests(unittest.TestCase):
     def test_background_clicks_clear_both_roster_selections_without_releasing_control(self):
         self.fill_armies()
         self.screen.add_unit(0, "Fixture I")
-        self.screen.roster_0_scroll = 0
+        self.screen._roster_scroll(0).value = 0
         self.screen.controlled_index = 0
         self.screen.draw(self.surface)
         first = self.screen.card_rect(0, 0)
@@ -3087,7 +3087,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened:
             self.click_card_settings(0, 0)
             opened.assert_not_called()
-        self.screen.roster_0_scroll = 0
+        self.screen._roster_scroll(0).value = 0
         self.screen.draw(self.surface)
         unit = self.screen.rosters[0][0]
         self.drag_card(self.screen.card_rect(0, 0).center, self.screen.unit_buttons[0, 1].rect.center)
@@ -3303,7 +3303,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         # Sixteen enemy cards fill eight columns, more than the roster shows at once.
         for _ in range(16):
             self.screen.add_unit(1, "Fixture I")
-        self.screen.roster_1_scroll = -(battle_screen.CARD_SIZE[0] + battle_screen.CARD_GAP) * 2
+        self.screen._roster_scroll(1).value = -(battle_screen.CARD_SIZE[0] + battle_screen.CARD_GAP) * 2
         unit = self.screen.rosters[0][0]
         # A drop on the full fourth column inserts a column before it.
         self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(1, 6).center)
@@ -3554,7 +3554,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.add_unit(0, "Fixture I")
         self.screen.selected[0] = 1
         self.click("Control")
-        self.screen.roster_0_scroll = 0
+        self.screen._roster_scroll(0).value = 0
         self.click("Simulate")
         self.screen.draw(self.surface)
         selected = list(self.screen.selected)
@@ -3585,7 +3585,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         rosters = copy.deepcopy(self.screen.rosters)
         with patch("pygame.mouse.get_pos", return_value=self.screen.panes[0].center):
             self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
-        self.assertLess(self.screen.roster_0_scroll, 0)
+        self.assertLess(self.screen._roster_scroll(0).value, 0)
         self.assertEqual(self.screen.rosters, rosters)
         self.assertFalse(any(button.text in {"Add Friendly", "Add Enemy", "Remove", "Control",
                                              "Release Control", "Random", "Simulate"}
@@ -4183,7 +4183,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.columns[0] = combat.paired_columns(24)
         self.screen.refresh_ui()
         self.screen.draw(self.surface)
-        self.screen.roster_0_scroll = -100
+        self.screen._roster_scroll(0).value = -100
         # Gaps between columns use the shared content-drag direction.
         pane = self.screen.panes[0]
         first, second = (self.screen.card_rect(0, index) for index in (0, 2))
@@ -4193,7 +4193,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             pygame.event.Event(pygame.MOUSEMOTION, pos=(point[0] + 10, point[1]),
                                rel=(10, 0), buttons=(1, 0, 0)),
             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(point[0] + 10, point[1]))])
-        self.assertEqual(self.screen.roster_0_scroll, -90)
+        self.assertEqual(self.screen._roster_scroll(0).value, -90)
 
     def test_main_menu_button_and_controller_transition(self):
         from tests import app_harness

@@ -33,7 +33,7 @@ EDITOR_BRUSH_MOUSE_BUTTONS = {1, 3}
 
 
 def _panel_rect(map_screen, name):
-    return getattr(map_screen, f"{name}_scroll_rect", None)
+    return map_screen.scroll_state(name).content_rect
 
 
 def _panels_are_live(map_screen):
@@ -334,7 +334,7 @@ def _map_position_is_on_ui(map_screen, event_pos):
             on_ui = True
         if ui_info_popup.relation_indicator_at_position(map_screen, event_pos) is not None:
             on_ui = True
-        action_rect = map_screen.country_actions_scroll_rect
+        action_rect = map_screen.scroll_state("country_actions").content_rect
         if action_rect and action_rect.collidepoint(mx, my):
             on_ui = True
 
@@ -352,12 +352,12 @@ def _handle_panel_scrolling(map_screen, event, mx, my):
     # Country-action buttons have their own short scroll pane. It is separate
     # from the information panels because its buttons are normal map elements,
     # not text rendered by the panel itself.
-    action_rect = map_screen.country_actions_scroll_rect
+    action_rect = map_screen.scroll_state("country_actions").content_rect
     if (event.type == pygame.MOUSEWHEEL and _panels_are_live(map_screen)
             and action_rect and action_rect.collidepoint(mx, my)):
         maximum = map_screen.country_actions_scroll_max
-        map_screen.country_actions_scroll_y = max(
-            0, min(map_screen.country_actions_scroll_y - event.y * c.SCROLL_STEP,
+        map_screen.scroll_state("country_actions").value = max(
+            0, min(map_screen.scroll_state("country_actions").value - event.y * c.SCROLL_STEP,
                    maximum))
         return True
 
@@ -365,12 +365,8 @@ def _handle_panel_scrolling(map_screen, event, mx, my):
             and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
             and action_rect):
         if map_screen.handle_content_drag(
-                event, attr="country_actions_scroll_y",
-                limit_attr="country_actions_scroll_max",
-                rect_attr="country_actions_scroll_rect",
-                drag_attr="country_actions_drag_state", lo=0,
-                hi=map_screen.country_actions_scroll_max,
-                invert=True, refresh=False):
+                event, map_screen.scroll_state("country_actions"), lo=0,
+                hi=map_screen.country_actions_scroll_max, invert=True, refresh=False):
             return True
 
     # --- SCROLLABLE INFO PANEL WHEEL INTERCEPT ---
@@ -382,9 +378,8 @@ def _handle_panel_scrolling(map_screen, event, mx, my):
             rect = _panel_rect(map_screen, name)
             if rect and rect.collidepoint(mx, my):
                 max_scroll = getattr(map_screen, f"{name}_scroll_max", 0)
-                current = getattr(map_screen, f"{name}_scroll_y", 0)
-                setattr(map_screen, f"{name}_scroll_y",
-                        max(0, min(current - event.y * c.SCROLL_STEP, max_scroll)))
+                scroll = map_screen.scroll_state(name)
+                scroll.value = max(0, min(scroll.value - event.y * c.SCROLL_STEP, max_scroll))
                 return True
 
     # --- SCROLLABLE INFO PANEL DRAG INTERCEPT ---
@@ -393,11 +388,8 @@ def _handle_panel_scrolling(map_screen, event, mx, my):
     if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
             and _panels_are_live(map_screen)):
         for name in MAP_PANELS:
-            if map_screen.handle_content_drag(event, attr=f"{name}_scroll_y",
-                                        rect_attr=f"{name}_scroll_rect",
-                                        drag_attr=f"{name}_drag_state", lo=0,
-                                        hi=getattr(map_screen, f"{name}_scroll_max", 0),
-                                        invert=True):
+            if map_screen.handle_content_drag(event, map_screen.scroll_state(name), lo=0,
+                                              hi=getattr(map_screen, f"{name}_scroll_max", 0), invert=True):
                 return True
     return False
 

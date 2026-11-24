@@ -100,7 +100,7 @@ class Standalone_Export_Screen(Screen):
     def on_enter(self, app, previous):
         self.controller = app
         self.map_screen = app.states["MAP"]
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.base_album_inventory = standalone_music.base_album_inventory()
         self.refresh_ui()
 
@@ -178,7 +178,7 @@ class Standalone_Export_Screen(Screen):
         for label, column_width in (("Rank", RANK_WIDTH), ("Country", NAME_WIDTH), ("Description", DESCRIPTION_WIDTH)):
             self.column_labels.append((label, (header_x, COUNTRY_LIST_TOP - 22)))
             header_x += column_width + BUTTON_GAP
-        self.scroll_content_rect = pygame.Rect(left_x, COUNTRY_LIST_TOP, row_width, COUNTRY_LIST_BOTTOM - COUNTRY_LIST_TOP)
+        self.scroll.content_rect = pygame.Rect(left_x, COUNTRY_LIST_TOP, row_width, COUNTRY_LIST_BOTTOM - COUNTRY_LIST_TOP)
         self.list_track = (left_x + row_width + SCROLLBAR_GAP, COUNTRY_LIST_TOP, COUNTRY_LIST_BOTTOM - COUNTRY_LIST_TOP)
         name_font = fonts.get("normal")
         for index, y in self.layout_list_rows(len(entries), COUNTRY_ROW_HEIGHT, COUNTRY_LIST_TOP, cull_top=COUNTRY_LIST_TOP, cull_bottom=COUNTRY_LIST_BOTTOM):
@@ -320,7 +320,7 @@ class Standalone_Export_Screen(Screen):
 
     def additional_events(self, event):
         if self.map_screen is not None:
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+            self.handle_list_scroll(event, content=True)
 
     def window_preview(self, settings):
         """Return the background drawn at the window's size and shrunk to the preview.
@@ -361,8 +361,8 @@ class Standalone_Export_Screen(Screen):
         name_font = fonts.get("normal")
         for text, position in self.column_labels:
             surface.blit(name_font.render(text, True, TEXT_COLOR), position)
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+        with ui_bars.clip_scroll_region(surface, self.scroll.content_rect,
+                                        draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
             for text, position in self.row_labels:
                 rendered = name_font.render(text, True, TEXT_COLOR)
                 surface.blit(rendered, rendered.get_rect(midleft=position))

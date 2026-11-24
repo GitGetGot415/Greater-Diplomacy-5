@@ -215,34 +215,34 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen = self.screen(False)
         screen.policies_rect.width = 620
         screen.refresh_ui()
-        self.assertLess(screen.policy_scroll_min_x, 0)
-        screen.policy_scroll_track_rect = pygame.Rect(100, 100, 500, 14)
+        self.assertLess(screen.policy_scroll.limit, 0)
+        screen.policy_scroll.track = pygame.Rect(100, 100, 500, 14)
 
-        screen._snap_policy_scroll(screen.policy_scroll_track_rect.left)
-        self.assertEqual(screen.policy_scroll_x, 0,
+        screen.policy_scroll.snap(screen.policy_scroll.track.midleft)
+        self.assertEqual(screen.policy_scroll.value, 0,
                          "dragging the scrollbar left moves the policy cards right")
 
-        screen._snap_policy_scroll(screen.policy_scroll_track_rect.right)
-        self.assertEqual(screen.policy_scroll_x, screen.policy_scroll_min_x,
+        screen.policy_scroll.snap(screen.policy_scroll.track.midright)
+        self.assertEqual(screen.policy_scroll.value, screen.policy_scroll.limit,
                          "dragging the scrollbar right moves the policy cards left")
 
         # Directly dragging the cards retains the conventional, grab-and-pan
         # direction. Only the dedicated scrollbar is reversed.
-        screen.policy_scroll_x = -100
+        screen.policy_scroll.value = -100
         viewport = screen._policy_viewport_rect()
         start = viewport.center
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=start, button=1))
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEMOTION, pos=(start[0] - 20, start[1]), rel=(-20, 0)))
-        self.assertEqual(screen.policy_scroll_x, -120)
+        self.assertEqual(screen.policy_scroll.value, -120)
 
-        previous_limit = screen.policy_scroll_min_x
+        previous_limit = screen.policy_scroll.limit
         self.tab(screen, politics.MILITARY).callback()
-        self.assertEqual(screen.policy_scroll_x, 0)
-        self.assertEqual(screen.policy_scroll_min_x, previous_limit)
-        self.assertIsNone(screen.content_drag_state)
-        self.assertIsNone(screen.policy_scroll_track_rect)
+        self.assertEqual(screen.policy_scroll.value, 0)
+        self.assertEqual(screen.policy_scroll.limit, previous_limit)
+        self.assertIsNone(screen.scroll.content_drag)
+        self.assertIsNone(screen.policy_scroll.track)
 
     def test_starting_economic_slider_saves_both_coordinates_and_clears_drift(self):
         from screens.editors.politics_editor import Politics_Edit_Screen

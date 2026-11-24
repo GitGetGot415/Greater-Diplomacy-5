@@ -504,7 +504,7 @@ class ProjectedMapTests(DealScreenTestCase):
         screen.panel_rect.height = screen.PANEL.height
         screen.draw(self.surface)
 
-        self.assertLess(screen.max_scroll, 0, "there is more text than room for it")
+        self.assertLess(screen.scroll.limit, 0, "there is more text than room for it")
         self.assertTrue(screen.is_over_ui(screen.panel_rect.center),
                         "the wheel has to reach the list, not the camera")
 

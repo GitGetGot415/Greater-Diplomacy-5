@@ -114,7 +114,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.front_slots = None
         self.cancel_drag()
         for pane in self.regions:
-            setattr(self, self.scroll_attrs(pane)["attr"], 0)
+            self.pane(pane).value = 0
         self.refresh_ui()
         self._observed_state = self._source_stamp()
 
@@ -234,7 +234,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 self._observed_state = stamp
             self.overview.province = self.province
         for pane in self.regions:
-            setattr(self, self.scroll_attrs(pane)["limit_attr"], 0)
+            self.pane(pane).limit = 0
         automation = self.automation_rect
         organize = Button(automation.x + GAP, automation.y + HEADER_H,
                           (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "red", "Organize",
@@ -363,7 +363,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         # Match reserve/held card widths while keeping fronts in two rows.
         columns = max(1, (available_w + GAP) // (CARD_MAX_W + GAP))
         card_w = min(CARD_MAX_W, (available_w - (columns - 1) * GAP) // columns)
-        attrs = self.scroll_attrs(pane)
+        scroll = self.pane(pane)
         if slots is not None:
             rows = FRONT_GRID_ROWS
             columns = math.ceil(count / rows)
@@ -371,8 +371,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         else:
             rows = math.ceil(count / columns)
             limit = min(0, rect.height - rows * (CARD_H + GAP) + GAP)
-        setattr(self, attrs['attr'], max(limit, min(0, self.pane_scroll(pane))))
-        setattr(self, attrs['limit_attr'], limit)
+        scroll.value = max(limit, min(0, scroll.value))
+        scroll.limit = limit
         self.row_paint[pane] = []
         self.slot_rects[pane] = []
         self.empty_slots[pane] = []
@@ -385,8 +385,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         else:
             grid_rows = self.layout_list_rows(
                 rows, CARD_H + GAP, rect.y, view_h=rect.height, pad=-GAP,
-                cull_top=rect.top, cull_bottom=rect.bottom,
-                attr=attrs['attr'], limit_attr=attrs['limit_attr'])
+                cull_top=rect.top, cull_bottom=rect.bottom, scroll=scroll)
         for grid_row, y in grid_rows:
             for column in range(columns):
                 # Fronts fill down each column before moving right; reserves fill across rows.
@@ -461,7 +460,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def _select(self, index):
         self.selected_lane = index
         for pane in self.regions:
-            setattr(self, self.scroll_attrs(pane)['attr'], 0)
+            self.pane(pane).value = 0
         self.refresh_ui()
 
     def _draw_mail_panel(self, surface, rect, name, *, translucent=False):

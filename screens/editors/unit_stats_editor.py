@@ -270,7 +270,7 @@ class UnitStatsEditorScreen(ModalScreen):
     def select_category(self, key):
         self.sync_entries()
         self.active_category = key
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def _read_ranges(self):
@@ -442,7 +442,7 @@ class UnitStatsEditorScreen(ModalScreen):
         locked = self.use_defaults[category]
         rows = self.rows[category]
         row_height = self.ROW_HEIGHT
-        self.scroll_content_rect = pygame.Rect(
+        self.scroll.content_rect = pygame.Rect(
             p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
         self._row_layout = list(self.layout_list_rows(
             len(rows), row_height, self.list_top,
@@ -558,7 +558,7 @@ class UnitStatsEditorScreen(ModalScreen):
     def additional_events(self, event):
         if any(isinstance(element, Slider) and element.dragging for element in self.elements):
             return
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     # ------------------------------------------------------------------ #
     #                             RENDERING                              #

@@ -52,7 +52,7 @@ class Claims_Screen(MapOverlayScreen):
 
     def set_view_mode(self, mode):
         self.view_mode = mode
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def can_edit_realtime(self):
@@ -421,14 +421,14 @@ class Claims_Screen(MapOverlayScreen):
         sections = self._panel_sections()
 
         viewport_h = self.panel_rect.height - 95
-        self.max_scroll = min(0, viewport_h - self._sections_height(sections) - 20)
-        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
+        self.scroll.limit = min(0, viewport_h - self._sections_height(sections) - 20)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
 
         clip_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, viewport_h)
-        self.scroll_content_rect = clip_rect
+        self.scroll.content_rect = clip_rect
         with ui_bars.clip_scroll_region(surface, clip_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            y_off = self.panel_rect.y + 100 + self.scroll_y
+                                        draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
+            y_off = self.panel_rect.y + 100 + self.scroll.value
             for i, section in enumerate(sections):
                 if i:
                     y_off += self.SECTION_GAP

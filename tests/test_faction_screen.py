@@ -113,11 +113,11 @@ class FactionScreenTests(unittest.TestCase):
                    side_effect=lambda _surface, _nation, _data, x, _y, _h: x + 24) as flags:
             screen.additional_draw(surface)
 
-        self.assertLess(screen.max_scroll, 0)
+        self.assertLess(screen.scroll.limit, 0)
         self.assertEqual(flags.call_count, len(nations))
 
         screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
-        self.assertLess(screen.scroll_y, 0)
+        self.assertLess(screen.scroll.value, 0)
 
     def test_roster_is_sorted_by_visible_country_name(self):
         game, nations = self.make_game()

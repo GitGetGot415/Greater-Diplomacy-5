@@ -173,7 +173,7 @@ class _RealtimeLobby(_RealtimeScreen):
         """Adds one scrolling row per country. A click passes the country id to on_pick."""
         top, bottom = self.COUNTRY_LIST_TOP, self.COUNTRY_LIST_BOTTOM
         pad = self.COUNTRY_LIST_PAD
-        self.scroll_content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - self.COUNTRY_LIST_WIDTH // 2, top - pad,
+        self.scroll.content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - self.COUNTRY_LIST_WIDTH // 2, top - pad,
                                                self.COUNTRY_LIST_WIDTH, bottom - top + pad)
         for index, button_y in self.layout_list_rows(
                 len(countries), self.COUNTRY_ROW_HEIGHT, top, pad=pad, cull_top=top - pad,
@@ -196,7 +196,7 @@ class _RealtimeLobby(_RealtimeScreen):
                       ready_label if ready else unready_label, on_click)
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def _draw_lobby_status(self, surface, config, players, host_id, nation_data):
         """Draws the country scrollbar, the match summary, and the player lines."""
@@ -532,7 +532,7 @@ class Realtime_Scenario_Select(MenuListScreen, _RealtimeScreen):
     def __init__(self):
         super().__init__()
         self.lobby = None
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def on_enter(self, app, previous):
@@ -593,7 +593,7 @@ class Realtime_Lobby(_RealtimeLobby):
         self.manual_advertised_address = False
         self.temporary_relay = None
         self.relay_token = ""
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def on_enter(self, app, previous):
@@ -623,7 +623,7 @@ class Realtime_Lobby(_RealtimeLobby):
         self.relay_token = host_setup.relay_token if self.temporary_relay else ""
         self.host_setup = host_setup
         self._lobby_signature = None
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -1203,7 +1203,7 @@ class Realtime_Remote_Lobby(_RealtimeLobby):
         super().__init__()
         self.client = self.view = None
         self.reconnect_token = ""
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def on_enter(self, app, previous):
@@ -1219,7 +1219,7 @@ class Realtime_Remote_Lobby(_RealtimeLobby):
     def bind_join(self, join_screen):
         self.client, self.view = join_screen.realtime_client, join_screen.realtime_view
         self.reconnect_token = join_screen.reconnect_token
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def _lobby_nation_data(self):

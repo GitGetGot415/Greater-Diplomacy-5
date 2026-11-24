@@ -129,8 +129,8 @@ class ExpensesTableScreen(TableScreen):
         self.grouped = grouped
         self.columns = expense_table_columns(grouped)
         self.rows = self.grouped_rows if grouped else self.individual_rows
-        self.scroll_y = 0
-        self.max_scroll = 0
+        self.scroll.value = 0
+        self.scroll.limit = 0
         self.sort_reverse.clear()
         self.refresh_ui()
 

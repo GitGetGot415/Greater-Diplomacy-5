@@ -344,14 +344,14 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["A"]["puppets"] = [f"Fixture subject {index}" for index in range(150)]
         screen = CountrySummaryScreen(game, "A")
         screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
-        self.assertLess(screen.scroll_y, 0)
-        initial_scroll = screen.scroll_y
+        self.assertLess(screen.scroll.value, 0)
+        initial_scroll = screen.scroll.value
         screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEDOWN))
-        self.assertGreaterEqual(screen.scroll_y, screen.max_scroll)
+        self.assertGreaterEqual(screen.scroll.value, screen.scroll.limit)
         screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEUP))
-        self.assertEqual(screen.scroll_y, initial_scroll)
+        self.assertEqual(screen.scroll.value, initial_scroll)
         screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEUP))
-        self.assertEqual(screen.scroll_y, 0)
+        self.assertEqual(screen.scroll.value, 0)
 
     def test_modal_open_and_back_preserve_country_and_tile_selection(self):
         game = world()

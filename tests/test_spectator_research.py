@@ -259,7 +259,7 @@ class SubjectTests(unittest.TestCase):
         self.screen.set_category("COMPLETED")
         draft = self.screen.spectator_draft
         before = deepcopy(draft)
-        view = (self.screen.current_category, self.screen.scroll_x, self.screen.target_scroll_x)
+        view = (self.screen.current_category, self.screen.scroll_x, self.screen.timeline_scroll.value)
         with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.exit_screen()
             callback = ask.call_args.args[2]
@@ -268,7 +268,7 @@ class SubjectTests(unittest.TestCase):
             self.assertFalse(self.screen.research_confirmation_pending)
             self.assertIs(self.screen.spectator_draft, draft)
             self.assertEqual(draft, before)
-            self.assertEqual((self.screen.current_category, self.screen.scroll_x, self.screen.target_scroll_x), view)
+            self.assertEqual((self.screen.current_category, self.screen.scroll_x, self.screen.timeline_scroll.value), view)
             self.assertEqual(self.map.world.nation_data[target]["research"], {})
             callback(False)  # An old popup answer cannot discard the retained draft.
             self.assertFalse(self.screen.done)

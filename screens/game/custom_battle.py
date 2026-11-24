@@ -552,13 +552,13 @@ class CustomBattleScreen(Screen):
         self.death_explosions = []
         self.death_explosion_circle = None
         self.kill_feed_surface = None
-        self.kill_feed_scroll = self.kill_feed_limit = 0
-        self.kill_feed_dragging = False
-        self.kill_feed_track = self.kill_feed_handle = None
+        self.kill_feed_pane.value = self.kill_feed_pane.limit = 0
+        self.kill_feed_pane.bar_drag = False
+        self.kill_feed_pane.track = self.kill_feed_pane.handle = None
         self.kill_feed_rect = pygame.Rect(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - KILL_FEED_WIDTH,
                                           KILL_FEED_TOP, KILL_FEED_WIDTH, KILL_FEED_HEIGHT)
-        self.kill_feed_content = self.kill_feed_rect.inflate(-2 * KILL_FEED_INSET, -2 * KILL_FEED_INSET)
-        self.kill_feed_content.width -= KILL_FEED_SCROLLBAR_WIDTH + KILL_FEED_SCROLLBAR_GAP
+        self.kill_feed_pane.content_rect = self.kill_feed_rect.inflate(-2 * KILL_FEED_INSET, -2 * KILL_FEED_INSET)
+        self.kill_feed_pane.content_rect.width -= KILL_FEED_SCROLLBAR_WIDTH + KILL_FEED_SCROLLBAR_GAP
         self.controlled_stats_key = None
         self.controlled_stats_surface = None
         self.forecast_key = None  # The armies the forecast line was calculated for.
@@ -566,9 +566,9 @@ class CustomBattleScreen(Screen):
         for side, top in enumerate(PANEL_TOPS):
             self.panes.append(pygame.Rect(PANEL_X + ROSTER_INSET, top + ROSTER_TOP,
                                           ROSTER_WIDTH, ROSTER_HEIGHT))
-            setattr(self, f"roster_{side}_scroll", 0)
-            setattr(self, f"roster_{side}_limit", 0)
-            setattr(self, f"roster_{side}_content", self.panes[side])
+            self._roster_scroll(side).value = 0
+            self._roster_scroll(side).limit = 0
+            self._roster_scroll(side).content_rect = self.panes[side]
         self.refresh_ui()
 
     def on_enter(self, app, previous):
@@ -651,7 +651,7 @@ class CustomBattleScreen(Screen):
         self.mode = "setup"
         self.cancel_active_drags()
         for side in (0, 1):
-            setattr(self, f"roster_{side}_scroll", 0)
+            self._roster_scroll(side).value = 0
         self.preview_battle()
 
     def _end_campaign(self):
@@ -730,12 +730,13 @@ class CustomBattleScreen(Screen):
             return CONTROL_KEYS
         return ()
 
-    @staticmethod
-    def _scroll_options(side):
-        return dict(attr=f"roster_{side}_scroll", limit_attr=f"roster_{side}_limit",
-                    track_attr=f"roster_{side}_track", handle_attr=f"roster_{side}_handle",
-                    drag_attr=f"roster_{side}_dragging", content_rect_attr=f"roster_{side}_content",
-                    axis="x")
+    def _roster_scroll(self, side):
+        """The horizontal pane of one side's roster cards."""
+        return self.scroll_state(f"roster_{side}", "x")
+
+    @property
+    def kill_feed_pane(self):
+        return self.scroll_state("kill_feed")
 
     def refresh_ui(self):
         self.unit_buttons = {}
@@ -795,9 +796,9 @@ class CustomBattleScreen(Screen):
                             sound_kind="open_settings")
                 column_count = self.columns[side][-1] + 1 if roster else 0
                 limit = min(0, ROSTER_WIDTH - column_count * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)
-                setattr(self, f"roster_{side}_limit", limit)
-                offset = max(limit, min(0, getattr(self, f"roster_{side}_scroll")))
-                setattr(self, f"roster_{side}_scroll", offset)
+                self._roster_scroll(side).limit = limit
+                offset = max(limit, min(0, self._roster_scroll(side).value))
+                self._roster_scroll(side).value = offset
                 if self.mode == "preview":
                     continue
                 x = PANEL_X + PANEL_WIDTH - BUTTON_WIDTH - ROSTER_INSET
@@ -917,7 +918,7 @@ class CustomBattleScreen(Screen):
         self.group = [[], []]
         self.controlled_index = None
         for side in (0, 1):
-            setattr(self, f"roster_{side}_scroll", 0)
+            self._roster_scroll(side).value = 0
         self.refresh_ui()
 
     def open_picker(self, side):
@@ -984,8 +985,8 @@ class CustomBattleScreen(Screen):
         self._set_columns(side, groups)
         self.selected[side] = self._index_of(side, unit)
         self.refresh_ui()
-        setattr(self, f"roster_{side}_scroll", max(getattr(self, f"roster_{side}_limit"),
-                                                   min(0, ROSTER_WIDTH - (column + 1) * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)))
+        roster = self._roster_scroll(side)
+        roster.value = max(roster.limit, min(0, ROSTER_WIDTH - (column + 1) * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP))
 
     def add_unit(self, side, name):
         if self.mode != "setup" or name not in self.unit_names:
@@ -1063,7 +1064,7 @@ class CustomBattleScreen(Screen):
         self.group[side] = []
         if side == 0:
             self.controlled_index = None
-        setattr(self, f"roster_{side}_scroll", 0)
+        self._roster_scroll(side).value = 0
         self.refresh_ui()
 
     def toggle_control(self):
@@ -1132,8 +1133,8 @@ class CustomBattleScreen(Screen):
         """Deploy the armies, paused, as preview shows them."""
         self.kill_feed.clear()
         self.death_explosions.clear()
-        self.kill_feed_scroll = 0
-        self.kill_feed_dragging = False
+        self.kill_feed_pane.value = 0
+        self.kill_feed_pane.bar_drag = False
         self._refresh_kill_feed()
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
                                                   friendly_columns=self.columns[0], enemy_columns=self.columns[1],
@@ -1152,34 +1153,29 @@ class CustomBattleScreen(Screen):
         if target.shape not in combat.FOOT_SHAPES:
             self.death_explosions.append((target, 0.0, DEATH_EXPLOSION_PALETTE, (target.x, target.y)))
             sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share(target))
-        if self.kill_feed_scroll < 0:
-            self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
+        if self.kill_feed_pane.value < 0:
+            self.kill_feed_pane.value -= KILL_FEED_ROW_HEIGHT
         self.kill_feed.appendleft((source, target, cause))
         self._refresh_kill_feed()
 
-    @staticmethod
-    def _kill_feed_scroll_options():
-        return dict(attr="kill_feed_scroll", limit_attr="kill_feed_limit", track_attr="kill_feed_track",
-                    handle_attr="kill_feed_handle", drag_attr="kill_feed_dragging",
-                    content_rect_attr="kill_feed_content")
 
     def _refresh_kill_feed(self):
         """Cache the fixed-size panel, including when no kills have occurred."""
-        view_height = self.kill_feed_content.height
-        self.kill_feed_limit = min(0, view_height - len(self.kill_feed) * KILL_FEED_ROW_HEIGHT)
-        self.kill_feed_scroll = max(self.kill_feed_limit, min(0, self.kill_feed_scroll))
+        view_height = self.kill_feed_pane.content_rect.height
+        self.kill_feed_pane.limit = min(0, view_height - len(self.kill_feed) * KILL_FEED_ROW_HEIGHT)
+        self.kill_feed_pane.value = max(self.kill_feed_pane.limit, min(0, self.kill_feed_pane.value))
         panel = pygame.Surface((KILL_FEED_WIDTH, KILL_FEED_HEIGHT), pygame.SRCALPHA)
         ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
-        content = self.kill_feed_content.move(-self.kill_feed_rect.x, -self.kill_feed_rect.y)
+        content = self.kill_feed_pane.content_rect.move(-self.kill_feed_rect.x, -self.kill_feed_rect.y)
         panel.set_clip(content)
         actor_width = KILL_FEED_ACTOR_WIDTH
         font = fonts.get("tiny")
         # Scrollbar positions can be fractional; deque slicing needs an integer row index.
-        first = math.floor(-self.kill_feed_scroll / KILL_FEED_ROW_HEIGHT)
+        first = math.floor(-self.kill_feed_pane.value / KILL_FEED_ROW_HEIGHT)
         visible = islice(self.kill_feed, first, first + KILL_FEED_VISIBLE_ROWS + 1)
         controlled = self.simulation.controlled if self.simulation is not None else None
         for row, (killer, victim, kind) in enumerate(visible, first):
-            top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT + self.kill_feed_scroll
+            top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT + self.kill_feed_pane.value
             for index, fighter in enumerate((killer, victim)):
                 x = KILL_FEED_INSET + index * (actor_width + KILL_FEED_CAUSE_WIDTH)
                 x = flag_icons.draw_flag_centered(panel, fighter.data["owner"], self.country_data,
@@ -1209,9 +1205,8 @@ class CustomBattleScreen(Screen):
         panel.set_clip(None)
         self.draw_list_scrollbar(panel, KILL_FEED_WIDTH - KILL_FEED_INSET - KILL_FEED_SCROLLBAR_WIDTH,
                                  KILL_FEED_INSET, view_height, width=KILL_FEED_SCROLLBAR_WIDTH,
-                                 **self._kill_feed_scroll_options())
-        for name in ("kill_feed_track", "kill_feed_handle"):
-            rect = getattr(self, name)
+                                 scroll=self.kill_feed_pane)
+        for rect in (self.kill_feed_pane.track, self.kill_feed_pane.handle):
             if rect is not None:
                 rect.move_ip(self.kill_feed_rect.topleft)
         self.kill_feed_surface = panel
@@ -1221,8 +1216,8 @@ class CustomBattleScreen(Screen):
         if event.type not in {pygame.MOUSEWHEEL, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION}:
             return False
         position = getattr(event, "pos", pygame.mouse.get_pos())
-        engaged = (self.kill_feed_rect.collidepoint(position) or self.kill_feed_dragging
-                   or self.is_content_dragging("kill_feed_scroll"))
+        engaged = (self.kill_feed_rect.collidepoint(position) or self.kill_feed_pane.bar_drag
+                   or self.is_content_dragging(self.kill_feed_pane))
         if not engaged:
             return False
         if event.type == pygame.MOUSEBUTTONUP:
@@ -1231,9 +1226,9 @@ class CustomBattleScreen(Screen):
                 self.pan_drag = None
             elif event.button == 3:
                 self.secondary_firing = False
-        before = self.kill_feed_scroll
-        self.handle_list_scroll(event, speed=KILL_FEED_ROW_HEIGHT, **self._kill_feed_scroll_options())
-        if before != self.kill_feed_scroll:
+        before = self.kill_feed_pane.value
+        self.handle_list_scroll(event, self.kill_feed_pane, speed=KILL_FEED_ROW_HEIGHT, content=True)
+        if before != self.kill_feed_pane.value:
             self._refresh_kill_feed()
         return True
 
@@ -1287,7 +1282,7 @@ class CustomBattleScreen(Screen):
         self.firing = False
         self.secondary_firing = False
         self.touch_pointers.clear()
-        self.kill_feed_dragging = False
+        self.kill_feed_pane.bar_drag = False
         if self.simulation is not None:
             self.simulation.set_player_input()
 
@@ -1446,8 +1441,6 @@ class CustomBattleScreen(Screen):
                 element.dragging = False
         for button in self.unit_buttons.values():
             button.is_pressed = False
-        for side in (0, 1):
-            setattr(self, f"roster_{side}_dragging", False)
 
     def card_rect(self, side, index):
         """A card stands in its column; a column's second card stands below its first."""
@@ -1455,7 +1448,7 @@ class CustomBattleScreen(Screen):
         column = columns[index]
         row = int(index > 0 and columns[index - 1] == column)
         pane = self.panes[side]
-        return pygame.Rect(pane.x + column * (CARD_SIZE[0] + CARD_GAP) + getattr(self, f"roster_{side}_scroll"),
+        return pygame.Rect(pane.x + column * (CARD_SIZE[0] + CARD_GAP) + self._roster_scroll(side).value,
                            pane.y + row * (CARD_SIZE[1] + CARD_GAP), *CARD_SIZE)
 
     def _drop_target(self, side, pos):
@@ -1465,7 +1458,7 @@ class CustomBattleScreen(Screen):
         the dropped card gets a new column there.
         """
         pane = self.panes[side]
-        column, within = divmod(pos[0] - pane.x - getattr(self, f"roster_{side}_scroll"), CARD_SIZE[0] + CARD_GAP)
+        column, within = divmod(pos[0] - pane.x - self._roster_scroll(side).value, CARD_SIZE[0] + CARD_GAP)
         if within < DROP_NEW_COLUMN_EDGE:
             return int(column), None
         if within > CARD_SIZE[0] - DROP_NEW_COLUMN_EDGE:
@@ -1492,7 +1485,7 @@ class CustomBattleScreen(Screen):
         return False
 
     def _on_scrollbar(self, side, pos):
-        track = getattr(self, f"roster_{side}_track", None)
+        track = self._roster_scroll(side).track
         return bool(track and track.collidepoint(pos))
 
     def _clear_roster_selection(self):
@@ -1676,11 +1669,10 @@ class CustomBattleScreen(Screen):
             return False
         pointer = getattr(event, "pos", pygame.mouse.get_pos())
         for side, pane in enumerate(self.panes):
-            options = self._scroll_options(side)
-            track = getattr(self, options["track_attr"], None)
+            roster = self._roster_scroll(side)
+            track = roster.track
             engaged = (pane.collidepoint(pointer) or (track and track.collidepoint(pointer))
-                       or getattr(self, options["drag_attr"], False)
-                       or self.is_content_dragging(options["attr"]))
+                       or roster.bar_drag or self.is_content_dragging(roster))
             if not engaged:
                 continue
             if (self._roster_reorderable(side) and event.type == pygame.MOUSEBUTTONDOWN
@@ -1693,7 +1685,7 @@ class CustomBattleScreen(Screen):
                         self.drag = [side, index, event.pos, False]
                         self.refresh_ui()
                         return True
-            if self.handle_list_scroll(event, **options):
+            if self.handle_list_scroll(event, roster, content=True):
                 return True
         return False
 
@@ -2048,7 +2040,7 @@ class CustomBattleScreen(Screen):
                     draw_player_arrow(surface, (rect.x + CARD_INSET + CARD_LEFT_WIDTH // 2, rect.y + CONTROLLED_ARROW_Y), 0)
             surface.set_clip(old_clip)
             self.draw_list_scrollbar(surface, self.panes[side].x, self.panes[side].bottom + 10,
-                                     ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, **self._scroll_options(side))
+                                     ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, scroll=self._roster_scroll(side))
         if self.drag is not None and self.drag[3]:
             side, index, origin, active = self.drag
             card = self.card_surfaces[self._card_key(side, self.rosters[side][index])]

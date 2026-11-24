@@ -697,7 +697,7 @@ def set_orders_or_battle(map_screen, set_btn, has_player_units):
 def layout_country_action_buttons(map_screen):
     """Place the fixed country-action stack inside its scroll viewport."""
     buttons = map_screen.country_action_buttons
-    rect = map_screen.country_actions_scroll_rect
+    rect = map_screen.scroll_state("country_actions").content_rect
     if not buttons or rect is None:
         return
 
@@ -705,13 +705,13 @@ def layout_country_action_buttons(map_screen):
                          for button in buttons)
     map_screen.country_actions_scroll_max = max(
         0, content_bottom - rect.bottom)
-    map_screen.country_actions_scroll_y = max(
-        0, min(map_screen.country_actions_scroll_y,
+    map_screen.scroll_state("country_actions").value = max(
+        0, min(map_screen.scroll_state("country_actions").value,
                    map_screen.country_actions_scroll_max))
 
     for button in buttons:
         button.rect.y = (button.country_action_base_y
-                         - map_screen.country_actions_scroll_y)
+                         - map_screen.scroll_state("country_actions").value)
         # Screen dispatches button events before the map event handler can
         # consume a pane drag. Do not let clipped-away rows receive that click.
         button.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())

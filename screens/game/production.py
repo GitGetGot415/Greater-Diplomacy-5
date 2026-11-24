@@ -142,8 +142,8 @@ class Production_Screen(Screen):
 
         # Scroll variables
         self.scroll_y = 0
-        self.target_scroll_y = 0
-        self.max_scroll = 0
+        self.scroll.value = 0
+        self.scroll.limit = 0
 
         # Which variant the single combined Infantry row currently builds -
         # "normal", "motorized", or "mechanized". Purely a UI selection, not
@@ -221,7 +221,7 @@ class Production_Screen(Screen):
         self.target_province = province
         self.map_screen = map_ref
         self.scroll_y = 0
-        self.target_scroll_y = 0
+        self.scroll.value = 0
         self.infantry_mode = "normal"
         self.custom_infantry_modes = {}
         self.artillery_mode = "normal"
@@ -229,14 +229,14 @@ class Production_Screen(Screen):
         self.refresh_ui()
 
     def enforce_scroll_bounds(self):
-        self.target_scroll_y = max(self.max_scroll, min(self.target_scroll_y, 0))
-        self.scroll_y = max(self.max_scroll, min(self.scroll_y, 0))
+        self.scroll.value = max(self.scroll.limit, min(self.scroll.value, 0))
+        self.scroll_y = max(self.scroll.limit, min(self.scroll_y, 0))
 
     def update(self):
         super().update()
         self.enforce_scroll_bounds()
-        if abs(self.scroll_y - self.target_scroll_y) > 0.5:
-            self.scroll_y += (self.target_scroll_y - self.scroll_y) * SCROLL_LERP
+        if abs(self.scroll_y - self.scroll.value) > 0.5:
+            self.scroll_y += (self.scroll.value - self.scroll_y) * SCROLL_LERP
 
         # Keep scrollable buttons pinned to the list. They stay visible (the
         # ProductionChromeOverlay draws over them once they slide behind the
@@ -282,10 +282,10 @@ class Production_Screen(Screen):
         self._add_custom_unit_section()
 
         # Calculate maximum scroll distance
-        # Negative floor, matching Screen.max_scroll -- see enforce_scroll_bounds.
-        self.max_scroll = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - self._list_y)
+        # Negative floor, matching ScrollState.limit -- see enforce_scroll_bounds.
+        self.scroll.limit = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - self._list_y)
 
-        self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
+        self.scroll.content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
     def _spectator_locked(self):
         return self.map_screen.session.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION
@@ -737,15 +737,14 @@ class Production_Screen(Screen):
 
     def additional_events(self, event):
         if event.type == pygame.MOUSEWHEEL:
-            self.target_scroll_y += event.y * SCROLL_WHEEL_STEP
+            self.scroll.value += event.y * SCROLL_WHEEL_STEP
             self.enforce_scroll_bounds()
 
-        # Content-drag targets target_scroll_y (not scroll_y) so a drag eases in
+        # Content-drag moves the pane's target (not the displayed scroll_y) so a drag eases in
         # exactly like the wheel does, via the same lerp in update(). refresh=False
         # since update() already repositions every is_scrollable button off
         # base_y + scroll_y each frame -- no need to rebuild the whole list per pixel.
-        if self.handle_content_drag(event, attr="target_scroll_y", rect_attr="scroll_content_rect",
-                                    lo=self.max_scroll, hi=0, refresh=False):
+        if self.handle_content_drag(event, refresh=False):
             self.enforce_scroll_bounds()
             return
 
@@ -762,7 +761,7 @@ class Production_Screen(Screen):
         if not self.target_province: return
 
         # Fixed header + resource HUD, drawn first now that the scrolling content
-        # below is genuinely clipped to scroll_content_rect instead of needing a
+        # below is genuinely clipped to the list pane's content rect instead of needing a
         # chrome layer painted over it afterwards to hide whatever slid behind it.
         self.draw_chrome(surface)
 
@@ -772,8 +771,8 @@ class Production_Screen(Screen):
         scroll = int(self.scroll_y)
         heading_font = fonts.get("heading2")
 
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+        with ui_bars.clip_scroll_region(surface, self.scroll.content_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.scroll.limit):
             for prefix, label, border, text_color in SECTION_PANELS:
                 start_y = getattr(self, f"{prefix}_start_y", 0)
                 end_y = getattr(self, f"{prefix}_end_y", 0)

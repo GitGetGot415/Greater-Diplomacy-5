@@ -143,8 +143,8 @@ class AlbumTileTests(unittest.TestCase):
         )
         player = object.__new__(Music_Player)
         player.controller = controller
-        player._scroll_album = 0
-        player._scroll_track = 0
+        player.pane("album").value = 0
+        player.pane("track").value = 0
         player.handle_back_key = lambda: None
         return player
 
@@ -157,7 +157,7 @@ class AlbumTileTests(unittest.TestCase):
             f"assets/music/Fixture {index // 10}/song {index}.ogg" for index in range(20)]
         for pane, other in (("album", "track"), ("track", "album")):
             with self.subTest(pane=pane):
-                player._scroll_album = player._scroll_track = -100
+                player.pane("album").value = player.pane("track").value = -100
                 player.refresh_ui()
                 start = player.pane_rects()[pane].center
                 end = (start[0], start[1] + 30)
@@ -169,7 +169,7 @@ class AlbumTileTests(unittest.TestCase):
                     player.additional_events(event)
                 self.assertEqual(player.pane_scroll(pane), -70)
                 self.assertEqual(player.pane_scroll(other), -100)
-                self.assertFalse(player.is_content_dragging(f"_scroll_{pane}"))
+                self.assertFalse(player.is_content_dragging(player.pane(pane)))
 
     def test_clear_starting_button_clears_and_saves_the_song(self):
         player = self.make_player([])
@@ -339,8 +339,8 @@ class AlbumTileTests(unittest.TestCase):
     def test_deleting_a_song_reloads_the_music(self):
         player = self.make_player([])
         player.refresh_ui = mock.Mock()
-        player._max_track = 0
-        player._scroll_track = 0
+        player.pane("track").limit = 0
+        player.pane("track").value = 0
         with mock.patch.object(queries, "delete_song") as delete:
             player.delete_song("music/Mine/a.mp3")
         delete.assert_called_once_with("music/Mine/a.mp3")

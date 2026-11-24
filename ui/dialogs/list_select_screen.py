@@ -68,7 +68,7 @@ class ListSelectScreen(ModalScreen):
     def set_items(self, items):
         """Replace picker rows after a successful action without closing the picker."""
         self.items = list(items)
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def _item_enabled(self, item):
@@ -102,7 +102,7 @@ class ListSelectScreen(ModalScreen):
         # through the box's lower half instead of being hidden behind it.
         search_bottom = self.panel_rect.y + self.SEARCH_BOX_Y + self.SEARCH_BOX_HEIGHT
         cull_top, cull_bottom = search_bottom + 8, self.panel_rect.bottom - 20
-        self.scroll_content_rect = pygame.Rect(self.panel_rect.x, cull_top, self.panel_rect.width, cull_bottom - cull_top)
+        self.scroll.content_rect = pygame.Rect(self.panel_rect.x, cull_top, self.panel_rect.width, cull_bottom - cull_top)
 
         for i, y in self.layout_list_rows(len(self.visible_items), self.ROW_HEIGHT, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
@@ -120,7 +120,7 @@ class ListSelectScreen(ModalScreen):
         # "cancel the picker" are two separate presses instead of one.
         if self.search_text:
             self.search_text = ""
-            self.scroll_y = 0
+            self.scroll.value = 0
             self.refresh_ui()
         else:
             self.go_back()
@@ -137,7 +137,7 @@ class ListSelectScreen(ModalScreen):
         new_text, _status = process_text_input(event, self.search_text, max_length=self.SEARCH_MAX_CHARS)
         if new_text != self.search_text:
             self.search_text = new_text
-            self.scroll_y = 0
+            self.scroll.value = 0
             self.refresh_ui()
 
     def additional_events(self, event):
@@ -147,7 +147,7 @@ class ListSelectScreen(ModalScreen):
         # Before the list scroll, which consumes the press that starts a drag.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.search_focused = self.search_rect.collidepoint(event.pos)
-        if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
+        if self.handle_list_scroll(event, content=True):
             return
         if event.type == pygame.KEYDOWN and self.search_active:
             self._handle_search_key(event)

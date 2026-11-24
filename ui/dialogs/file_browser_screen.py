@@ -541,13 +541,13 @@ class FileBrowserScreen(ModalScreen):
         self.sort_descending = key == self.sort_key and not self.sort_descending
         self.sort_key = key
         self._apply_sort()
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def _show(self, path):
         """Opens `path` without touching the Back and Forward history."""
         self.current_dir = path
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.selected_folder = None
         self.cursor = self.anchor = None
         if self.mode != "open_files":
@@ -747,14 +747,14 @@ class FileBrowserScreen(ModalScreen):
 
     def _toggle_hidden(self):
         self.show_hidden = not self.show_hidden
-        self.scroll_y = 0
+        self.scroll.value = 0
         self._load_entries()
         self.refresh_ui()
 
     def _set_show_all_types(self, show_all):
         self.show_all_types = show_all
         self.type_menu_open = False
-        self.scroll_y = 0
+        self.scroll.value = 0
         self._load_entries()
         self.refresh_ui()
 
@@ -924,10 +924,10 @@ class FileBrowserScreen(ModalScreen):
             return
         top = index * self.ROW_HEIGHT
         view_h = self.rows_rect.height
-        if top + self.scroll_y < 0:
-            self.scroll_y = -top
-        elif top + self.ROW_HEIGHT + self.scroll_y > view_h:
-            self.scroll_y = view_h - top - self.ROW_HEIGHT
+        if top + self.scroll.value < 0:
+            self.scroll.value = -top
+        elif top + self.ROW_HEIGHT + self.scroll.value > view_h:
+            self.scroll.value = view_h - top - self.ROW_HEIGHT
 
     def additional_events(self, event):
         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
@@ -936,7 +936,7 @@ class FileBrowserScreen(ModalScreen):
             self._clear_current_selection()
             self._sync_name_field()
             self.refresh_ui()
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     # ------------------------------------------------------------------ #
     #                              RENDERING                             #
@@ -1053,7 +1053,7 @@ class FileBrowserScreen(ModalScreen):
             self.elements.append(header)
 
         rows = self.rows_rect
-        self.scroll_content_rect = rows
+        self.scroll.content_rect = rows
         for i, y in self.layout_list_rows(len(self.entries), self.ROW_HEIGHT, rows.y, view_h=rows.height,
                                           cull_top=rows.top, cull_bottom=rows.bottom):
             entry = self.entries[i]

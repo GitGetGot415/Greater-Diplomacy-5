@@ -29,12 +29,12 @@ class TextDetailScreen(Screen):
         self.title = title
         self.subtitle = subtitle
         self.body = str(body or "")
-        self.scroll_y = 0
-        self.max_scroll = 0
+        self.scroll.value = 0
+        self.scroll.limit = 0
         self.elements = [make_back_button(self.exit_screen)]
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def draw(self, surface):
         self.draw_background(surface)

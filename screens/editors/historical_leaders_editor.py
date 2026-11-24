@@ -88,10 +88,10 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
 
         self._load_from_disk()
 
-        self._scroll_roster = 0
-        self._scroll_timeline = 0
-        self._max_roster = 0
-        self._max_timeline = 0
+        self.pane("roster").value = 0
+        self.pane("timeline").value = 0
+        self.pane("roster").limit = 0
+        self.pane("timeline").limit = 0
         self._entry_layout = []
 
         self.refresh_ui()
@@ -125,7 +125,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
 
         self.regions = {"roster": self.roster_rect, "timeline": self.timeline_rect}
         for name, rect in self.regions.items():
-            setattr(self, f"_content_{name}", rect)
+            self.pane(name).content_rect = rect
 
         tx = self.timeline_rect.x + 12
         self.field_x = {
@@ -142,7 +142,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
     def select_country(self, country):
         self.sync_entries()
         self.active_country = country
-        self._scroll_timeline = 0
+        self.pane("timeline").value = 0
         self.refresh_ui()
 
     def add_country(self):
@@ -161,8 +161,8 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
             self.data[country] = []
             self.roster = sorted(self.data.keys())
             self.active_country = country
-            self._scroll_roster = 0
-            self._scroll_timeline = 0
+            self.pane("roster").value = 0
+            self.pane("timeline").value = 0
             self.refresh_ui()
 
         pickers.open_listbox_selector(
@@ -368,8 +368,8 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
                     return
                 queries.save_historical_leader_timeline(data)
                 self._load_from_disk()
-                self._scroll_roster = 0
-                self._scroll_timeline = 0
+                self.pane("roster").value = 0
+                self.pane("timeline").value = 0
                 dialogs.show_success("Import Success", "Historical leaders timeline imported.")
                 self.refresh_ui()
 
@@ -392,8 +392,8 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
                 return
             queries.save_historical_leader_timeline(default_data)
             self._load_from_disk()
-            self._scroll_roster = 0
-            self._scroll_timeline = 0
+            self.pane("roster").value = 0
+            self.pane("timeline").value = 0
             dialogs.show_success("Reset", "Historical leaders timeline reset to the game's defaults.")
             self.refresh_ui()
 
@@ -439,7 +439,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
             field.entry_ref = entry
             field.entry_key = key
             field.pane = "timeline"
-            field.click_guard = self._guard_timeline
+            field.click_guard = self.pane("timeline").guard
             return field
 
         self.elements.append(mk("year", fx["year"], row1_y, 52, True))
@@ -456,7 +456,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
         swatch.rect.size = (COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE)
         swatch.set_colors(tuple(color) if color else (55, 60, 65))
         swatch.pane = "timeline"
-        swatch.click_guard = self._guard_timeline
+        swatch.click_guard = self.pane("timeline").guard
         self.elements.append(swatch)
 
         clear_btn = Button(fx["color"] + COLOR_SWATCH_SIZE + 8, row1_y - 1, "tiny_square", "orange", "Clear",
@@ -465,7 +465,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
         if not color:
             clear_btn.apply_state(enabled=False)
         clear_btn.pane = "timeline"
-        clear_btn.click_guard = self._guard_timeline
+        clear_btn.click_guard = self.pane("timeline").guard
         self.elements.append(clear_btn)
 
         for key, size, is_portrait, preview_size, pick_cb, clear_cb in (
@@ -480,7 +480,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
                              lambda e=entry, cb=pick_cb: cb(e), image=preview, show_text=False)
             img_btn.rect.size = (IMAGE_SWATCH_SIZE, IMAGE_SWATCH_SIZE)
             img_btn.pane = "timeline"
-            img_btn.click_guard = self._guard_timeline
+            img_btn.click_guard = self.pane("timeline").guard
             self.elements.append(img_btn)
 
             img_clear_btn = Button(fx[key] + IMAGE_SWATCH_SIZE + 8, row2_y - 1, "tiny_square", "orange", "Clear",
@@ -489,7 +489,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
             if not has_override:
                 img_clear_btn.apply_state(enabled=False)
             img_clear_btn.pane = "timeline"
-            img_clear_btn.click_guard = self._guard_timeline
+            img_clear_btn.click_guard = self.pane("timeline").guard
             self.elements.append(img_clear_btn)
 
         # Kept well clear of the card's own right edge (timeline_rect.right - 20,
@@ -498,7 +498,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
         del_btn = Button(self.timeline_rect.right - 65, row1_y - 4, "tiny_square", "red", "X",
                          lambda e=entry: self.delete_entry(e), font_preset="button_small")
         del_btn.pane = "timeline"
-        del_btn.click_guard = self._guard_timeline
+        del_btn.click_guard = self.pane("timeline").guard
         self.elements.append(del_btn)
 
     def refresh_ui(self):
@@ -524,13 +524,13 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
                                      font_preset="button_small", sound_kind="select_category")
             btn.rect.width = self.roster_rect.width - 50
             btn.pane = "roster"
-            btn.click_guard = self._guard_roster
+            btn.click_guard = self.pane("roster").guard
             self.elements.append(btn)
 
             rm_btn = Button(self.roster_rect.right - 44, y + 3, "tiny_square", "red", "x",
                             lambda cc=country: self.remove_country(cc), font_preset="button_small")
             rm_btn.pane = "roster"
-            rm_btn.click_guard = self._guard_roster
+            rm_btn.click_guard = self.pane("roster").guard
             self.elements.append(rm_btn)
 
         if self.active_country:
@@ -616,9 +616,9 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
         surface.blit(hint_line2, (PAD, c.SCREEN_HEIGHT - 24))
 
         self.draw_list_scrollbar(surface, self.roster_rect.right - 8, self.roster_rect.y,
-                                 self.roster_rect.height, **self.scroll_attrs("roster"))
+                                 self.roster_rect.height, scroll=self.pane("roster"))
         self.draw_list_scrollbar(surface, self.timeline_rect.right - 8, self.timeline_rect.y,
-                                 self.timeline_rect.height, **self.scroll_attrs("timeline"))
+                                 self.timeline_rect.height, scroll=self.pane("timeline"))
 
 
 def open_historical_leaders_editor(on_done=None):

@@ -202,18 +202,18 @@ class Music_Player(ScrollPanes, Screen):
         if not self.preview and not os.path.exists(c.MUSIC_DIR):
             os.makedirs(c.MUSIC_DIR)
         
-        self._scroll_album = 0
-        self._scroll_track = 0
-        self._max_album = 0
-        self._max_track = 0
+        self.pane("album").value = 0
+        self.pane("track").value = 0
+        self.pane("album").limit = 0
+        self.pane("track").limit = 0
         
         # Drag state trackers for scrollbars
-        self._drag_album = False
-        self._drag_track = False
-        self._track_album = None
-        self._handle_album = None
-        self._track_track = None
-        self._handle_track = None
+        self.pane("album").bar_drag = False
+        self.pane("track").bar_drag = False
+        self.pane("album").track = None
+        self.pane("album").handle = None
+        self.pane("track").track = None
+        self.pane("track").handle = None
         
         
         self.refresh_ui()
@@ -238,12 +238,12 @@ class Music_Player(ScrollPanes, Screen):
     def refresh_ui(self):
         self.elements = []
 
-        self._content_album = pygame.Rect(0, 120, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 120)
-        self._content_track = pygame.Rect(MUSIC_LEFT_PANE_W, 200, MUSIC_RIGHT_PANE_X - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
+        self.pane("album").content_rect = pygame.Rect(0, 120, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 120)
+        self.pane("track").content_rect = pygame.Rect(MUSIC_LEFT_PANE_W, 200, MUSIC_RIGHT_PANE_X - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
 
         # --- 1. Left Column: Albums (Scrolling) ---
         # Room above the first row so the delete buttons are not cut off.
-        y_offset = 120 + ALBUM_DELETE_OVERHANG + self._scroll_album
+        y_offset = 120 + ALBUM_DELETE_OVERHANG + self.pane("album").value
         album_content_h = ALBUM_DELETE_OVERHANG
         
         albums = self.album_display_order()
@@ -347,10 +347,10 @@ class Music_Player(ScrollPanes, Screen):
 
         album_content_h += max(slot_heights)
         # Calculate max boundary for Album scrolling
-        self._max_album = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
+        self.pane("album").limit = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
 
         # --- 2. Right Column: Tracks (Scrolling) ---
-        track_y = 200 + self._scroll_track # Adjusted to start below new scrubber
+        track_y = 200 + self.pane("track").value # Adjusted to start below new scrubber
         track_content_h = 0
         self._track_dividers = []
         previous_album = None
@@ -445,7 +445,7 @@ class Music_Player(ScrollPanes, Screen):
         track_content_h += song_y
 
         # Calculate max boundary for Track scrolling
-        self._max_track = min(0, c.SCREEN_HEIGHT - 200 - track_content_h - 20)
+        self.pane("track").limit = min(0, c.SCREEN_HEIGHT - 200 - track_content_h - 20)
 
         # --- 3. Top Layer: Fixed Overlay & Buttons ---
         self.elements.append(ScreenLayer(self, "draw_top_bar"))
@@ -782,8 +782,8 @@ class Music_Player(ScrollPanes, Screen):
         self.controller.load_music_data()
         self.refresh_ui()
         # The shorter list can leave the pane scrolled past its new end.
-        if self._scroll_track < self._max_track:
-            self._scroll_track = self._max_track
+        if self.pane("track").value < self.pane("track").limit:
+            self.pane("track").value = self.pane("track").limit
             self.refresh_ui()
 
     def start_new_album(self):
@@ -827,8 +827,8 @@ class Music_Player(ScrollPanes, Screen):
         self.controller.load_music_data()
         self.refresh_ui()
         # The shorter list can leave the pane scrolled past its new end.
-        if self._scroll_album < self._max_album:
-            self._scroll_album = self._max_album
+        if self.pane("album").value < self.pane("album").limit:
+            self.pane("album").value = self.pane("album").limit
             self.refresh_ui()
 
     def toggle_album(self, album):
@@ -857,7 +857,7 @@ class Music_Player(ScrollPanes, Screen):
     # The two panes are ordinary scrollable lists, so they both go through
     # Screen.handle_list_scroll / draw_list_scrollbar with their own attrs.
     def pane_rects(self):
-        return {"album": self._content_album, "track": self._content_track}
+        return {"album": self.pane("album").content_rect, "track": self.pane("track").content_rect}
 
     def additional_events(self, event):
         self.route_pane_scroll(event)
@@ -934,7 +934,7 @@ class TacticalSongsScreen(ModalScreen):
         self.player = player
         self.controller = player.controller
         for setting, _label in TACTICAL_SONG_LISTS:
-            setattr(self, f"_scroll_{setting}", 0)
+            self.pane(setting).value = 0
         self.refresh_ui()
 
     def column_x(self, index):
@@ -953,7 +953,7 @@ class TacticalSongsScreen(ModalScreen):
                                 "Back", self.exit_screen, sound_kind="back")]
         for index, (setting, _label) in enumerate(TACTICAL_SONG_LISTS):
             rect = self.list_rect(index)
-            setattr(self, f"_content_{setting}", rect)
+            self.pane(setting).content_rect = rect
             songs = getattr(self.controller, setting)
             # The row after the last song adds a song.
             for row, y in self.pane_rows(setting, len(songs) + 1, rect.y, rect.height, row_h=song_y):
@@ -1012,7 +1012,7 @@ class TacticalSongsScreen(ModalScreen):
         clamped = False
         for setting, _label in TACTICAL_SONG_LISTS:
             if self.pane_scroll(setting) < self.pane_scroll_limit(setting):
-                setattr(self, f"_scroll_{setting}", self.pane_scroll_limit(setting))
+                self.pane(setting).value = self.pane_scroll_limit(setting)
                 clamped = True
         if clamped:
             self.refresh_ui()

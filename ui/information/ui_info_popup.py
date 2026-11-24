@@ -158,7 +158,7 @@ def draw_relation_indicators(map_screen, surface):
 
 
 def draw_unit_info(map_screen, surface):
-    map_screen.diplomatic_scroll_rect = None
+    map_screen.scroll_state("diplomatic").content_rect = None
     if not map_screen.selected_province:
         return
 
@@ -179,10 +179,10 @@ def draw_unit_info(map_screen, surface):
         # body below the title is clipped and scrolled with the mouse wheel
         # instead of being truncated with an "(...and more)" line.
         body_rect = pygame.Rect(dip_rect.x, dip_rect.y + 40, dip_rect.width, dip_rect.bottom - (dip_rect.y + 40))
-        map_screen.diplomatic_scroll_rect = body_rect
+        map_screen.scroll_state("diplomatic").content_rect = body_rect
 
         scroll_max = map_screen.diplomatic_scroll_max
-        scroll_offset = max(0, min(map_screen.diplomatic_scroll_y, scroll_max))
+        scroll_offset = max(0, min(map_screen.scroll_state("diplomatic").value, scroll_max))
 
         body_top = body_rect.y
         y_offset = body_top - scroll_offset
@@ -299,4 +299,4 @@ def draw_unit_info(map_screen, surface):
         # Re-derive the scroll limit from what was actually drawn this frame.
         content_height = (y_offset + scroll_offset) - body_top
         map_screen.diplomatic_scroll_max = max(0, content_height - body_rect.height)
-        map_screen.diplomatic_scroll_y = min(scroll_offset, map_screen.diplomatic_scroll_max)
+        map_screen.scroll_state("diplomatic").value = min(scroll_offset, map_screen.diplomatic_scroll_max)

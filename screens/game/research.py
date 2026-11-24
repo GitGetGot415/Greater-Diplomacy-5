@@ -500,16 +500,11 @@ class Research_Screen(Screen):
         self.details_screen = None
 
         # --- Timeline Variables ---
+        # The timeline pane holds the target offset; scroll_x eases toward it.
         self.scroll_x = 0
-        self.target_scroll_x = 0
         self.min_scroll_x = self.max_scroll_x = 0
         self.pixels_per_year = RESEARCH_LAYOUT["pixels_per_year"]
-        self.scroll_content_rect = pygame.Rect(0, HEADER_HEIGHT, c.SCREEN_WIDTH, c.SCREEN_HEIGHT - HEADER_HEIGHT)
-
-        # --- Timeline scrollbar drag state ---
-        self.hscroll_track_rect = None
-        self.hscroll_handle_rect = None
-        self.is_dragging_hscrollbar = False
+        self.timeline_scroll.content_rect = pygame.Rect(0, HEADER_HEIGHT, c.SCREEN_WIDTH, c.SCREEN_HEIGHT - HEADER_HEIGHT)
 
         self.setup_nodes()
 
@@ -627,67 +622,75 @@ class Research_Screen(Screen):
         super().update()
         self.enforce_scroll_bounds()
 
-        if abs(self.scroll_x - self.target_scroll_x) > 0.5:
-            self.scroll_x += (self.target_scroll_x - self.scroll_x) * SCROLL_LERP
+        if abs(self.scroll_x - self.timeline_scroll.value) > 0.5:
+            self.scroll_x += (self.timeline_scroll.value - self.scroll_x) * SCROLL_LERP
 
         self._sync_tech_node_positions()
 
     def additional_events(self, event):
         if self.current_category in self.nodes:
             if event.type == pygame.MOUSEWHEEL:
-                self.target_scroll_x += event.y * SCROLL_WHEEL_STEP
+                self.timeline_scroll.value += event.y * SCROLL_WHEEL_STEP
 
             # A grab on the scrollbar itself takes priority over dragging the
             # timeline content -- otherwise a mouse-down on the bar would arm
             # both gestures and fight over the same motion events.
             if not self.handle_timeline_scrollbar(event):
-                # Content-drag targets target_scroll_x, same as the wheel, and lets
+                # Content-drag moves the timeline target, same as the wheel, and lets
                 # update()'s existing lerp ease scroll_x the rest of the way -- matches
                 # every other scrollable list instead of this being the one screen
                 # dragged with the right mouse button.
-                self.handle_content_drag(event, attr="target_scroll_x", rect_attr="scroll_content_rect",
-                                         lo=self.min_scroll_x, hi=self.max_scroll_x, refresh=False, axis="x")
+                self.handle_content_drag(event, self.timeline_scroll, lo=self.min_scroll_x,
+                                         hi=self.max_scroll_x, refresh=False)
 
             # --- Clamp user input immediately ---
             self.enforce_scroll_bounds()
 
             self._sync_tech_node_positions()
 
+    @property
+    def timeline_scroll(self):
+        """The timeline pane. Its value is the target offset on scroll_x's signed range."""
+        return self.scroll_state("timeline", "x")
+
     def handle_timeline_scrollbar(self, event):
         """Drag-to-scroll on the horizontal scrollbar track/handle at the
         bottom of the screen. Mirrors Screen.handle_list_scroll's
         grab/drag/snap pattern, but against scroll_x's own signed min/max-year
-        range instead of the mixin's fixed 0..negative-max convention -- so it
-        drives target_scroll_x directly rather than going through that helper.
+        range instead of the standard 0..negative-limit convention -- so it
+        snaps the timeline pane itself rather than going through that helper.
         Returns True when the event was consumed.
         """
+        scroll = self.timeline_scroll
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            was_dragging = self.is_dragging_hscrollbar
-            self.is_dragging_hscrollbar = False
+            was_dragging = scroll.bar_drag
+            scroll.bar_drag = False
             if was_dragging:
                 return True
 
-        track = self.hscroll_track_rect
-        handle = self.hscroll_handle_rect
+        track, handle = scroll.track, scroll.handle
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and track:
             if handle and handle.collidepoint(event.pos):
-                self.is_dragging_hscrollbar = True  # Grabbing the handle drags from where it sits
+                # Keep the grab point so the first motion does not jump.
+                scroll.bar_drag = True
+                scroll.grab_offset = event.pos[0] - handle.centerx
                 self._cancel_pressed_elements()
                 return True
             if track.collidepoint(event.pos):
-                self.is_dragging_hscrollbar = True  # Clicking the bare track jumps to that spot
+                scroll.bar_drag = True  # Clicking the bare track jumps to that spot
+                scroll.grab_offset = 0
                 self._cancel_pressed_elements()
                 self.snap_timeline_scroll(event.pos[0])
                 return True
-        elif event.type == pygame.MOUSEMOTION and self.is_dragging_hscrollbar:
-            self.snap_timeline_scroll(event.pos[0])
+        elif event.type == pygame.MOUSEMOTION and scroll.bar_drag:
+            self.snap_timeline_scroll(event.pos[0] - scroll.grab_offset)
             return True
 
         return False
 
     def snap_timeline_scroll(self, mouse_x):
-        """Jumps target_scroll_x to wherever the scrollbar handle was dragged.
+        """Jumps the timeline target to wherever the scrollbar handle was dragged.
 
         year_to_x's scroll_x convention runs backwards from a left-to-right
         scrollbar (scroll_x is most positive at the timeline's START_YEAR end
@@ -695,12 +698,12 @@ class Research_Screen(Screen):
         min/max passed to the generic horizontal-scrollbar math are negated
         and swapped to land the handle at the correct end.
         """
-        track = self.hscroll_track_rect
+        track = self.timeline_scroll.track
         if not track:
             return
         value = ui_bars.calculate_scroll_snap_horizontal(
             mouse_x, -self.max_scroll_x, -self.min_scroll_x, track.x, track.width)
-        self.target_scroll_x = -value
+        self.timeline_scroll.value = -value
 
     def tech_year(self, tech_key, lvl):
         """The year a year-tiered tech reaches this level."""
@@ -775,7 +778,7 @@ class Research_Screen(Screen):
         self.current_category = "INFANTRY"
         self.details_screen = None
         self.scroll_x = 0
-        self.target_scroll_x = 0
+        self.timeline_scroll.value = 0
         # Research_Screen is a singleton built once at boot (see main.py), but the
         # scenario's tech_tree can be pruned (disabled units/buildings) on every
         # map load -- rebuild self.nodes from whatever tech_tree looks like now,
@@ -789,7 +792,7 @@ class Research_Screen(Screen):
     def set_category(self, cat):
         self.current_category = queries.normalize_air_category(cat)
         self.scroll_x = 0
-        self.target_scroll_x = 0
+        self.timeline_scroll.value = 0
         self.enforce_scroll_bounds()
         self.refresh_ui()
 
@@ -1241,11 +1244,9 @@ class Research_Screen(Screen):
         track_w = c.SCREEN_WIDTH - (2 * HSCROLLBAR_MARGIN_X)
 
         # See snap_timeline_scroll for why this is negated/swapped.
-        track, handle = ui_bars.draw_standard_scrollbar_horizontal(
+        self.timeline_scroll.track, self.timeline_scroll.handle = ui_bars.draw_standard_scrollbar_horizontal(
             surface, -self.scroll_x, -self.max_scroll_x, -self.min_scroll_x,
             track_x, track_y, track_w, HSCROLLBAR_HEIGHT)
-        self.hscroll_track_rect = track
-        self.hscroll_handle_rect = handle
 
     def cache_completed_text_list(self, res_levels):
         """Lay out the completed overview at the input/state boundary."""
@@ -1308,7 +1309,7 @@ class Research_Screen(Screen):
             self.min_scroll_x = -((c.END_YEAR - current_year) * self.pixels_per_year)
             self.max_scroll_x = -((c.START_YEAR - current_year) * self.pixels_per_year)
 
-            self.target_scroll_x = max(self.min_scroll_x, min(self.target_scroll_x, self.max_scroll_x))
+            self.timeline_scroll.value = max(self.min_scroll_x, min(self.timeline_scroll.value, self.max_scroll_x))
             self.scroll_x = max(self.min_scroll_x, min(self.scroll_x, self.max_scroll_x))
 
     def additional_draw(self, surface):

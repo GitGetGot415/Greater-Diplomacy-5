@@ -61,7 +61,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
         self.relationship_view = "core"
 
         for name in self.REGIONS:
-            setattr(self, f"_scroll_{name}", 0)
+            self.pane(name).value = 0
 
         self.faction_field = TextField(0, 0, 300, 36, "", label="Faction Name:")
         self._layout()
@@ -91,10 +91,9 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
             self.regions[name] = pygame.Rect(self._col_x(("guarantees", "attaches", "access").index(name)),
                                               self.lists_top, self.COL_W, self.LIST_VIEW_H)
 
-        # Published per-region so scroll_attrs's content_rect_attr can point
-        # handle_content_drag/draw_elements at each region's own rect by name.
+        # Each region's pane drags from its own rect.
         for name, rect in self.regions.items():
-            setattr(self, f"_content_{name}", rect)
+            self.pane(name).content_rect = rect
 
     def _col_x(self, index):
         return self.cols_x + index * (self.COL_W + self.COL_GAP)
@@ -132,7 +131,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                         if faction and queries.get_country_faction(n, self.map_screen.world.nation_data) == faction}
 
         for name in self.REGIONS:
-            setattr(self, f"_scroll_{name}", 0)
+            self.pane(name).value = 0
         self.refresh_ui()
 
     def toggle_membership(self, group, name):
@@ -300,7 +299,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
             btn.is_selected = cid == self.target
             btn.sound_kind = "select_category"
             btn.pane = "nations"
-            btn.click_guard = self._guard_nations
+            btn.click_guard = self.pane("nations").guard
             self.elements.append(btn)
 
         if not self.target:
@@ -317,7 +316,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                                 lambda n=name, cb=on_click: cb(n))
                 btn.is_selected = checked
                 btn.pane = region
-                btn.click_guard = getattr(self, f"_guard_{region}")
+                btn.click_guard = self.pane(region).guard
                 self.elements.append(btn)
 
         core_button = make_choice_button(self.cols_x, self.row_a_y - 2, "editor_ui", "Wars, Factions & Puppets",
@@ -389,7 +388,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                 surface.blit(small.render("None available.", True, c.UI_TEXT_MUTED),
                              (col_x + 4, self.lists_top + 6))
             self.draw_list_scrollbar(surface, col_x + self.COL_W - 18, self.lists_top, self.LIST_VIEW_H,
-                                     **self.scroll_attrs(region))
+                                     scroll=self.pane(region))
 
         self.draw_list_scrollbar(surface, self.nat_x + self.NAT_W - 18, self.nations_top,
-                                 self.nations_view_h, **self.scroll_attrs("nations"))
+                                 self.nations_view_h, scroll=self.pane("nations"))

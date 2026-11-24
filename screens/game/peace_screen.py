@@ -129,11 +129,11 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
 
         inner_h = panel.height - self.PAD * 2
         clip = pygame.Rect(panel.x + 5, panel.y + self.PAD, panel.width - 10, inner_h)
-        self.scroll_content_rect = clip
+        self.scroll.content_rect = clip
 
         with ui_bars.clip_scroll_region(surface, clip,
-                                        draw_top=self.scroll_y != 0,
-                                        draw_bottom=self.scroll_y > self.max_scroll):
+                                        draw_top=self.scroll.value != 0,
+                                        draw_bottom=self.scroll.value > self.scroll.limit):
             for i, y in self.layout_list_rows(len(lines), self.LINE_H,
                                               panel.y + self.PAD, view_h=inner_h,
                                               cull_top=panel.y, cull_bottom=panel.bottom):

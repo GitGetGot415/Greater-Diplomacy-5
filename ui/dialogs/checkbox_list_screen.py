@@ -92,7 +92,7 @@ class CheckboxListScreen(ModalScreen):
             for item in self.items:
                 if isinstance(item, CheckboxItem) and item.key in checked:
                     item.checked = True
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def checked_keys(self):
@@ -144,7 +144,7 @@ class CheckboxListScreen(ModalScreen):
 
         row_w, _row_h = c.SIZES["checkbox_row"]
         cull_top, cull_bottom = self.list_top - 1, self.list_top + self.list_view_h - self.ROW_HEIGHT + 2
-        self.scroll_content_rect = pygame.Rect(p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
+        self.scroll.content_rect = pygame.Rect(p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
         self._row_layout = list(self.layout_list_rows(
             len(self.items), self.ROW_HEIGHT, self.list_top, view_h=self.list_view_h,
             # Cull a row as soon as it would hang past the bottom of the view,
@@ -169,7 +169,7 @@ class CheckboxListScreen(ModalScreen):
                                     self.exit_screen, sound_kind="back"))
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def draw_body(self, surface):
         p = self.panel_rect
@@ -193,8 +193,8 @@ class CheckboxListScreen(ModalScreen):
         header_font = fonts.get("normal")
         note_font = fonts.get("small")
         row_w, _row_h = c.SIZES["checkbox_row"]
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+        with ui_bars.clip_scroll_region(surface, self.scroll.content_rect,
+                                        draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
             for el in self.elements:
                 if getattr(el, "is_scrollable", False):
                     el.draw(surface)

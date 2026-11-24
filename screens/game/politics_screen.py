@@ -139,11 +139,6 @@ class Politics_Screen(Screen):
         self.is_read_only = country_id is not None and country_id != map_screen.session.player_country
         self.group = politics.CIVILIAN
         self._set_panel_rects()
-        self.policy_scroll_x = 0
-        self.policy_scroll_min_x = 0
-        self.policy_scrollbar_dragging = False
-        self.policy_scroll_track_rect = None
-        self.policy_scroll_handle_rect = None
 
         self.is_valid_player = (self.player in self.map_screen.world.nation_data
                                 and self.player not in c.UNPLAYABLE_NATIONS + ["Editor"])
@@ -187,14 +182,17 @@ class Politics_Screen(Screen):
             return False
         return queries.realtime_turn_open(self.map_screen)
 
+    @property
+    def policy_scroll(self):
+        """The horizontal pane of policy cards."""
+        return self.scroll_state("policies", "x")
+
     def select_group(self, group):
         """Show the selected axes and their policy cards."""
         if group != self.group:
             self.cancel_active_drags()
-            self.policy_scroll_x = 0
-            self.policy_scrollbar_dragging = False
-            self.policy_scroll_track_rect = None
-            self.policy_scroll_handle_rect = None
+            self.policy_scroll.value = 0
+            self.policy_scroll.track = self.policy_scroll.handle = None
         self.group = group
         self.refresh_ui()
 
@@ -217,7 +215,7 @@ class Politics_Screen(Screen):
         self.elements = [make_back_button(self.exit_screen, style="map")]
         self._policy_cards = []
         policies = politics.policies_for_group(self.group)
-        self.scroll_content_rect = self._policy_viewport_rect()
+        self.policy_scroll.content_rect = self._policy_viewport_rect()
         self._update_policy_scroll_bounds(len(policies))
 
         if not self.is_valid_player:
@@ -265,7 +263,7 @@ class Politics_Screen(Screen):
                     button.disabled = not self.can_edit or not politics.can_shift(self._positions[axis_id], drift)
                     self.elements.append(button)
 
-        scroll_guard = self.content_hover_guard() if self.policy_scroll_min_x < 0 else None
+        scroll_guard = self.content_hover_guard(self.policy_scroll) if self.policy_scroll.limit < 0 else None
         for index, definition in enumerate(policies):
             policy_id = definition["id"]
             state = politics.policy_state(nation_data, self.player, policy_id)
@@ -288,12 +286,12 @@ class Politics_Screen(Screen):
 
     def _update_policy_scroll_bounds(self, count):
         content_width = count * POLICY_CARD_WIDTH + max(0, count - 1) * POLICY_CARD_GAP
-        self.policy_scroll_min_x = min(0, self.scroll_content_rect.width - content_width)
-        self.policy_scroll_x = max(self.policy_scroll_min_x, min(0, self.policy_scroll_x))
+        self.policy_scroll.limit = min(0, self.policy_scroll.content_rect.width - content_width)
+        self.policy_scroll.value = max(self.policy_scroll.limit, min(0, self.policy_scroll.value))
 
     def _policy_card_rect(self, index):
-        viewport = self.scroll_content_rect
-        return pygame.Rect(viewport.x + self.policy_scroll_x + index * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
+        viewport = self.policy_scroll.content_rect
+        return pygame.Rect(viewport.x + self.policy_scroll.value + index * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
                            viewport.y,
                            POLICY_CARD_WIDTH, POLICY_CARD_HEIGHT)
 
@@ -428,18 +426,14 @@ class Politics_Screen(Screen):
                                      border_width=3, gradient_strength=style["gradient_strength"])
 
     def _draw_policies(self, surface):
-        viewport = self.scroll_content_rect
+        viewport = self.policy_scroll.content_rect
         with ui_bars.clip_scroll_region(surface, viewport):
             for card in self._policy_cards:
                 surface.blit(card.face, card.rect)
 
-        track, handle = ui_bars.draw_standard_scrollbar_horizontal(
-            # Moving the handle left shifts the cards right.
-            surface, self.policy_scroll_min_x - self.policy_scroll_x,
-            self.policy_scroll_min_x, 0, viewport.x, viewport.bottom + POLICY_SCROLLBAR_GAP,
-            viewport.width, POLICY_SCROLLBAR_HEIGHT)
-        self.policy_scroll_track_rect = track
-        self.policy_scroll_handle_rect = handle
+        # Moving the handle left shifts the cards right.
+        self.policy_scroll.draw_scrollbar(surface, viewport.x, viewport.bottom + POLICY_SCROLLBAR_GAP,
+                                          viewport.width, POLICY_SCROLLBAR_HEIGHT)
 
     @staticmethod
     def _build_policy_card(card, definition, state, eligible):
@@ -501,44 +495,11 @@ class Politics_Screen(Screen):
         return f"Activating · {state.get('turns_remaining', 0)}t"
 
     def additional_events(self, event):
-        viewport = self.scroll_content_rect
-        if (self.policy_scroll_min_x < 0 and event.type == pygame.MOUSEWHEEL
-                and viewport.collidepoint(pygame.mouse.get_pos())):
-            self.policy_scroll_x = max(self.policy_scroll_min_x,
-                                       min(0, self.policy_scroll_x + event.y * POLICY_SCROLL_WHEEL_STEP))
-            self.refresh_ui()
+        scroll = self.policy_scroll
+        if scroll.limit >= 0:
             return
-
-        if self._handle_policy_scrollbar(event):
+        if event.type == pygame.MOUSEWHEEL:
+            if scroll.content_rect.collidepoint(pygame.mouse.get_pos()):
+                self.scroll_by(event, scroll, POLICY_SCROLL_WHEEL_STEP)
             return
-        if self.policy_scroll_min_x < 0:
-            self.handle_content_drag(event, attr="policy_scroll_x", limit_attr="policy_scroll_min_x",
-                                     rect_attr="scroll_content_rect", axis="x")
-
-    def _handle_policy_scrollbar(self, event):
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            was_dragging = self.policy_scrollbar_dragging
-            self.policy_scrollbar_dragging = False
-            return was_dragging
-
-        track = self.policy_scroll_track_rect
-        handle = self.policy_scroll_handle_rect
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and track:
-            if (handle and handle.collidepoint(event.pos)) or track.collidepoint(event.pos):
-                self.policy_scrollbar_dragging = True
-                self._cancel_pressed_elements()
-                self._snap_policy_scroll(event.pos[0])
-                self.refresh_ui()
-                return True
-        elif event.type == pygame.MOUSEMOTION and self.policy_scrollbar_dragging:
-            self._snap_policy_scroll(event.pos[0])
-            self.refresh_ui()
-            return True
-        return False
-
-    def _snap_policy_scroll(self, mouse_x):
-        track = self.policy_scroll_track_rect
-        if track:
-            handle_value = ui_bars.calculate_scroll_snap_horizontal(
-                mouse_x, self.policy_scroll_min_x, 0, track.x, track.width)
-            self.policy_scroll_x = self.policy_scroll_min_x - handle_value
+        self.handle_list_scroll(event, scroll, content=True)

@@ -546,9 +546,9 @@ class Battle_Screen(ModalScreen):
         self.row_paint[pane] = []
         rows = (len(unit_list) + CARD_COLUMNS - 1) // CARD_COLUMNS
         # A different lane can have fewer cards than the previously scrolled one.
-        attrs = self.scroll_attrs(pane)
+        scroll = self.pane(pane)
         limit = min(0, rect.height - rows * self.ROW_HEIGHT)
-        setattr(self, attrs["attr"], max(limit, min(0, self.pane_scroll(pane))))
+        scroll.value = max(limit, min(0, scroll.value))
         for grid_row, y in self.pane_rows(pane, rows, rect.y, rect.height):
             for column in range(CARD_COLUMNS):
                 index = grid_row * CARD_COLUMNS + column

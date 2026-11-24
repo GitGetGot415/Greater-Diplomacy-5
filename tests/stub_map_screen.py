@@ -22,6 +22,7 @@ import data.constants as c
 from data.game_state import WorldState
 from data.session_state import LOCAL_PLAY, SessionState
 from data.state_access import StateAccess
+from ui.widgets.scroll_state import ScrollPaneOwner
 
 
 # Presentation state of a live Map that shared draw and input helpers read.
@@ -34,7 +35,7 @@ UI_STATE = {
     "show_player_ready_screen": False, "show_exit_confirmation": False,
     "multiplayer_host_mode": False, "multiplayer_player_key": "",
     "army_panel_visible_in_orders": False, "army_group_transition_states": None,
-    "army_editor_state": None, "btn_realtime_details": None, "army_panel_scroll_y": 0,
+    "army_editor_state": None, "btn_realtime_details": None,
     "strategic_unit_fade_states": None, "_minimap_image_cache": None, "unit_view_buttons": {},
     "unit_view_bar_collapsed": False, "btn_unit_view_toggle": None,
     "army_custom_symbol_state": None,
@@ -78,7 +79,7 @@ def state_owner(double, name):
     return double
 
 
-class MapDouble(StateAccess):
+class MapDouble(ScrollPaneOwner, StateAccess):
     """A pygame-free map double that owns world and session state like a live Map.
 
     Keyword arguments and class attributes named after world or session fields

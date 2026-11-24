@@ -63,35 +63,35 @@ class MapPanelScrollTests(unittest.TestCase):
                 # Give the panel something to scroll; the ceiling is normally
                 # set from the content height while drawing.
                 for other in map_input.MAP_PANELS:
-                    setattr(self.map, f"{other}_scroll_y", 0)
+                    self.map.scroll_state(other).value = 0
                     setattr(self.map, f"{other}_scroll_max", 500)
 
                 map_input.handle_map_events(self.map, wheel(-1, rect.center))
 
-                self.assertGreater(getattr(self.map, f"{name}_scroll_y"), 0,
+                self.assertGreater(self.map.scroll_state(name).value, 0,
                                    f"{name} did not scroll")
                 for other in map_input.MAP_PANELS:
                     if other != name:
-                        self.assertEqual(getattr(self.map, f"{other}_scroll_y"), 0,
+                        self.assertEqual(self.map.scroll_state(other).value, 0,
                                          f"{other} scrolled when {name} was under the cursor")
 
     def test_scroll_is_clamped_to_the_ceiling(self):
         name = map_input.MAP_PANELS[0]
         rect = map_input._panel_rect(self.map, name)
-        setattr(self.map, f"{name}_scroll_y", 0)
+        self.map.scroll_state(name).value = 0
         setattr(self.map, f"{name}_scroll_max", 40)
 
         for _ in range(20):
             map_input.handle_map_events(self.map, wheel(-1, rect.center))
-        self.assertEqual(getattr(self.map, f"{name}_scroll_y"), 40)
+        self.assertEqual(self.map.scroll_state(name).value, 40)
 
         for _ in range(20):
             map_input.handle_map_events(self.map, wheel(1, rect.center))
-        self.assertEqual(getattr(self.map, f"{name}_scroll_y"), 0)
+        self.assertEqual(self.map.scroll_state(name).value, 0)
 
     def test_wheel_off_every_panel_does_not_scroll_them(self):
         for name in map_input.MAP_PANELS:
-            setattr(self.map, f"{name}_scroll_y", 0)
+            self.map.scroll_state(name).value = 0
             setattr(self.map, f"{name}_scroll_max", 500)
 
         # Bottom-left corner, clear of all three published rects.
@@ -102,7 +102,7 @@ class MapPanelScrollTests(unittest.TestCase):
         map_input.handle_map_events(self.map, wheel(-1, away))
 
         for name in map_input.MAP_PANELS:
-            self.assertEqual(getattr(self.map, f"{name}_scroll_y"), 0)
+            self.assertEqual(self.map.scroll_state(name).value, 0)
 
     def test_a_panel_blocks_clicks_reaching_the_map(self):
         """Hovering a panel must set on_ui, or a click passes through to the

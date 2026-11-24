@@ -213,14 +213,14 @@ class TouchGestureTests(unittest.TestCase):
 
     def test_ui_drag_scrolls_existing_content_without_panning_the_map(self):
         self.owner.touch_map_at = lambda pos: None
-        self.owner.scroll_content_rect = pygame.Rect(400, 200, 300, 300)
-        self.owner.scroll_y = -100
-        self.owner.max_scroll = -400
+        self.owner.scroll.content_rect = pygame.Rect(400, 200, 300, 300)
+        self.owner.scroll.value = -100
+        self.owner.scroll.limit = -400
         self.press()
         events = self.send(finger(pygame.FINGERMOTION, (500, 330)))
         for event in events:
             self.owner.handle_content_drag(event)
-        self.assertEqual(self.owner.scroll_y, -70)
+        self.assertEqual(self.owner.scroll.value, -70)
         self.assertEqual(self.map.camera.pos, pygame.Vector2())
         for event in self.release((500, 330)):
             self.owner.handle_content_drag(event)

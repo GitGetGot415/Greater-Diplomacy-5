@@ -163,18 +163,16 @@ class Messages_Screen(Screen):
         self.drafts = [] 
         self.draft_edit_rects = []
         
-        # The message thread scrolls on the positive convention (0 at the
-        # newest message, growing as you scroll back), unlike Screen's
-        # scroll_y which is a negative offset. Kept under its own name so
-        # the two never share an attribute -- the contact list beside it
-        # does use the base class's helpers, on the base convention.
-        self.msg_scroll_y = 0
+        # The message thread pane scrolls on the positive convention (0 at the
+        # newest message, growing as you scroll back up to max_msg_scroll),
+        # unlike the contact list beside it, which uses the standard list pane.
+        self.thread_scroll.value = 0
         self.max_msg_scroll = 0
         
-        self.contact_scroll_y = 0
-        self.max_contact_scroll = 0
-        self.is_dragging_contacts = False
-        self.message_drag_state = None
+        self.scroll.value = 0
+        self.scroll.limit = 0
+        self.scroll.bar_drag = False
+        self.thread_scroll.content_drag = None
         self.forward_button_rects = []
         # Reply buttons of the selected country's open offers, built with the
         # thread, and the visible part of each as drawn this frame.
@@ -214,11 +212,11 @@ class Messages_Screen(Screen):
         self.compose_focused = False
         self.drafts = []
         self.draft_edit_rects = []
-        self.msg_scroll_y = 0
+        self.thread_scroll.value = 0
         self.max_msg_scroll = 0
-        self.contact_scroll_y = 0
-        self.is_dragging_contacts = False
-        self.message_drag_state = None
+        self.scroll.value = 0
+        self.scroll.bar_drag = False
+        self.thread_scroll.content_drag = None
         self.forward_button_rects = []
         self.offer_buttons = []
         self.offer_button_rects = []
@@ -298,8 +296,8 @@ class Messages_Screen(Screen):
         self.exiting_thread = None
         self.bubble_starts = {}
         self.selected_recipient = target
-        self.message_drag_state = None
-        self.msg_scroll_y = 0
+        self.thread_scroll.content_drag = None
+        self.thread_scroll.value = 0
         
         p_data = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
         for msg in p_data.get("inbox", []):
@@ -326,12 +324,12 @@ class Messages_Screen(Screen):
 
     def cycle_contact_sort(self):
         self.contact_sort = MSG_SORT_ORDERS[(MSG_SORT_ORDERS.index(self.contact_sort) + 1) % len(MSG_SORT_ORDERS)]
-        self.contact_scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def toggle_add_contact(self):
         self.show_all_contacts = not self.show_all_contacts
-        self.contact_scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def edit_conversation_theme(self):
@@ -355,7 +353,7 @@ class Messages_Screen(Screen):
 
     def select_new_contact(self, target):
         self.show_all_contacts = False
-        self.contact_scroll_y = 0
+        self.scroll.value = 0
         self.select_recipient(target)
 
     def send_message(self):
@@ -481,9 +479,7 @@ class Messages_Screen(Screen):
                                  self.draft_edit_rects + self.forward_button_rects
                                  + self.offer_button_rects)
             if not (event.type == pygame.MOUSEBUTTONDOWN and clicked_action):
-                if self.handle_content_drag(event, attr="msg_scroll_y", limit_attr="max_msg_scroll",
-                                            rect_attr="thread_rect", drag_attr="message_drag_state",
-                                            lo=0, hi=self.max_msg_scroll, refresh=False):
+                if self.handle_content_drag(event, self.thread_scroll, lo=0, hi=self.max_msg_scroll, refresh=False):
                     self.draft_edit_rects = []
                     self.forward_button_rects = []
                     self.offer_button_rects = []
@@ -554,23 +550,21 @@ class Messages_Screen(Screen):
                 and not is_tactical and in_thread):
             for forward_rect, message in reversed(self.forward_button_rects):
                 if forward_rect.collidepoint((mx, my)):
-                    self.message_drag_state = None
+                    self.thread_scroll.content_drag = None
                     self.open_forward_picker(message)
                     return
 
         # --- Contact List Scrolling (wheel, scrollbar-handle drag, content drag) ---
         if event.type == pygame.MOUSEWHEEL and mx < MSG_LEFT_PANE_W:
-            self.scroll_by(event, attr="contact_scroll_y", limit_attr="max_contact_scroll", speed=30)
+            self.scroll_by(event, speed=30)
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
-            if self.handle_list_scroll(event, attr="contact_scroll_y", limit_attr="max_contact_scroll",
-                                        track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect",
-                                        drag_attr="is_dragging_contacts", content_rect_attr="scroll_content_rect"):
+            if self.handle_list_scroll(event, content=True):
                 return
 
         # --- Message Thread Scrolling ---
         if event.type == pygame.MOUSEWHEEL and in_thread:
-            self.msg_scroll_y += event.y * 40
-            self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
+            self.thread_scroll.value += event.y * 40
+            self.thread_scroll.value = max(0, min(self.thread_scroll.value, self.max_msg_scroll))
             self.draft_edit_rects = []
             self.forward_button_rects = []
             self.offer_button_rects = []
@@ -607,7 +601,7 @@ class Messages_Screen(Screen):
             if under is None:
                 return False
             under.handle_event(event)
-            self.message_drag_state = None
+            self.thread_scroll.content_drag = None
             return True
         pressed = [button for button in self.offer_buttons if button.is_pressed]
         for button in pressed:
@@ -616,6 +610,11 @@ class Messages_Screen(Screen):
             else:
                 button.is_pressed = False
         return bool(pressed)
+
+    @property
+    def thread_scroll(self):
+        """The message thread pane, measured up from the newest message."""
+        return self.scroll_state("thread")
 
     def refresh_ui(self):
         self._build_ui()
@@ -648,8 +647,8 @@ class Messages_Screen(Screen):
             progress = max(0.0, min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS))
             messages.append(dict(prepared, exit_offset=(1 - progress) ** MSG_ENTER_EASING_POWER))
         self.exiting_thread = {"messages": messages, "started_at": now, "rect": self.thread_rect.copy(),
-                               "scroll_y": self.msg_scroll_y, "max_scroll": self.max_msg_scroll} if messages else None
-        self.message_drag_state = None
+                               "scroll_y": self.thread_scroll.value, "max_scroll": self.max_msg_scroll} if messages else None
+        self.thread_scroll.content_drag = None
         self.draft_edit_rects = []
         self.forward_button_rects = []
         self.offer_button_rects = []
@@ -693,6 +692,7 @@ class Messages_Screen(Screen):
         self.thread_rect = pygame.Rect(MSG_LEFT_PANE_W, MSG_HEADER_H,
                                        c.SCREEN_WIDTH - MSG_LEFT_PANE_W,
                                        c.SCREEN_HEIGHT - MSG_HEADER_H - MSG_INPUT_H)
+        self.thread_scroll.content_rect = self.thread_rect
         self._prepare_thread()
         self._prepare_composer()
         unread_x = c.SCREEN_WIDTH - MSG_MARGIN - MSG_HEADER_UNREAD_W
@@ -745,7 +745,7 @@ class Messages_Screen(Screen):
         if self.selected_recipient:
             history_contacts.add(self.selected_recipient)
 
-        self.scroll_content_rect = pygame.Rect(MSG_MARGIN, MSG_CONTACT_LIST_TOP_Y,
+        self.scroll.content_rect = pygame.Rect(MSG_MARGIN, MSG_CONTACT_LIST_TOP_Y,
                                                MSG_LEFT_PANE_W - 2 * MSG_MARGIN - 14,
                                                c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y - MSG_MARGIN)
         if self.show_all_contacts:
@@ -786,17 +786,17 @@ class Messages_Screen(Screen):
 
         row_height = MSG_NEW_CONTACT_ROW_H if self.show_all_contacts else MSG_CONTACT_ROW_H
         row_step = row_height + MSG_CONTACT_ROW_GAP
-        self.max_contact_scroll = min(0, self.scroll_content_rect.height - len(display_list) * row_step)
-        self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
+        self.scroll.limit = min(0, self.scroll.content_rect.height - len(display_list) * row_step)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
         for index, country in enumerate(display_list):
-            y = MSG_CONTACT_LIST_TOP_Y + index * row_step + self.contact_scroll_y
+            y = MSG_CONTACT_LIST_TOP_Y + index * row_step + self.scroll.value
             display_name = queries.get_country_display_name(country, self.map_screen.world.nation_data)
             unread = unread_counts.get(country, 0)
             # Unanswered requests use the same unread rule as the map badge.
             if queries.has_unanswered_request(self.map_screen.session.player_country, country, self.map_screen.world.nation_data):
                 unread += 1
             callback = self.select_new_contact if self.show_all_contacts else self.select_recipient
-            row = ConversationRow(MSG_MARGIN, y, self.scroll_content_rect.width,
+            row = ConversationRow(MSG_MARGIN, y, self.scroll.content_rect.width,
                                   display_name, previews.get(country, ""), unread,
                                   self.selected_recipient == country,
                                   lambda target=country, select=callback: select(target),
@@ -1225,7 +1225,7 @@ class Messages_Screen(Screen):
                                             "forward_button": forward, "offer_rows": offer_rows})
             total_h += box_height + 15
         self.max_msg_scroll = max(0, total_h - self.thread_rect.height + 20)
-        self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
+        self.thread_scroll.value = max(0, min(self.thread_scroll.value, self.max_msg_scroll))
 
     def _prepare_composer(self):
         """Cache the input text after edits and conversation changes."""
@@ -1273,9 +1273,7 @@ class Messages_Screen(Screen):
         surface.blit(self.header_surface, (header_x,
                                            top_dy + (MSG_HEADER_H - self.header_surface.get_height()) // 2))
         self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y,
-                                 self.scroll_content_rect.height, width=10,
-                                 attr="contact_scroll_y", limit_attr="max_contact_scroll",
-                                 track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
+                                 self.scroll.content_rect.height, width=10)
         composer_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom + bottom_dy,
                                      self.thread_rect.width, MSG_INPUT_H)
         self._draw_panel(surface, composer_rect, "composer")
@@ -1302,7 +1300,7 @@ class Messages_Screen(Screen):
             self._draw_thread(surface, thread["messages"], thread["rect"], thread["scroll_y"],
                               thread["max_scroll"], exit_started=thread["started_at"])
         else:
-            self._draw_thread(surface, self.processed_messages, self.thread_rect, self.msg_scroll_y, self.max_msg_scroll)
+            self._draw_thread(surface, self.processed_messages, self.thread_rect, self.thread_scroll.value, self.max_msg_scroll)
 
     def _draw_thread(self, surface, messages, rect, scroll_y, max_scroll, *, exit_started=None):
         current_y = rect.bottom - 20 + scroll_y

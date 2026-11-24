@@ -228,7 +228,7 @@ class UnitRangeEditorTests(unittest.TestCase):
             screen.select_category("range")
             field = next(element for element in screen.elements if getattr(element, "entry_key", None))
             field.text = "88"
-            screen.scroll_y = screen.max_scroll
+            screen.scroll.value = screen.scroll.limit
             screen.refresh_ui()
             screen.draw(self.surface)
             self.assertEqual(screen.values["Fixture Wing 00"]["air_range_start"], "88")

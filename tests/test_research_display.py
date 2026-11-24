@@ -245,5 +245,5 @@ class ResearchInputTests(unittest.TestCase):
             self.screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1))
             self.screen.update()
             self.screen.draw(self.surface)
-        self.assertLess(self.screen.target_scroll_x, 0)
+        self.assertLess(self.screen.timeline_scroll.value, 0)
         self.click_second_level()

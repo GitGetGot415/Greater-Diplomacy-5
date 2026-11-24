@@ -47,7 +47,7 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         row_x = p.x + 20
         row_w = p.width - 40
         cull_top, cull_bottom = p.y + 60, p.bottom - 70
-        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
+        self.scroll.content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
             unit = units[i]
@@ -125,7 +125,7 @@ class Unit_Transfer_Screen(EditorOverlayScreen):
         row_x = p.x + 20
         row_w = p.width - 40
         cull_top, cull_bottom = p.y + 60, p.bottom - 70
-        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
+        self.scroll.content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
             unit = units[i]

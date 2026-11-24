@@ -57,11 +57,11 @@ class ExpensesTableTests(unittest.TestCase):
         self.assertIs(table.rows, individual)
         self.assertEqual([column.key for column in table.columns][1], "location")
 
-        table.scroll_y = -90
+        table.scroll.value = -90
         table.elements[-1].callback()
         self.assertIs(table.rows, grouped)
         self.assertEqual([column.key for column in table.columns][1], "count")
-        self.assertEqual(table.scroll_y, 0)
+        self.assertEqual(table.scroll.value, 0)
         self.assertEqual([row["unit"] for row in table.rows],
                          ["Infantry 1914", "Infantry 1915", "Convoy (Infantry 1914)"])
 

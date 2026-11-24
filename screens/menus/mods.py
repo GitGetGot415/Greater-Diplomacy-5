@@ -91,7 +91,7 @@ class Mods(FolderListState):
 
         self._row_subtext = []
         mods = self.list_folders()
-        self.scroll_content_rect = pygame.Rect(0, 110, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 110)
+        self.scroll.content_rect = pygame.Rect(0, 110, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 110)
         for i, btn_y in self.layout_list_rows(len(mods), self.ROW_HEIGHT, self.ROW_TOP):
             self._add_row(mods[i], btn_y)
 
@@ -157,11 +157,11 @@ class Mods(FolderListState):
         self._row_subtext.append((subtext, 25, btn_y + 32))
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def additional_draw(self, surface):
         clip = surface.get_clip()
-        surface.set_clip(self.scroll_content_rect)
+        surface.set_clip(self.scroll.content_rect)
         for text, x, y in self._row_subtext:
             if text:
                 fonts.draw_text_with_shadow(surface, text, x, y, "small", (180, 180, 180))

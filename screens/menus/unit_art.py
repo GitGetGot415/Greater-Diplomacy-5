@@ -262,7 +262,7 @@ class Unit_Art(Screen):
         self.rows = []
         self._visible_rows = []
         self.gallery_top = TABS_TOP
-        self.scroll_content_rect = None
+        self.scroll.content_rect = None
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
@@ -282,14 +282,14 @@ class Unit_Art(Screen):
         # mean something different) under the new one, so fall back to the
         # generic tab rather than carry a stale selection across.
         self.country = None
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def set_country_filter(self, country):
         if country == self.country:
             return
         self.country = country
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def set_level_display(self, mode):
@@ -348,7 +348,7 @@ class Unit_Art(Screen):
         self.elements.append(self._build_show_all_art_toggle())
         self.elements.extend(self._build_level_display_toggle())
 
-        self.scroll_content_rect = pygame.Rect(GALLERY_X, self.gallery_top, GALLERY_W,
+        self.scroll.content_rect = pygame.Rect(GALLERY_X, self.gallery_top, GALLERY_W,
                                                GALLERY_BOTTOM - self.gallery_top)
         self._visible_rows = self._layout_gallery_rows()
 
@@ -364,7 +364,7 @@ class Unit_Art(Screen):
         vertical space than that -- a one-cell family with a three-word name
         stacks three lines of text next to a single line of icons), so two
         rows can have completely different heights. This still sets
-        self.max_scroll the same way (min(0, view_h - total_content_height))
+        self.scroll.limit the same way (min(0, view_h - total_content_height))
         so handle_list_scroll, draw_list_scrollbar and friends work
         unmodified.
         """
@@ -385,15 +385,15 @@ class Unit_Art(Screen):
 
         view_h = GALLERY_BOTTOM - self.gallery_top
         total_h = sum(height for _row, _lines, height in laid_out)
-        self.max_scroll = min(0, view_h - total_h)
+        self.scroll.limit = min(0, view_h - total_h)
         # A mode switch keeps whatever scroll position the player was at (see
         # set_level_display), but its wrapping can shrink the content below
         # that point -- clamp back within range instead of leaving a gap of
         # blank space or an out-of-bounds scrollbar handle.
-        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
 
         visible = []
-        y = self.gallery_top + self.scroll_y
+        y = self.gallery_top + self.scroll.value
         for row, lines, height in laid_out:
             if y + height > self.gallery_top and y < GALLERY_BOTTOM:
                 visible.append((row, lines, y, height))
@@ -512,7 +512,7 @@ class Unit_Art(Screen):
         return buttons
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     # ------------------------------------------------------------------ #
     #                             RENDERING                              #
@@ -530,7 +530,7 @@ class Unit_Art(Screen):
                     (GALLERY_X + ROW_PAD_X, 55))
 
         clip = surface.get_clip()
-        surface.set_clip(self.scroll_content_rect)
+        surface.set_clip(self.scroll.content_rect)
         for row, lines, y, height in self._visible_rows:
             self._draw_row(surface, row, lines, y, height)
         surface.set_clip(clip)

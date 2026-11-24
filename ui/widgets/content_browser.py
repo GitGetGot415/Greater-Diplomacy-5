@@ -122,8 +122,8 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.search_field.text = ""
         self.search_field.active = False
         self.selected_entry = None
-        self._scroll_items = 0
-        self._scroll_details = 0
+        self.pane("items").value = 0
+        self.pane("details").value = 0
         self.cancel_active_drags()
         super().set_sub_state(state)
 
@@ -145,10 +145,10 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         offset = self.leading_row_count
         row_count = len(self.filtered_entries) + offset
         limit = min(0, rect.height - row_count * self.ROW_HEIGHT)
-        self._scroll_items = max(limit, min(0, self.pane_scroll("items")))
+        self.pane("items").value = max(limit, min(0, self.pane_scroll("items")))
         for index, y in self.layout_list_rows(row_count, self.ROW_HEIGHT, rect.y,
                                               cull_top=rect.top, cull_bottom=rect.bottom,
-                                              attr="_scroll_items", limit_attr="_max_items"):
+                                              scroll=self.pane("items")):
             row_rect = pygame.Rect(rect.x, y, rect.width, self.ROW_HEIGHT - 6)
             if index < offset:
                 label, callback = self.leading_row
@@ -196,7 +196,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                                    self.action_top - self.detail_panel.y - 84),
         }
         for name, rect in self.regions.items():
-            setattr(self, f"_content_{name}", rect)
+            self.pane(name).content_rect = rect
         self.layout_search_controls(self.CONTROL_Y)
 
     def layout_search_controls(self, y):
@@ -243,11 +243,11 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.filtered_entries = entries
         selected = next((entry for entry in entries if entry.path == selected_path), None)
         if selected != self.selected_entry:
-            self._scroll_details = 0
+            self.pane("details").value = 0
         self.selected_entry = selected
 
     def filter_entries(self, _text):
-        self._scroll_items = 0
+        self.pane("items").value = 0
         self.refresh_ui()
 
     def clear_search(self):
@@ -256,12 +256,12 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
     def cycle_sort(self):
         self.sort_index = (self.sort_index + 1) % len(self.SORTS)
-        self._scroll_items = 0
+        self.pane("items").value = 0
         self.refresh_ui()
 
     def select_entry(self, entry):
         self.selected_entry = entry
-        self._scroll_details = 0
+        self.pane("details").value = 0
         self.refresh_ui()
 
     def toggle_entry(self, entry):
@@ -292,8 +292,8 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                              for text in texts for line in wrap_text(text, font, rect.width)]
         self.detail_line_height = font.get_linesize() + 5
         content_height = self.detail_text_offset + len(self.detail_lines) * self.detail_line_height
-        self._max_details = min(0, rect.height - content_height)
-        self._scroll_details = max(self._max_details, min(0, self.pane_scroll("details")))
+        self.pane("details").limit = min(0, rect.height - content_height)
+        self.pane("details").value = max(self.pane("details").limit, min(0, self.pane_scroll("details")))
         heading = self.selected_entry.name if self.selected_entry else ""
         self.detail_heading = fonts.get("heading2").render(
             fit_text(heading, fonts.get("heading2"), self.detail_panel.width - self.MARGIN * 2), True, c.UI_TEXT_BRIGHT)
@@ -389,9 +389,9 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
             row = index + self.leading_row_count
             top = row * self.ROW_HEIGHT + scroll
             if top < 0:
-                self._scroll_items = -row * self.ROW_HEIGHT
+                self.pane("items").value = -row * self.ROW_HEIGHT
             elif top + self.ROW_HEIGHT > rect.height:
-                self._scroll_items = rect.height - (row + 1) * self.ROW_HEIGHT
+                self.pane("items").value = rect.height - (row + 1) * self.ROW_HEIGHT
             self.select_entry(self.filtered_entries[index])
 
     def handle_events(self, events):
@@ -505,7 +505,7 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
                                    detail_width, self.action_top - self.detail_panel.y - 64 - gap),
         }
         for name, rect in self.regions.items():
-            setattr(self, f"_content_{name}", rect)
+            self.pane(name).content_rect = rect
         self.layout_search_controls(self.LIBRARY_CONTROL_Y)
 
     def build_browser_controls(self):

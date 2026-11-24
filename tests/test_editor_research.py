@@ -310,7 +310,7 @@ class EditorResearchTreeTests(unittest.TestCase):
 
     def test_mouse_click_on_a_locked_visible_node_applies_the_editor_rule(self):
         button = self.node("tip", 2)
-        self.screen.scroll_x = self.screen.target_scroll_x = c.SCREEN_WIDTH // 2 - button.rect.centerx
+        self.screen.scroll_x = self.screen.timeline_scroll.value = c.SCREEN_WIDTH // 2 - button.rect.centerx
         self.screen.enforce_scroll_bounds()
         self.screen._sync_tech_node_positions()
         with patch.object(pygame.mouse, "get_pos", return_value=button.rect.center):
@@ -424,9 +424,9 @@ class EditorResearchTreeTests(unittest.TestCase):
                         patch.object(queries, "get_living_nations", side_effect=AssertionError("frame country scan")):
                     self.screen.update()
                     self.screen.draw(surface)
-                before = self.screen.target_scroll_x
+                before = self.screen.timeline_scroll.value
                 self.screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1))
-                self.assertNotEqual(self.screen.target_scroll_x, before)
+                self.assertNotEqual(self.screen.timeline_scroll.value, before)
         self.screen.set_category("COMPLETED")
         self.screen.draw(self.surface)
         self.assertTrue(self.screen.completed_text_surfaces)

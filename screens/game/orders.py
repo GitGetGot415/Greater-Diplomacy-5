@@ -153,7 +153,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         self.map_screen.selected_province = province
         self.battle_screen = None
         if not preserve_scroll:
-            self.scroll_y = 0
+            self.scroll.value = 0
         self.cancel_bombard_targeting(refresh=False)
         units = province.get("units", [])
         own_indices = [i for i, unit in enumerate(units)
@@ -676,9 +676,9 @@ class Orders_Screen(UnitCommandControls, Screen):
             self.elements.append(battle_button)
 
         total_content_h = len(rows) * self.row_height
-        self.max_scroll_y = min(0, self.panel_max_h - total_content_h)
-        self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
-        self.scroll_content_rect = pygame.Rect(
+        self.scroll.limit = min(0, self.panel_max_h - total_content_h)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
+        self.scroll.content_rect = pygame.Rect(
             self.PANEL_X + 2, self.panel_top,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
         row_guard = self.content_hover_guard()
@@ -772,13 +772,13 @@ class Orders_Screen(UnitCommandControls, Screen):
 
         tiny_font = fonts.get("tiny")
         for display_index, (row_key, unit, province, index) in enumerate(rows):
-            row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
+            row_y = self.panel_top + (display_index * self.row_height) + self.scroll.value
             row_rect = pygame.Rect(
                 self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
                 self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
                 self.row_height)
 
-            if not row_rect.colliderect(self.scroll_content_rect):
+            if not row_rect.colliderect(self.scroll.content_rect):
                 continue
 
             self._cache_row_icon(row_key, unit)
@@ -923,9 +923,9 @@ class Orders_Screen(UnitCommandControls, Screen):
         return lines
 
     def _hovered_portrait_tooltip(self, position):
-        if not self.scroll_content_rect or not self.scroll_content_rect.collidepoint(position):
+        if not self.scroll.content_rect or not self.scroll.content_rect.collidepoint(position):
             return ()
-        list_top = self.panel_top + self.scroll_y
+        list_top = self.panel_top + self.scroll.value
         index = (position[1] - list_top) // self.row_height
         if 0 <= index < len(self._roster_rows) and self._unit_row_icon_rect(list_top + index * self.row_height).collidepoint(position):
             return self._row_portrait_tooltips.get(self._roster_rows[index][0], ())
@@ -951,7 +951,7 @@ class Orders_Screen(UnitCommandControls, Screen):
 
         mouse_pos = pygame.mouse.get_pos()
         help_text = None
-        if self.scroll_content_rect.collidepoint(mouse_pos):
+        if self.scroll.content_rect.collidepoint(mouse_pos):
             help_text = self._hovered_action_help(mouse_pos)
 
         if help_text is None:
@@ -1011,7 +1011,7 @@ class Orders_Screen(UnitCommandControls, Screen):
             gradient_strength=style["gradient_strength"])
         self._draw_panel_header(surface, rows, player_units, read_only)
 
-        content_rect = self.scroll_content_rect or pygame.Rect(
+        content_rect = self.scroll.content_rect or pygame.Rect(
             self.PANEL_X + 2, self.panel_top,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
 
@@ -1020,14 +1020,14 @@ class Orders_Screen(UnitCommandControls, Screen):
         # clicked to change selection, but only selected rows receive command
         # controls on their right.
         with ui_bars.clip_scroll_region(surface, content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll_y):
+                                        draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
             if not rows:
                 empty_text = "(No units selected)"
                 surface.blit(tiny_font.render(empty_text, True, c.UI_TEXT_MUTED),
-                             (self.PANEL_X + PANEL_INSET, self.panel_top + self.scroll_y))
+                             (self.PANEL_X + PANEL_INSET, self.panel_top + self.scroll.value))
             else:
                 for display_index, (row_key, unit, province, unit_index) in enumerate(rows):
-                    y_pos = self.panel_top + (display_index * self.row_height) + self.scroll_y
+                    y_pos = self.panel_top + (display_index * self.row_height) + self.scroll.value
                     row_rect = pygame.Rect(
                         self.PANEL_X + UNIT_ROW_X_OFFSET, y_pos,
                         self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
@@ -1040,7 +1040,7 @@ class Orders_Screen(UnitCommandControls, Screen):
 
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
-            self.panel_max_h, width=SCROLLBAR_WIDTH, limit_attr="max_scroll_y")
+            self.panel_max_h, width=SCROLLBAR_WIDTH)
 
         # Show the same live left-drag rectangle as the map screen.  The
         # rectangle must be normalized in-place; pygame returns None from
