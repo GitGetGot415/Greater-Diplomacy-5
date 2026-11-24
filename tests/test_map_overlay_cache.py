@@ -316,7 +316,7 @@ class CombatDisplayTests(unittest.TestCase):
         }
 
         color = overlay_renderer.combat_outlook_color(
-            [[attacker, defender]], nation_data, set(), "C",
+            [[attacker, defender]], nation_data,
             province=province, information_available=True)
 
         self.assertEqual(
@@ -335,7 +335,7 @@ class CombatDisplayTests(unittest.TestCase):
         }
 
         color = overlay_renderer.combat_outlook_color(
-            [[attacker, defender]], nation_data, set(), "Spectator",
+            [[attacker, defender]], nation_data,
             province=province, information_available=False)
 
         self.assertEqual(color, overlay_renderer.COMBAT_BUBBLE_UNKNOWN_COLOR)
@@ -352,7 +352,7 @@ class CombatDisplayTests(unittest.TestCase):
         }
 
         color = overlay_renderer.combat_outlook_color(
-            [[navy_a, navy_b]], nation_data, set(), "Spectator",
+            [[navy_a, navy_b]], nation_data,
             province=sea, information_available=True)
 
         self.assertEqual(

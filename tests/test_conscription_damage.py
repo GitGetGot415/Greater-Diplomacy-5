@@ -12,7 +12,6 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic import politics
-from ui.rendering import overlay_renderer
 from map_logic.system32 import combat_processor, combat_rules
 from screens.game.economy import Economy_Screen
 from tests.stub_map_screen import StubMapScreen as EconomyMap
@@ -117,14 +116,9 @@ class ConscriptionCombatTests(unittest.TestCase):
                 province = game.add_province("p1", "B", units=[attacker, defender])
                 expected = attacker["attack"] * (1.0 + queries.get_conscription_damage_bonus(game.world.nation_data["A"]))
                 roster = unit_roster_row(attacker, province, game.world.nation_data, True)
-                friendly, enemy, involved = overlay_renderer.combat_strengths(
-                    [province["units"]], game.world.nation_data, {"A"})
                 battle = combat_rules.build_battle([province["units"]], game.world.nation_data)
                 incoming = combat_rules.projected_incoming_damage(battle, game.world.nation_data)
-                self.assertTrue(involved)
                 self.assertAlmostEqual(roster["attack"], expected)
-                self.assertAlmostEqual(friendly, expected)
-                self.assertAlmostEqual(enemy, defender["attack"])
                 self.assertAlmostEqual(incoming[id(defender)], expected)
                 combat_processor.process_combat(game)
                 self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)

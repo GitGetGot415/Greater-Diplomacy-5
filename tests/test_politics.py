@@ -1009,18 +1009,6 @@ class DisplayedDamageTests(unittest.TestCase):
             self.assertAlmostEqual(damage_taken(defenders), printed,
                                    msg=f"panel and resolver disagree at {value:+d}")
 
-    def test_the_map_combat_bubble_reads_the_same_number(self):
-        from ui.rendering import overlay_renderer
-
-        for value in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
-            screen, _prov = two_nation_tile(a_value=value)
-            friendly, enemy, involved = overlay_renderer.combat_strengths(
-                [[unit("A"), unit("B")]], screen.world.nation_data, {"A"})
-            self.assertTrue(involved)
-            self.assertAlmostEqual(friendly, unit("A")["attack"] * axis_damage_multiplier(value))
-            self.assertAlmostEqual(enemy, unit("B")["attack"],
-                                   msg="the enemy's own politics is unaffected")
-
 
 class BombardmentDamageTests(unittest.TestCase):
     def bombardment_damage(self, a_value):
