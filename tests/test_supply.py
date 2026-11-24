@@ -114,8 +114,29 @@ class SupplyTests(SupplyFixture):
                 self.assertEqual(queries.unit_movement_speed(unit), speed)
                 self.assertEqual(queries.presentation_move_speed(world, unit), speed)
                 self.assertEqual(rows[id(unit)]["speed"], speed)
-        self.assertIn("Fuel", rows[id(fuel_user)]["supply"])
-        self.assertNotIn("Fuel", rows[id(infantry)]["supply"])
+        fuel_icon = sidebar_info.RESOURCE_ICONS["fuel"]
+        self.assertIn(fuel_icon, dict(rows[id(fuel_user)]["supply"][1]))
+        self.assertNotIn(fuel_icon, dict(rows[id(infantry)]["supply"][1]))
+
+    def test_sidebar_omits_fully_supplied_units_but_shows_a_fuel_only_shortage(self):
+        tile = province(1, "A", output=(200, 200, 99.9))
+        fuel_user = division(tile)
+        infantry = division(tile, kind="Supply Test Infantry")
+        world = game(tile)
+
+        queries.prepare_presentation_supply(world)
+        sidebar_info.prepare_unit_roster(world, tile)
+
+        rows = world._unit_roster_cache[tile["id"]][2]
+        self.assertNotIn("supply", rows[id(infantry)])
+        label, entries = rows[id(fuel_user)]["supply"]
+        self.assertIn("100%", label)
+        self.assertEqual(dict(entries)[sidebar_info.RESOURCE_ICONS["fuel"]], "<100%")
+
+        tile["test_output"] = (200, 200, 100)
+        queries.prepare_presentation_supply(world)
+        sidebar_info.prepare_unit_roster(world, tile)
+        self.assertNotIn("supply", world._unit_roster_cache[tile["id"]][2][id(fuel_user)])
 
     def test_fuel_caps_turn_movement_and_preserves_the_queued_route(self):
         tiles = [province(key, "Unclaimed" if key == 2 else "A",
@@ -373,7 +394,7 @@ class SupplyTests(SupplyFixture):
         sidebar_info.prepare_unit_roster(world, tile)
         row = world._unit_roster_cache[1][2][id(unit)]
         full_supply = sidebar_info.unit_roster_row(unit, tile, world.nation_data, False)
-        self.assertIn("10%", row["supply"])
+        self.assertIn("10%", row["supply"][0])
         self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.1)
         with queries.combat_supply(queries.freeze_combat_supply(world)):
             self.assertAlmostEqual(combat_rules.effective_damage_multiplier(queries.supply_combat_profile(unit)), 0.1)
@@ -387,7 +408,8 @@ class SupplyTests(SupplyFixture):
         font.render.return_value = pygame.Surface((10, 15))
         font.get_height.return_value = 15
         with (patch.object(sidebar_info.flag_icons, "draw_flag_centered", return_value=10),
-              patch.object(sidebar_info, "draw_combat_stats")):
+              patch.object(sidebar_info, "draw_combat_stats"),
+              patch.object(sidebar_info, "draw_icon_row", wraps=sidebar_info.draw_icon_row) as icon_row):
             for in_combat in (False, True):
                 with self.subTest(in_combat=in_combat):
                     tile = province(1, "A")
@@ -401,11 +423,10 @@ class SupplyTests(SupplyFixture):
                     _, battle, rows = world._unit_roster_cache[tile["id"]]
                     self.assertEqual(bool(battle.lanes), in_combat)
 
-                    font.render.reset_mock()
+                    icon_row.reset_mock()
                     sidebar_info.draw_unit_roster(world, surface, tile, tile["units"], True, 0, 0, surface.get_width())
-                    rendered = [call.args[0] for call in font.render.call_args_list]
-                    self.assertEqual(rendered.count(rows[id(unit)]["supply"]), 1)
-                    self.assertEqual(rendered.count(rows[id(foreign)]["supply"]), 1)
+                    rendered = [call.args[2:4] for call in icon_row.call_args_list]
+                    self.assertCountEqual(rendered, [rows[id(unit)]["supply"], rows[id(foreign)]["supply"]])
 
     def test_sidebar_uses_the_player_supply_projection(self):
         self.library["Supply Test Division"].update(cost_materials=900)
@@ -422,7 +443,7 @@ class SupplyTests(SupplyFixture):
 
         rows = world._unit_roster_cache[tile["id"]][2]
         self.assertEqual(world.player_supply_projection, {unit["unit_id"]: (1, 0, 0.5)})
-        self.assertIn("10%", rows[id(unit)]["supply"])
+        self.assertIn("10%", rows[id(unit)]["supply"][0])
         with queries.combat_supply(queries.presentation_supply(world)):
             self.assertAlmostEqual(queries.unit_supply_multiplier(unit), 0.1)
         self.assertNotIn("supply", rows[id(foreign)])

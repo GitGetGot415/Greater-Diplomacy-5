@@ -20,6 +20,7 @@ from ui.widgets.text_utils import wrap_text
 BACK_BTN_MAP_CENTER = (50, c.TOP_BAR_UI_CENTER_Y)
 ICON_SPEED = "Lightning"
 ICON_BOMBARD_RANGE = "Target"
+RESOURCE_ICONS = {"materials": "Iron", "manpower": "Infantry", "fuel": "Oil"}
 
 PROGRESS_FILL_COLOR = (80, 160, 80)
 PROGRESS_DISABLED_FILL_COLOR = (100, 100, 100)
@@ -295,6 +296,10 @@ def scale_icon(icon_name, size):
     icon_surf = symbol_loader.SYMBOLS.get(icon_name)
     if not icon_surf:
         return None
+    return _scaled_ui_icon(icon_surf, size)
+
+@lru_cache(maxsize=128)
+def _scaled_ui_icon(icon_surf, size):
     return pygame.transform.smoothscale(icon_surf, (size, size))
 
 def draw_notification_badge(surface, rect, text, color=None):
@@ -1152,8 +1157,7 @@ def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, 
     Resources are omitted when both their previous and new values are zero.
     """
     entries = []
-    for resource, icon_name, val in (("materials", "Iron", mat),
-                                     ("manpower", "Infantry", man), ("fuel", "Oil", fuel)):
+    for resource, val in (("materials", mat), ("manpower", man), ("fuel", fuel)):
         try:
             numeric = float(val)
         except (ValueError, TypeError):
@@ -1172,7 +1176,7 @@ def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, 
         display_val = formatted[0] if previous_values is None else (
             (f"{formatted[0]} -> ", color if previous_color is None else previous_color),
             (formatted[1], color))
-        entries.append((icon_name, display_val))
+        entries.append((RESOURCE_ICONS[resource], display_val))
 
     # 16px icons and a 20px step, rather than the font-height sizing the stat
     # rows use, keeps the resource glyphs at their long-standing HUD size.

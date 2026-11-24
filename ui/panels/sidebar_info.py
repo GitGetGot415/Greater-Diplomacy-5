@@ -3,7 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
-from ui.widgets.ui_elements import draw_combat_stats, draw_bombardment_stats
+from ui.widgets.ui_elements import RESOURCE_ICONS, draw_bombardment_stats, draw_combat_stats, draw_icon_row
 from ui.widgets import flag_icons
 from map_logic.system32 import combat_rules
 
@@ -46,6 +46,11 @@ def unit_roster_row(profile, province, nation_data, is_combat):
     }
 
 
+def _supply_percentage(fraction):
+    percent = f"{fraction:.0%}"
+    return "<100%" if fraction < 1 and percent == "100%" else percent
+
+
 def prepare_unit_roster(map_screen, province):
     """Cache one province's ground battle and stats at a selection/state boundary."""
     units = queries.filter_visible_units(
@@ -61,12 +66,13 @@ def prepare_unit_roster(map_screen, province):
             profile = battle.profiles.get(id(unit), unit)
             row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
             status = queries.unit_supply_status(supply, unit)
-            if status is not None:
-                manpower, materials, fuel = status.fractions
-                row["supply"] = (f"Supply {status.readiness:.0%}   "
-                                 f"Manpower {manpower:.0%}   Materials {materials:.0%}")
-                if queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0:
-                    row["supply"] += f"   Fuel {fuel:.0%}"
+            if status is not None and any(fraction < 1 for fraction in status.fractions):
+                uses_fuel = queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0
+                resources = tuple((key, fraction) for key, fraction in zip(c.ECON_RESOURCE_KEYS, status.fractions)
+                                  if key != "fuel" or uses_fuel)
+                if any(fraction < 1 for _, fraction in resources):
+                    entries = tuple((RESOURCE_ICONS[key], _supply_percentage(fraction)) for key, fraction in resources)
+                    row["supply"] = f"Supply {_supply_percentage(status.readiness)}   ", entries
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:
@@ -96,9 +102,11 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
     def draw_supply(row, row_x, y):
         supply = row.get("supply")
         if supply:
-            text = map_screen.small_font.render(supply, True, c.UI_TEXT_MUTED)
-            surface.blit(text, (row_x, y))
-            return text.get_height()
+            label, entries = supply
+            font = map_screen.small_font
+            height = font.get_height()
+            draw_icon_row(surface, font, label, entries, row_x, y, c.UI_TEXT_MUTED, icon_size=max(1, height - 2))
+            return height
         return 0
 
     # --- Active Garrison / Combat Zone ---
