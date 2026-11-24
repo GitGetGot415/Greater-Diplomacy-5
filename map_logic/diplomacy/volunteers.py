@@ -191,26 +191,6 @@ def travel_turns(context, donor, host):
     return 2
 
 
-def _nearest_owned(context, start_id, owner):
-    world_state = world_for(context)
-    if start_id not in world_state.id_to_province:
-        return None
-    queue = deque([start_id])
-    seen = {start_id}
-    while queue:
-        province_id = queue.popleft()
-        province = world_state.id_to_province.get(province_id)
-        if not province:
-            continue
-        if province.get("owner") == owner:
-            return province
-        for neighbor_id in province.get("neighbors", []):
-            if neighbor_id not in seen:
-                seen.add(neighbor_id)
-                queue.append(neighbor_id)
-    return None
-
-
 def _restore_to_origin(context, donor, entry):
     world_state = world_for(context)
     unit = entry.get("unit")
@@ -346,7 +326,7 @@ def _deploy(context, donor, host, mission):
         return
     for entry in mission.get("held_units", []):
         unit = entry.get("unit")
-        destination = _nearest_owned(context, entry.get("origin_id"), host)
+        destination = movement_processor.nearest_owned_province(entry.get("origin_id"), host, world_state.id_to_province)
         if not unit or not destination:
             _restore_to_origin(context, donor, entry)
             continue
