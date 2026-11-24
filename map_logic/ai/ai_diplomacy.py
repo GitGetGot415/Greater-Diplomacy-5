@@ -175,8 +175,8 @@ def finish_proactive_llm_tasks(context, batch):
 
     if batch is not None:
         session_state.loading_status_text = (
-            f"Directing AI Nations ({session_state.progress["proactive_llm_tasks"].completed}/"
-            f"{session_state.progress["proactive_llm_tasks"].total})...")
+            f"Directing AI Nations ({session_state.progress['proactive_llm_tasks'].completed}/"
+            f"{session_state.progress['proactive_llm_tasks'].total})...")
         outcome = batch.collect()
         ai_llm_runner.report_unserved(context, outcome, "Directing AI nations")
 
@@ -1334,4 +1334,4 @@ def _run_basic_proactive_ai(context):
 
         # --- Update Progress Bar ---
         session_state.progress["proactive_tasks"].completed += 1
-        session_state.loading_status_text = f"Evaluating AI Grand Strategy ({session_state.progress["proactive_tasks"].completed}/{session_state.progress["proactive_tasks"].total})..."
+        session_state.loading_status_text = f"Evaluating AI Grand Strategy ({session_state.progress['proactive_tasks'].completed}/{session_state.progress['proactive_tasks'].total})..."
