@@ -828,13 +828,17 @@ class ProvinceProduction:
             for deposit, resource in c.NATURAL_RESOURCE_OUTPUTS.items():
                 deposits[resource] += int(resources.get(deposit, 0)) * territory[resource] * refining
 
+        return {"core" if is_core else "non_core": yields, "resources": deposits, "buildings": self.building_output(province)}
+
+    def building_output(self, province):
+        owner = province["owner"]
+        economy = self.country(owner)
         research = self.nation_data[owner].get("research", {})
         if owner not in self.country_buildings:
             self.country_buildings[owner] = get_building_output_modifiers(research, self.library, context=self.context, cache=self.buildings)
-        buildings = queries.get_province_building_output(
+        return queries.get_province_building_output(
             province, research, self.library, modifiers=self.country_buildings[owner], factory_multiplier=economy["factory_multiplier"],
             non_core_multiplier=economy["non_core_building_multiplier"])
-        return {"core" if is_core else "non_core": yields, "resources": deposits, "buildings": buildings}
 
 
 def calculate_all_economies(map_data, nation_data, *, context=None):

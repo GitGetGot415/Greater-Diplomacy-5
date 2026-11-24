@@ -52,6 +52,19 @@ def apply_editor_territory_brush(context, province, remove=False):
     return layers
 
 
+def conquest_owner(context, province, new_owner):
+    """Apply the integrated-subject rule to an incoming conquest owner."""
+    nations = world_for(context).nation_data
+    if session_for(context).is_editor or new_owner not in nations:
+        return new_owner
+    nation = nations[new_owner]
+    if nation.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED and province["id"] not in nation.get("spawned_territories", ()):
+        master = nation.get("master")
+        if master and master in nations:
+            return master
+    return new_owner
+
+
 def conquer_province(context, province, new_owner, *, refresh_visuals=True, check_landless=True,
                      apply_capture_rules=True):
     """Apply ownership. Batch callers can defer visuals and retirement.
@@ -61,14 +74,8 @@ def conquer_province(context, province, new_owner, *, refresh_visuals=True, chec
     world_state = world_for(context)
     session_state = session_for(context)
     if province:
-        # --- NEW: Integrated Puppet Capture Reroute ---
-        if apply_capture_rules and not session_state.is_editor and new_owner in world_state.nation_data:
-            nd = world_state.nation_data[new_owner]
-            if nd.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
-                if province["id"] not in nd.get("spawned_territories", []):
-                    master = nd.get("master")
-                    if master and master in world_state.nation_data:
-                        new_owner = master
+        if apply_capture_rules:
+            new_owner = conquest_owner(context, province, new_owner)
 
         # --- NEW: If you ever lose a territory, you immediately get a claim on it ---
         old_owner = province.get("owner", "Unclaimed")

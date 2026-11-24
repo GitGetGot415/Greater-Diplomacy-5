@@ -228,7 +228,7 @@ class MovementCounterTests(unittest.TestCase):
         provinces = {name: [] for name in countries}
         seen, cleanup = [], []
 
-        def assign_air(_context, country, _units):
+        def assign_air(_context, country, _units, **_kwargs):
             seen.append((country, context.session.progress["movement_tasks"].completed, context.session.progress["movement_tasks"].total))
             if fail:
                 raise ValueError("Fixture planning failure")
@@ -237,7 +237,8 @@ class MovementCounterTests(unittest.TestCase):
             "_build_shared_pathing_caches": (set(), set(), {}),
             "_reset_orders_and_collect_units": (units, provinces),
             "_gather_enemies": [], "_compute_unsafe_waters": {},
-            "_discover_borders_and_targets": {"all_enemy_coasts": [], "enemy_coastal_waters": []},
+            "_discover_borders_and_targets": {"all_enemy_coasts": [], "enemy_coastal_waters": [],
+                                               "enemy_targets": set(), "unclaimed_targets": set(), "coastal_approaches": {}},
             "_track_battles_and_convoys": {"active_battles": set(), "lost_battles": set()},
             "_build_target_assignments": {"target_destinations": [], "naval_destinations": []}, "_repair_havens": {},
         }
@@ -253,7 +254,8 @@ class MovementCounterTests(unittest.TestCase):
             patches.enter_context(mock.patch.object(ai_movement.queries, "is_air_unit", side_effect=lambda unit, **kw: unit["kind"] == "air"))
             patches.enter_context(mock.patch.object(ai_movement.queries, "is_air_transport", return_value=False))
             patches.enter_context(mock.patch.object(ai_movement.ai_world, "for_screen",
-                return_value=SimpleNamespace(land_entry_ids=lambda country: set())))
+                return_value=SimpleNamespace(land_entry_ids=lambda country: set(), visible_provinces=lambda country: None,
+                                             provs_by_owner={})))
             if fail:
                 with self.assertRaises(ValueError):
                     ai_movement._generate_unit_orders(context)

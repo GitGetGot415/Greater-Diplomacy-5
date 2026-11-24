@@ -59,6 +59,26 @@ class SupplyFixture(TestCase):
 
 
 class SupplyTests(SupplyFixture):
+    def test_capture_projection_moves_ashore_demand_and_adds_embarked_demand(self):
+        home = province(1, "A", [2], output=(100, 100, 100))
+        target = province(2, "B", [1], output=(50, 50, 50))
+        already_ashore = division(home)
+        embarked = division(home)
+        home["units"].remove(embarked)
+        world = game(home, target)
+        snapshot = queries.SupplySnapshot(world)
+        projected = snapshot.land_supply_after_capture("A", {2: "A"}, [(2, already_ashore), (2, embarked)])
+        self.assertEqual(snapshot.status(already_ashore).readiness, 1)
+        self.assertIsNone(snapshot.status(embarked))
+        self.assertEqual(home["units"], [already_ashore])
+        self.assertEqual(target["owner"], "B")
+
+        target.update(owner="A", units=[already_ashore, embarked])
+        home["units"].clear()
+        actual = queries.SupplySnapshot(world)
+        self.assertEqual(projected, (actual.status(already_ashore), actual.status(embarked)))
+        self.assertEqual(projected[0].readiness, 0.75)
+
     def test_available_production_yields_shared_resource_ratios_and_nonlethal_attrition(self):
         tile = province(1, "A", output=(15, 20, 25))
         unit = division(tile, health=50)
