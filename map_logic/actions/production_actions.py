@@ -152,55 +152,56 @@ def cancel_production(context, country_id, province, queue, index, *, authority=
     return ProductionResult(queue, item, item.get("refund", {}), "cancelled", province_id=province.get("id"))
 
 
-def validate_queue_budget(country, commands):
-    """Check cumulative production and repair costs without changing stockpiles.
-
-    Like queries.can_afford for one order, a resource fails only when the draft charges it.
-    A stockpile already below zero does not block orders that cost none of it.
-    """
+def _calculate_draft_budget(country, commands):
+    """Calculate affordability and settlement from the same draft entries."""
     available = {key: float(country.get(key.removeprefix("cost_"), 0)) for key in COST_KEYS}
     charged = dict.fromkeys(COST_KEYS, 0.0)
+    refunds = dict.fromkeys(COST_KEYS, 0)
+    costs = dict.fromkeys(COST_KEYS, 0)
     for command in commands:
-        if command.get("type") == "province_queue":
-            for item in command.get("cancelled", []):
-                refund = item.get("refund", {}) if isinstance(item, dict) else {}
-                for key in available:
-                    available[key] += max(0, float(refund.get(key, 0)))
-            for cost in command.get("new_costs", []):
-                for key in available:
-                    available[key] -= float(cost.get(key, 0))
-                    charged[key] += float(cost.get(key, 0))
-        elif command.get("type") == "unit_order":
-            for key in available:
-                available[key] += float(command.get("unit_refund", {}).get(key, 0))
-            order = command.get("order")
-            if isinstance(order, dict) and order.get("type") == "REPAIR":
-                for key in available:
-                    available[key] -= float(order["realtime_cost"].get(key, 0))
-                    charged[key] += float(order["realtime_cost"].get(key, 0))
+        kind = command.get("type")
+        if kind == "province_queue":
+            refund_entries = (item.get("refund", {}) for item in command.get("cancelled", [])
+                              if isinstance(item, dict))
+            cost_entries = command.get("new_costs", [])
+            check_cost = True
+        elif kind == "unit_order":
+            refund_entries = (command.get("unit_refund", {}),)
+            order = command.get("order") or {}
+            check_cost = order.get("type") == "REPAIR"
+            cost_entries = (order["realtime_cost"] if check_cost else order.get("realtime_cost", {}),)
+        else:
+            continue
+
+        for refund in refund_entries:
+            for key in COST_KEYS:
+                amount = refund.get(key, 0)
+                refunds[key] += amount
+                # Keep the recorded amount for settlement. Only positive
+                # production refunds count toward affordability.
+                available[key] += max(0, float(amount)) if kind == "province_queue" else float(amount)
+        for cost in cost_entries:
+            for key in COST_KEYS:
+                amount = cost.get(key, 0)
+                costs[key] += amount
+                if check_cost:
+                    available[key] -= float(amount)
+                    charged[key] += float(amount)
+
+    # A stockpile already below zero blocks only drafts that charge it.
     if any(available[key] < 0 and charged[key] > 0 for key in COST_KEYS):
         raise ValueError("These production and repair orders exceed available resources.")
-    return available
+    return available, refunds, costs
+
+
+def validate_queue_budget(country, commands):
+    """Check cumulative production and repair costs without changing stockpiles."""
+    return _calculate_draft_budget(country, commands)[0]
 
 
 def settle_draft_budget(country, commands):
     """Settle the validated combined budget before installing domain changes."""
-    validate_queue_budget(country, commands)
-    refunds = dict.fromkeys(COST_KEYS, 0)
-    costs = dict.fromkeys(COST_KEYS, 0)
-    for command in commands:
-        if command.get("type") == "province_queue":
-            for item in command.get("cancelled", []):
-                for key in COST_KEYS:
-                    refunds[key] += item.get("refund", {}).get(key, 0)
-            for cost in command.get("new_costs", []):
-                for key in COST_KEYS:
-                    costs[key] += cost.get(key, 0)
-        elif command.get("type") == "unit_order":
-            order = command.get("order") or {}
-            for key in COST_KEYS:
-                refunds[key] += command.get("unit_refund", {}).get(key, 0)
-                costs[key] += order.get("realtime_cost", {}).get(key, 0)
+    _, refunds, costs = _calculate_draft_budget(country, commands)
     queries.refund_resources(country, refunds)
     queries.deduct_resources(country, costs)
 

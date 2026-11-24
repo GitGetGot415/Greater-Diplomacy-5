@@ -95,6 +95,20 @@ class ProductionActionTests(unittest.TestCase):
             actions.validate_queue_budget(country, [{"type": "province_queue", "cancelled": [],
                                                      "new_costs": [{"cost_materials": 1}]}])
 
+    def test_mixed_draft_keeps_recorded_refunds_and_debt_settlement(self):
+        country = {"materials": -3, "manpower": 3, "fuel": 7}
+        commands = [
+            {"type": "province_queue", "cancelled": [{}, {"refund": {"cost_manpower": 5, "cost_fuel": -2}}],
+             "new_costs": [{"cost_manpower": 2, "cost_fuel": 3}]},
+            {"type": "unit_order", "unit_refund": {"cost_manpower": 1},
+             "order": {"type": "REPAIR", "realtime_cost": {"cost_manpower": 7}}},
+        ]
+        self.assertEqual(actions.validate_queue_budget(country, commands),
+                         {"cost_materials": -3, "cost_manpower": 0, "cost_fuel": 4})
+        self.assertEqual(country, {"materials": -3, "manpower": 3, "fuel": 7})
+        actions.settle_draft_budget(country, commands)
+        self.assertEqual(country, {"materials": 0, "manpower": 0, "fuel": 2})
+
     def test_building_orders_charge_their_manpower(self):
         fixture = {"Fixture Building": {"group": "fixture", "time": 3,
                                         "cost_materials": 4, "cost_manpower": 5, "cost_fuel": 1}}
