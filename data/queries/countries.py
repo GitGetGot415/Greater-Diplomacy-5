@@ -49,6 +49,11 @@ def get_viewing_country(context):
     return session.viewing_country if session.viewing_country is not None else session.player_country
 
 
+def has_full_map_visibility(viewer, nation_data):
+    """Whether this viewer's role bypasses province fog."""
+    return viewer != c.TOURNAMENT_SPECTATOR and (viewer in ("Spectator", "Editor", "None") or viewer not in nation_data)
+
+
 def get_visible_provinces(context):
     """Calculates and returns sets of province IDs currently visible and partially visible to the player."""
     world_state = world_for(context)
@@ -64,7 +69,7 @@ def get_visible_provinces(context):
         # normal no-vision rendering behavior.
         return set(), set()
 
-    if player_country in ["Spectator", "Editor", "None"] or player_country not in nation_data:
+    if has_full_map_visibility(player_country, nation_data):
         return None, None # Returns None to signify "Full Visibility / Ignore Fog"
         
     friendly_nations = queries.get_all_friendly_nations(player_country, nation_data)

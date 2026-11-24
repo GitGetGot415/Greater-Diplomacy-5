@@ -8,6 +8,7 @@ from dataclasses import dataclass, field, replace
 
 import data.constants as c
 from data import queries
+from data.queries.countries import has_full_map_visibility
 from data.state_access import session_for, world_for
 
 
@@ -766,7 +767,7 @@ def prepare_presentation_supply(context):
         snapshot = SupplySnapshot(context)
         player = session_for(context).player_country
         scenario = world_for(context).scenario_settings
-        can_see_all = (player not in snapshot.nations and player != c.TOURNAMENT_SPECTATOR
+        can_see_all = (has_full_map_visibility(player, snapshot.nations)
                        or not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, scenario))
         statuses = {
             identity: snapshot.status(data.unit)

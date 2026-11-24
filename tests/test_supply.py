@@ -484,6 +484,32 @@ class SupplyTests(SupplyFixture):
         self.assertEqual(queries.presentation_move_speed(world, unit), 2)
         self.assertEqual(queries.presentation_move_speed(world, foreign), 5)
 
+    def test_spectator_sees_supply_with_fog_even_with_a_country_record(self):
+        tile = province(1, "A", output=(50, 50, 0))
+        unit = division(tile)
+        world = game(tile)
+        world.world.scenario_settings["fog_of_war"] = True
+        world.world.nation_data["Spectator"] = {}
+        world.session.player_country = "Spectator"
+        world.visible_provinces, _ = queries.get_visible_provinces(world)
+
+        queries.prepare_presentation_supply(world)
+        sidebar_info.prepare_unit_roster(world, tile)
+
+        status = queries.unit_supply_status(queries.presentation_supply(world), unit)
+        self.assertEqual(status, queries.SupplySnapshot(world).status(unit))
+        self.assertEqual(queries.presentation_move_speed(world, unit), 1)
+        self.assertIn("supply", world._unit_roster_cache[tile["id"]][2][id(unit)])
+        screen = bare_orders_screen()
+        screen.map_screen = world
+        self.assertTrue(any(line.startswith("Supply ") for line in screen._unit_portrait_tooltip_lines(0, unit, tile)))
+
+        for viewer in ("B", c.TOURNAMENT_SPECTATOR):
+            with self.subTest(viewer=viewer):
+                world.session.player_country = viewer
+                queries.prepare_presentation_supply(world)
+                self.assertIsNone(queries.unit_supply_status(queries.presentation_supply(world), unit))
+
     def test_orders_portrait_details_use_visible_supply_and_keep_foreign_orders_private(self):
         self.library["Supply Test Division"].update(cost_materials=900)
         tile = province(1, "A", output=(100, 0, 50))
