@@ -16,7 +16,7 @@ from beepbox_audio import (
     is_available,
     is_beepbox_song,
 )
-from compilation_scripts.html_compilation import _ignore_web_asset
+from compilation_scripts.build_support import include_asset
 from screens.menus.credits import CREDITS_DATA
 from data.platform import browser_js_source
 from tests.web_fixtures import GarblingWindow
@@ -101,9 +101,9 @@ class BeepBoxAudioTests(unittest.TestCase):
 
     def test_web_build_stages_synth_and_song_but_drops_matching_audio(self):
         song_mp3 = os.path.splitext(SONG_PATH)[0] + ".mp3"
-        self.assertFalse(_ignore_web_asset(SONG_PATH))
-        self.assertFalse(_ignore_web_asset(SYNTH_PATH))
-        self.assertTrue(_ignore_web_asset(song_mp3))
+        self.assertTrue(include_asset(SONG_PATH, "web"))
+        self.assertTrue(include_asset(SYNTH_PATH, "web"))
+        self.assertFalse(include_asset(song_mp3, "web"))
 
     @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
     def test_beepbox_source_synthesizes_pcm_from_the_song_json(self):

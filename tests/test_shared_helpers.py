@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from data.io.json_io import load_json_or_empty, render_compact_mapping, write_compact_mapping
+from data.io.json_io import load_json_or_empty, render_compact_mapping
 from data.number_utils import clamp, clamp01, clamp_float
 
 
@@ -29,7 +29,8 @@ class CompactJsonTests(unittest.TestCase):
         handle, path = tempfile.mkstemp(suffix=".json")
         os.close(handle)
         try:
-            write_compact_mapping(path, value)
+            with open(path, "w", encoding="utf-8", newline="") as file:
+                file.write(render_compact_mapping(value))
             self.assertEqual(load_json_or_empty(path), value)
         finally:
             os.unlink(path)

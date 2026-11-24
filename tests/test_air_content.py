@@ -77,7 +77,7 @@ class AirCategoryMigrationTests(unittest.TestCase):
                     self.assertEqual(library["mod_entry"][field], "MOD_CATEGORY")
                     self.assertIs(queries._load_cached_json(cache_key), library)
                     library["scenario_only_entry"] = {field: "SCENARIO"}
-                    self.assertIs(queries.reload_game_library(cache_key), library)
+                    self.assertIs(queries._load_cached_json(cache_key, reload=True), library)
                     self.assertNotIn("scenario_only_entry", library)
                     self.assertEqual(library["entry"][field], current)
                     expected = copy.deepcopy(library)
