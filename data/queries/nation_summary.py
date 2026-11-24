@@ -94,7 +94,7 @@ def can_view_complete_army(context, country_id):
 def get_country_summary(context, country_id):
     """Build a read-only country summary from information available to its viewer.
 
-    Foreign military totals count visible units, without revealing transported cargo.
+    Foreign military totals count visible units, including the cargo of visible aircraft.
     Economy figures use the existing projections only when private information is available.
     Call this when opening the summary, never during frame rendering.
     """
@@ -118,8 +118,7 @@ def get_country_summary(context, country_id):
         visible_units = province.get("units", [])
         if not complete_army:
             visible_units = queries.filter_visible_units(visible_units, viewer, province, nation_data)
-        candidates = units_with_air_cargo(visible_units) if complete_army else visible_units
-        units.extend(unit for unit in candidates if unit.get("owner") == country_id)
+        units.extend(unit for unit in units_with_air_cargo(visible_units) if unit.get("owner") == country_id)
 
     economy_available = can_view_country_economy(context, country_id)
     economy = {"available": False, "resources": []}

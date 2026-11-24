@@ -49,11 +49,6 @@ def get_viewing_country(context):
     return session.viewing_country if session.viewing_country is not None else session.player_country
 
 
-def has_full_map_visibility(viewer, nation_data):
-    """Whether this viewer's role bypasses province fog."""
-    return viewer != c.TOURNAMENT_SPECTATOR and (viewer in ("Spectator", "Editor", "None") or viewer not in nation_data)
-
-
 def get_visible_provinces(context):
     """Calculates and returns sets of province IDs currently visible and partially visible to the player."""
     world_state = world_for(context)
@@ -69,7 +64,7 @@ def get_visible_provinces(context):
         # normal no-vision rendering behavior.
         return set(), set()
 
-    if has_full_map_visibility(player_country, nation_data):
+    if player_country in ("Spectator", "Editor", "None") or player_country not in nation_data:
         return None, None # Returns None to signify "Full Visibility / Ignore Fog"
         
     friendly_nations = queries.get_all_friendly_nations(player_country, nation_data)
@@ -140,6 +135,18 @@ def get_visible_provinces(context):
     partial_set -= visible_set
     
     return visible_set, partial_set
+
+
+def get_map_fog_visibility(context):
+    """Apply the map's fog setting and hotseat viewing rules."""
+    session = session_for(context)
+    if session.selection_mode or not queries.get_scenario_flag(
+            "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_for(context).scenario_settings):
+        return None, None
+    # Blanket the map during the AI phase so hotseat players cannot see the previous player's view.
+    if session.viewing_ai_moves and len(session.active_players) > 1:
+        return set(), set()
+    return queries.get_visible_provinces(context)
 
 
 def is_province_visible(context, prov_id):

@@ -67,6 +67,13 @@ def filter_visible_units(units, viewer_nation, province, nation_data):
     return [u for u in units if queries.is_unit_visible_to(u, viewer_nation, province, nation_data)]
 
 
+def is_unit_visible_on_map(unit, viewer, province, nation_data, visible_provinces):
+    """Apply province fog and unit visibility to a viewer's map records."""
+    return (unit.get("owner") == viewer
+            or (visible_provinces is None or province["id"] in visible_provinces)
+            and queries.is_unit_visible_to(unit, viewer, province, nation_data))
+
+
 def is_hostile_territory(moving_nation, target_owner, nation_data):
     """Checks if a nation is actively at war with the target territory."""
     if target_owner in c.UNPLAYABLE_NATIONS:

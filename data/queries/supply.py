@@ -8,7 +8,7 @@ from dataclasses import dataclass, field, replace
 
 import data.constants as c
 from data import queries
-from data.queries.countries import has_full_map_visibility
+from data.queries.combat_state import is_unit_visible_on_map
 from data.state_access import session_for, world_for
 
 
@@ -694,9 +694,15 @@ class SupplySnapshot:
             return None
         return SupplyStatus.from_fractions(fractions, self.unit_data[supply_unit_key(unit)].demand)
 
-    def player_summary(self, player):
-        return {identity: self.fractions(data.unit) for identity, data in self.unit_data.items()
-                if data.owner == player and isinstance(identity, str)}
+    def visible_supply_units(self, viewer, visible_provinces):
+        return {identity: data.unit for identity, data in self.unit_data.items()
+                if is_unit_visible_on_map(data.unit, viewer, self.provinces[data.province], self.nations, visible_provinces)}
+
+    def player_summary(self, player, visible_provinces, previous=None):
+        previous = previous or {}
+        return {identity: previous[identity] if identity in previous else self.fractions(unit)
+                for identity, unit in self.visible_supply_units(player, visible_provinces).items()
+                if isinstance(identity, str)}
 
 
 @contextmanager
@@ -765,21 +771,16 @@ def prepare_presentation_supply(context):
                     for identity, unit in units.items()}
     else:
         snapshot = SupplySnapshot(context)
-        player = session_for(context).player_country
-        scenario = world_for(context).scenario_settings
-        can_see_all = (has_full_map_visibility(player, snapshot.nations)
-                       or not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, scenario))
-        statuses = {
-            identity: snapshot.status(data.unit)
-            for identity, data in snapshot.unit_data.items() if data.owner == player or can_see_all
-        }
-        units = {identity: snapshot.unit_data[identity].unit for identity in statuses}
+        viewer = queries.get_viewing_country(context)
+        visible, _ = queries.get_map_fog_visibility(context)
+        units = snapshot.visible_supply_units(viewer, visible)
+        statuses = {identity: snapshot.status(unit) for identity, unit in units.items()}
     context._supply_presentation = statuses
     context._movement_speed_presentation = {identity: unit_movement_speed(unit, supply=statuses) for identity, unit in units.items()}
 
 
 def presentation_supply(context):
-    """The cached local view, or the host's private player projection."""
+    """The cached supply view for units visible to the player."""
     return getattr(context, "_supply_presentation", None) or {}
 
 

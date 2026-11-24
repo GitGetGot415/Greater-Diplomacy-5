@@ -570,29 +570,10 @@ def refresh_fog_map(map_screen):
     """Builds a semi-transparent fog surface to darken unseen provinces."""
     timer = pygame.time.get_ticks()
     
-    # Turn off the fog entirely if disabled in constants OR if the player is currently selecting a country
-    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.world.scenario_settings) or map_screen.session.selection_mode:
+    map_screen.visible_provinces, map_screen.partial_visible_provinces = queries.get_map_fog_visibility(map_screen)
+    if map_screen.visible_provinces is None:
         map_screen.fog_map = None
-        map_screen.visible_provinces = None
-        map_screen.partial_visible_provinces = None
         return
-
-    # --- THE FIX: Blanket the entire map in fog during the AI viewing phase in multiplayer ---
-    # Prevents hotseat players from seeing Player 1's vision before the next turn starts
-    is_multiplayer = len(map_screen.session.active_players) > 1
-    if map_screen.session.viewing_ai_moves and is_multiplayer:
-        map_screen.visible_provinces = set() # Return an empty set so nothing is visible
-        map_screen.partial_visible_provinces = set()
-    else:
-    # Dynamically fetch get_visible_provinces from queries
-        vis_result = queries.get_visible_provinces(map_screen)
-        if vis_result[0] is None:
-            map_screen.fog_map = None
-            map_screen.visible_provinces = None
-            map_screen.partial_visible_provinces = None
-            return
-            
-        map_screen.visible_provinces, map_screen.partial_visible_provinces = vis_result
 
     fog_strength = map_screen.world.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
     extreme_hidden = set()

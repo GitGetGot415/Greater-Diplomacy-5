@@ -140,13 +140,17 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(province["units"], [{"type": "Fixture"}])
 
     @fast_tournament_crypto()
-    def test_host_supply_is_delivered_only_to_the_unit_owner(self):
+    def test_host_supply_is_delivered_for_units_visible_to_each_player(self):
         owner, other = list(self.keys)[:2]
         province = next(row for row in self.host.world.map_data.values() if row["owner"] == owner)
+        deployment = next(row for row in self.host.world.map_data.values() if row["owner"] == other)
         unit = {"type": "Supply fixture", "owner": owner, "unit_id": "supply-fixture", "health": 100, "max_health": 100}
+        deployed = dict(unit, unit_id="deployed-fixture")
         province["units"].append(unit)
+        deployment["units"].append(deployed)
         with mock.patch.object(queries, "get_live_unit_upkeep", return_value=dict.fromkeys(c.ECON_RESOURCE_KEYS, 100)):
-            expected = queries.SupplySnapshot(self.host).player_summary(owner)
+            supply = queries.SupplySnapshot(self.host)
+            expected = {record["unit_id"]: supply.fractions(record) for record in (unit, deployed)}
             path, payload = self.export()
         entry = payload["verification_table"][io.hash_key(self.keys[owner])]
         self.assertEqual(queries.normalize_supply_projection(io.decrypt_dict(entry["enc_player_supply"], self.keys[owner])), expected)
@@ -154,7 +158,8 @@ class TournamentArchiveTests(unittest.TestCase):
         _, restored = self.load_snapshot(path, self.keys[owner])
         self.assertEqual(queries.normalize_supply_projection(restored["player_supply"]), expected)
         _, restored = self.load_snapshot(path, self.keys[other])
-        self.assertNotIn("player_supply", restored)
+        self.assertEqual(queries.normalize_supply_projection(restored["player_supply"]),
+                         {deployed["unit_id"]: expected[deployed["unit_id"]]})
         _, restored = self.load_snapshot(path, "host-key")
         self.assertNotIn("player_supply", restored)
 

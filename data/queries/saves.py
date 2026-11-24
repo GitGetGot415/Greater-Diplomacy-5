@@ -354,13 +354,25 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
     return save_dict
 
 
+def player_snapshot_visible_provinces(context, country_id):
+    """Return the province fog mask used for multiplayer unit records."""
+    world = world_for(context)
+    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, world.scenario_settings):
+        return None
+    if country_id not in world.nation_data:
+        return set()
+    view = viewer_context(country_id, world.map_data, world.nation_data,
+                          {p["id"]: p for p in world.map_data.values()})
+    return queries.get_visible_provinces(view)[0]
+
+
 def player_snapshot_projection(context, snapshot, country_id, *, player_supply=None):
     """Filter a network save before transmission, including raw map geometry."""
     world_state = world_for(context)
     result = copy.deepcopy(snapshot)
     result.pop("tactical_player_unit_id", None)
-    result["player_supply"] = (queries.SupplySnapshot(context).player_summary(country_id)
-                               if player_supply is None else player_supply)
+    visible = player_snapshot_visible_provinces(context, country_id)
+    result["player_supply"] = queries.SupplySnapshot(context).player_summary(country_id, visible, player_supply)
     # Only the map editor uses these settings, and a background image can be large.
     result.pop("standalone_export_settings", None)
     from map_logic.system32 import unit_events
@@ -371,11 +383,6 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
     result["unit_event_read_turns"] = {
         owner: turn for owner, turn in result.get("unit_event_read_turns", {}).items()
         if owner == country_id and turn == report["turn"]}
-    view = viewer_context(country_id, world_state.map_data, world_state.nation_data,
-                          {p["id"]: p for p in world_state.map_data.values()})
-    visible, _partial = queries.get_visible_provinces(view) if country_id in world_state.nation_data else (set(), set())
-    fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                            world_state.scenario_settings)
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
         country_id, world_state.map_data, world_state.nation_data, context=context)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
@@ -403,15 +410,14 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
         original = by_key.get(key)
         if original is None:
             continue
-        can_see = not fog or visible is None or original["id"] in visible
+        can_see = visible is None or original["id"] in visible
         province["units"] = [unit for unit in province.get("units", [])
-            if unit.get("owner") == country_id or can_see and queries.is_unit_visible_to(
-                unit, country_id, original, world_state.nation_data)]
-        for unit in province["units"]:
+            if queries.is_unit_visible_on_map(unit, country_id, original, world_state.nation_data, visible)]
+        for unit in queries.units_with_air_cargo(province["units"]):
             if unit.get("owner") != country_id:
                 # Visible troops' Hold preferences classify the battle's enemy
                 # reserve panels; their missions and lane targets remain private.
-                for field in ("order", "lane_target", "repair_trip", "air_cargo"):
+                for field in ("order", "lane_target", "repair_trip"):
                     unit.pop(field, None)
         if original.get("owner") != country_id:
             for field in ("building_queue", "unit_queue", "orders"):

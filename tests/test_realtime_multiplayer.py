@@ -1326,7 +1326,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             self.assertEqual(len(units), 2)
             visible_enemy = next(unit for unit in units if unit.get('unit_id') == 'visible')
             self.assertEqual(visible_enemy['combat_stance'], 'RESERVE')
-            self.assertFalse(set(visible_enemy) & {'order', 'lane_target', 'repair_trip', 'air_cargo'})
+            self.assertFalse(set(visible_enemy) & {'order', 'lane_target', 'repair_trip'})
             self.assertEqual(records['foreign']['units'], [])
         # Only the map editor uses these settings.
         self.assertNotIn('standalone_export_settings', projected)

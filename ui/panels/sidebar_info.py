@@ -78,7 +78,7 @@ def prepare_unit_roster(map_screen, province):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
             row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.world.nation_data, is_combat, library=library)
-            if (cargo := unit.get("air_cargo")) and queries.can_view_complete_army(map_screen, unit["owner"]):
+            if cargo := unit.get("air_cargo"):
                 row["cargo"] = [(member.get("custom_name") or queries.get_condensed_unit_name(member["type"], library, context=map_screen),
                                  queries.format_health_percent(member)) for member in cargo]
             status = queries.unit_supply_status(supply, unit)

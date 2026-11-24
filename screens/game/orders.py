@@ -863,8 +863,8 @@ class Orders_Screen(UnitCommandControls, Screen):
         map_screen = self.map_screen
         nations = map_screen.world.nation_data
         is_own = owner == map_screen.session.player_country
-        if not is_own and (not queries.is_province_visible(map_screen, province["id"])
-                           or not queries.is_unit_visible_to(unit, map_screen.session.player_country, province, nations)):
+        if not queries.is_unit_visible_on_map(unit, map_screen.session.player_country, province, nations,
+                                              map_screen.visible_provinces):
             return ()
 
         library = queries.get_unit_library(map_screen)
@@ -877,20 +877,35 @@ class Orders_Screen(UnitCommandControls, Screen):
         if unit.get("volunteer_host"):
             lines.append(f"Volunteer: {queries.get_country_display_name(unit['volunteer_host'], nations)}")
 
+        lines.extend(self._unit_portrait_stat_lines(unit, province, nations, library))
+        if is_own and (order_summary := self._row_order_summaries.get(row_key)):
+            lines.append(order_summary[0])
+        for member in unit.get("air_cargo", ()):
+            kind = queries.get_unit_display_name(member["type"], library, context=map_screen)
+            lines.append(f"Cargo: {member.get('custom_name') or kind}")
+            lines.extend(self._unit_portrait_stat_lines(member, province, nations, library, embarked=True))
+        return lines
+
+    def _unit_portrait_stat_lines(self, unit, province, nations, library, *, embarked=False):
+        map_screen = self.map_screen
         supply = queries.presentation_supply(map_screen)
         with queries.combat_supply(supply):
-            active = queries.is_province_in_active_combat(province, nations)
+            active = not embarked and queries.is_province_in_active_combat(province, nations)
             stats = sidebar_info.unit_roster_row(unit, province, nations, active, library=library)
         hp, max_hp = self._unit_row_health(unit)
-        lines.append(f"HP {hp:,.0f} / {max_hp:,.0f}")
+        lines = [f"HP {hp:,.0f} / {max_hp:,.0f}"]
         number = queries.format_number
         defense = number(stats["defense"])
-        if stats["fort"]:
+        if stats["fort"] and not embarked:
             defense += f" + {number(stats['fort'])}"
         lines.append(f"Attack {number(stats['attack'])} | Defense {defense} | Speed {number(stats['speed'])}")
         if stats["bombard"] is not None:
             damage, attack_range = stats["bombard"]
             lines.append(f"Bombardment {number(damage)} | Range {number(attack_range)}")
+
+        if embarked:
+            lines.append("Supply: N/A (embarked)")
+            return lines
 
         status = queries.unit_supply_status(supply, unit)
         if status is not None:
@@ -902,8 +917,6 @@ class Orders_Screen(UnitCommandControls, Screen):
                 fuel_percent, speed_change = fuel_readout
                 speed_note = f" | Speed {speed_change:+g}" if speed_change else ""
                 lines.append(f"Fuel: {fuel_percent}{speed_note}")
-        if is_own and (order_summary := self._row_order_summaries.get(row_key)):
-            lines.append(order_summary[0])
         return lines
 
     def _hovered_portrait_tooltip(self, position):

@@ -388,7 +388,8 @@ def export_tournament(context, file_path, master_key, keys_dict):
         if cid in peace_choices:
             entry["enc_peace_choices"] = encrypt_dict(peace_choices[cid], keys_dict[cid])
         if entry.get("role") == "PLAYER":
-            summary = supply.player_summary(cid)
+            visible = queries.player_snapshot_visible_provinces(context, cid)
+            summary = supply.player_summary(cid, visible)
             if summary:
                 entry["enc_player_supply"] = encrypt_dict(summary, keys_dict[cid], compress=True)
 

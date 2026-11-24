@@ -323,7 +323,7 @@ class SupplyTests(SupplyFixture):
         self.assertEqual(snapshot.fractions(unit), (0, 0, 0))
         self.assertEqual(snapshot.fractions(unit, network=snapshot.sea_projection("A", reopen=(3,))), (1, 1, 1))
 
-    def test_sea_blockade_takes_both_routes_and_exposes_only_owned_summary(self):
+    def test_sea_blockade_takes_both_routes_and_hides_submarines_in_projection(self):
         front = province(1, "A", [2, 3], coast=True)
         north = province(2, "Ocean", [1, 4], sea=True)
         south = province(3, "Ocean", [1, 4], sea=True)
@@ -465,7 +465,9 @@ class SupplyTests(SupplyFixture):
         tile = province(1, "A", output=(100, 0, 50))
         unit = division(tile, speed=5)
         foreign = division(tile, "C", speed=5)
-        world = game(tile)
+        behind_fog = province(2, "C")
+        hidden = division(behind_fog, "C")
+        world = game(tile, behind_fog)
         world.world.scenario_settings["fog_of_war"] = True
         snapshot = queries.player_snapshot_projection(world, queries.build_save_dict(world), "A")
         world.player_supply_projection = queries.normalize_supply_projection(snapshot["player_supply"])
@@ -474,15 +476,20 @@ class SupplyTests(SupplyFixture):
         sidebar_info.prepare_unit_roster(world, tile)
 
         rows = world._unit_roster_cache[tile["id"]][2]
-        self.assertEqual(world.player_supply_projection, {unit["unit_id"]: (1, 0, 0.5)})
+        self.assertEqual(world.player_supply_projection, {unit["unit_id"]: (1, 0, 0.5), foreign["unit_id"]: (0, 0, 0)})
+        self.assertNotIn(hidden["unit_id"], world.player_supply_projection)
         self.assertIn("10%", rows[id(unit)]["supply"][0])
         self.assertEqual(rows[id(unit)]["fuel"], ("50%", -3))
         with queries.combat_supply(queries.presentation_supply(world)):
             self.assertAlmostEqual(queries.unit_supply_multiplier(unit), 0.1)
-        self.assertNotIn("supply", rows[id(foreign)])
-        self.assertNotIn("fuel", rows[id(foreign)])
+        self.assertIn("supply", rows[id(foreign)])
+        self.assertIn("fuel", rows[id(foreign)])
         self.assertEqual(queries.presentation_move_speed(world, unit), 2)
-        self.assertEqual(queries.presentation_move_speed(world, foreign), 5)
+        self.assertEqual(queries.presentation_move_speed(world, foreign), 1)
+
+        legacy = {unit["unit_id"]: (1, 0, 0.5)}
+        upgraded = queries.player_snapshot_projection(world, queries.build_save_dict(world), "A", player_supply=legacy)
+        self.assertEqual(upgraded["player_supply"], world.player_supply_projection)
 
     def test_spectator_sees_supply_with_fog_even_with_a_country_record(self):
         tile = province(1, "A", output=(50, 50, 0))
@@ -533,6 +540,28 @@ class SupplyTests(SupplyFixture):
 
         foreign_lines = screen._unit_portrait_tooltip_lines(1, foreign, tile)
         self.assertTrue(foreign_lines)
-        self.assertFalse(any("| Manpower " in line or line.startswith(("Fuel:", "Move:")) for line in foreign_lines))
+        self.assertTrue(any(line.startswith("Supply ") for line in foreign_lines))
+        self.assertTrue(any(line.startswith("Fuel:") for line in foreign_lines))
+        self.assertFalse(any(line.startswith("Move:") for line in foreign_lines))
         world.visible_provinces.clear()
         self.assertFalse(screen._unit_portrait_tooltip_lines(1, foreign, tile))
+
+    def test_visible_foreign_transport_shows_its_passengers(self):
+        tile = province(1, "A")
+        passenger = division(tile, "B", custom_name="Carried division")
+        tile["units"].remove(passenger)
+        plane = division(tile, "B", kind="Supply Test Plane", air_cargo=[passenger])
+        world = game(tile)
+        world.world.scenario_settings["fog_of_war"] = True
+        world.visible_provinces, _ = queries.get_map_fog_visibility(world)
+        queries.prepare_presentation_supply(world)
+        sidebar_info.prepare_unit_roster(world, tile)
+
+        row = world._unit_roster_cache[tile["id"]][2][id(plane)]
+        self.assertEqual(row["cargo"][0][0], passenger["custom_name"])
+        screen = bare_orders_screen()
+        screen.map_screen = world
+        lines = screen._unit_portrait_tooltip_lines(0, plane, tile)
+        self.assertTrue(any(passenger["custom_name"] in line for line in lines))
+        self.assertEqual(sum(line.startswith("Attack ") for line in lines), 2)
+        self.assertIsNone(queries.SupplySnapshot(world).status(passenger))

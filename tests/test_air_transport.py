@@ -786,15 +786,24 @@ class TransportTests(unittest.TestCase):
         self.assertIn(self.plane, self.base["units"])
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
 
-    def test_snapshot_hides_foreign_cargo_even_without_fog(self):
+    def test_snapshot_shows_visible_foreign_cargo_without_orders(self):
         self.load()
+        self.cargo["order"] = {"type": "MOVE", "path": []}
         snapshot = queries.build_save_dict(self.game)
         self.game.world.scenario_settings["fog_of_war"] = False
         projected = queries.player_snapshot_projection(self.game, snapshot, "B")
         foreign = projected["provinces"][self.base["json_key"]]["units"][0]
-        self.assertNotIn("air_cargo", foreign)
+        projected_cargo, = foreign["air_cargo"]
+        self.assertEqual(projected_cargo["unit_id"], self.cargo["unit_id"])
+        self.assertEqual(projected_cargo["health"], self.cargo["health"])
+        self.assertNotIn("order", projected_cargo)
         own = queries.player_snapshot_projection(self.game, snapshot, "A")
         self.assertEqual(own["provinces"][self.base["json_key"]]["units"][0]["air_cargo"], [self.cargo])
+
+        self.game.world.scenario_settings["fog_of_war"] = True
+        with patch.object(queries, "get_visible_provinces", return_value=(set(), set())):
+            hidden = queries.player_snapshot_projection(self.game, snapshot, "B")
+        self.assertEqual(hidden["provinces"][self.base["json_key"]]["units"], [])
 
     def import_client(self, client, transform=None):
         with tempfile.TemporaryDirectory() as directory:
