@@ -1,6 +1,5 @@
 from data.state_access import world_for, session_for
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
-import random
 from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_director, ai_evaluation,
                           ai_handler, ai_letters, ai_llm_runner, ai_opinion,
@@ -886,9 +885,12 @@ def _declare_war_for_cores_and_claims(bag, context, ai_name, my_enemies, my_mast
         desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
         if desire >= ai_tuning.AI_WAR_DESIRE_THRESHOLD:
 
-            # Random chance to actually declare war
+            # The chance to actually declare war, rolled so the same save makes
+            # the same declarations whatever order the nations are processed in.
             war_chance = float(world_state.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
-            if random.random() <= war_chance:
+            roll = ai_candidates.stable_fraction(ai_personality.scenario_seed(world_state.scenario_settings),
+                                                 ai_name, target, current_turn, "WAR_DECLARATION")
+            if roll < war_chance:
                 has_wargoal = queries.has_wargoal(ai_name, target, world_state.nation_data, world_state.map_data)
                 if has_wargoal:
                     if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target, "WAR_DECLARATION"):
@@ -1128,6 +1130,17 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
                 bag.add_initiative(ai_candidates.make(action, other, score, rationale, **payload))
 
 
+def _claim_rank(prov):
+    """Sort key putting the province most worth claiming first.
+
+    A claim is what makes land cheaper to take at the peace table (see
+    deal.tile_value_between), so it goes on the land worth the most there,
+    valued as the peace terms value it. Ties go to the lowest id so a re-run
+    claims the same province.
+    """
+    return (-deal_mod.tile_value(prov), str(prov["id"]))
+
+
 def _fabricate_claims_during_war(context, ai_name, data, my_enemies, active_nations):
     """Section 4.5: while at war and with no claim queued, picks one enemy
     province (preferring one bordering territory we already hold or claim) to fabricate a claim on."""
@@ -1158,9 +1171,9 @@ def _fabricate_claims_during_war(context, ai_name, data, my_enemies, active_nati
 
     chosen_target = None
     if potential_targets_adjacent:
-        chosen_target = random.choice(potential_targets_adjacent)
+        chosen_target = min(potential_targets_adjacent, key=lambda item: _claim_rank(item[1]))
     elif potential_targets_any:
-        chosen_target = random.choice(potential_targets_any)
+        chosen_target = min(potential_targets_any, key=lambda item: _claim_rank(item[1]))
 
     if chosen_target:
         target_enemy, target_prov = chosen_target
@@ -1213,7 +1226,7 @@ def _fabricate_claims_on_weaker_neighbors(context, ai_name, data, my_master, my_
                         coastal_ids = world.sea_targets.get(ai_name, {}).get(neighbor, set())
                         valid_targets = [p for p in valid_targets if p["id"] in coastal_ids]
                     if valid_targets:
-                        target_prov = random.choice(valid_targets)
+                        target_prov = min(valid_targets, key=_claim_rank)
                         queue = data.setdefault("claim_queue", [])
 
                         # Ensure it's not already in the queue

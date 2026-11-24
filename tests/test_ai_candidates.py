@@ -305,5 +305,49 @@ class NearbySeaTargetTests(unittest.TestCase):
                          [("WAR_DECLARATION", "B")])
 
 
+class WarRollTests(unittest.TestCase):
+    """The declaration chance is a roll a re-run repeats, not module `random`."""
+
+    def declarations(self, chance):
+        game = NearbySeaTargetTests().make_game()
+        game.world.scenario_settings["ai_war_declaration_chance"] = chance
+        game.world.nation_data["A"]["claims"] = [game.home_of("B")["id"]]
+        world = ai_world.build(game)
+        bag = ac.Collector("A", game.world.nation_data["A"]["pending_diplomacy"])
+        ai_diplomacy._declare_war_for_cores_and_claims(
+            bag, game, "A", [], "", "", False, {"A", "B", "C", "D"}, world)
+        return [(choice.action, choice.target) for choice in bag.ranked()]
+
+    def test_chance_zero_never_declares(self):
+        self.assertEqual(self.declarations(0.0), [])
+
+    def test_the_same_save_makes_the_same_decision(self):
+        self.assertEqual(self.declarations(0.5), self.declarations(0.5))
+
+    def test_the_roll_is_fixed_by_its_parts_and_below_one(self):
+        first = ac.stable_fraction("seed", "A", "B", 3, "WAR_DECLARATION")
+        self.assertEqual(first, ac.stable_fraction("seed", "A", "B", 3, "WAR_DECLARATION"))
+        self.assertNotEqual(first, ac.stable_fraction("seed", "A", "B", 4, "WAR_DECLARATION"))
+        self.assertTrue(0.0 <= first < 1.0)
+
+
+class WartimeClaimTests(unittest.TestCase):
+    """A wartime claim goes on the enemy land worth the most, next to ours first."""
+
+    def test_the_richest_adjacent_province_is_claimed(self):
+        game = StubMapScreen(["A", "B"], human_players=[])
+        game.set_war("A", "B")
+        home = game.home_of("A")
+        plain = game.add_province("B")
+        rich = game.add_province("B", buildings=["Fixture Works"])
+        # Worth more still, but not next to anything of ours.
+        game.add_province("B", buildings=["Fixture Works", "Fixture Works"])
+        game.border(home["id"], plain["id"])
+        game.border(home["id"], rich["id"])
+        data = game.world.nation_data["A"]
+        ai_diplomacy._fabricate_claims_during_war(game, "A", data, ["B"], {"A", "B"})
+        self.assertEqual([entry["prov_id"] for entry in data["claim_queue"]], [rich["id"]])
+
+
 if __name__ == "__main__":
     unittest.main()

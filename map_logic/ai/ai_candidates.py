@@ -183,18 +183,30 @@ def describe(candidate):
     return f"{head} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
 
 
+def stable_fraction(*parts):
+    """A number in [0, 1), like random.random(), fixed by `parts`.
+
+    For AI choices a re-run must repeat. `stable_fraction(...) < chance` is
+    never true at chance 0 and always true at chance 1.
+
+    Not `random`: the same save re-run has to make the same choices, whatever
+    order the nations happen to be processed in, and ai_personality already
+    establishes hashing the names as how this codebase gets determinism it can
+    reproduce.
+    """
+    key = "|".join(str(part) for part in parts)
+    digest = hashlib.sha256(key.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "big") / float(1 << 32)
+
+
 def _haggle(nation, partner, turn, spread=ai_tuning.AI_TRADE_JITTER):
     """A stable per-pair, per-turn wobble in 1±spread.
 
-    Not `random`: the same save re-run has to make the same offers, and
-    ai_personality already establishes hashing the names as how this codebase
-    gets determinism it can reproduce. Without it every nation on the map sizes
-    its offer with the same arithmetic and arrives at the same round number,
-    which is what made the AI's proposals read as one copy-pasted message.
+    Without it every nation on the map sizes its offer with the same arithmetic
+    and arrives at the same round number, which is what made the AI's proposals
+    read as one copy-pasted message.
     """
-    digest = hashlib.sha256(f"{nation}|{partner}|{turn}".encode("utf-8")).digest()
-    unit_interval = int.from_bytes(digest[:4], "big") / float(0xFFFFFFFF)
-    return 1.0 + spread * (unit_interval * 2.0 - 1.0)
+    return 1.0 + spread * (stable_fraction(nation, partner, turn) * 2.0 - 1.0)
 
 
 def _negotiators_number(amount, ceiling=None):
