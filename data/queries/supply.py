@@ -699,6 +699,7 @@ class SupplySnapshot:
                 if is_unit_visible_on_map(data.unit, viewer, self.provinces[data.province], self.nations, visible_provinces)}
 
     def player_summary(self, player, visible_provinces, previous=None):
+        """Share authoritative coverage for visible units, filling older owner-only projections."""
         previous = previous or {}
         return {identity: previous[identity] if identity in previous else self.fractions(unit)
                 for identity, unit in self.visible_supply_units(player, visible_provinces).items()

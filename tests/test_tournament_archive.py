@@ -164,6 +164,28 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertNotIn("player_supply", restored)
 
     @fast_tournament_crypto()
+    def test_public_unfogged_archive_shows_supply_and_visible_cargo(self):
+        owner = next(iter(self.keys))
+        province = next(row for row in self.host.world.map_data.values() if row["owner"] == owner)
+        unit = {"type": "Supply fixture", "owner": owner, "unit_id": "supply-fixture", "health": 100, "max_health": 100}
+        cargo = dict(unit, unit_id="cargo-fixture", order={"type": "MOVE", "path": []})
+        plane = dict(unit, type="Transport fixture", unit_id="transport-fixture", air_cargo=[cargo])
+        province["units"] = [unit, plane]
+        self.host.world.scenario_settings["fog_of_war"] = False
+
+        with (mock.patch.object(queries, "get_live_unit_upkeep", return_value=dict.fromkeys(c.ECON_RESOURCE_KEYS, 100)),
+              mock.patch.object(queries, "get_unit_library", return_value={"Transport fixture": {"air_role": "transport"}})):
+            expected = queries.SupplySnapshot(self.host).fractions(unit)
+            path, _ = self.export()
+
+        _, restored = self.load_snapshot(path, c.TOURNAMENT_SPECTATOR_KEY)
+        self.assertEqual(queries.normalize_supply_projection(restored["player_supply"]), {unit["unit_id"]: expected})
+        public_plane = restored["provinces"][province["json_key"]]["units"][1]
+        public_cargo, = public_plane["air_cargo"]
+        self.assertEqual(public_cargo["unit_id"], cargo["unit_id"])
+        self.assertNotIn("order", public_cargo)
+
+    @fast_tournament_crypto()
     def test_snapshot_stores_current_provinces_once_and_regenerates_overlays(self):
         path, payload = self.export()
         snapshot = io.decrypt_dict(payload["game_data"], self.host.session.multiplayer_session_key)

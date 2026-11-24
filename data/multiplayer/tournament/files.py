@@ -156,7 +156,7 @@ def _strip_spectator_countries(nation_data, *, for_archive=False):
             country.pop(key, None)
 
 
-def _strip_spectator_provinces(provinces, *, for_archive=False):
+def _strip_spectator_provinces(provinces, *, for_archive=False, show_cargo=False):
     if not isinstance(provinces, dict):
         return
     for province in provinces.values():
@@ -166,8 +166,11 @@ def _strip_spectator_provinces(provinces, *, for_archive=False):
             province.update(building_queue=[], unit_queue=[], orders=[])
         for unit in province.get("units", []):
             if isinstance(unit, dict):
-                unit.pop("order", None)
-                unit.pop("air_cargo", None)
+                if not show_cargo:
+                    unit.pop("air_cargo", None)
+                for record in queries.units_with_air_cargo([unit]):
+                    if isinstance(record, dict):
+                        queries.strip_private_unit_orders(record)
 
 
 def strip_sensitive_data_for_tournament_spectator(context):
@@ -187,10 +190,11 @@ def strip_sensitive_data_for_tournament_spectator(context):
     session_state.current_player_index = 0
 
     _strip_spectator_countries(world_state.nation_data)
-    _strip_spectator_provinces(world_state.map_data)
+    _strip_spectator_provinces(world_state.map_data, show_cargo=not queries.get_scenario_flag(
+        "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings))
 
 
-def build_tournament_spectator_save(save_dict):
+def build_tournament_spectator_save(save_dict, *, player_supply=None):
     """Return the public, fog-limited projection stored for spectators.
 
     The spectator key must never disclose the session key that decrypts the
@@ -205,13 +209,17 @@ def build_tournament_spectator_save(save_dict):
     spectator_save["unit_event_log"] = {
         "turn": spectator_save.get("date", {}).get("total_turns", 0), "events": []}
     spectator_save["unit_event_read_turns"] = {}
+    show_units = not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, save_dict.get("scenario_settings", {}))
+    spectator_save.pop("player_supply", None)
+    if show_units and player_supply is not None:
+        spectator_save["player_supply"] = player_supply
 
     _strip_spectator_countries(spectator_save.get("nation_data"), for_archive=True)
-    _strip_spectator_provinces(spectator_save.get("provinces"), for_archive=True)
+    _strip_spectator_provinces(spectator_save.get("provinces"), for_archive=True, show_cargo=show_units)
     # A self-contained tournament also includes raw geometry. Older maps may
     # have mutable province fields mixed into that geometry, so scrub the same
     # fields defensively before writing the public projection.
-    _strip_spectator_provinces(spectator_save.get("_raw_map_data"), for_archive=True)
+    _strip_spectator_provinces(spectator_save.get("_raw_map_data"), for_archive=True, show_cargo=show_units)
 
     return spectator_save
 
@@ -396,8 +404,10 @@ def export_tournament(context, file_path, master_key, keys_dict):
     context.session.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key, compress=True)
+    spectator_visible = queries.player_snapshot_visible_provinces(context, c.TOURNAMENT_SPECTATOR)
+    spectator_supply = supply.player_summary(c.TOURNAMENT_SPECTATOR, spectator_visible) if spectator_visible is None else None
     spectator_game_data_enc = encrypt_dict(
-        build_tournament_spectator_save(save_dict), c.TOURNAMENT_SPECTATOR_KEY, compress=True)
+        build_tournament_spectator_save(save_dict, player_supply=spectator_supply), c.TOURNAMENT_SPECTATOR_KEY, compress=True)
     history_enc = None # History omitted for tournament saves to reduce file size
     
     payload = {

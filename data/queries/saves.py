@@ -354,6 +354,12 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
     return save_dict
 
 
+def strip_private_unit_orders(unit):
+    # Hold preferences still classify the visible enemy reserve panels.
+    for field in ("order", "lane_target", "repair_trip"):
+        unit.pop(field, None)
+
+
 def player_snapshot_visible_provinces(context, country_id):
     """Return the province fog mask used for multiplayer unit records."""
     world = world_for(context)
@@ -415,10 +421,7 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
             if queries.is_unit_visible_on_map(unit, country_id, original, world_state.nation_data, visible)]
         for unit in queries.units_with_air_cargo(province["units"]):
             if unit.get("owner") != country_id:
-                # Visible troops' Hold preferences classify the battle's enemy
-                # reserve panels; their missions and lane targets remain private.
-                for field in ("order", "lane_target", "repair_trip"):
-                    unit.pop(field, None)
+                strip_private_unit_orders(unit)
         if original.get("owner") != country_id:
             for field in ("building_queue", "unit_queue", "orders"):
                 province[field] = []

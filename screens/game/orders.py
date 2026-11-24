@@ -882,7 +882,10 @@ class Orders_Screen(UnitCommandControls, Screen):
             lines.append(order_summary[0])
         for member in unit.get("air_cargo", ()):
             kind = queries.get_unit_display_name(member["type"], library, context=map_screen)
-            lines.append(f"Cargo: {member.get('custom_name') or kind}")
+            name = member.get("custom_name") or kind
+            lines.append(f"Cargo: {name}")
+            if name != kind:
+                lines.append(kind)
             lines.extend(self._unit_portrait_stat_lines(member, province, nations, library, embarked=True))
         return lines
 

@@ -97,26 +97,27 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(queries.get_country_summary(game, "A")["politics"]["drift"], 1)
         self.assertIsNone(queries.get_country_summary(game, "B")["politics"]["drift"])
 
-    def test_foreign_totals_exclude_fogged_units_hidden_submarines_and_cargo(self):
+    def test_foreign_totals_count_visible_cargo_and_exclude_hidden_units(self):
         game = world()
         visible = game.home_of("B")["units"][0]
         plane = unit("B", kind="Transport fixture")
-        plane["air_cargo"] = [unit("B", attack=999)]
+        cargo = unit("B", attack=999)
+        plane["air_cargo"] = [cargo]
         game.home_of("B")["units"].extend([unit("B", kind="Submarine fixture"), plane])
         hidden = game.add_province("B", units=[unit("B", attack=999)])
         self.assertNotIn(hidden["id"], game.visible_provinces)
         summary = queries.get_country_summary(game, "B")
         self.assertFalse(summary["military"]["complete"])
-        self.assertEqual(summary["military"]["unit_count"], 2)
+        self.assertEqual(summary["military"]["unit_count"], 3)
         self.assertEqual(summary["military"]["damage_output"],
-                         combat_rules.volley([visible, plane], nation_data=game.world.nation_data))
-        self.assertEqual(summary["military"]["raw_damage_output"], combat_rules.volley([visible, plane]))
+                         combat_rules.volley([visible, plane, cargo], nation_data=game.world.nation_data))
+        self.assertEqual(summary["military"]["raw_damage_output"], combat_rules.volley([visible, plane, cargo]))
         self.assertFalse(summary["economy"]["available"])
         self.assertEqual(summary["economy"]["resources"], [])
         self.assertNotIn("conscription", summary["economy"])
         self.assertNotIn("conversion", summary["economy"])
 
-    def test_own_cargo_counts_without_revealing_foreign_cargo(self):
+    def test_own_cargo_counts_in_military_totals(self):
         game = world()
         game.home_of("A")["units"][0]["air_cargo"] = [unit("A")]
         self.assertEqual(queries.get_country_summary(game, "A")["military"]["unit_count"], 2)
