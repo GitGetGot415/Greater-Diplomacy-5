@@ -15,7 +15,7 @@ from data.multiplayer.tournament import files as tournament_files
 from map_logic.ai.ai_evaluation import evaluate_verdict
 from map_logic.ai.scripted_events import scripted_event_response_preview
 from map_logic.diplomacy import guarantees, military_attaches, peace_scope, player_diplomacy_actions, volunteers
-from map_logic.diplomacy.action_definitions import availability
+from map_logic.diplomacy.action_definitions import UNILATERAL_ACTIONS, availability
 from map_logic.system32 import turn_manager, unit_events
 from screens.editors import menus as editor_menus
 from screens.editors import scripted_events_editor
@@ -1277,7 +1277,7 @@ def _update_foreign_country_buttons(map_screen, owner):
     in_same_faction = queries.are_in_same_faction(map_screen.session.player_country, owner, map_screen.world.nation_data)
     pending_action, pending_turns = queries.get_diplomatic_status(map_screen.session.player_country, owner, map_screen.world.nation_data)
 
-    is_unilateral_pending = pending_action in c.UNILATERAL_ACTIONS
+    is_unilateral_pending = pending_action in UNILATERAL_ACTIONS
     if is_unilateral_pending and pending_turns > 0:
         pending_action = ""
         pending_turns = 0

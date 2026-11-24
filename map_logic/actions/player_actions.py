@@ -16,7 +16,7 @@ from data.state_access import BackendState
 from data import queries
 from map_logic.diplomacy import volunteers, faction_actions, diplomacy_messages, peace_scope, diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
-from map_logic.diplomacy.action_definitions import availability
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS, availability
 from map_logic.actions import unit_actions, production_actions
 from map_logic.actions.production_actions import (
     validate_queue_budget,
@@ -699,7 +699,7 @@ class PlayerActions:
             raise PlayerActionError("Invalid diplomacy draft.")
         if any(len(value) > 100 for value in (pending, responses, draft_lists)):
             raise PlayerActionError("Too many diplomatic actions in one turn.")
-        allowed_actions = set(c.UNILATERAL_ACTIONS) | set(c.BILATERAL_ACTIONS)
+        allowed_actions = set(UNILATERAL_ACTIONS) | set(BILATERAL_ACTIONS)
 
         def target_ok(target: Any, action=None) -> str:
             if (not isinstance(target, str) or (target == country_id and action not in c.SELF_TARGETED_ACTIONS) or
@@ -761,7 +761,7 @@ class PlayerActions:
             if not isinstance(info, dict):
                 raise PlayerActionError("Invalid diplomatic response.")
             verdict, action = info.get("verdict"), info.get("action")
-            if verdict not in ("ACCEPT", "REJECT") or action not in c.BILATERAL_ACTIONS:
+            if verdict not in ("ACCEPT", "REJECT") or action not in BILATERAL_ACTIONS:
                 raise PlayerActionError("Invalid diplomatic response.")
             entry = {"verdict": verdict, "action": action,
                      "message": text(info.get("message", ""), "response message")}

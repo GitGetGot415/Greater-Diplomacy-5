@@ -9,7 +9,7 @@ from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, global_
 from map_logic.diplomacy import volunteers, war_calls
 from map_logic.diplomacy import guarantees
 from map_logic.diplomacy import military_attaches
-from map_logic.diplomacy.action_definitions import availability
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, availability
 import data.constants as c
 
 
@@ -229,7 +229,7 @@ def _answer_incoming_request(context, target, verdict, custom_msg):
     if not can_edit_diplomacy(context):
         return None
     action, incoming_turns = queries.get_diplomatic_status(target, context.session.player_country, context.world.nation_data)
-    if incoming_turns <= 0 or action not in c.BILATERAL_ACTIONS:
+    if incoming_turns <= 0 or action not in BILATERAL_ACTIONS:
         return None
 
     # Re-clicking the same verdict is an undo, handled inside the toggle.

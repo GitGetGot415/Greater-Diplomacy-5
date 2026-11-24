@@ -1,11 +1,11 @@
 """Declare diplomatic categories, legality, and existing execution phases."""
 
-# Constants import these definitions during initialization. Load rule dependencies inside checks so definitions remain available during that import.
-
-
-
-
 from dataclasses import dataclass
+
+import data.constants as c
+from data.state_access import world_for
+
+# Queries and the diplomacy rule modules import these definitions, so each check loads them when it runs.
 
 
 @dataclass(frozen=True)
@@ -66,7 +66,6 @@ def _check_faction_control(context, sender, target, action_type, nation_data, se
 
 def _check_war_declaration(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    import data.constants as c
     if sender == target:
         return (False, 'a country cannot declare war on itself')
     if queries.are_at_war(sender, target, nation_data):
@@ -94,8 +93,6 @@ def _check_ceasefire(context, sender, target, action_type, nation_data, sender_d
 
 def _factions_disabled(context):
     from data import queries
-    import data.constants as c
-    from data.state_access import world_for
     return queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS,
                                      world_for(context).scenario_settings)
 
@@ -352,10 +349,7 @@ LITE_RESPONSE_KEYS = {action: definition.lite_response for action, definition in
 
 
 def handlers_for(field, namespace):
-    """Resolve names in the owning module once its handlers have been defined.
-
-    Constants import the definitions before the execution modules can load.
-    """
+    """Resolve names in the owning module once its handlers have been defined."""
     handlers = {}
     for action, definition in ACTION_DEFINITIONS.items():
         name = getattr(definition, field)
@@ -369,8 +363,7 @@ def availability(context, sender, target, action, *, phase="draft", scripted=Fal
 
     `scripted` says a scripted event chose this action, which global rules may exempt.
     """
-    from data.state_access import world_for
-    from map_logic.diplomacy import global_rules
+    from map_logic.diplomacy import global_rules, peace_scope
     world = world_for(context)
     nation_data = world.nation_data
     sender_data, target_data = nation_data.get(sender), nation_data.get(target)
@@ -385,7 +378,6 @@ def availability(context, sender, target, action, *, phase="draft", scripted=Fal
         return Availability(False, "unknown diplomatic action")
     allowed, reason = definition.legality(context, sender, target, action, nation_data, sender_data, target_data)
     if allowed and action in ("PEACE_TREATY", "CEASEFIRE"):
-        from map_logic.diplomacy import peace_scope
         send_turn = world.time_manager.total_turns if phase == "send" else None
         reason = peace_scope.offer_block_reason(sender, target, nation_data, responses=responses, send_turn=send_turn)
         allowed = not reason

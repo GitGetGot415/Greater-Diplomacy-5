@@ -16,7 +16,7 @@ from ui.dialogs import pickers
 from ui.background_styles import MESSAGE_PANEL_STYLES
 
 from map_logic.diplomacy import peace_scope, player_diplomacy_actions, ratification, war_calls
-from map_logic.diplomacy.action_definitions import availability
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, availability
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
 from screens.game.deal_screen import open_trade_menu
 
@@ -888,7 +888,7 @@ class Messages_Screen(Screen):
                 ]})
 
         action, turns = queries.get_diplomatic_status(target, player, nation_data)
-        if turns > 0 and action in c.BILATERAL_ACTIONS:
+        if turns > 0 and action in BILATERAL_ACTIONS:
             reason = war_calls.request_block_reason(action, target, player, nation_data)
             if reason:
                 # Preview the reason locally. Turn resolution records the outcome in both inboxes.

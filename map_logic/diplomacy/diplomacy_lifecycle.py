@@ -11,6 +11,7 @@ import uuid
 
 import data.constants as c
 from data.state_access import world_for
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
 
 
 class RequestState(Enum):
@@ -25,7 +26,7 @@ def request_state(record):
     age = record.get("turns", 0)
     if age == 0:
         return RequestState.SCHEDULED if record.get("timer", 0) > 0 else RequestState.DRAFT
-    if record.get("action") in c.BILATERAL_ACTIONS:
+    if record.get("action") in BILATERAL_ACTIONS:
         return RequestState.AWAITING_REPLY if age == 1 else RequestState.EXPIRED
     return RequestState.AWAITING_REACTION
 
@@ -126,7 +127,7 @@ def apply_draft(nation_data, sender, pending, responses, draft_lists):
                 original["forwarded_source"] = intent["forwarded_source"]
                 continue
             # Executed unilateral actions can be replaced, as in local play.
-            if (in_flight[target].get("action") not in c.UNILATERAL_ACTIONS
+            if (in_flight[target].get("action") not in UNILATERAL_ACTIONS
                     or intent.get("turns", 0) > 0):
                 continue
         old = current.get(target)

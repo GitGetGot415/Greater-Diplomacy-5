@@ -1,6 +1,8 @@
 """Diplomatic status: wars, military access, truces, and pending message state."""
 
 import data.constants as c
+# action_definitions imports queries, so read its tables through the module at call time.
+from map_logic.diplomacy import action_definitions
 
 
 def add_nation_list_entry(nation_data, nation, field, entry):
@@ -119,7 +121,7 @@ def get_message_draft(sender, target, nation_data):
 def is_diplomat_busy(sender, target, nation_data):
     """Returns True if the diplomat is currently traveling."""
     action, turns = get_diplomatic_status(sender, target, nation_data)
-    is_unilateral = action in c.UNILATERAL_ACTIONS
+    is_unilateral = action in action_definitions.UNILATERAL_ACTIONS
 
     if is_unilateral or action.startswith("MSG:"):
         return False
@@ -156,7 +158,7 @@ def has_unanswered_request(nation, other_nation, nation_data):
     req = nation_data.get(other_nation, {}).get("pending_diplomacy", {}).get(nation)
     if not isinstance(req, dict):
         return False
-    if req.get("turns", 0) <= 0 or req.get("action", "") not in c.BILATERAL_ACTIONS:
+    if req.get("turns", 0) <= 0 or req.get("action", "") not in action_definitions.BILATERAL_ACTIONS:
         return False
 
     # Already answered this turn -- the reply just hasn't been processed yet.
@@ -195,7 +197,7 @@ def get_unread_message_count(nation, nation_data):
             for recipient, req in sender_data.get("pending_diplomacy", {}).items():
                 if not isinstance(req, dict):
                     continue
-                if req.get("turns", 0) <= 0 or req.get("action", "") not in c.BILATERAL_ACTIONS:
+                if req.get("turns", 0) <= 0 or req.get("action", "") not in action_definitions.BILATERAL_ACTIONS:
                     continue
                 my_response = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
                 if isinstance(my_response, dict) and my_response.get("verdict"):

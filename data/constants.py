@@ -1,7 +1,6 @@
 from data.platform import IS_WEB
 from data import research_display
 from data.io.starting_defaults import get_starting_value
-from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
 
 # Used for logical ownership assignment
 WATER_MAPPING = {
