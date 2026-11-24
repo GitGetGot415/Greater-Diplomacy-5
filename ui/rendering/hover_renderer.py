@@ -42,7 +42,7 @@ def draw_hover_glow(map_screen, surface):
         cam_x_int = int(map_screen.camera.pos.x)
         cam_y_int = int(map_screen.camera.pos.y)
 
-        offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+        offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
         for offset in offsets:
             # Subtract the integer camera pos, THEN multiply by zoom.
             sx = (px + offset - cam_x_int) * map_screen.camera.zoom

@@ -13,7 +13,8 @@ from ui.rendering import overlay_renderer
 from ui.rendering import country_names
 from ui.rendering import symbol_loader
 from ui.panels import army_panel, map_top_right_layout, minimap
-from tests.stub_map_screen import bare_orders_screen, map_double
+from tests.stub_map_screen import state_owner, bare_orders_screen, map_double
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 class CountryMapCenterTests(unittest.TestCase):
@@ -332,7 +333,7 @@ class ArmyQueryTests(unittest.TestCase):
         # A submitted route must not be replaced after its resolution, even if
         # movement stopped before reaching the area.  An idle later turn may.
         unit.pop("order")
-        map_ref._units_with_move_order_this_turn = {id(unit)}
+        map_ref.session._units_with_move_order_this_turn = {id(unit)}
         self.assertEqual(queries.queue_idle_army_defense_orders(map_ref), 0)
         self.assertNotIn("order", unit)
         self.assertEqual(queries.queue_idle_army_defense_orders(map_ref), 1)
@@ -398,7 +399,7 @@ class ArmyControlTests(unittest.TestCase):
         self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
             pygame.KEYDOWN, key=pygame.K_x, mod=0, unicode="x")))
         self.assertEqual(map_stub.army_editor_state["name"], "Army 1x")
-        self.assertEqual(map_stub.nation_data["A"]["armies"][0]["name"], "Army 1")
+        self.assertEqual(map_stub.world.nation_data["A"]["armies"][0]["name"], "Army 1")
 
         flip = army_panel._flip_button_rect(army_panel._editor_rect())
         self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
@@ -418,7 +419,7 @@ class ArmyControlTests(unittest.TestCase):
         map_stub = self._name_editor_map()
         self._focus_name(map_stub)
         army_panel.handle_back_key(map_stub)
-        army_panel._open_editor(map_stub, map_stub.nation_data["A"]["armies"][0])
+        army_panel._open_editor(map_stub, map_stub.world.nation_data["A"]["armies"][0])
         self.assertFalse(map_stub.army_editor_state["name_active"])
 
     def test_enter_and_escape_keep_editor_shortcuts_with_or_without_name_focus(self):
@@ -449,7 +450,7 @@ class ArmyControlTests(unittest.TestCase):
                      patch("ui.widgets.ui_elements.pygame.key.get_mods", return_value=0):
                     self.assertTrue(army_panel.handle_event(map_stub, paste))
                 self.assertEqual(map_stub.army_editor_state["name"], "Army 1 NorthernCommand")
-                self.assertEqual(map_stub.nation_data["A"]["armies"][0]["name"], "Army 1")
+                self.assertEqual(map_stub.world.nation_data["A"]["armies"][0]["name"], "Army 1")
 
     def test_army_name_editor_limits_pasted_text(self):
         map_stub = self._name_editor_map()
@@ -556,7 +557,7 @@ class ArmyControlTests(unittest.TestCase):
             unit_hover_hitboxes=[], unit_stack_hitboxes=[],
             unit_selection_drag=None, is_unit_selected=lambda _unit: False)
         province = {"units": [first, second, third]}
-        map_screen.map_data = {"one": province}
+        map_screen.world.map_data = {"one": province}
         surface = pygame.Surface((200, 200), pygame.SRCALPHA)
 
         with (patch.object(overlay_renderer, "unit_box",
@@ -591,7 +592,7 @@ class ArmyControlTests(unittest.TestCase):
         surface = pygame.Surface((200, 200), pygame.SRCALPHA)
         first_province = {"units": first_tile_units}
         second_province = {"units": second_tile_units}
-        map_screen.map_data = {"one": first_province, "two": second_province}
+        map_screen.world.map_data = {"one": first_province, "two": second_province}
 
         with (patch.object(overlay_renderer, "unit_box",
                            side_effect=lambda *_args, **kwargs: pygame.Surface(
@@ -1035,8 +1036,7 @@ class ArmyControlTests(unittest.TestCase):
         map_stub = map_double(
             player_country="A", nation_data=nations, map_data=world,
             selected_province=world["one"], army_panel_visible_in_orders=True,
-            selection_mode=False, is_editor=False, tactical_mode=False,
-            realtime_multiplayer=False, map_w=1000, map_h=500,
+            selection_mode=False, mode=LOCAL_PLAY, tactical_mode=False, map_w=1000, map_h=500,
             selected_map_unit_ids=lambda: selected_ids,
             can_select_map_units=lambda: True,
             assign_selection_to_army=lambda army_id: queries.assign_units_to_army(
@@ -1087,8 +1087,8 @@ class ArmyControlTests(unittest.TestCase):
                             for row in custom_symbol))
 
     def test_province_view_hides_the_army_tray_until_orders_open(self):
-        map_ref = map_double(realtime_multiplayer=False, selected_province=None,
-                                  selection_mode=False, is_editor=False,
+        map_ref = map_double(mode=LOCAL_PLAY, selected_province=None,
+                                  selection_mode=False,
                                   player_country="A", tactical_mode=False,
                                   map_w=1000, map_h=500)
         self.assertTrue(army_panel._visible(map_ref))
@@ -1100,16 +1100,16 @@ class ArmyControlTests(unittest.TestCase):
     def test_the_turn_loading_screen_hides_the_army_tray(self):
         """The loading screen covers the map, so the tray must neither draw
         nor take clicks while the turn is processed."""
-        map_ref = map_double(realtime_multiplayer=False, selected_province=None,
-                             selection_mode=False, is_editor=False,
+        map_ref = map_double(mode=LOCAL_PLAY, selected_province=None,
+                             selection_mode=False,
                              player_country="A", tactical_mode=False,
                              map_w=1000, map_h=500)
         self.assertTrue(army_panel._visible(map_ref))
         for flag in ("ai_is_thinking", "is_refreshing"):
             with self.subTest(flag=flag):
-                setattr(map_ref, flag, True)
+                setattr(state_owner(map_ref, flag), flag, True)
                 self.assertFalse(army_panel._visible(map_ref))
-                setattr(map_ref, flag, False)
+                setattr(state_owner(map_ref, flag), flag, False)
 
 class UnassignedArmyPanelTests(unittest.TestCase):
     def setUp(self):
@@ -1123,8 +1123,8 @@ class UnassignedArmyPanelTests(unittest.TestCase):
         self.nations = {"A": {"armies": []}}
         self.map = map_double(
             player_country="A", nation_data=self.nations, map_data=self.world,
-            selected_province=None, selection_mode=False, is_editor=False,
-            tactical_mode=False, realtime_multiplayer=False, map_w=1000, map_h=500,
+            selected_province=None, selection_mode=False, mode=LOCAL_PLAY,
+            tactical_mode=False, map_w=1000, map_h=500,
             selected_map_unit_ids=lambda: [], can_select_map_units=lambda: True,
             select_army=Mock(), show_feedback=Mock(), army_editor_state=None,
             assign_selection_to_army=Mock())
@@ -1254,17 +1254,17 @@ class UnassignedArmyPanelTests(unittest.TestCase):
     def test_cached_unassigned_members_are_private_to_the_prepared_player(self):
         self.nations["B"] = {"armies": []}
         self.world["home"]["units"].append({"owner": "B", "type": "Infantry"})
-        self.map.player_country = "B"
+        self.map.session.player_country = "B"
         self.assertEqual(army_panel._armies(self.map), [])
         army_panel.prepare(self.map)
         self.assertEqual(army_panel._armies(self.map)[0]["unit_ids"],
                          [self.world["home"]["units"][-1]["unit_id"]])
-        for field, value in (("player_country", "Spectator"), ("is_editor", True),
+        for field, value in (("player_country", "Spectator"), ("mode", MAP_EDITOR),
                              ("tactical_mode", True), ("selection_mode", True)):
-            original = getattr(self.map, field)
-            setattr(self.map, field, value)
+            original = getattr(state_owner(self.map, field), field)
+            setattr(state_owner(self.map, field), field, value)
             self.assertEqual(army_panel._armies(self.map), [])
-            setattr(self.map, field, original)
+            setattr(state_owner(self.map, field), field, original)
 
 
 class MinimapTests(unittest.TestCase):

@@ -101,17 +101,17 @@ class _TextInputModal(DialogScreen):
                                                              self.input_rect.y - 14)))
 
 
-def _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate, on_result):
+def _run_text_input_dialog(title, message, initial_text, char_allowed, validate, on_result):
     """Shared single-line text-entry modal used by ask_integer and ask_string.
 
     char_allowed(unicode_char, current_text) -> bool decides which typed characters are accepted.
     validate(text) -> (value, error_message); value is None (with a message) when the text isn't acceptable yet.
     """
     open_dialog(lambda surface: _TextInputModal(surface, title, message, initial_text, char_allowed, validate),
-                on_result, tk_parent)
+                on_result)
 
 
-def ask_integer(title, message, on_result, minvalue=None, maxvalue=None, initial=None, tk_parent=None):
+def ask_integer(title, message, on_result, minvalue=None, maxvalue=None, initial=None):
     """Answers on_result(int) once confirmed, or on_result(None) if cancelled."""
 
     def char_allowed(ch, current_text):
@@ -131,10 +131,10 @@ def ask_integer(title, message, on_result, minvalue=None, maxvalue=None, initial
         return value, ""
 
     initial_text = str(initial) if initial is not None else ""
-    _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate, on_result)
+    _run_text_input_dialog(title, message, initial_text, char_allowed, validate, on_result)
 
 
-def ask_string(title, message, on_result, initial="", tk_parent=None, allow_empty=True, is_valid_char=None,
+def ask_string(title, message, on_result, initial="", allow_empty=True, is_valid_char=None,
                max_length=None):
     """Answers on_result(str) once confirmed, or on_result(None) if cancelled.
 
@@ -152,4 +152,4 @@ def ask_string(title, message, on_result, initial="", tk_parent=None, allow_empt
             return None, "This field cannot be empty."
         return text, ""
 
-    _run_text_input_dialog(title, message, initial, tk_parent, char_allowed, validate, on_result)
+    _run_text_input_dialog(title, message, initial, char_allowed, validate, on_result)

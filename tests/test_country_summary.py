@@ -15,10 +15,11 @@ from map_logic.system32 import combat_rules
 from map_logic.system32.time_handler import TimeHandler
 from screens.game.country_summary import CountrySummaryScreen, open_country_summary
 from tests.politics_fixtures import policy_fixtures
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import state_owner, StubMapScreen
 from screens.game import map_input
 from ui.navigation import modal_stack
 from ui.bars import flag_renderer
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 
 
 def unit(owner, attack=80, kind="Summary fixture"):
@@ -29,18 +30,18 @@ def unit(owner, attack=80, kind="Summary fixture"):
 def world():
     game = StubMapScreen(["A", "B", "C"])
     game.selected_province = None
-    game.hide_top_info = game.hide_flag = game.selection_mode = False
-    game.show_player_ready_screen = game.show_exit_confirmation = game.is_saving = False
-    game.ai_is_thinking = game.viewing_ai_moves = False
+    game.hide_top_info = game.hide_flag = game.session.selection_mode = False
+    game.show_player_ready_screen = game.show_exit_confirmation = game.session.is_saving = False
+    game.session.ai_is_thinking = game.session.viewing_ai_moves = False
     game.feedback_text = ""
-    game.scenario_settings = {"fog_of_war": True}
+    game.world.scenario_settings = {"fog_of_war": True}
     game.visible_provinces = {game.home_of("A")["id"], game.home_of("B")["id"]}
-    for country, data in game.nation_data.items():
+    for country, data in game.world.nation_data.items():
         # Research the fuel conversion limit so the saved rate is in effect.
         data.update(name=f"Display {country}", research={"fuel_refining": math.ceil(0.1 / c.FUEL_REFINING_CONVERSION_PER_LVL)},
                     manpower=200, conscription_slider=0.25, mat_to_fuel_slider=0.1)
         game.home_of(country)["units"] = [unit(country)]
-    for key, province in game.map_data.items():
+    for key, province in game.world.map_data.items():
         province["json_key"] = key
         province["terrain"] = "plains"
     return game
@@ -63,14 +64,14 @@ class CountrySummaryTests(unittest.TestCase):
     @policy_fixtures({"id": "damage_fixture", "effects": {"damage": 1.25, "manpower": 0.85}})
     def test_own_summary_matches_shared_damage_and_economy_rules(self):
         game = world()
-        game.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
-        politics.set_economic_value(game.nation_data, "A", -4)
-        game.nation_data["A"][politics.POLICY_KEY] = {
+        game.world.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
+        politics.set_economic_value(game.world.nation_data, "A", -4)
+        game.world.nation_data["A"][politics.POLICY_KEY] = {
             "damage_fixture": {"status": politics.POLICY_ACTIVE}}
         summary = queries.get_country_summary(game, "A")
         troops = game.home_of("A")["units"]
         expected_damage = sum(troop["attack"] * combat_rules.effective_damage_multiplier(
-            troop, game.nation_data) for troop in troops)
+            troop, game.world.nation_data) for troop in troops)
         self.assertEqual(summary["name"], "Display A")
         self.assertTrue(summary["military"]["complete"])
         self.assertEqual(summary["military"]["damage_output"], expected_damage)
@@ -78,21 +79,21 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertAlmostEqual(summary["military"]["raw_damage_output"]
                                * summary["military"]["damage_multiplier"], expected_damage)
         self.assertEqual(summary["military"]["damage_multiplier"],
-                         queries.get_country_damage_multiplier("A", game.nation_data))
+                         queries.get_country_damage_multiplier("A", game.world.nation_data))
         income, expenses, _breakdown = queries.get_economy_projections(
-            "A", game.map_data, copy.deepcopy(game.nation_data))
+            "A", game.world.map_data, copy.deepcopy(game.world.nation_data))
         for row in summary["economy"]["resources"]:
             self.assertEqual(row["income"], income[row["resource"]])
             self.assertEqual(row["expenses"], expenses[row["resource"]])
             self.assertEqual(row["net"], row["income"] - row["expenses"])
         self.assertEqual(summary["politics"]["value"], c.POLITICS_MAX)
         self.assertEqual(summary["politics"]["economic_value"], -4)
-        self.assertEqual(summary["politics"]["research_multiplier"], politics.research_multiplier(game.nation_data, "A"))
+        self.assertEqual(summary["politics"]["research_multiplier"], politics.research_multiplier(game.world.nation_data, "A"))
 
     def test_only_the_viewers_own_country_shows_its_political_direction(self):
         game = world()
-        politics.set_drift(game.nation_data, "A", 1)
-        politics.set_drift(game.nation_data, "B", -1)
+        politics.set_drift(game.world.nation_data, "A", 1)
+        politics.set_drift(game.world.nation_data, "B", -1)
         self.assertEqual(queries.get_country_summary(game, "A")["politics"]["drift"], 1)
         self.assertIsNone(queries.get_country_summary(game, "B")["politics"]["drift"])
 
@@ -108,7 +109,7 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertFalse(summary["military"]["complete"])
         self.assertEqual(summary["military"]["unit_count"], 2)
         self.assertEqual(summary["military"]["damage_output"],
-                         combat_rules.volley([visible, plane], nation_data=game.nation_data))
+                         combat_rules.volley([visible, plane], nation_data=game.world.nation_data))
         self.assertEqual(summary["military"]["raw_damage_output"], combat_rules.volley([visible, plane]))
         self.assertFalse(summary["economy"]["available"])
         self.assertEqual(summary["economy"]["resources"], [])
@@ -122,9 +123,9 @@ class CountrySummaryTests(unittest.TestCase):
 
     def test_politics_factions_and_subjects_use_existing_country_state(self):
         game = world()
-        game.nation_data["A"].update(faction="Fixture Pact", is_faction_leader=True, puppets=["C"])
-        game.nation_data["B"].update(faction="Fixture Pact")
-        game.nation_data["C"].update(master="A")
+        game.world.nation_data["A"].update(faction="Fixture Pact", is_faction_leader=True, puppets=["C"])
+        game.world.nation_data["B"].update(faction="Fixture Pact")
+        game.world.nation_data["C"].update(master="A")
         summary = queries.get_country_summary(game, "A")
         self.assertEqual(summary["diplomacy"]["faction_members"], ["A", "B"])
         self.assertEqual(summary["diplomacy"]["faction_leader"], "A")
@@ -136,38 +137,38 @@ class CountrySummaryTests(unittest.TestCase):
 
     def test_local_inspection_does_not_initialize_subject_economy_or_change_state(self):
         game = world()
-        game.nation_data["C"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        before = copy.deepcopy((game.nation_data, game.map_data))
+        game.world.nation_data["C"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
+        before = copy.deepcopy((game.world.nation_data, game.world.map_data))
         queries.get_country_summary(game, "A")
-        self.assertEqual((game.nation_data, game.map_data), before)
+        self.assertEqual((game.world.nation_data, game.world.map_data), before)
 
     def test_foreign_economy_access_depends_on_actual_mode_and_fog(self):
         game = world()
         self.assertFalse(queries.can_view_country_economy(game, "B"))
-        game.scenario_settings["fog_of_war"] = False
+        game.world.scenario_settings["fog_of_war"] = False
         self.assertTrue(queries.can_view_country_economy(game, "B"))
-        for mode in ("multiplayer_mode", "realtime_multiplayer"):
+        for mode in (TOURNAMENT, REALTIME):
             with self.subTest(mode=mode):
-                setattr(game, mode, True)
+                game.session.mode = mode
                 self.assertFalse(queries.can_view_country_economy(game, "B"))
                 self.assertTrue(queries.can_view_country_economy(game, "A"))
-                setattr(game, mode, False)
-        game.player_country = "Spectator"
-        game.scenario_settings["fog_of_war"] = True
+                game.session.mode = LOCAL_PLAY
+        game.session.player_country = "Spectator"
+        game.world.scenario_settings["fog_of_war"] = True
         self.assertTrue(queries.can_view_country_economy(game, "B"))
         self.assertTrue(queries.get_country_summary(game, "B")["military"]["complete"])
-        game.player_country = c.TOURNAMENT_SPECTATOR
+        game.session.player_country = c.TOURNAMENT_SPECTATOR
         self.assertFalse(queries.can_view_country_economy(game, "B"))
 
     def test_network_filtered_foreign_records_do_not_become_zero_economy_figures(self):
         game = world()
         game.home_of("A")["neighbors"] = [game.home_of("B")["id"]]
-        snapshot = {"nation_data": game.nation_data,
-                    "provinces": {province["json_key"]: province for province in game.map_data.values()}}
+        snapshot = {"nation_data": game.world.nation_data,
+                    "provinces": {province["json_key"]: province for province in game.world.map_data.values()}}
         filtered = queries.player_snapshot_projection(game, snapshot, "A")
-        game.nation_data = filtered["nation_data"]
-        game.realtime_multiplayer = True
-        self.assertNotIn("materials", game.nation_data["B"])
+        game.world.nation_data = filtered["nation_data"]
+        game.session.mode = REALTIME
+        self.assertNotIn("materials", game.world.nation_data["B"])
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Private economy queried")):
             summary = queries.get_country_summary(game, "B")
         self.assertFalse(summary["economy"]["available"])
@@ -176,59 +177,58 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertNotIn("conversion", summary["economy"])
 
     def test_faction_members_and_direct_subjects_share_economies_in_each_mode(self):
-        for mode in ("local", "multiplayer_mode", "realtime_multiplayer"):
+        for mode in (LOCAL_PLAY, TOURNAMENT, REALTIME):
             for relationship in ("faction", "puppet", "overlord"):
                 with self.subTest(mode=mode, relationship=relationship):
                     game = world()
-                    if mode != "local":
-                        setattr(game, mode, True)
+                    game.session.mode = mode
                     if relationship == "faction":
-                        game.nation_data["A"]["faction"] = game.nation_data["B"]["faction"] = "Fixture Pact"
+                        game.world.nation_data["A"]["faction"] = game.world.nation_data["B"]["faction"] = "Fixture Pact"
                     else:
                         master, subject = ("A", "B") if relationship == "puppet" else ("B", "A")
-                        game.nation_data[subject]["master"] = master
-                        game.nation_data[master]["puppets"] = [subject]
+                        game.world.nation_data[subject]["master"] = master
+                        game.world.nation_data[master]["puppets"] = [subject]
                     for viewer, target in (("A", "B"), ("B", "A")):
-                        game.player_country = viewer
+                        game.session.player_country = viewer
                         self.assertTrue(queries.can_view_country_economy(game, target))
                         self.assertFalse(queries.can_view_country_economy(game, "C"))
-                        if mode == "realtime_multiplayer":
+                        if mode == REALTIME:
                             game.country_economy_summaries = queries.get_shared_country_economy_summaries(
-                                viewer, game.map_data, game.nation_data)
+                                viewer, game.world.map_data, game.world.nation_data)
                         economy = queries.get_country_summary(game, target)["economy"]
                         self.assertTrue(economy["available"])
                         self.assertTrue(economy["resources"])
-                        self.assertEqual(economy["conscription"], game.nation_data[target]["conscription_slider"])
-                        self.assertEqual(economy["conversion"], game.nation_data[target]["mat_to_fuel_slider"])
+                        self.assertEqual(economy["conscription"], game.world.nation_data[target]["conscription_slider"])
+                        self.assertEqual(economy["conversion"], game.world.nation_data[target]["mat_to_fuel_slider"])
 
     def test_shared_network_totals_match_host_without_revealing_private_source_data(self):
         game = world()
-        game.nation_data["A"]["faction"] = game.nation_data["B"]["faction"] = "Fixture Pact"
+        game.world.nation_data["A"]["faction"] = game.world.nation_data["B"]["faction"] = "Fixture Pact"
         hidden = game.add_province("B", units=[unit("B")])
         hidden.update(json_key="hidden", terrain="plains")
-        game.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}])
+        game.world.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}])
         expected = queries.get_country_summary(game, "B")["economy"]
-        before = copy.deepcopy((game.map_data, game.nation_data))
-        snapshot = {"nation_data": game.nation_data,
-                    "provinces": {province["json_key"]: province for province in game.map_data.values()}}
+        before = copy.deepcopy((game.world.map_data, game.world.nation_data))
+        snapshot = {"nation_data": game.world.nation_data,
+                    "provinces": {province["json_key"]: province for province in game.world.map_data.values()}}
         filtered = queries.player_snapshot_projection(game, snapshot, "A")
-        self.assertEqual((game.map_data, game.nation_data), before)
+        self.assertEqual((game.world.map_data, game.world.nation_data), before)
         self.assertEqual(set(filtered["country_economy_summaries"]), {"B"})
         for field in ("research", "research_queue", "inbox", "materials", "manpower", "fuel"):
             self.assertNotIn(field, filtered["nation_data"]["B"])
-        game.realtime_multiplayer = True
-        game.nation_data = filtered["nation_data"]
-        game.map_data = filtered["provinces"]
+        game.session.mode = REALTIME
+        game.world.nation_data = filtered["nation_data"]
+        game.world.map_data = filtered["provinces"]
         game.country_economy_summaries = filtered["country_economy_summaries"]
         with patch.object(queries, "calculate_all_economies", side_effect=AssertionError("Client recalculated totals")):
             self.assertEqual(queries.get_country_summary(game, "B")["economy"], expected)
-        game.nation_data["B"]["faction"] = ""
+        queries.set_country_faction(game.world.nation_data, "B", "")
         self.assertFalse(queries.get_country_summary(game, "B")["economy"]["available"])
 
     def test_shared_network_economy_stays_private_without_authoritative_totals(self):
         game = world()
-        game.realtime_multiplayer = True
-        game.nation_data["A"]["faction"] = game.nation_data["B"]["faction"] = "Fixture Pact"
+        game.session.mode = REALTIME
+        game.world.nation_data["A"]["faction"] = game.world.nation_data["B"]["faction"] = "Fixture Pact"
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Filtered economy queried")):
             summary = queries.get_country_summary(game, "B")
         self.assertEqual(summary["economy"], {"available": False, "resources": []})
@@ -237,10 +237,10 @@ class CountrySummaryTests(unittest.TestCase):
         from data.multiplayer.tournament import files as tournament_files
         game = world()
         # The tournament filter projects a complete save, which records the date.
-        game.time_manager = TimeHandler()
+        game.world.time_manager = TimeHandler()
         game.presentation_enabled = False  # The stub has no map layers to refresh.
-        game.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        game.nation_data["A"]["puppets"] = ["B"]
+        game.world.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
+        game.world.nation_data["A"]["puppets"] = ["B"]
         expected = queries.get_country_summary(game, "B")["economy"]
         tournament_files.strip_sensitive_data_for_player(game, "A")
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Stripped economy queried")):
@@ -253,28 +253,28 @@ class CountrySummaryTests(unittest.TestCase):
         """Tournament and real-time players receive one projection of the world."""
         from data.multiplayer.tournament import files as tournament_files
         game = world()
-        game.time_manager = TimeHandler()
+        game.world.time_manager = TimeHandler()
         game.presentation_enabled = False  # The stub has no map layers to refresh.
-        game.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}], materials=500)
-        game.nation_data["A"].update(materials=700)
+        game.world.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}], materials=500)
+        game.world.nation_data["A"].update(materials=700)
         projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "A")
         tournament_files.strip_sensitive_data_for_player(game, "A")
         for field in ("inbox", "research_queue", "materials"):
-            self.assertNotIn(field, game.nation_data["B"])
-        self.assertEqual(game.nation_data["A"]["materials"], 700)
-        for province in game.map_data.values():
+            self.assertNotIn(field, game.world.nation_data["B"])
+        self.assertEqual(game.world.nation_data["A"]["materials"], 700)
+        for province in game.world.map_data.values():
             self.assertEqual(province["units"], projected["provinces"][province["json_key"]]["units"])
         self.assertEqual(game.home_of("C")["units"], [])
         self.assertEqual(len(game.home_of("A")["units"]), 1)
 
     def test_legacy_country_uses_existing_slider_defaults_without_writing_them(self):
         game = world()
-        game.nation_data["A"].pop("conscription_slider")
-        game.nation_data["A"].pop("mat_to_fuel_slider")
-        before = copy.deepcopy(game.nation_data)
+        game.world.nation_data["A"].pop("conscription_slider")
+        game.world.nation_data["A"].pop("mat_to_fuel_slider")
+        before = copy.deepcopy(game.world.nation_data)
         summary = queries.get_country_summary(game, "A")
         self.assertEqual((summary["economy"]["conscription"], summary["economy"]["conversion"]), (1.0, 0.0))
-        self.assertEqual(game.nation_data, before)
+        self.assertEqual(game.world.nation_data, before)
 
     def test_flag_selects_own_country_foreign_owner_and_own_fallback_on_water(self):
         game = world()
@@ -289,10 +289,10 @@ class CountrySummaryTests(unittest.TestCase):
         for field in ("hide_flag", "hide_top_info", "selection_mode", "show_player_ready_screen",
                       "show_exit_confirmation", "is_saving", "ai_is_thinking", "viewing_ai_moves"):
             with self.subTest(field=field):
-                setattr(game, field, True)
+                setattr(state_owner(game, field), field, True)
                 self.assertIsNone(flag_renderer.flag_button_rect(game))
-                setattr(game, field, False)
-        game.player_country = "Spectator"
+                setattr(state_owner(game, field), field, False)
+        game.session.player_country = "Spectator"
         self.assertIsNone(flag_renderer.flag_button_rect(game))
         game.selected_province = game.home_of("B")
         self.assertIsNotNone(flag_renderer.flag_button_rect(game))
@@ -315,14 +315,14 @@ class CountrySummaryTests(unittest.TestCase):
         for country, tactical in (("A", False), ("B", False), ("A", True)):
             with self.subTest(country=country, tactical=tactical):
                 game = world()
-                game.tactical_mode = tactical
-                game.player_unit = game.home_of("A")["units"][0] if tactical else None
-                before = copy.deepcopy((game.nation_data, game.map_data))
+                game.session.tactical_mode = tactical
+                game.session.player_unit = game.home_of("A")["units"][0] if tactical else None
+                before = copy.deepcopy((game.world.nation_data, game.world.map_data))
                 screen = CountrySummaryScreen(game, country)
                 for element in screen.elements:
                     element.callback()
                 self.assertTrue(screen.done)
-                self.assertEqual((game.nation_data, game.map_data), before)
+                self.assertEqual((game.world.nation_data, game.world.map_data), before)
 
     def test_frame_drawing_and_scrolling_use_cached_summary_data(self):
         game = world()
@@ -340,7 +340,7 @@ class CountrySummaryTests(unittest.TestCase):
 
     def test_long_relationship_lists_scroll_and_return_to_the_top(self):
         game = world()
-        game.nation_data["A"]["puppets"] = [f"Fixture subject {index}" for index in range(150)]
+        game.world.nation_data["A"]["puppets"] = [f"Fixture subject {index}" for index in range(150)]
         screen = CountrySummaryScreen(game, "A")
         screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
         self.assertLess(screen.scroll_y, 0)
@@ -365,7 +365,7 @@ class CountrySummaryTests(unittest.TestCase):
             modal.update()
             self.assertTrue(modal_stack.is_empty())
         self.assertIs(game.selected_province, selected)
-        self.assertEqual(game.player_country, "A")
+        self.assertEqual(game.session.player_country, "A")
 
 
 if __name__ == "__main__":

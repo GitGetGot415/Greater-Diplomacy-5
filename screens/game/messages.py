@@ -279,7 +279,7 @@ class Messages_Screen(Screen):
                 self.drafts.append(self.compose_text.strip())
                 self.compose_text = ""
             diplomacy_messages.save_text_drafts(
-                self.map_screen.nation_data, self.map_screen.player_country,
+                self.map_screen.world.nation_data, self.map_screen.session.player_country,
                 self.selected_recipient, self.drafts)
 
     def select_recipient(self, target):
@@ -301,7 +301,7 @@ class Messages_Screen(Screen):
         self.message_drag_state = None
         self.msg_scroll_y = 0
         
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        p_data = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
         for msg in p_data.get("inbox", []):
             if msg.get("sender") == target:
                 msg["read"] = True
@@ -309,7 +309,7 @@ class Messages_Screen(Screen):
         # Load drafts and sync with the map screen
         draft_lists = p_data.get("draft_lists", {})
         saved_list = draft_lists.get(target, [])
-        draft_str = queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data)
+        draft_str = queries.get_message_draft(self.map_screen.session.player_country, target, self.map_screen.world.nation_data)
         
         if saved_list:
             self.drafts = saved_list.copy()
@@ -339,7 +339,7 @@ class Messages_Screen(Screen):
             return
         country = self.selected_recipient
         colors = session_for(self.map_screen).conversation_colors
-        name = queries.get_country_display_name(country, self.map_screen.nation_data)
+        name = queries.get_country_display_name(country, self.map_screen.world.nation_data)
         pickers.open_color_picker(
             self.map_screen, f"{name}: Conversation Theme", self.bg_color,
             lambda color: self._set_conversation_color(colors, country, color),
@@ -359,7 +359,7 @@ class Messages_Screen(Screen):
         self.select_recipient(target)
 
     def send_message(self):
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             return
         if self.selected_recipient:
             message = self.compose_text.strip()
@@ -376,25 +376,25 @@ class Messages_Screen(Screen):
     def _forward_targets(self, message):
         """Returns living countries this player can send the message to."""
         active_nations = {
-            prov.get("owner") for prov in self.map_screen.map_data.values()
+            prov.get("owner") for prov in self.map_screen.world.map_data.values()
             if prov.get("owner") not in c.UNPLAYABLE_NATIONS
         }
         sender = message.get("sender", "") if isinstance(message, dict) else ""
         return [
-            country for country, data in self.map_screen.nation_data.items()
+            country for country, data in self.map_screen.world.nation_data.items()
             if data.get("is_playable")
-            and country != self.map_screen.player_country
+            and country != self.map_screen.session.player_country
             and country != sender
             and country in active_nations
         ]
 
     def open_forward_picker(self, message):
         """Opens the country picker for one received message."""
-        if not self.map_screen or self.map_screen.tactical_mode:
+        if not self.map_screen or self.map_screen.session.tactical_mode:
             return
 
         targets = self._forward_targets(message)
-        targets.sort(key=lambda country: self.map_screen.nation_data.get(country, {}).get("name", country))
+        targets.sort(key=lambda country: self.map_screen.world.nation_data.get(country, {}).get("name", country))
         if not targets:
             self.map_screen.show_feedback("There are no countries available to receive this message.")
             return
@@ -405,7 +405,7 @@ class Messages_Screen(Screen):
         labels = []
         label_to_country = {}
         for country in targets:
-            display_name = queries.get_country_display_name(country, self.map_screen.nation_data)
+            display_name = queries.get_country_display_name(country, self.map_screen.world.nation_data)
             label = display_name
             if label in label_to_country:
                 label = f"{display_name} ({country})"
@@ -425,12 +425,12 @@ class Messages_Screen(Screen):
 
     def queue_forward(self, message, target):
         """Queues a provenance-stamped forward and keeps the current thread open."""
-        if not self.map_screen or self.map_screen.tactical_mode:
+        if not self.map_screen or self.map_screen.session.tactical_mode:
             return
         result = diplomacy_messages.queue_forwarded_message(
-            self.map_screen.nation_data, self.map_screen.player_country,
-            target, self.map_screen.player_country, message)
-        target_name = queries.get_country_display_name(target, self.map_screen.nation_data)
+            self.map_screen.world.nation_data, self.map_screen.session.player_country,
+            target, self.map_screen.session.player_country, message)
+        target_name = queries.get_country_display_name(target, self.map_screen.world.nation_data)
         if result.startswith("Forward queued"):
             self.map_screen.show_feedback(f"{result} ({target_name})")
         else:
@@ -440,7 +440,7 @@ class Messages_Screen(Screen):
     def mark_thread_unread(self):
         """Marks all messages from the selected contact as unread and returns to contact list."""
         if not self.selected_recipient or not self.map_screen: return
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        p_data = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
         for msg in p_data.get("inbox", []):
             if msg.get("sender") == self.selected_recipient:
                 msg["read"] = False
@@ -461,7 +461,7 @@ class Messages_Screen(Screen):
         flag), so they only clear once the player actually responds.
         """
         if not self.map_screen: return
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        p_data = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
         for msg in p_data.get("inbox", []):
             msg["read"] = True
         self.refresh_ui()
@@ -474,7 +474,7 @@ class Messages_Screen(Screen):
         # Before the thread drag and the list scroll, which consume the press that starts a drag.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self._set_compose_focus(self.input_rect.move(0, self._bar_offsets()[1]).collidepoint((mx, my)))
-        is_tactical = self.map_screen.tactical_mode
+        is_tactical = self.map_screen.session.tactical_mode
         in_thread = self.thread_rect.collidepoint((mx, my))
         if self.selected_recipient and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
             clicked_action = any(rect.collidepoint((mx, my)) for rect, _ in
@@ -503,39 +503,39 @@ class Messages_Screen(Screen):
                         # HANDLE DIPLOMATIC ACTION UNDO CLICKS
                         if idx == "TRADE_OFFER":
                             pending = diplomacy_messages.get_pending(
-                                self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                                self.map_screen.world.nation_data, self.map_screen.session.player_country, self.selected_recipient)
                             # Passing it to the toggle logic safely refunds the escrow!
-                            diplomacy_processor.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
+                            diplomacy_processor.toggle_diplomacy_action(self.map_screen, self.map_screen.session.player_country, self.selected_recipient, "TRADE", "")
                             if pending.get("action") == "TRADE" and not diplomacy_messages.get_pending(
-                                    self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient):
+                                    self.map_screen.world.nation_data, self.map_screen.session.player_country, self.selected_recipient):
                                 sound_effects.play_ui_sound("delete_message")
                             self.map_screen.show_feedback("Trade Offer Cancelled.")
                         elif idx == "WAR_DECLARATION":
-                            diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                            diplomacy_messages.clear_pending(self.map_screen.world.nation_data, self.map_screen.session.player_country, self.selected_recipient)
                             self.map_screen.show_feedback("War Declaration Cancelled.")
                         elif isinstance(idx, str) and idx.startswith("FORMAL_"):
                             act_name = idx[7:]
                             pending = diplomacy_messages.get_pending(
-                                self.map_screen.nation_data, self.map_screen.player_country,
+                                self.map_screen.world.nation_data, self.map_screen.session.player_country,
                                 self.selected_recipient)
                             if act_name == diplomacy_messages.FORWARD_ACTION:
                                 diplomacy_messages.cancel_queued_forward(
-                                    self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                                    self.map_screen.world.nation_data, self.map_screen.session.player_country, self.selected_recipient)
                             elif act_name == volunteers.ACTION:
                                 if pending.get("turns", 0) == 0:
                                     volunteers.cancel_offer(
-                                        self.map_screen, self.map_screen.player_country,
+                                        self.map_screen, self.map_screen.session.player_country,
                                         self.selected_recipient)
                                     self.map_screen.show_feedback("Volunteer Offer Cancelled.")
                                 else:
                                     self.map_screen.show_feedback("Cannot undo after the volunteer offer was delivered.")
                             elif act_name == volunteers.RECALL_ACTION:
                                 msg = diplomacy_processor.toggle_diplomacy_action(
-                                    self.map_screen.nation_data, self.map_screen.player_country,
+                                    self.map_screen, self.map_screen.session.player_country,
                                     self.selected_recipient, volunteers.RECALL_ACTION)
                                 self.map_screen.show_feedback(msg)
                             else:
-                                diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                                diplomacy_messages.clear_pending(self.map_screen.world.nation_data, self.map_screen.session.player_country, self.selected_recipient)
                                 self.map_screen.show_feedback(f"{act_name.replace('_', ' ').title()} Cancelled.")
                         else:
                             if isinstance(idx, int) and 0 <= idx < len(self.drafts):
@@ -577,7 +577,7 @@ class Messages_Screen(Screen):
 
         # --- Text Input Logic ---
         if self.selected_recipient:
-            locked = queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+            locked = queries.is_diplomat_busy(self.map_screen.session.player_country, self.selected_recipient, self.map_screen.world.nation_data)
             if not locked and not is_tactical and self._compose_has_focus():
                 previous_text = self.compose_text
                 self.compose_text, status = process_text_input(event, self.compose_text, max_length=MAX_MESSAGE_LENGTH)
@@ -698,9 +698,9 @@ class Messages_Screen(Screen):
         unread_x = c.SCREEN_WIDTH - MSG_MARGIN - MSG_HEADER_UNREAD_W
         trade_x = unread_x - MSG_CONTROL_GAP - MSG_HEADER_TRADE_W
         theme_x = trade_x - MSG_CONTROL_GAP - MSG_HEADER_THEME_W
-        header = queries.get_country_display_name(self.selected_recipient, self.map_screen.nation_data) if self.selected_recipient else "Messages"
+        header = queries.get_country_display_name(self.selected_recipient, self.map_screen.world.nation_data) if self.selected_recipient else "Messages"
         header_font = fonts.get("heading2")
-        self.header_flag = (flag_icons.flag_surface(self.selected_recipient, self.map_screen.nation_data, MSG_HEADER_FLAG_SIZE)
+        self.header_flag = (flag_icons.flag_surface(self.selected_recipient, self.map_screen.world.nation_data, MSG_HEADER_FLAG_SIZE)
                             if self.selected_recipient else None)
         flag_space = self.header_flag.get_width() + MSG_FLAG_GAP if self.header_flag is not None else 0
         header_width = theme_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - flag_space
@@ -708,11 +708,11 @@ class Messages_Screen(Screen):
         self.sidebar_title_surface = fonts.get("normal").render("Messages", True, (220, 229, 240))
         self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, MSG_EMPTY_TEXT_COLOR)
         
-        active_nations = set([prov.get("owner") for prov in self.map_screen.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
-        playable = [country for country, d in self.map_screen.nation_data.items() if d.get("is_playable") and country != self.map_screen.player_country and country in active_nations]
-        playable.sort(key=lambda country: self.map_screen.nation_data.get(country, {}).get("name", country))
+        active_nations = set([prov.get("owner") for prov in self.map_screen.world.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
+        playable = [country for country, d in self.map_screen.world.nation_data.items() if d.get("is_playable") and country != self.map_screen.session.player_country and country in active_nations]
+        playable.sort(key=lambda country: self.map_screen.world.nation_data.get(country, {}).get("name", country))
 
-        p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
+        p_data = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
         inbox = p_data.get("inbox", [])
 
         history_contacts = set()
@@ -725,20 +725,20 @@ class Messages_Screen(Screen):
 
         # These all iterate snapshots -- a turn can still be resolving while this
         # screen rebuilds, and a live iterator would trip over the changes.
-        pending = diplomacy_messages.get_pending_map(self.map_screen.nation_data, self.map_screen.player_country)
+        pending = diplomacy_messages.get_pending_map(self.map_screen.world.nation_data, self.map_screen.session.player_country)
         for target, p_info in list(pending.items()):
             if target in playable and isinstance(p_info, dict) and p_info.get("action"):
                 history_contacts.add(target)
-            elif target in playable and queries.get_message_draft(self.map_screen.player_country, target, self.map_screen.nation_data).strip():
+            elif target in playable and queries.get_message_draft(self.map_screen.session.player_country, target, self.map_screen.world.nation_data).strip():
                 history_contacts.add(target)
 
         # Anyone waiting on our answer, plus anyone we've already answered. Without
         # this a request whose message went astray would raise the unread badge
         # while having no row here to click -- a notification with nowhere to go.
-        for sender in queries.get_pending_request_senders(self.map_screen.player_country, self.map_screen.nation_data):
+        for sender in queries.get_pending_request_senders(self.map_screen.session.player_country, self.map_screen.world.nation_data):
             if sender in playable:
                 history_contacts.add(sender)
-        for sender in list(diplomacy_messages.get_response_map(self.map_screen.nation_data, self.map_screen.player_country)):
+        for sender in list(diplomacy_messages.get_response_map(self.map_screen.world.nation_data, self.map_screen.session.player_country)):
             if sender in playable:
                 history_contacts.add(sender)
 
@@ -771,7 +771,7 @@ class Messages_Screen(Screen):
                 prefix = "You: " if outgoing else ""
                 if diplomacy_messages.is_system_notice(message):
                     prefix = f"{diplomacy_messages.SYSTEM_NOTICE_AUTHOR}: "
-                content = diplomacy_messages.conversation_message_text(message, self.map_screen.player_country, self.map_screen.nation_data)
+                content = diplomacy_messages.conversation_message_text(message, self.map_screen.session.player_country, self.map_screen.world.nation_data)
                 previews[country] = prefix + " ".join(content.split())
             if not outgoing and not message.get("read", False):
                 unread_counts[country] = unread_counts.get(country, 0) + 1
@@ -790,23 +790,23 @@ class Messages_Screen(Screen):
         self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
         for index, country in enumerate(display_list):
             y = MSG_CONTACT_LIST_TOP_Y + index * row_step + self.contact_scroll_y
-            display_name = queries.get_country_display_name(country, self.map_screen.nation_data)
+            display_name = queries.get_country_display_name(country, self.map_screen.world.nation_data)
             unread = unread_counts.get(country, 0)
             # Unanswered requests use the same unread rule as the map badge.
-            if queries.has_unanswered_request(self.map_screen.player_country, country, self.map_screen.nation_data):
+            if queries.has_unanswered_request(self.map_screen.session.player_country, country, self.map_screen.world.nation_data):
                 unread += 1
             callback = self.select_new_contact if self.show_all_contacts else self.select_recipient
             row = ConversationRow(MSG_MARGIN, y, self.scroll_content_rect.width,
                                   display_name, previews.get(country, ""), unread,
                                   self.selected_recipient == country,
                                   lambda target=country, select=callback: select(target),
-                                  flag=flag_icons.flag_surface(country, self.map_screen.nation_data, MSG_CONTACT_FLAG_SIZE),
+                                  flag=flag_icons.flag_surface(country, self.map_screen.world.nation_data, MSG_CONTACT_FLAG_SIZE),
                                   compact=self.show_all_contacts, theme_color=colors.get(country))
             row.is_scrollable = True
             row.click_guard = self.content_hover_guard()
             self.elements.append(row)
 
-        is_tactical = self.map_screen.tactical_mode
+        is_tactical = self.map_screen.session.tactical_mode
         queue_button = Button(c.SCREEN_WIDTH - MSG_MARGIN - MSG_QUEUE_W,
                               c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_MARGIN,
                               (MSG_QUEUE_W, MSG_INPUT_H - 2 * MSG_MARGIN), "blue", "Queue",
@@ -822,7 +822,7 @@ class Messages_Screen(Screen):
         trade_button = Button(trade_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_TRADE_W, MSG_HEADER_BUTTON_H), "orange", "Trade", self.open_trade,
                               font_preset="button_small")
         trade_button.disabled = (not self.selected_recipient or is_tactical
-                                 or not availability(self.map_screen.nation_data, self.map_screen.player_country,
+                                 or not availability(self.map_screen, self.map_screen.session.player_country,
                                                      self.selected_recipient, "TRADE").allowed)
         self.elements.append(trade_button)
         theme_button = Button(theme_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_THEME_W, MSG_HEADER_BUTTON_H), "blue", "Theme",
@@ -847,10 +847,10 @@ class Messages_Screen(Screen):
         treaty to ratify, so each offer carries its own reply buttons and is
         shown under its own message. Both can be answered in the same turn.
         """
-        nation_data = self.map_screen.nation_data
-        player = self.map_screen.player_country
+        nation_data = self.map_screen.world.nation_data
+        player = self.map_screen.session.player_country
         target = self.selected_recipient
-        editable = not self.map_screen.tactical_mode
+        editable = not self.map_screen.session.tactical_mode
         offers = []
 
         choice = peace_scope.pending_choice(nation_data, player, target)
@@ -909,7 +909,7 @@ class Messages_Screen(Screen):
             params = request.get("parameters", request.get("message", fallback))
             # A trade can arrive after a war broke out while it waited; the
             # send rule then refuses it, so accepting it is unavailable too.
-            acceptable = not is_trade or availability(nation_data, target, player, action).allowed
+            acceptable = not is_trade or availability(self.map_screen, target, player, action).allowed
             if is_peace:
                 wars = peace_scope.offer_wars(target, player, request, nation_data)
                 acceptable = not peace_scope.settlement_block(wars, nation_data)
@@ -928,9 +928,9 @@ class Messages_Screen(Screen):
         return offers
 
     def choose_peace_offer(self, opponent, round_id, proposer):
-        if self.map_screen.tactical_mode or not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
+        if self.map_screen.session.tactical_mode or not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
             return
-        peace_scope.choose_offer(self.map_screen.nation_data, self.map_screen.player_country, opponent, round_id, proposer)
+        peace_scope.choose_offer(self.map_screen.world.nation_data, self.map_screen.session.player_country, opponent, round_id, proposer)
         self.refresh_ui()
 
     @staticmethod
@@ -949,22 +949,22 @@ class Messages_Screen(Screen):
         return 1 if not msg.get("request_id") else 0
 
     def answer_ratification(self, accept):
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             return
         player_diplomacy_actions.handle_ratify_treaty(self.map_screen, accept)
         self.refresh_ui()
 
     def clear_ratification(self):
         """Takes back an answer, while the leader is still waiting on it."""
-        if self.map_screen.tactical_mode or not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
+        if self.map_screen.session.tactical_mode or not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
             return
 
-        ratification.pending_for(self.map_screen.nation_data,
-                                 self.map_screen.player_country).pop("verdict", None)
+        ratification.pending_for(self.map_screen.world.nation_data,
+                                 self.map_screen.session.player_country).pop("verdict", None)
         self.refresh_ui()
 
     def open_trade(self):
-        if not self.selected_recipient or self.map_screen.tactical_mode:
+        if not self.selected_recipient or self.map_screen.session.tactical_mode:
             return
         self.save_current_draft()
         open_trade_menu(self.map_screen, self.selected_recipient)
@@ -981,8 +981,8 @@ class Messages_Screen(Screen):
         if not self.selected_recipient:
             return
 
-        nation_data = self.map_screen.nation_data
-        player = self.map_screen.player_country
+        nation_data = self.map_screen.world.nation_data
+        player = self.map_screen.session.player_country
         p_data = nation_data.get(player, {})
         inbox = p_data.get("inbox", [])
         seen_notices = set()
@@ -1053,7 +1053,7 @@ class Messages_Screen(Screen):
                         msg.get("parameters"),
                         viewer_is_proposer=trade_viewer_is_proposer,
                         subject=trade_subject,
-                        nation_data=self.map_screen.nation_data):
+                        nation_data=self.map_screen.world.nation_data):
                     archived_terms = True
                     display_thread.append({
                         "content": line, "is_player": is_player, "is_draft": False,
@@ -1073,12 +1073,12 @@ class Messages_Screen(Screen):
         # them on the sender's pending entry, which is the only place they ever
         # lived. Read from there when the thread carried none.
         their_offer = diplomacy_messages.get_pending(
-            self.map_screen.nation_data, self.selected_recipient, self.map_screen.player_country)
+            self.map_screen.world.nation_data, self.selected_recipient, self.map_screen.session.player_country)
         if (not archived_terms and their_offer.get("action") == "TRADE"
                 and their_offer.get("turns", 0) > 0):
             legacy_lines = diplomacy_messages.describe_trade(
                 their_offer.get("parameters"),
-                nation_data=self.map_screen.nation_data)
+                nation_data=self.map_screen.world.nation_data)
             for line in legacy_lines:
                 display_thread.append({
                     "content": line, "is_player": False, "is_draft": False,
@@ -1105,7 +1105,7 @@ class Messages_Screen(Screen):
             self.offer_buttons.extend(offer["buttons"])
 
         # Check if there is an active diplomatic action pending for this target
-        pending = diplomacy_messages.get_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+        pending = diplomacy_messages.get_pending(self.map_screen.world.nation_data, self.map_screen.session.player_country, self.selected_recipient)
         act_str = pending.get("action", "")
         is_diplo_action = bool(act_str) and not act_str.startswith("MSG:")
         forward_queued = diplomacy_messages.has_queued_forward(pending)
@@ -1215,7 +1215,7 @@ class Messages_Screen(Screen):
                 x = (width - rendered.get_width()) // 2 if is_system else MSG_BUBBLE_TEXT_PAD
                 cached.blit(rendered, (x, header_h + 10 + index * line_height))
             forward = None
-            if msg["forward_source"] and not self.map_screen.tactical_mode:
+            if msg["forward_source"] and not self.map_screen.session.tactical_mode:
                 forward = Button(0, 0, MSG_FORWARD_BUTTON_SIZE, "grey", "Forward", lambda: None, font_preset="tiny")
             offer_rows = [row for offer in msg.get("offers", ()) for row in offer.get("rows", (offer["buttons"],))]
             box_height = height + len(offer_rows) * MSG_OFFER_ROW_H
@@ -1233,10 +1233,10 @@ class Messages_Screen(Screen):
                                       c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_MARGIN,
                                       c.SCREEN_WIDTH - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - MSG_QUEUE_W - MSG_CONTROL_GAP,
                                       MSG_INPUT_H - 2 * MSG_MARGIN)
-        self.compose_enabled = bool(self.selected_recipient) and not self.map_screen.tactical_mode
+        self.compose_enabled = bool(self.selected_recipient) and not self.map_screen.session.tactical_mode
         if self.compose_enabled:
             self.compose_enabled = not queries.is_diplomat_busy(
-                self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+                self.map_screen.session.player_country, self.selected_recipient, self.map_screen.world.nation_data)
         text = self.compose_text + ("|" if self.compose_active else "")
         self.compose_surface = fonts.get("normal").render(text, True, (242, 245, 250))
 
@@ -1330,7 +1330,7 @@ class Messages_Screen(Screen):
                     x += round((edge_x - x) * offset)
                     surface.blit(prepared["surface"], (x, current_y))
                     button_y = current_y + prepared["header_h"] + prepared["bubble_h"] // 2
-                    if interactive and msg["is_draft"] and not self.map_screen.tactical_mode:
+                    if interactive and msg["is_draft"] and not self.map_screen.session.tactical_mode:
                         delete_rect = pygame.Rect(x - 35, button_y - 12, 25, 25)
                         self.draft_edit_rects.append((delete_rect.clip(rect), msg["draft_idx"]))
                         ui_elements.draw_pixel_button(surface, delete_rect, (130, 48, 48))

@@ -86,7 +86,7 @@ def tactical_player_unit(context):
     return session_state.player_unit
 
 
-def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, context=None):
+def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, context):
     """Militia are for wars. At peace, stand them down.
 
     Runs after the purchase loop rather than before it, and skips any type on
@@ -832,14 +832,12 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
             # We have the tech and the physical foundation, now check dynamic costs
             b_stats = queries.get_building_cost(target_bldg, ai_name, world_state.map_data, building_library,
                                                 world_state.nation_data)
-            c_mat = b_stats.get("cost_materials", 0)
-            c_fuel = b_stats.get("cost_fuel", 0)
 
-            if data.get("materials", 0) >= c_mat and data.get("fuel", 0) >= c_fuel:
+            if queries.can_afford(data, b_stats):
                 production_actions.submit_production(
                     context, ai_name, prov, "building_queue",
                     {"order_type": "BUILDING", "item_name": target_bldg},
-                    authority="ai", policy=production_actions.AI_POLICY, building_library=building_library)
+                    authority="ai", building_library=building_library)
 
                 # Successfully queued a building. Break out of the loop so it only queues one per turn
                 # to avoid instantly draining its treasury on 30 workshops at once.

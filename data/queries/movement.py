@@ -46,11 +46,11 @@ def plan_unit_move_orders(context, records, destination, append=False):
             continue
         old_path = (list(order.get("path", [])) if append and isinstance(order, dict)
                     and order.get("type") == "MOVE" else [])
-        start = context.id_to_province.get(old_path[-1]) if old_path else origin
+        start = context.world.id_to_province.get(old_path[-1]) if old_path else origin
         if start is None:
             raise ValueError("A selected unit has an invalid queued route.")
         segment = queries.find_unit_move_path(
-            unit, start, destination["id"], context.id_to_province, context.nation_data, context=context)
+            unit, start, destination["id"], context.world.id_to_province, context.world.nation_data, context=context)
         if segment is None:
             raise ValueError("No legal route exists for every selected unit.")
         path = old_path + segment

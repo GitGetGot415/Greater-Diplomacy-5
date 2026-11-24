@@ -70,12 +70,12 @@ def _relation_factor_text(kind, detail):
 def prepare_relation_indicators(map_screen):
     """Update directional opinions when the selection or map state changes."""
     province = map_screen.selected_province
-    player = map_screen.player_country
+    player = map_screen.session.player_country
     owner = province.get("owner") if province else None
-    nation_data = map_screen.nation_data
+    nation_data = map_screen.world.nation_data
     if (owner == player or owner not in nation_data or player not in nation_data
             or owner in c.UNPLAYABLE_NATIONS or player in c.UNPLAYABLE_NATIONS
-            or map_screen.selection_mode):
+            or map_screen.session.selection_mode):
         map_screen._relation_indicator_cache = None
         return
 
@@ -85,7 +85,7 @@ def prepare_relation_indicators(map_screen):
         return
 
     their_factors, your_factors = queries.get_mutual_relation_breakdowns(
-        owner, player, nation_data, map_screen.id_to_province)
+        owner, player, nation_data, map_screen.world.id_to_province)
     owner_name = queries.get_country_display_name(owner, nation_data)
     titles = (f"{owner_name}'s opinion of you", f"Your opinion of {owner_name}")
     opinions = []
@@ -99,9 +99,9 @@ def _relation_indicators(map_screen):
     # Some map input callers use lightweight screens without the province HUD.
     cached = getattr(map_screen, "_relation_indicator_cache", None)
     province = map_screen.selected_province
-    if cached is None or not province or map_screen.selection_mode:
+    if cached is None or not province or map_screen.session.selection_mode:
         return ()
-    key = (province.get("owner"), map_screen.player_country, map_screen._presentation_cache_revision)
+    key = (province.get("owner"), map_screen.session.player_country, map_screen._presentation_cache_revision)
     return cached[1] if cached[0] == key else ()
 
 
@@ -163,7 +163,7 @@ def draw_unit_info(map_screen, surface):
         return
 
     owner = map_screen.selected_province.get("owner", "Unclaimed")
-    is_foreign = queries.is_foreign_playable(owner, map_screen.player_country, map_screen.nation_data)
+    is_foreign = queries.is_foreign_playable(owner, map_screen.session.player_country, map_screen.world.nation_data)
 
     # --- Diplomatic Info (Faction & Wars) ---
     if owner not in c.UNPLAYABLE_NATIONS:
@@ -191,8 +191,8 @@ def draw_unit_info(map_screen, surface):
                                         draw_top=scroll_offset != 0, draw_bottom=scroll_offset < scroll_max):
             # Guarantees are the first diplomatic fact: they decide who joins
             # a new war before factions or access do.
-            protected = guarantees.guaranteed_targets(owner, map_screen.nation_data)
-            guarantors = guarantees.guarantors_of(owner, map_screen.nation_data)
+            protected = guarantees.guaranteed_targets(owner, map_screen.world.nation_data)
+            guarantors = guarantees.guarantors_of(owner, map_screen.world.nation_data)
             for label, color, nations in (
                     ("Guaranteeing:", c.COLOR_GOLD_HIGHLIGHT, protected),
                     ("Guaranteed By:", (150, 200, 255), guarantors)):
@@ -202,14 +202,14 @@ def draw_unit_info(map_screen, surface):
                              (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 for nation in nations:
-                    display = map_screen.nation_data.get(nation, {}).get("name", nation)
+                    display = map_screen.world.nation_data.get(nation, {}).get("name", nation)
                     surface.blit(map_screen.small_font.render(f" - {display}", True,
                                                               c.UI_TEXT_LIGHT),
                                  (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
-            hosts = military_attaches.hosts_for(owner, map_screen.nation_data)
-            observers = military_attaches.attaches_from(owner, map_screen.nation_data)
+            hosts = military_attaches.hosts_for(owner, map_screen.world.nation_data)
+            observers = military_attaches.attaches_from(owner, map_screen.world.nation_data)
             for label, color, nations in (
                     ("Military Attachés With:", (255, 180, 100), hosts),
                     ("Hosts Attachés From:", (255, 210, 150), observers)):
@@ -219,13 +219,13 @@ def draw_unit_info(map_screen, surface):
                              (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 for nation in nations:
-                    display = map_screen.nation_data.get(nation, {}).get("name", nation)
+                    display = map_screen.world.nation_data.get(nation, {}).get("name", nation)
                     surface.blit(map_screen.small_font.render(f" - {display}", True,
                                                               c.UI_TEXT_LIGHT),
                                  (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
-            faction_name = queries.get_country_faction(owner, map_screen.nation_data)
+            faction_name = queries.get_country_faction(owner, map_screen.world.nation_data)
 
             if not faction_name:
                 surface.blit(map_screen.small_font.render("No Faction", True, c.UI_TEXT_MUTED), (dip_rect.x + 10, y_offset))
@@ -234,46 +234,46 @@ def draw_unit_info(map_screen, surface):
                 surface.blit(map_screen.small_font.render(faction_name, True, c.COLOR_SUCCESS_GREEN), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
-                members = queries.get_faction_members(faction_name, map_screen.nation_data)
+                members = queries.get_faction_members(faction_name, map_screen.world.nation_data)
                 for m in members:
-                    m_display = map_screen.nation_data.get(m, {}).get("name", m)
+                    m_display = map_screen.world.nation_data.get(m, {}).get("name", m)
                     surface.blit(map_screen.small_font.render(f" - {m_display}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
             # --- MAP PUPPET HIERARCHY ---
-            master = map_screen.nation_data.get(owner, {}).get("master", "")
+            master = map_screen.world.nation_data.get(owner, {}).get("master", "")
             if master:
-                m_disp = map_screen.nation_data.get(master, {}).get("name", master)
+                m_disp = map_screen.world.nation_data.get(master, {}).get("name", master)
                 surface.blit(map_screen.small_font.render(f"Master: {m_disp}", True, (255, 150, 150)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
 
-            puppets = map_screen.nation_data.get(owner, {}).get("puppets", [])
+            puppets = map_screen.world.nation_data.get(owner, {}).get("puppets", [])
             if puppets:
                 surface.blit(map_screen.small_font.render("Puppets:", True, c.COLOR_GOLD_HIGHLIGHT), (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 for p in puppets:
-                    p_disp = map_screen.nation_data.get(p, {}).get("name", p)
+                    p_disp = map_screen.world.nation_data.get(p, {}).get("name", p)
                     surface.blit(map_screen.small_font.render(f" - {p_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
             # Keep war info so players know who this nation is fighting
-            wars = queries.get_enemies(owner, map_screen.nation_data)
+            wars = queries.get_enemies(owner, map_screen.world.nation_data)
             if wars:
                 surface.blit(map_screen.small_font.render("At War With:", True, (255, 100, 100)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 for w in wars:
-                    w_disp = map_screen.nation_data.get(w, {}).get("name", w)
+                    w_disp = map_screen.world.nation_data.get(w, {}).get("name", w)
                     surface.blit(map_screen.small_font.render(f" - {w_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
             # Truces don't show up anywhere else, but they're the reason a
             # recent enemy can't be attacked again yet.
-            truces = queries.get_active_truces(owner, map_screen.nation_data)
+            truces = queries.get_active_truces(owner, map_screen.world.nation_data)
             if truces:
                 surface.blit(map_screen.small_font.render("Truce With:", True, (200, 200, 100)), (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 for t, turns_left in truces.items():
-                    t_disp = map_screen.nation_data.get(t, {}).get("name", t)
+                    t_disp = map_screen.world.nation_data.get(t, {}).get("name", t)
                     surface.blit(map_screen.small_font.render(f" - {t_disp} ({turns_left} turns)", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
@@ -284,15 +284,15 @@ def draw_unit_info(map_screen, surface):
             # through. Nothing listed either of them anywhere before.
             for label, color, names in (
                     ("Grants Passage To:", c.COLOR_GOLD_HIGHLIGHT,
-                     queries.get_military_access_granted_by(owner, map_screen.nation_data)),
+                     queries.get_military_access_granted_by(owner, map_screen.world.nation_data)),
                     ("Has Passage Through:", (150, 200, 255),
-                     queries.get_military_access_granted_to(owner, map_screen.nation_data))):
+                     queries.get_military_access_granted_to(owner, map_screen.world.nation_data))):
                 if not names:
                     continue
                 surface.blit(map_screen.small_font.render(label, True, color), (dip_rect.x + 10, y_offset))
                 y_offset += 20
                 for n in names:
-                    n_disp = map_screen.nation_data.get(n, {}).get("name", n)
+                    n_disp = map_screen.world.nation_data.get(n, {}).get("name", n)
                     surface.blit(map_screen.small_font.render(f" - {n_disp}", True, c.UI_TEXT_LIGHT), (dip_rect.x + 10, y_offset))
                     y_offset += 20
 

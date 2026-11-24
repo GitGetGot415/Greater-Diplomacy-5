@@ -30,7 +30,7 @@ def unit_permission(context, country_id, unit, *, authority="player"):
     if authority in ("ai", "server", "setup"):
         return True
     session = session_for(context)
-    if getattr(session, "tactical_mode", False):
+    if session.tactical_mode:
         return unit is session.player_unit
     return session.player_country == country_id
 

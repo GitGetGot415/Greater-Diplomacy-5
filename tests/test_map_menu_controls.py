@@ -7,6 +7,8 @@ import pygame
 
 from screens.game import map_buttons
 from tests import app_harness
+from tests.stub_map_screen import state_owner
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 class MapMenuControlTests(unittest.TestCase):
@@ -21,17 +23,17 @@ class MapMenuControlTests(unittest.TestCase):
         # A freshly booted map is still on the country-picking screen, where
         # update_button_states returns after two buttons. The bar under test
         # only exists once a country has been chosen.
-        saved = {a: getattr(game, a) for a in ("is_editor", "selected_province", "selection_mode")}
+        saved = {a: getattr(state_owner(game, a), a) for a in ("mode", "selected_province", "selection_mode")}
         try:
-            game.is_editor = is_editor
-            game.selection_mode = False
+            game.session.mode = MAP_EDITOR if is_editor else LOCAL_PLAY
+            game.session.selection_mode = False
             game.selected_province = saved["selected_province"] if selected else None
             map_buttons.update_button_states(game)
             return [el for el in game.elements
                     if getattr(el, "visible", False)]
         finally:
             for attr, value in saved.items():
-                setattr(game, attr, value)
+                setattr(state_owner(game, attr), attr, value)
             map_buttons.update_button_states(game)
 
     def test_claims_is_on_a_players_left_bar(self):
@@ -77,20 +79,20 @@ class MapMenuControlTests(unittest.TestCase):
         from ui.navigation.screen import dispatch_global_keys
 
         game = self.map
-        saved = {attr: getattr(game, attr) for attr in (
+        saved = {attr: getattr(state_owner(game, attr), attr) for attr in (
             "selected_province", "selection_mode", "mail_draft_text",
             "navigation_intro_popup")}
         self.addCleanup(map_buttons.update_button_states, game)
         for attr, value in saved.items():
-            self.addCleanup(setattr, game, attr, value)
-        game.selection_mode = False
+            self.addCleanup(setattr, state_owner(game, attr), attr, value)
+        game.session.selection_mode = False
         game.navigation_intro_popup = None
         game.mail_draft_text = ""
         game.selected_province = next(
-            province for province in game.map_data.values()
-            if province.get("owner") != game.player_country
-            and province.get("owner") in game.nation_data
-            and game.nation_data[province["owner"]].get("is_playable"))
+            province for province in game.world.map_data.values()
+            if province.get("owner") != game.session.player_country
+            and province.get("owner") in game.world.nation_data
+            and game.world.nation_data[province["owner"]].get("is_playable"))
         map_buttons.update_button_states(game)
         button = game.btn_declare_war
         button.disabled = False

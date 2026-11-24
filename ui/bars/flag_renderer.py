@@ -10,7 +10,7 @@ FLAG_HOVER_BRIGHTNESS = 35
 
 def displayed_country(map_screen):
     """Use the selected land owner, or the player's country, for the flag."""
-    country = map_screen.player_country
+    country = map_screen.session.player_country
     province = map_screen.selected_province
     if province and province.get("owner", "Unclaimed") not in c.UNPLAYABLE_NATIONS:
         country = province.get("owner")
@@ -19,13 +19,15 @@ def displayed_country(map_screen):
 
 def summary_country(map_screen):
     """Return the flag's country only while its summary control is available."""
+    session = map_screen.session
+    if session.selection_mode or session.is_saving or session.ai_is_thinking or session.viewing_ai_moves:
+        return None
     # Optional attributes support map-input test doubles and older tool screens.
-    blocked = ("hide_top_info", "hide_flag", "selection_mode", "show_player_ready_screen",
-               "show_exit_confirmation", "is_saving", "ai_is_thinking", "viewing_ai_moves")
+    blocked = ("hide_top_info", "hide_flag", "show_player_ready_screen", "show_exit_confirmation")
     if any(getattr(map_screen, name, False) for name in blocked):
         return None
     country = displayed_country(map_screen)
-    if country in c.UNPLAYABLE_NATIONS or country not in map_screen.nation_data:
+    if country in c.UNPLAYABLE_NATIONS or country not in map_screen.world.nation_data:
         return None
     return country
 
@@ -53,7 +55,7 @@ def draw_flag(map_screen, surface):
     if map_screen.hide_top_info or country_header_hidden(map_screen):
         return
     country = displayed_country(map_screen)
-    flag = flag_icons.flag_surface(country, map_screen.nation_data, FLAG_RECT.size)
+    flag = flag_icons.flag_surface(country, map_screen.world.nation_data, FLAG_RECT.size)
     button_rect = flag_button_rect(map_screen)
     hovered = button_rect is not None and button_rect.collidepoint(pygame.mouse.get_pos())
     surface.blit(_highlighted_flag(flag) if hovered else flag, FLAG_RECT)

@@ -322,7 +322,7 @@ class Realtime_Host_Setup(_RealtimeScreen):
                 self.address = self.local_address
             server_map = load_backend_state(self.scenario_path, is_scenario=True,
                                             scenario_settings=copy.deepcopy(self.settings))
-            countries = queries.get_active_playable_nations(server_map.map_data, server_map.nation_data)
+            countries = queries.get_active_playable_nations(server_map.world.map_data, server_map.world.nation_data)
             if self.capacity is None:
                 self.capacity = min(MAX_PLAYER_CAPACITY, len(countries))
             config = RealtimeConfig(self.scenario_path, copy.deepcopy(self.settings), self.capacity,
@@ -678,7 +678,7 @@ class Realtime_Lobby(_RealtimeLobby):
                                         self.request_kick(target, name)))
 
     def _lobby_nation_data(self):
-        return getattr(self.server_map, "nation_data", {})
+        return self.server_map.world.nation_data if self.server_map is not None else {}
 
     def choose_host_country(self, country_id):
         try:
@@ -732,8 +732,8 @@ class Realtime_Lobby(_RealtimeLobby):
         try:
             settings = copy.deepcopy(self.session.config.scenario_settings)
             replacement_map = load_backend_state(path, is_scenario=True, scenario_settings=settings)
-            countries = queries.get_active_playable_nations(replacement_map.map_data,
-                                                             replacement_map.nation_data)
+            countries = queries.get_active_playable_nations(replacement_map.world.map_data,
+                                                             replacement_map.world.nation_data)
             default_capacity = min(MAX_PLAYER_CAPACITY, len(countries))
             self.session.reconfigure_lobby(
                 self.session.host_id, path, settings, countries,

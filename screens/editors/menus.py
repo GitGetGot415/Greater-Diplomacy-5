@@ -44,7 +44,7 @@ def _has_active_countries(map_screen):
 
     Six of them used to carry this check written out verbatim, message and all.
     """
-    if not queries.get_living_nations(map_screen.map_data):
+    if not queries.get_living_nations(map_screen.world.map_data):
         map_screen.show_feedback("No active countries on map!")
         return False
     return True
@@ -121,8 +121,8 @@ def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="
     def cb(val):
         setattr(map_screen, attr, val)
         map_screen.editor_mode = mode
-        display = (queries.get_country_display_name(val, map_screen.nation_data)
-                   if val in map_screen.nation_data else val)
+        display = (queries.get_country_display_name(val, map_screen.world.nation_data)
+                   if val in map_screen.world.nation_data else val)
         if mode == "UNIT":
             display = queries.get_unit_display_name(val, context=map_screen)
         map_screen.show_feedback(f"{feedback_label}: {display}")
@@ -130,11 +130,11 @@ def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="
 
 def _paintable_nations(map_screen):
     """The nation list every nation-painting brush offers, sorted accent-insensitively."""
-    nations = sorted(map_screen.nation_data.keys(), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
+    nations = sorted(map_screen.world.nation_data.keys(), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower())
     country_ids = [n for n in nations if n not in ["Unclaimed", "The Rot"]
                    and (n not in c.UNPLAYABLE_NATIONS or n == "None")]
     return ["Unclaimed", "The Rot", "----------"] + queries.country_picker_items(
-        country_ids, map_screen.nation_data)
+        country_ids, map_screen.world.nation_data)
 
 def select_brush_nation(map_screen):
     """Opens a Tkinter selection window and sets mode to NATION."""
@@ -162,8 +162,8 @@ def spec_select_edit_country(map_screen):
     """Opens a Tkinter window for a Spectator to select which nation to edit."""
     if not _has_active_countries(map_screen):
         return
-    items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.map_data)),
-                                         map_screen.nation_data)
+    items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.world.map_data)),
+                                         map_screen.world.nation_data)
     def cb(val):
         map_screen.editing_country = val
         map_screen.next_state, map_screen.done = "EDIT_COUNTRY", True
@@ -192,13 +192,13 @@ def open_editor_economy(map_screen):
     if not _has_active_countries(map_screen):
         return
 
-    active_countries = sorted(queries.get_living_nations(map_screen.map_data))
-    all_econ = queries.calculate_all_economies(map_screen.map_data, map_screen.nation_data, context=map_screen)
+    active_countries = sorted(queries.get_living_nations(map_screen.world.map_data))
+    all_econ = queries.calculate_all_economies(map_screen.world.map_data, map_screen.world.nation_data, context=map_screen)
 
     def get_stats(cid, res_key):
         d = all_econ[cid]
         bd = d["breakdown"][res_key]
-        cur = int(map_screen.nation_data.get(cid, {}).get(res_key, 0))
+        cur = int(map_screen.world.nation_data.get(cid, {}).get(res_key, 0))
         inc = int(bd["core"] + bd["non_core"] + bd["resources"])
         bld = int(bd["buildings"])
         upk = int(d["upkeep"][res_key])
@@ -209,7 +209,7 @@ def open_editor_economy(map_screen):
     for cid in active_countries:
         if cid not in all_econ:
             continue
-        row = {"country": queries.get_country_display_name(cid, map_screen.nation_data)}
+        row = {"country": queries.get_country_display_name(cid, map_screen.world.nation_data)}
         for prefix, res_key in (("p", "manpower"), ("m", "materials"), ("f", "fuel")):
             cur, inc, bld, upk, net = get_stats(cid, res_key)
             row[f"{prefix}_cur"], row[f"{prefix}_inc"] = cur, inc
@@ -241,7 +241,7 @@ def open_spectator_messages(map_screen):
     def display_date(value):
         return month_pattern.sub(lambda match: match.group()[:3].capitalize(), str(value))
 
-    for c_name, data in map_screen.nation_data.items():
+    for c_name, data in map_screen.world.nation_data.items():
         if data.get("is_playable"):
             inbox = data.get("inbox", [])
             for msg in inbox:
@@ -268,8 +268,8 @@ def open_spectator_messages(map_screen):
                     except ValueError:
                         pass
 
-                    sender_name = queries.get_country_display_name(sender, map_screen.nation_data)
-                    receiver_name = queries.get_country_display_name(c_name, map_screen.nation_data)
+                    sender_name = queries.get_country_display_name(sender, map_screen.world.nation_data)
+                    receiver_name = queries.get_country_display_name(c_name, map_screen.world.nation_data)
                     if is_system:
                         receiver_name = ", ".join(sorted((sender_name, receiver_name)))
                         sender_name = diplomacy_messages.SYSTEM_NOTICE_AUTHOR
@@ -284,18 +284,18 @@ def open_spectator_messages(map_screen):
                         # diplomatic -- which is all this column could say
                         # before the action was recorded on the message.
                         "type": diplomacy_messages.message_category(msg),
-                        "message": diplomacy_messages.conversation_message_text(msg, c_name, map_screen.nation_data),
+                        "message": diplomacy_messages.conversation_message_text(msg, c_name, map_screen.world.nation_data),
                         "system_notice": is_system,
                         "parameters": msg.get("parameters"),
                         "llm": bool(msg.get("llm")),
                         "forwarded": diplomacy_messages.is_forwarded(msg),
                         "forwarded_by": queries.get_country_display_name(
-                            msg.get("forwarded_by", ""), map_screen.nation_data),
+                            msg.get("forwarded_by", ""), map_screen.world.nation_data),
                         "forwarded_at": msg.get("forwarded_at", ""),
                         "original_sender": queries.get_country_display_name(
-                            msg.get("original_sender", ""), map_screen.nation_data),
+                            msg.get("original_sender", ""), map_screen.world.nation_data),
                         "original_receiver": queries.get_country_display_name(
-                            msg.get("original_receiver", ""), map_screen.nation_data),
+                            msg.get("original_receiver", ""), map_screen.world.nation_data),
                         "original_receiver_id": msg.get("original_receiver", ""),
                         "original_date": msg.get("original_date", ""),
                     })
@@ -435,7 +435,7 @@ def open_edited_countries(map_screen):
     default_data = country_io.load_all_country_data()
 
     rows = []
-    for c_id, current_data in map_screen.nation_data.items():
+    for c_id, current_data in map_screen.world.nation_data.items():
         if c_id in ["Unclaimed", "Ocean", "Lakes", "The Rot", "Spectator", "GLOBAL_EVENTS", "FACTION_WAR_MAPS"]:
             continue
 

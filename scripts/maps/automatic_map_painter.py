@@ -1,12 +1,6 @@
 import tkinter as tk
-from tkinter import messagebox, ttk, simpledialog
-import sys
+from tkinter import messagebox, ttk, simpledialog, filedialog
 import os
-
-# Add the parent directory (project root) to the Python path so it can find the 'data' module
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
-from ui.dialogs.file_browser_screen import run_file_browser
 
 from PIL import Image
 import json
@@ -46,11 +40,8 @@ def get_neighbors(x, y, width, height):
     return adj
 
 def run_generator(progress_var, root):
-    _picked = {}
-    run_file_browser("Select Terrain Map", "base_maps",
-                     extensions=[".png", ".jpg", ".jpeg", ".bmp"], tk_parent=root,
-                     on_result=lambda p: _picked.setdefault("path", p))
-    path = _picked.get("path")
+    path = filedialog.askopenfilename(title="Select Terrain Map", initialdir="base_maps", parent=root,
+                                      filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
     if not path: return
 
     # --- Ask for a Map Name and Create a Folder ---

@@ -52,10 +52,10 @@ class DiplomacyEditorAgreementTests(unittest.TestCase):
 
         editor.save()
 
-        self.assertEqual(guarantees.guaranteed_targets("A", game.nation_data), ["D"])
-        self.assertEqual(military_attaches.hosts_for("A", game.nation_data), ["C"])
-        self.assertIn("A", game.nation_data["B"]["military_access"])
-        self.assertNotIn("B", game.nation_data["A"]["military_access"])
+        self.assertEqual(guarantees.guaranteed_targets("A", game.world.nation_data), ["D"])
+        self.assertEqual(military_attaches.hosts_for("A", game.world.nation_data), ["C"])
+        self.assertIn("A", game.world.nation_data["B"]["military_access"])
+        self.assertNotIn("B", game.world.nation_data["A"]["military_access"])
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ import unittest
 
 import data.constants as c
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, treaty_effects, war_calls
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import MapDouble, StubMapScreen
 
 
 def nation(**over):
@@ -146,15 +146,15 @@ class BackstopTests(unittest.TestCase):
     it waits -- so the check has to be at acceptance, not only at sending.
     """
 
-    class Host:
+    class Host(MapDouble):
         pass
 
     def host(self, nd):
         host = self.Host()
-        host.nation_data = nd
-        host.map_data = {}
-        host.scenario_settings = {}
-        host.global_rules = []
+        host.world.nation_data = nd
+        host.world.map_data = {}
+        host.world.scenario_settings = {}
+        host.world.global_rules = []
         return host
 
     def hungary(self):
@@ -202,7 +202,7 @@ class ObsoleteWarRequestTests(unittest.TestCase):
         self.host.set_faction("Alliance", "Master", "Subject", "Ally")
         self.host.set_war("Master", "Enemy")
         self.host.set_war("Ally", "Enemy")
-        self.nd = self.host.nation_data
+        self.nd = self.host.world.nation_data
         diplomacy_messages.set_pending(self.nd, "Subject", "Master", "JOIN_WARS", turns=1)
 
     def test_crossed_requests_make_the_queued_acceptance_a_shared_outcome(self):

@@ -34,10 +34,10 @@ peace decisions. A country sees its own side exactly, sees enemy units on tiles
 it can see, and guesses the rest from public land. See perceived_military.
 """
 
-from data.state_access import world_for, session_for
+from data.state_access import world_for, session_for, viewer_context
+from data.world_nations import WorldNations
 import collections
 import random
-from types import SimpleNamespace
 
 import data.constants as c
 from map_logic.ai import ai_tuning
@@ -52,10 +52,7 @@ def visible_to(map_data, nation_data, id_to_province, viewer):
     None means the viewer sees everything. This builds the same view a
     player's map uses, so the AI sees no more and no less than a player would.
     """
-    view = SimpleNamespace(player_country=viewer, map_data=map_data,
-                           nation_data=nation_data, id_to_province=id_to_province,
-                           tactical_mode=False, player_unit=None)
-    visible, _partial = queries.get_visible_provinces(view)
+    visible, _partial = queries.get_visible_provinces(viewer_context(viewer, map_data, nation_data, id_to_province))
     return visible
 
 
@@ -66,8 +63,10 @@ class AIWorld:
                  human_players=(), scenario_settings=None):
         self.map_data = map_data
         self.nation_data = nation_data
-        self.scenario_settings = (scenario_settings if scenario_settings is not None
-                                  else getattr(world_for(nation_data), "scenario_settings", {}))
+        if scenario_settings is None:
+            # Plain country dictionaries carry no scenario.
+            scenario_settings = nation_data.world.scenario_settings if isinstance(nation_data, WorldNations) else {}
+        self.scenario_settings = scenario_settings
         self.id_to_province = id_to_province
         self.total_turns = total_turns
 

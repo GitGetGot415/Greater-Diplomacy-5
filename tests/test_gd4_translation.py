@@ -278,12 +278,12 @@ class GD4TranslationTests(unittest.TestCase):
             self.assertEqual(saved_map_data[first_key]["owner"], "United States of America")
 
             loaded = main.Map(load_path=destination, is_scenario=False, num_players=1)
-            self.assertEqual(loaded.time_manager.year, 1939)
-            self.assertEqual(loaded.time_manager.month_index, 9)
-            self.assertEqual(loaded.time_manager.day, 15)
-            self.assertEqual(loaded.scenario_settings["days_per_turn"], 30)
-            self.assertEqual(loaded.player_country, "United States of America")
-            self.assertEqual(loaded.id_to_province[gd4.GD4_PROVINCE_TO_GD5[0]]["owner"],
+            self.assertEqual(loaded.world.time_manager.year, 1939)
+            self.assertEqual(loaded.world.time_manager.month_index, 9)
+            self.assertEqual(loaded.world.time_manager.day, 15)
+            self.assertEqual(loaded.world.scenario_settings["days_per_turn"], 30)
+            self.assertEqual(loaded.session.player_country, "United States of America")
+            self.assertEqual(loaded.world.id_to_province[gd4.GD4_PROVINCE_TO_GD5[0]]["owner"],
                              "United States of America")
             # This is where a persisted "None" player country used to crash.
             loaded.update()

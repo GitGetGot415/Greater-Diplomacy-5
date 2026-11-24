@@ -422,16 +422,16 @@ class UnitProgressionTests(unittest.TestCase):
     def test_latest_units_and_research_survive_save_data_round_trip(self):
         game = sample_map_screen()
         research = self.final_research()
-        units = [queries.create_unit_dict(name, game.player_country, self.library)
+        units = [queries.create_unit_dict(name, game.session.player_country, self.library)
                  for name in ai_unit_eval.buildable_units(research, self.library)]
-        game.time_manager.year = c.END_YEAR
-        game.nation_data[game.player_country]['research'] = research
-        province = next(iter(game.map_data.values()))
+        game.world.time_manager.year = c.END_YEAR
+        game.world.nation_data[game.session.player_country]['research'] = research
+        province = next(iter(game.world.map_data.values()))
         province['units'] = units
         saved = json.loads(json.dumps(queries.build_save_dict(game)))
-        loaded_provinces = queries.map_data_with_saved_provinces(game.raw_json_data, saved['provinces'])
+        loaded_provinces = queries.map_data_with_saved_provinces(game.world.raw_json_data, saved['provinces'])
         self.assertEqual(saved['date']['year'], c.END_YEAR)
-        loaded_research = saved['nation_data'][game.player_country]['research']
+        loaded_research = saved['nation_data'][game.session.player_country]['research']
         self.assertEqual(loaded_research, research)
         loaded_units = next(iter(loaded_provinces.values()))['units']
         self.assertEqual(loaded_units, units)

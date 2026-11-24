@@ -87,7 +87,7 @@ def _editor_state(map_screen):
     if not isinstance(state, dict):
         return None
     army = next((item for item in queries.get_armies(
-        map_screen.player_country, map_screen.nation_data, map_screen.map_data)
+        map_screen.session.player_country, map_screen.world.nation_data, map_screen.world.map_data)
                  if item.get("id") == state.get("army_id")), None)
     if army is None or army["id"] == c.UNASSIGNED_ARMY_ID:
         map_screen.army_editor_state = None
@@ -253,11 +253,11 @@ def _save_editor(map_screen):
     if state is None:
         return False
     army = queries.update_army_presentation(
-        map_screen.player_country, state["army_id"], state["name"],
+        map_screen.session.player_country, state["army_id"], state["name"],
         state["symbol"], state["symbol_color"], state["symbol_rotation"],
         state["symbol_flipped"], state["custom_symbol"],
-        map_screen.nation_data,
-        map_screen.map_data)
+        map_screen.world.nation_data,
+        map_screen.world.map_data)
     if army is None:
         map_screen.show_feedback("Army names cannot be blank")
         return False
@@ -594,21 +594,21 @@ def _visible(map_screen, orders_screen=None):
     if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
         return False
     # The turn loading screen covers the map, so the tray has nothing to act on.
-    if map_screen.ai_is_thinking or map_screen.is_refreshing:
+    if map_screen.session.ai_is_thinking or map_screen.session.is_refreshing:
         return False
-    return (not map_screen.selection_mode
-            and not map_screen.is_editor
+    return (not map_screen.session.selection_mode
+            and not map_screen.session.is_editor
             and (map_screen.army_panel_visible_in_orders
                  or not map_screen.selected_province)
-            and map_screen.player_country not in ("None", "Spectator")
-            and not map_screen.tactical_mode)
+            and map_screen.session.player_country not in ("None", "Spectator")
+            and not map_screen.session.tactical_mode)
 
 
 def prepare(map_screen):
     """Cache the Unassigned card after units, rosters, or the player change."""
-    map_screen.unassigned_army_country = map_screen.player_country
+    map_screen.unassigned_army_country = map_screen.session.player_country
     map_screen.unassigned_army_card = queries.get_unassigned_army(
-        map_screen.player_country, map_screen.nation_data, map_screen.map_data)
+        map_screen.session.player_country, map_screen.world.nation_data, map_screen.world.map_data)
 
 
 def _refresh_presentation(map_screen):
@@ -623,13 +623,13 @@ def _refresh_presentation(map_screen):
 def _armies(map_screen, orders_screen=None):
     if not _visible(map_screen, orders_screen):
         return []
-    armies = queries.get_armies(map_screen.player_country, map_screen.nation_data,
-                               map_screen.map_data)
+    armies = queries.get_armies(map_screen.session.player_country, map_screen.world.nation_data,
+                               map_screen.world.map_data)
     # Test doubles may omit cached presentation data. Real maps prepare it at state changes.
     unassigned = map_screen.unassigned_army_card
     cache_country = map_screen.unassigned_army_country
     return ([unassigned] + armies
-            if c.SHOW_UNCLAIMED and cache_country == map_screen.player_country
+            if c.SHOW_UNCLAIMED and cache_country == map_screen.session.player_country
             and unassigned and unassigned["unit_ids"]
             else armies)
 
@@ -759,18 +759,18 @@ def handle_event(map_screen, event, orders_screen=None):
             return True
         close_rect = _close_rect(rect)
         if close_rect.collidepoint(event.pos):
-            queries.disband_army(map_screen.player_country, army["id"],
-                                  map_screen.nation_data, map_screen.map_data)
+            queries.disband_army(map_screen.session.player_country, army["id"],
+                                  map_screen.world.nation_data, map_screen.world.map_data)
             _refresh_presentation(map_screen)
             map_screen.show_feedback(f"Disbanded {army['name']}")
         elif _move_up_rect(rect).collidepoint(event.pos):
-            if queries.move_army(map_screen.player_country, army["id"], -1,
-                                  map_screen.nation_data, map_screen.map_data):
+            if queries.move_army(map_screen.session.player_country, army["id"], -1,
+                                  map_screen.world.nation_data, map_screen.world.map_data):
                 _refresh_presentation(map_screen)
                 map_screen.show_feedback(f"Moved {army['name']} up")
         elif _move_down_rect(rect).collidepoint(event.pos):
-            if queries.move_army(map_screen.player_country, army["id"], 1,
-                                  map_screen.nation_data, map_screen.map_data):
+            if queries.move_army(map_screen.session.player_country, army["id"], 1,
+                                  map_screen.world.nation_data, map_screen.world.map_data):
                 _refresh_presentation(map_screen)
                 map_screen.show_feedback(f"Moved {army['name']} down")
         elif _target_area_rect(rect).collidepoint(event.pos):

@@ -22,6 +22,7 @@ from tests.stub_map_screen import map_double
 from tests.tournament_fixtures import fast_tournament_crypto
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -36,7 +37,7 @@ def fixture():
         "at_war_with": [enemy]} for owner, enemy in (("A", "B"), ("B", "A"))}
     return map_double(map_data={str(pid): province for pid, province in provinces.items()},
         id_to_province=provinces, nation_data=nations, scenario_settings={"fog_of_war": False},
-        player_country="A", tactical_mode=False, player_unit=None, is_editor=False,
+        player_country="A", tactical_mode=False, player_unit=None, mode=LOCAL_PLAY,
         time_manager=SimpleNamespace(total_turns=1, day=1, month_index=0, year=1939),
         unit_event_log={"turn": 1, "events": []}, unit_event_read_turns={},
         loop_map=False, active_players=["A", "B"], current_player_index=0,
@@ -48,7 +49,7 @@ def unit(game, owner, pid=1, health=10, attack=6, name="Test division"):
     result = {"owner": owner, "type": "Infantry", "custom_name": name, "health": health,
               "max_health": health, "attack": attack, "defense": 0,
               "order": {"type": "MOVE", "path": []}}
-    game.id_to_province[pid]["units"].append(result)
+    game.world.id_to_province[pid]["units"].append(result)
     return result
 
 
@@ -70,12 +71,12 @@ class UnitEventRulesTests(unittest.TestCase):
         combat_processor.process_combat(baseline)
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Ground combat", combat_processor.process_combat)
-        actual = copy.deepcopy(game.map_data)
+        actual = copy.deepcopy(game.world.map_data)
         for province in actual.values():
             for item in province["units"]:
                 item.pop("unit_id", None)
-        self.assertEqual(actual, baseline.map_data)
-        events = game.unit_event_log["events"]
+        self.assertEqual(actual, baseline.world.map_data)
+        events = game.world.unit_event_log["events"]
         received = [entry for entry in events if entry["owner"] == "A" and entry["event"] == "DAMAGE_RECEIVED"]
         self.assertEqual(sum(entry["amount"] for entry in received), 2)
         self.assertTrue(all(entry["tile_id"] == 1 and "Enemy division" in entry["details"] for entry in received))
@@ -87,11 +88,11 @@ class UnitEventRulesTests(unittest.TestCase):
         victim = unit(game, "A")
         first = unit(game, "B", attack=4)
         second = unit(game, "B", attack=8)
-        shots = combat_rules.damage_shots([first, second], [victim], nation_data=game.nation_data, with_sources=True)
+        shots = combat_rules.damage_shots([first, second], [victim], nation_data=game.world.nation_data, with_sources=True)
         with unit_events.record_turn(game):
             for targets, attack, sources in shots:
                 combat_processor.apply_group_damage(attack, targets, sources=sources, tile=1)
-        entries = game.unit_event_log["events"]
+        entries = game.world.unit_event_log["events"]
         received = sum(entry["amount"] for entry in entries if entry["event"] == "DAMAGE_RECEIVED")
         credits = {entry["unit_id"]: entry["amount"] for entry in entries if entry["event"] == "DAMAGE_DEALT"}
         weights = dict((source["unit_id"], weight) for source, weight in shots[0][2])
@@ -106,14 +107,14 @@ class UnitEventRulesTests(unittest.TestCase):
         disbanded = unit(game, "A")
         with unit_events.record_turn(game):
             def move(_game):
-                game.id_to_province[1]["units"].remove(moving)
-                game.id_to_province[2]["units"].append(moving)
+                game.world.id_to_province[1]["units"].remove(moving)
+                game.world.id_to_province[2]["units"].append(moving)
             unit_events.run_step(game, "Movement", move)
             unit_events.run_step(game, "Repairs", lambda _game: repaired.update(health=7))
-            unit_events.run_step(game, "Disbanding", lambda _game: game.id_to_province[1]["units"].remove(disbanded))
+            unit_events.run_step(game, "Disbanding", lambda _game: game.world.id_to_province[1]["units"].remove(disbanded))
             unit_events.run_step(game, "Deployments", lambda _game: unit(game, "A"))
             unit_events.run_step(game, "Upgrades", lambda _game: moving.update(type="Test upgrade"))
-        entries = game.unit_event_log["events"]
+        entries = game.world.unit_event_log["events"]
         self.assertEqual({entry["event"] for entry in entries}, {"MOVED", "REPAIRED", "DISBANDED", "DEPLOYED", "UPGRADED"})
         self.assertEqual(next(entry["tile_id"] for entry in entries if entry["event"] == "MOVED"), 2)
         self.assertEqual(next(entry["amount"] for entry in entries if entry["event"] == "REPAIRED"), 4)
@@ -122,23 +123,23 @@ class UnitEventRulesTests(unittest.TestCase):
     def test_forecasts_and_combat_outside_resolution_do_not_write_reports(self):
         game = fixture()
         target = unit(game, "A")
-        original = copy.deepcopy(game.unit_event_log)
+        original = copy.deepcopy(game.world.unit_event_log)
         combat_processor.apply_group_damage(1, [target])
-        self.assertEqual(game.unit_event_log, original)
+        self.assertEqual(game.world.unit_event_log, original)
         with unit_events.record_turn(game):
             combat_processor.apply_group_damage(2, [copy.deepcopy(target)])
-        self.assertEqual(game.unit_event_log["events"], [])
+        self.assertEqual(game.world.unit_event_log["events"], [])
 
     def test_new_turn_replaces_events_and_clears_old_read_preferences(self):
         game = fixture()
-        game.unit_event_log["events"] = [row()]
+        game.world.unit_event_log["events"] = [row()]
         unit_events.mark_read(game)
         unit_events.set_event_filter(game, "DESTROYED")
-        game.time_manager.total_turns += 1
+        game.world.time_manager.total_turns += 1
         with unit_events.record_turn(game):
             pass
-        self.assertEqual(game.unit_event_log, {"turn": 2, "events": []})
-        self.assertEqual(game.unit_event_read_turns, {})
+        self.assertEqual(game.world.unit_event_log, {"turn": 2, "events": []})
+        self.assertEqual(game.session.unit_event_read_turns, {})
         self.assertIsNone(unit_events.event_filter_for(game))
 
     def test_failed_resolution_does_not_publish_partial_events(self):
@@ -148,14 +149,14 @@ class UnitEventRulesTests(unittest.TestCase):
         with self.assertRaises(RuntimeError), unit_events.record_turn(game):
             combat_processor.apply_group_damage(2, [target])
             raise RuntimeError("Interrupted resolution")
-        self.assertEqual(game.unit_event_log["events"], [])
+        self.assertEqual(game.world.unit_event_log["events"], [])
         self.assertEqual(unit_events.event_filter_for(game), "DESTROYED")
         combat_processor.apply_group_damage(2, [target])
-        self.assertEqual(game.unit_event_log["events"], [])
+        self.assertEqual(game.world.unit_event_log["events"], [])
 
     def test_fogged_attacker_name_is_revealed_and_location_is_private(self):
         game = fixture()
-        game.scenario_settings["fog_of_war"] = True
+        game.world.scenario_settings["fog_of_war"] = True
         target = unit(game, "A")
         source = unit(game, "B", pid=2, name="Secret weapon")
         with unit_events.record_turn(game):
@@ -168,10 +169,10 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertEqual([part["owner"] for part in parts if "owner" in part], ["B"])
         loaded = fixture()
         unit_events.restore(loaded, json.loads(json.dumps(projected)))
-        self.assertEqual(loaded.unit_event_log, projected["unit_event_log"])
+        self.assertEqual(loaded.world.unit_event_log, projected["unit_event_log"])
         loaded.refresh_all_maps = lambda: unit_events.refresh_presentation(loaded)
         apply_authoritative_snapshot(loaded, projected)
-        self.assertEqual(loaded.unit_event_log, projected["unit_event_log"])
+        self.assertEqual(loaded.world.unit_event_log, projected["unit_event_log"])
 
     def test_detail_flags_use_recorded_owners_even_with_duplicate_names_and_removed_units(self):
         game = fixture()
@@ -180,10 +181,10 @@ class UnitEventRulesTests(unittest.TestCase):
         second = unit(game, "A", name="Same name")
         with unit_events.record_turn(game):
             combat_processor.apply_group_damage(2, [victim], sources=[(first, 1), (second, 1)], tile=1)
-        received = next(entry for entry in game.unit_event_log["events"] if entry["event"] == "DAMAGE_RECEIVED")
+        received = next(entry for entry in game.world.unit_event_log["events"] if entry["event"] == "DAMAGE_RECEIVED")
         self.assertEqual([part["owner"] for part in received["detail_parts"] if "owner" in part], ["B", "A"])
         self.assertEqual("".join(part["text"] for part in received["detail_parts"]), received["details"])
-        game.id_to_province[1]["units"].clear()
+        game.world.id_to_province[1]["units"].clear()
         self.assertEqual(unit_events.entries_for(game)[0]["detail_parts"], received["detail_parts"])
 
     def test_grounded_air_loss_has_sources_and_destroyed_entry(self):
@@ -193,22 +194,22 @@ class UnitEventRulesTests(unittest.TestCase):
         unit(game, "B", name="Ground attacker")
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Ground combat", combat_processor.process_combat)
-        entries = [entry for entry in game.unit_event_log["events"] if entry["owner"] == "A"]
+        entries = [entry for entry in game.world.unit_event_log["events"] if entry["owner"] == "A"]
         self.assertEqual({entry["event"] for entry in entries}, {"DAMAGE_RECEIVED", "DESTROYED"})
         self.assertTrue(any("Ground attacker" in entry["details"] for entry in entries))
 
     def test_tactical_sources_use_the_selected_divisions_visibility(self):
         game = fixture()
-        game.scenario_settings["fog_of_war"] = True
-        game.tactical_mode = True
-        game.player_unit = unit(game, "A")
+        game.world.scenario_settings["fog_of_war"] = True
+        game.session.tactical_mode = True
+        game.session.player_unit = unit(game, "A")
         source = unit(game, "B", pid=2, name="Hidden source")
         with patch.object(queries, "get_visible_provinces", return_value=({1}, set())) as visibility:
             with unit_events.record_turn(game):
-                combat_processor.apply_group_damage(1, [game.player_unit], sources=[(source, 1)], tile=1)
+                combat_processor.apply_group_damage(1, [game.session.player_unit], sources=[(source, 1)], tile=1)
         view = visibility.call_args_list[0].args[0]
-        self.assertTrue(view.tactical_mode)
-        self.assertIs(view.player_unit, game.player_unit)
+        self.assertTrue(view.session.tactical_mode)
+        self.assertIs(view.session.player_unit, game.session.player_unit)
         self.assertIn("Hidden source (tile ???)", unit_events.entries_for(game)[0]["details"])
         self.assertNotIn("tile 2", json.dumps(unit_events.entries_for(game)))
 
@@ -218,7 +219,7 @@ class UnitEventRulesTests(unittest.TestCase):
                 (False, {1}, True, "2"), (False, {1, 2}, False, "???")):
             with self.subTest(fog=fog, visible=visible, unit_visible=unit_visible):
                 game = fixture()
-                game.scenario_settings["fog_of_war"] = fog
+                game.world.scenario_settings["fog_of_war"] = fog
                 victim = unit(game, "A")
                 attacker = unit(game, "B", pid=2, name="Attacker")
                 with patch.object(queries, "get_visible_provinces", return_value=(visible, set())), \
@@ -231,17 +232,17 @@ class UnitEventRulesTests(unittest.TestCase):
 
     def test_hidden_targets_are_identified_in_damage_dealt_reports_without_their_positions(self):
         game = fixture()
-        game.scenario_settings["fog_of_war"] = True
+        game.world.scenario_settings["fog_of_war"] = True
         victim = unit(game, "A", name="Hidden target")
         attacker = unit(game, "B", pid=2)
         with patch.object(queries, "get_visible_provinces", return_value=({2}, set())):
             with unit_events.record_turn(game):
                 combat_processor.apply_group_damage(1, [victim], sources=[(attacker, 1)], tile=1)
-        game.player_country = "B"
+        game.session.player_country = "B"
         entry = unit_events.entries_for(game)[0]
         self.assertEqual(entry["event"], "DAMAGE_DEALT")
         self.assertIn("Hidden target (tile ???)", entry["details"])
-        self.assertNotIn("Unknown unit", json.dumps(game.unit_event_log))
+        self.assertNotIn("Unknown unit", json.dumps(game.world.unit_event_log))
         self.assertEqual([part["owner"] for part in entry["detail_parts"] if "owner" in part], ["A"])
         projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "B")
         self.assertIn("Hidden target (tile ???)", json.dumps(projected["unit_event_log"]))
@@ -251,14 +252,14 @@ class UnitEventRulesTests(unittest.TestCase):
         from tests.air_fixtures import tile, wing, world
         from map_logic.system32 import air_processor
         game = world()
-        game.is_editor = False
+        game.session.mode = LOCAL_PLAY
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
         missile = wing(base, "V2 Rocket I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
         wing(target, "Infantry", owner="B")
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
-        entries = game.unit_event_log["events"]
+        entries = game.world.unit_event_log["events"]
         dealt = [entry for entry in entries if entry["unit_id"] == missile["unit_id"] and entry["event"] == "DAMAGE_DEALT"]
         self.assertTrue(dealt)
         self.assertTrue(all(entry["tile_id"] == target["id"] for entry in dealt))
@@ -267,8 +268,8 @@ class UnitEventRulesTests(unittest.TestCase):
     def air_report_fixture(self):
         from tests.air_fixtures import tile, wing, world
         game = world()
-        game.is_editor = False
-        game.scenario_settings["fog_of_war"] = False
+        game.session.mode = LOCAL_PLAY
+        game.world.scenario_settings["fog_of_war"] = False
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
         patrol_base = tile(game, 3, 40, owner="B")
@@ -285,7 +286,7 @@ class UnitEventRulesTests(unittest.TestCase):
         game, attacker, patrol, garrison, target = self.air_report_fixture()
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
-        entries = game.unit_event_log["events"]
+        entries = game.world.unit_event_log["events"]
         interceptions = [entry for entry in entries if entry["details"].startswith("Interception:")]
         strikes = [entry for entry in entries if entry["details"].startswith("Air missions:")]
         self.assertEqual({entry["unit_id"] for entry in interceptions},
@@ -299,9 +300,9 @@ class UnitEventRulesTests(unittest.TestCase):
                                 for entry in exchange))
         snapshot = json.loads(json.dumps(queries.build_save_dict(game, include_provinces=False)))
         loaded = fixture()
-        loaded.time_manager.total_turns = game.time_manager.total_turns
+        loaded.world.time_manager.total_turns = game.world.time_manager.total_turns
         unit_events.restore(loaded, snapshot)
-        self.assertEqual(loaded.unit_event_log, game.unit_event_log)
+        self.assertEqual(loaded.world.unit_event_log, game.world.unit_event_log)
         projected = queries.player_snapshot_projection(game, snapshot, "A")
         self.assertEqual(projected["unit_event_log"]["events"],
                          [entry for entry in entries if entry["owner"] == "A"])
@@ -310,8 +311,8 @@ class UnitEventRulesTests(unittest.TestCase):
         from tests.air_fixtures import wing
         from map_logic.system32 import air_processor
         game, attacker, patrol, garrison, target = self.air_report_fixture()
-        base = game.id_to_province[1]
-        game.id_to_province[3]["units"].remove(patrol)
+        base = game.world.id_to_province[1]
+        game.world.id_to_province[3]["units"].remove(patrol)
         wings = [attacker] + [wing(base, attacker["type"], order=attacker["order"])
                              for _ in range(c.COMBAT_WIDTH * 2 - 1)]
         for index, unit in enumerate(wings):
@@ -320,7 +321,7 @@ class UnitEventRulesTests(unittest.TestCase):
         reduced_attack = sum(unit["attack"] for unit in wings) * queries.air_stack_attack_efficiency(len(wings))
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
-        dealt = [entry for entry in game.unit_event_log["events"] if entry["event"] == "DAMAGE_DEALT"]
+        dealt = [entry for entry in game.world.unit_event_log["events"] if entry["event"] == "DAMAGE_DEALT"]
         self.assertEqual({entry["unit_id"] for entry in dealt}, {unit["unit_id"] for unit in wings})
         self.assertAlmostEqual(sum(entry["amount"] for entry in dealt), reduced_attack - garrison["defense"])
         for unit in wings:
@@ -340,7 +341,7 @@ class UnitEventRulesTests(unittest.TestCase):
                 lost["health"] = 1
                 with unit_events.record_turn(game):
                     unit_events.run_step(game, "Air missions", air_processor.process_air_orders)
-                losses = [entry for entry in game.unit_event_log["events"]
+                losses = [entry for entry in game.world.unit_event_log["events"]
                           if entry["unit_id"] == lost["unit_id"] and entry["event"] == "DESTROYED"]
                 self.assertEqual(len(losses), 1)
                 self.assertEqual(losses[0]["details"], expected_phase)
@@ -348,9 +349,9 @@ class UnitEventRulesTests(unittest.TestCase):
 
     def test_authoritative_resolver_records_and_replaces_each_turn(self):
         game = fixture()
-        game.time_manager = TimeHandler(start_year=1939)
-        game.history = {}
-        game.multi_turns_total = 0
+        game.world.time_manager = TimeHandler(start_year=1939)
+        game.world.history = {}
+        game.session.progress["multi_turns"].total = 0
         victim = unit(game, "A", health=2)
         unit(game, "B", attack=100)
         with ExitStack() as stack:
@@ -360,18 +361,18 @@ class UnitEventRulesTests(unittest.TestCase):
             stack.enter_context(patch.object(turn_processor.economy_processor, "process_economy"))
             stack.enter_context(patch.object(turn_processor.research_processor, "process_national_research"))
             asyncio.run(turn_processor.resolve_turn_logic(game))
-            self.assertTrue(any(entry["unit_id"] == victim["unit_id"] for entry in game.unit_event_log["events"]))
-            self.assertEqual(game.unit_event_log["turn"], game.time_manager.total_turns)
+            self.assertTrue(any(entry["unit_id"] == victim["unit_id"] for entry in game.world.unit_event_log["events"]))
+            self.assertEqual(game.world.unit_event_log["turn"], game.world.time_manager.total_turns)
             asyncio.run(turn_processor.resolve_turn_logic(game))
-        self.assertEqual(game.unit_event_log["events"], [])
+        self.assertEqual(game.world.unit_event_log["events"], [])
 
     def test_air_strike_reveals_attacker_without_revealing_hidden_base(self):
         from tests.air_fixtures import tile, wing, world
         from map_logic.system32 import air_processor
         game = world()
-        game.is_editor = False
-        game.player_country = "B"
-        game.scenario_settings["fog_of_war"] = True
+        game.session.mode = LOCAL_PLAY
+        game.session.player_country = "B"
+        game.world.scenario_settings["fog_of_war"] = True
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
         attacker = wing(base, "Monoplane Bomber I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
@@ -390,39 +391,39 @@ class UnitEventRulesTests(unittest.TestCase):
 class UnitEventPersistenceTests(unittest.TestCase):
     def test_mark_unread_preserves_other_players_and_survives_save_and_broadcast(self):
         game = fixture()
-        game.unit_event_log["events"] = [row(), row("B")]
-        game.unit_event_read_turns = {"A": 1, "B": 1}
+        game.world.unit_event_log["events"] = [row(), row("B")]
+        game.session.unit_event_read_turns = {"A": 1, "B": 1}
         authoritative = queries.build_save_dict(game)
-        before = copy.deepcopy(game.unit_event_log)
+        before = copy.deepcopy(game.world.unit_event_log)
         unit_events.mark_unread(game)
         self.assertEqual(game._unit_event_unread, 1)
-        self.assertEqual(game.unit_event_read_turns, {"B": 1})
-        self.assertEqual(game.unit_event_log, before)
+        self.assertEqual(game.session.unit_event_read_turns, {"B": 1})
+        self.assertEqual(game.world.unit_event_log, before)
         loaded = fixture()
         unit_events.restore(loaded, json.loads(json.dumps(queries.build_save_dict(game))))
         unit_events.refresh_presentation(loaded)
         self.assertEqual(loaded._unit_event_unread, 1)
-        self.assertEqual(loaded.unit_event_read_turns, {"B": 1})
+        self.assertEqual(loaded.session.unit_event_read_turns, {"B": 1})
         game.refresh_all_maps = lambda: unit_events.refresh_presentation(game)
         apply_authoritative_snapshot(game, authoritative)
         self.assertEqual(game._unit_event_unread, 1)
-        self.assertEqual(game.unit_event_read_turns, {"B": 1})
+        self.assertEqual(game.session.unit_event_read_turns, {"B": 1})
 
     def test_json_round_trip_and_legacy_defaults(self):
         game = fixture()
         entry = row()
         entry["detail_parts"] = [{"text": entry["details"], "owner": "B"}]
-        game.unit_event_log["events"] = [entry]
+        game.world.unit_event_log["events"] = [entry]
         unit_events.mark_read(game)
         snapshot = json.loads(json.dumps(queries.build_save_dict(game, include_provinces=False)))
         loaded = fixture()
         unit_events.restore(loaded, snapshot)
-        self.assertEqual(loaded.unit_event_log, game.unit_event_log)
+        self.assertEqual(loaded.world.unit_event_log, game.world.unit_event_log)
         unit_events.refresh_presentation(loaded)
         self.assertEqual(loaded._unit_event_unread, 0)
         unit_events.restore(loaded, {})
-        self.assertEqual(loaded.unit_event_log["events"], [])
-        self.assertEqual(loaded.unit_event_read_turns, {})
+        self.assertEqual(loaded.world.unit_event_log["events"], [])
+        self.assertEqual(loaded.session.unit_event_read_turns, {})
 
     def test_legacy_details_and_malformed_optional_parts_keep_the_original_text(self):
         game = fixture()
@@ -431,7 +432,7 @@ class UnitEventPersistenceTests(unittest.TestCase):
                       [{"text": "Different text", "owner": "B"}]):
             with self.subTest(parts=parts):
                 unit_events.restore(game, {"unit_event_log": {"turn": 1, "events": [entry | {"detail_parts": parts}]}})
-                self.assertEqual(game.unit_event_log["events"], [entry])
+                self.assertEqual(game.world.unit_event_log["events"], [entry])
 
     def test_stale_and_malformed_reports_are_discarded(self):
         game = fixture()
@@ -440,14 +441,14 @@ class UnitEventPersistenceTests(unittest.TestCase):
         for value in (None, [], {"turn": 0, "events": [row()]}, {"turn": 1, "events": bad_rows}):
             with self.subTest(value=value):
                 unit_events.restore(game, {"unit_event_log": value, "unit_event_read_turns": []})
-                self.assertEqual(game.unit_event_log["events"], [])
+                self.assertEqual(game.world.unit_event_log["events"], [])
 
     def test_player_projection_and_tournament_spectator_do_not_leak_other_reports(self):
         game = fixture()
-        game.unit_event_log["events"] = [row(), row("B")]
-        for entry in game.unit_event_log["events"]:
+        game.world.unit_event_log["events"] = [row(), row("B")]
+        for entry in game.world.unit_event_log["events"]:
             entry["detail_parts"] = [{"text": entry["details"], "owner": entry["owner"]}]
-        game.unit_event_read_turns = {"A": 1, "B": 1}
+        game.session.unit_event_read_turns = {"A": 1, "B": 1}
         saved = queries.build_save_dict(game)
         for viewer in ("A", "B", c.TOURNAMENT_SPECTATOR):
             projected = queries.player_snapshot_projection(game, saved, viewer)
@@ -463,25 +464,25 @@ class UnitEventPersistenceTests(unittest.TestCase):
     def test_realtime_broadcast_keeps_local_reads_until_the_next_turn(self):
         game = fixture()
         game.refresh_all_maps = lambda: unit_events.refresh_presentation(game)
-        game.unit_event_log["events"] = [row()]
-        game.unit_event_log["events"][0]["detail_parts"] = [{"text": "Ground combat", "owner": "B"}]
+        game.world.unit_event_log["events"] = [row()]
+        game.world.unit_event_log["events"][0]["detail_parts"] = [{"text": "Ground combat", "owner": "B"}]
         snapshot = queries.build_save_dict(game)
         unit_events.mark_read(game)
         unit_events.set_event_filter(game, "DESTROYED")
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game._unit_event_unread, 0)
-        self.assertEqual(game.unit_event_log["events"][0]["detail_parts"], snapshot["unit_event_log"]["events"][0]["detail_parts"])
+        self.assertEqual(game.world.unit_event_log["events"][0]["detail_parts"], snapshot["unit_event_log"]["events"][0]["detail_parts"])
         self.assertEqual(unit_events.event_filter_for(game), "DESTROYED")
         snapshot["date"]["total_turns"] += 1
         snapshot["unit_event_log"]["turn"] += 1
         apply_authoritative_snapshot(game, snapshot)
         self.assertEqual(game._unit_event_unread, 1)
-        self.assertEqual(game.unit_event_read_turns, {})
+        self.assertEqual(game.session.unit_event_read_turns, {})
         self.assertIsNone(unit_events.event_filter_for(game))
 
     def test_reports_and_reads_are_not_realtime_commands(self):
         game = fixture()
-        game.unit_event_log["events"] = [row()]
+        game.world.unit_event_log["events"] = [row()]
         before = collect_map_commands(game, "A")
         unit_events.mark_read(game)
         unit_events.set_event_filter(game, "DESTROYED")
@@ -491,37 +492,37 @@ class UnitEventPersistenceTests(unittest.TestCase):
     def test_tournament_move_cannot_replace_host_reports(self):
         helper = tournament_tests.TournamentMoveTests()
         host = tournament_tests.Host()
-        host.unit_event_log = {"turn": host.time_manager.total_turns, "events": [row("Leader")]}
-        host.unit_event_read_turns = {}
-        before = copy.deepcopy(host.unit_event_log)
+        host.world.unit_event_log = {"turn": host.world.time_manager.total_turns, "events": [row("Leader")]}
+        host.session.unit_event_read_turns = {}
+        before = copy.deepcopy(host.world.unit_event_log)
         forged = helper.player_data(host, unit_event_log={"turn": 4, "events": [row("Member")]},
                                     unit_event_read_turns={"Member": 4})
         with tempfile.TemporaryDirectory() as temporary:
             path = helper.write_move(temporary, "forged.gd5move", "Leader", forged)
             self.assertEqual(helper.import_moves(host, [path])["loaded"], 1)
-        self.assertEqual(host.unit_event_log, before)
-        self.assertEqual(host.unit_event_read_turns, {})
+        self.assertEqual(host.world.unit_event_log, before)
+        self.assertEqual(host.session.unit_event_read_turns, {})
 
 
 class UnitEventViewTests(unittest.TestCase):
     def test_hotseat_tactical_spectator_and_editor_views(self):
         game = fixture()
-        game.unit_event_log["events"] = [row(unit_id="mine"), row(unit_id="other"), row("B")]
+        game.world.unit_event_log["events"] = [row(unit_id="mine"), row(unit_id="other"), row("B")]
         unit_events.refresh_presentation(game)
         self.assertEqual(game._unit_event_unread, 2)
         unit_events.mark_read(game)
-        game.player_country = "B"
+        game.session.player_country = "B"
         unit_events.refresh_presentation(game)
         self.assertEqual(game._unit_event_unread, 1)
-        game.player_country = "A"
-        game.tactical_mode = True
-        game.player_unit = {"unit_id": "mine"}
+        game.session.player_country = "A"
+        game.session.tactical_mode = True
+        game.session.player_unit = {"unit_id": "mine"}
         self.assertEqual([entry["unit_id"] for entry in unit_events.entries_for(game)], ["mine"])
-        game.player_country = "Spectator"
+        game.session.player_country = "Spectator"
         self.assertEqual(len(unit_events.entries_for(game)), 3)
-        game.player_country = c.TOURNAMENT_SPECTATOR
+        game.session.player_country = c.TOURNAMENT_SPECTATOR
         self.assertEqual(unit_events.entries_for(game), [])
-        game.is_editor = True
+        game.session.mode = MAP_EDITOR
         self.assertEqual(unit_events.entries_for(game), [])
 
 
@@ -531,13 +532,13 @@ class UnitEventScreenTests(unittest.TestCase):
         app_harness.boot()
         from screens.game.map import Map
         cls.game = Map(load_path=app_harness.SCENARIO_PATH, is_scenario=True)
-        cls.game.selection_mode = False
-        cls.game.player_country = sorted(queries.get_living_nations(cls.game.map_data))[0]
+        cls.game.session.selection_mode = False
+        cls.game.session.player_country = sorted(queries.get_living_nations(cls.game.world.map_data))[0]
 
     def setUp(self):
-        self.game.unit_event_log = {"turn": self.game.time_manager.total_turns,
-                                    "events": [row(self.game.player_country)]}
-        self.game.unit_event_read_turns = {}
+        self.game.world.unit_event_log = {"turn": self.game.world.time_manager.total_turns,
+                                    "events": [row(self.game.session.player_country)]}
+        self.game.session.unit_event_read_turns = {}
         unit_events.set_event_filter(self.game, None)
         unit_events.refresh_presentation(self.game)
 
@@ -559,7 +560,7 @@ class UnitEventScreenTests(unittest.TestCase):
     def test_table_uses_cached_rows_and_opens_complete_details(self):
         from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
-        game.unit_event_log["events"][0]["details"] = "Long incident details " * 80
+        game.world.unit_event_log["events"][0]["details"] = "Long incident details " * 80
         screen = UnitEventsScreen(game)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
@@ -567,16 +568,16 @@ class UnitEventScreenTests(unittest.TestCase):
             screen.draw(surface)
         with patch("ui.dialogs.show_info") as details:
             screen.show_event(screen.rows[0])
-        self.assertIn(game.unit_event_log["events"][0]["details"], details.call_args.args[1])
+        self.assertIn(game.world.unit_event_log["events"][0]["details"], details.call_args.args[1])
     def test_owner_flags_follow_destroyed_units_after_sorting_and_filtering(self):
         from screens.game.unit_events_screen import UnitEventsScreen
         from ui.widgets import flag_icons
         game = self.game
-        events = [row(game.player_country) | {"unit_name": "Z destroyed unit"},
+        events = [row(game.session.player_country) | {"unit_name": "Z destroyed unit"},
                   row("Historic country", event="MOVED") | {"unit_name": "A moving unit"}]
-        game.unit_event_log["events"] = events
+        game.world.unit_event_log["events"] = events
         flags = {owner: pygame.Surface(flag_icons.ROW_FLAG_SIZE) for owner in {entry["owner"] for entry in events}}
-        with patch.object(game, "player_country", "Spectator"), \
+        with patch.object(game.session, "player_country", "Spectator"), \
                 patch.object(flag_icons, "flag_surface", side_effect=lambda owner, _data: flags[owner]) as prepare:
             screen = UnitEventsScreen(game)
         self.assertEqual({call.args[0] for call in prepare.call_args_list}, set(flags))
@@ -616,9 +617,9 @@ class UnitEventScreenTests(unittest.TestCase):
         parts = [{"text": "Ground combat: "}, {"text": "Same name (tile 1)", "owner": "B"},
                  {"text": "; "}, {"text": "Same name (tile 2)", "owner": "C"},
                  {"text": "; Unknown unit"}]
-        entry = game.unit_event_log["events"][0]
+        entry = game.world.unit_event_log["events"][0]
         entry.update(details="".join(part["text"] for part in parts), detail_parts=parts)
-        colors = {game.player_country: (20, 120, 20), "B": (120, 20, 20), "C": (20, 20, 120)}
+        colors = {game.session.player_country: (20, 120, 20), "B": (120, 20, 20), "C": (20, 20, 120)}
         flags = {}
         for owner, color in colors.items():
             flags[owner] = pygame.Surface(flag_icons.ROW_FLAG_SIZE)
@@ -645,7 +646,7 @@ class UnitEventScreenTests(unittest.TestCase):
         for index in range(30):
             parts.append({"text": "LongUnitName" * 10 + f" (tile {index})", "owner": "B"})
             parts.append({"text": "; "})
-        entry = game.unit_event_log["events"][0]
+        entry = game.world.unit_event_log["events"][0]
         entry.update(details="".join(part["text"] for part in parts), detail_parts=parts)
         flag = pygame.Surface(flag_icons.ROW_FLAG_SIZE)
         flag.fill((123, 45, 67))
@@ -668,7 +669,7 @@ class UnitEventScreenTests(unittest.TestCase):
     def test_mark_all_unread_restores_badge_after_closing_until_reopened(self):
         from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
-        before = copy.deepcopy(game.unit_event_log)
+        before = copy.deepcopy(game.world.unit_event_log)
         screen = UnitEventsScreen(game)
         self.assertEqual(game.btn_unit_events.notification_count, 0)
         button = screen.btn_mark_all_unread
@@ -678,14 +679,14 @@ class UnitEventScreenTests(unittest.TestCase):
         screen.refresh_ui()
         screen.exit_screen()
         self.assertEqual(game.btn_unit_events.notification_count, len(screen.rows))
-        self.assertEqual(game.unit_event_log, before)
+        self.assertEqual(game.world.unit_event_log, before)
         UnitEventsScreen(game)
         self.assertEqual(game.btn_unit_events.notification_count, 0)
 
     def test_empty_log_disables_mark_all_unread(self):
         from screens.game.unit_events_screen import UnitEventsScreen
         from ui.navigation import modal_stack
-        self.game.unit_event_log["events"] = []
+        self.game.world.unit_event_log["events"] = []
         screen = UnitEventsScreen(self.game)
         self.assertTrue(screen.btn_mark_all_unread.disabled)
         self.assertEqual(self.game.btn_unit_events.notification_count, 0)
@@ -698,8 +699,8 @@ class UnitEventScreenTests(unittest.TestCase):
         from screens.game.unit_events_screen import UnitEventsScreen
         from ui.navigation import modal_stack
         game = self.game
-        game.unit_event_log["events"] += [row(game.player_country, event="MOVED"), row("Other country")]
-        before = copy.deepcopy(game.unit_event_log)
+        game.world.unit_event_log["events"] += [row(game.session.player_country, event="MOVED"), row("Other country")]
+        before = copy.deepcopy(game.world.unit_event_log)
         screen = UnitEventsScreen(game)
         self.assertEqual(len(screen.rows), 2)
         with patch.object(modal_stack, "push") as push:
@@ -715,13 +716,13 @@ class UnitEventScreenTests(unittest.TestCase):
         picker = push.call_args.args[0].screen
         picker.select(next(item for item in picker.items if item[1] is None))
         self.assertEqual(len(reopened.rows), 2)
-        self.assertEqual(game.unit_event_log, before)
+        self.assertEqual(game.world.unit_event_log, before)
 
     def test_filter_picker_disables_empty_choices_during_search_and_keyboard_selection(self):
         from screens.game.unit_events_screen import UnitEventsScreen
         from ui.navigation import modal_stack
         game = self.game
-        game.unit_event_log["events"] += [row(game.player_country, event="MOVED"),
+        game.world.unit_event_log["events"] += [row(game.session.player_country, event="MOVED"),
                                           row("Other country", event="REPAIRED")]
         screen = UnitEventsScreen(game)
         screen.set_event_filter("MOVED")
@@ -776,13 +777,13 @@ class UnitEventScreenTests(unittest.TestCase):
     def test_filter_respects_tactical_and_spectator_permissions(self):
         from screens.game.unit_events_screen import UnitEventsScreen
         game = self.game
-        game.unit_event_log["events"] += [row(game.player_country, "other"), row("Other country")]
+        game.world.unit_event_log["events"] += [row(game.session.player_country, "other"), row("Other country")]
         for viewer, tactical, editor, expected in (
-                (game.player_country, True, False, 1), ("Spectator", False, False, 3),
-                (c.TOURNAMENT_SPECTATOR, False, False, 0), (game.player_country, False, True, 0)):
+                (game.session.player_country, True, False, 1), ("Spectator", False, False, 3),
+                (c.TOURNAMENT_SPECTATOR, False, False, 0), (game.session.player_country, False, True, 0)):
             with self.subTest(viewer=viewer, tactical=tactical, editor=editor), \
-                    patch.object(game, "player_country", viewer), patch.object(game, "tactical_mode", tactical), \
-                    patch.object(game, "is_editor", editor), patch.object(game, "player_unit", {"unit_id": "gone"}):
+                    patch.object(game.session, "player_country", viewer), patch.object(game.session, "tactical_mode", tactical), \
+                    patch.object(game.session, "mode", MAP_EDITOR if editor else LOCAL_PLAY), patch.object(game.session, "player_unit", {"unit_id": "gone"}):
                 screen = UnitEventsScreen(game)
                 screen.set_event_filter("DESTROYED")
                 self.assertEqual(len(screen.rows), expected)
@@ -791,7 +792,7 @@ class UnitEventScreenTests(unittest.TestCase):
         from data.map import save_map
         from screens.game.map import Map
         game = self.game
-        entry = game.unit_event_log["events"][0]
+        entry = game.world.unit_event_log["events"][0]
         entry["detail_parts"] = [{"text": entry["details"], "owner": "B"}]
         unit_events.mark_read(game)
         unit_events.set_event_filter(game, "DESTROYED")
@@ -799,7 +800,7 @@ class UnitEventScreenTests(unittest.TestCase):
             asyncio.run(save_map.save_map_data(game, "reports"))
             path = Path(temporary, "reports")
             loaded = Map(load_path=str(path), skip_initial_income=True)
-            self.assertEqual(loaded.unit_event_log, game.unit_event_log)
+            self.assertEqual(loaded.world.unit_event_log, game.world.unit_event_log)
             self.assertEqual(loaded._unit_event_unread, 0)
             self.assertIsNone(unit_events.event_filter_for(loaded))
             metadata_path = path / "meta.json"
@@ -808,7 +809,7 @@ class UnitEventScreenTests(unittest.TestCase):
             del metadata["unit_event_read_turns"]
             metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
             legacy = Map(load_path=str(path), skip_initial_income=True)
-            self.assertEqual(legacy.unit_event_log["events"], [])
+            self.assertEqual(legacy.world.unit_event_log["events"], [])
 
 
 if __name__ == "__main__":

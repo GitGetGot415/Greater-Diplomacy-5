@@ -18,10 +18,11 @@ import unittest
 import data.constants as c
 from data import queries
 from data.map import load_map
-from map_logic.diplomacy import faction_actions, puppet_actions, treaty_effects
+from map_logic.diplomacy import faction_actions, faction_records, puppet_actions, treaty_effects
 from map_logic.territory import ownership as own
 from map_logic.system32 import movement_processor
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 def nation(**over):
@@ -33,20 +34,20 @@ def nation(**over):
     return base
 
 
-class Screen:
+class Screen(MapDouble):
     """Enough of a map screen for ownership changes. ai_is_thinking short-circuits
     every repaint, so nothing here needs a display surface."""
 
-    is_editor = False
+    mode = LOCAL_PLAY
     viewing_ai_moves = False
     ai_is_thinking = True
     map_mode = "POLITICAL"
     centers_need_update = False
 
     def __init__(self, nation_data, map_data):
-        self.nation_data = nation_data
-        self.map_data = map_data
-        self.id_to_province = {p["id"]: p for p in map_data.values()}
+        self.world.nation_data = nation_data
+        self.world.map_data = map_data
+        self.world.id_to_province = {p["id"]: p for p in map_data.values()}
         fill_state_defaults(self)
 
 
@@ -159,11 +160,13 @@ class RetireLandlessTests(unittest.TestCase):
         }
         self.map_data = {"1": province(1, "Empire", cores=["Empire", "Doomed"]),
                          "2": province(2, "Empire", cores=["Doomed"])}
-        return Screen(self.nation_data, self.map_data)
+        screen = Screen(self.nation_data, self.map_data)
+        self.nation_data = screen.world.nation_data
+        return screen
 
     def test_map_editor_can_paint_integrated_puppet_territory(self):
         screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        screen.is_editor = True
+        screen.session.mode = MAP_EDITOR
         province_to_paint = self.map_data["1"]
         province_to_paint["owner"] = "Unclaimed"
 
@@ -282,11 +285,12 @@ class RetireLandlessTests(unittest.TestCase):
         map_data["1"]["units"] = [{"owner": "Victim", "type": "Infantry"},
                                  {"owner": "Already Exiled", "type": "Infantry"}]
         screen = Screen(nation_data, map_data)
+        nation_data = screen.world.nation_data
         own.conquer_province(screen, map_data["1"], "Taker")
 
         self.assertEqual(nation_data["Victim"]["faction"], "")
         self.assertEqual(nation_data["Already Exiled"]["faction"], "")
-        self.assertNotIn("Pact", nation_data["FACTION_WAR_MAPS"])
+        self.assertIsNone(faction_records.pre_war_map(nation_data, "Pact"))
         self.assertEqual(nation_data["Taker"]["at_war_with"], [])
         self.assertNotIn("Victim", queries.get_politically_active_nations(
             map_data, nation_data))
@@ -300,7 +304,7 @@ class RetireLandlessTests(unittest.TestCase):
         """Zero provinces is what half of a repaint looks like. Losing the
         scenario's treaties for it would be destructive, not tidy."""
         screen = self.build()
-        screen.is_editor = True
+        screen.session.mode = MAP_EDITOR
         own.retire_landless_nation(screen, "Doomed")
         self.assertEqual(self.nation_data["Doomed"]["faction"], "Pact")
         self.assertEqual(self.nation_data["Empire"]["at_war_with"], ["Doomed"])
@@ -308,7 +312,7 @@ class RetireLandlessTests(unittest.TestCase):
     def test_the_editor_still_erases_a_created_puppet(self):
         """That half always ran there and is how re-annexation cleans up."""
         screen = self.build(is_created_integrated_puppet=True)
-        screen.is_editor = True
+        screen.session.mode = MAP_EDITOR
         own.retire_landless_nation(screen, "Doomed")
         self.assertNotIn("Doomed", self.nation_data)
 

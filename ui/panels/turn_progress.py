@@ -71,9 +71,9 @@ def draw_turn_loading_screen(map_screen, surface):
         surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + bar_h // 2)))
 
     # --- NEW MULTI TURN LOGIC ---
-    multi_total = session_state.multi_turns_total
-    if multi_total > 0:
-        draw_bar(center_y - 50, "Multi-Turn Skip Progress", session_state.multi_turns_completed, multi_total)
+    multi_turns = session_state.progress["multi_turns"]
+    if multi_turns.total > 0:
+        draw_bar(center_y - 50, "Multi-Turn Skip Progress", multi_turns.completed, multi_turns.total)
 
         # --- Draw the Abort Multi-Turn Button ---
         abort_btn_rect = pygame.Rect(center_x - 110, c.SCREEN_HEIGHT - 90, 220, 45)
@@ -95,16 +95,17 @@ def draw_turn_loading_screen(map_screen, surface):
 
     # Keep every phase visible and in a fixed position, including phases with no work.
     phases = (
-        ("Writing Letters", session_state.letters_completed, session_state.letters_total),
-        ("Analyzing Global Strategy", session_state.proactive_tasks_completed, session_state.proactive_tasks_total),
-        ("Generating AI Movement Orders", session_state.movement_tasks_completed, session_state.movement_tasks_total),
-        ("Drafting Proactive Diplomatics", session_state.proactive_llm_tasks_completed, session_state.proactive_llm_tasks_total),
-        ("Processing Global Responses", session_state.responsive_tasks_completed, session_state.responsive_tasks_total),
-        ("Re-Rendering World Maps", session_state.refresh_tasks_completed, session_state.refresh_tasks_total),
+        ("Writing Letters", "letters"),
+        ("Analyzing Global Strategy", "proactive_tasks"),
+        ("Generating AI Movement Orders", "movement_tasks"),
+        ("Drafting Proactive Diplomatics", "proactive_llm_tasks"),
+        ("Processing Global Responses", "responsive_tasks"),
+        ("Re-Rendering World Maps", "refresh_tasks"),
     )
     top = center_y + TURN_PROGRESS_FIRST_ROW_OFFSET
-    for index, (label, completed, total) in enumerate(phases):
-        draw_bar(top + spacing * index, f"{index + 1}. {label}", completed, total)
+    for index, (label, phase) in enumerate(phases):
+        progress = session_state.progress[phase]
+        draw_bar(top + spacing * index, f"{index + 1}. {label}", progress.completed, progress.total)
 
     # --- Draw the Force Skip Button ---
     if has_model_work(session_state):
@@ -130,13 +131,13 @@ def has_model_work(session_state):
     it -- which matters a great deal now that ai_turn_budget_seconds can be 0
     and Force Skip is the only thing that ends a turn early.
     """
-    return (session_state.proactive_llm_tasks_total > 0
-            or session_state.responsive_tasks_total > 0
-            or session_state.letters_total > 0)
+    return (session_state.progress["proactive_llm_tasks"].total > 0
+            or session_state.progress["responsive_tasks"].total > 0
+            or session_state.progress["letters"].total > 0)
 
 
 def threads_panel_available(map_screen):
     """The model threads panel exists while the AI phases with model work run."""
     session_state = session_for(map_screen)
-    return (session_state.ai_is_thinking and session_state.multi_turns_total == 0
+    return (session_state.ai_is_thinking and session_state.progress["multi_turns"].total == 0
             and has_model_work(session_state))

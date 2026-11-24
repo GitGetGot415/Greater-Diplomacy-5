@@ -15,7 +15,7 @@ MINIMAP_VIEWBOX_COLOR = (255, 255, 0)
 
 def minimap_rect(map_screen, screen_width, screen_height):
     """Return the shared minimap bounds used by drawing and top-right layout."""
-    map_aspect = map_screen.map_h / map_screen.map_w
+    map_aspect = map_screen.world.map_h / map_screen.world.map_w
     mini_w = MINIMAP_WIDTH
     mini_h = int(mini_w * map_aspect)
     return pygame.Rect(screen_width - mini_w - MINIMAP_MARGIN_X,
@@ -73,15 +73,15 @@ def draw_minimap(map_screen, surface, screen_width, screen_height):
     world_ui_offset = c.UI_LEFT_OFFSET / map_screen.camera.zoom
     
     # 2. Wrap the shifted X coordinate so it seamlessly loops around the globe
-    wrapped_x = (map_screen.camera.pos.x + world_ui_offset) % map_screen.map_w
+    wrapped_x = (map_screen.camera.pos.x + world_ui_offset) % map_screen.world.map_w
     
     # 3. Calculate the Start Position (vx)
-    vx = (wrapped_x / map_screen.map_w) * mini_w + mx
-    vy = (map_screen.camera.pos.y / map_screen.map_h) * mini_h + my
+    vx = (wrapped_x / map_screen.world.map_w) * mini_w + mx
+    vy = (map_screen.camera.pos.y / map_screen.world.map_h) * mini_h + my
     
     # 4. Calculate the Width (vw)
-    vw = (visible_map_width / map_screen.camera.zoom / map_screen.map_w) * mini_w
-    vh = ((screen_height - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor) / map_screen.map_h) * mini_h
+    vw = (visible_map_width / map_screen.camera.zoom / map_screen.world.map_w) * mini_w
+    vh = ((screen_height - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor) / map_screen.world.map_h) * mini_h
     
     # --- Draw with Wrap-around support & Clamping ---
     vx_relative = vx - mx

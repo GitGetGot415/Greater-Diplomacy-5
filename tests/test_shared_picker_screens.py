@@ -144,14 +144,14 @@ class MapRefreshTests(unittest.TestCase):
 class OptionalMapStateTests(unittest.TestCase):
     def test_each_map_owns_its_multiplayer_and_editor_state(self):
         first, second = BackendState(), BackendState()
-        first.submitted_moves.add("A")
-        first.multiplayer_keys_dict["A"] = "key"
-        first.realtime_volunteer_drafts["A"] = []
-        first.editor_history.append("state")
-        self.assertEqual(second.submitted_moves, set())
-        self.assertEqual(second.multiplayer_keys_dict, {})
-        self.assertEqual(second.realtime_volunteer_drafts, {})
-        self.assertEqual(second.editor_history, [])
+        first.session.submitted_moves.add("A")
+        first.session.multiplayer_keys_dict["A"] = "key"
+        first.session.realtime_volunteer_drafts["A"] = []
+        first.session.editor_history.append("state")
+        self.assertEqual(second.session.submitted_moves, set())
+        self.assertEqual(second.session.multiplayer_keys_dict, {})
+        self.assertEqual(second.session.realtime_volunteer_drafts, {})
+        self.assertEqual(second.session.editor_history, [])
 
     def test_backend_state_reads_every_optional_rule_field_without_a_screen(self):
         state = BackendState()

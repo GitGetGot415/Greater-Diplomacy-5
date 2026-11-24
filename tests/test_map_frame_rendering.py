@@ -10,6 +10,7 @@ import data.constants as c
 from ui import background_styles
 from ui.bars import ui_bars
 from ui.widgets import ui_elements
+from tests.stub_map_screen import map_double
 
 
 class DisplayModeTests(unittest.TestCase):
@@ -93,7 +94,7 @@ class MapFrameRenderingTests(unittest.TestCase):
         cache.start()
         self.addCleanup(cache.stop)
         self.surface = pygame.Surface((800, 600))
-        self.game = SimpleNamespace(
+        self.game = map_double(
             top_bar_rect=pygame.Rect(0, 0, 800, 40),
             bot_bar_rect=pygame.Rect(0, 560, 800, 40),
             raised_rect=pygame.Rect(0, 0, 120, 600),

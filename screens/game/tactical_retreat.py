@@ -36,8 +36,8 @@ class Tactical_Retreat_Screen(Screen):
         self.campaign = previous.campaign
         self.map_screen = self.campaign.map_screen
         self.routes = queries.find_retreat_routes(
-            self.campaign.unit, self.campaign.province, self.map_screen.id_to_province,
-            self.map_screen.nation_data, context=self.map_screen)
+            self.campaign.unit, self.campaign.province, self.map_screen.world.id_to_province,
+            self.map_screen.world.nation_data, context=self.map_screen)
 
     def _hovered_id(self, position):
         province = queries.get_clicked_province(position, self.map_screen)
@@ -49,7 +49,7 @@ class Tactical_Retreat_Screen(Screen):
         if route is None:
             self.map_screen.show_feedback("The unit cannot retreat there.")
             return False
-        unit_actions.apply_action(self.map_screen, self.map_screen.player_country,
+        unit_actions.apply_action(self.map_screen, self.map_screen.session.player_country,
                                   self.campaign.province, self.campaign.unit,
                                   {"type": "MOVE", "path": route})
         self.map_screen.invalidate_map_presentation_cache()
@@ -87,7 +87,7 @@ class Tactical_Retreat_Screen(Screen):
         map_ref.draw_clean_map_background(surface)
         hovered = self._hovered_id(pygame.mouse.get_pos())
         for province_id in self.routes:
-            center = queries.world_to_screen(map_ref.id_to_province[province_id]["center"], map_ref)
+            center = queries.world_to_screen(map_ref.world.id_to_province[province_id]["center"], map_ref)
             size = MARKER_HOVER_SIZE if province_id == hovered else MARKER_SIZE
             marker = pygame.Rect(0, 0, size, size)
             marker.center = (round(center[0]), round(center[1]))

@@ -33,7 +33,7 @@ class DefenseAreaScreen(MapOverlayScreen):
 
     def _army(self):
         return next((army for army in queries.get_armies(
-            self.player, self.map_screen.nation_data, self.map_screen.map_data)
+            self.player, self.map_screen.world.nation_data, self.map_screen.world.map_data)
                      if army.get("id") == self.army_id), None)
 
     def refresh_ui(self):
@@ -70,7 +70,7 @@ class DefenseAreaScreen(MapOverlayScreen):
             return
         army = queries.set_army_defense_area(
             self.player, self.army_id, list(self.selected_ids),
-            self.map_screen.nation_data, self.map_screen.map_data)
+            self.map_screen.world.nation_data, self.map_screen.world.map_data)
         if army is None:
             self.map_screen.show_feedback("That army no longer exists.")
             self.exit_screen()

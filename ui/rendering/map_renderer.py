@@ -63,8 +63,8 @@ def draw_map_background(map_screen, surface, ocean_color):
     checkerboard_scale = camera.zoom * MAP_CHECKERBOARD_SCALE
     horizon = map_screen.top_ui_height - camera.pos.y * camera.zoom * camera.tilt_factor
     camera_x = camera.pos.x
-    if map_screen.loop_map and map_screen.map_w:
-        camera_x %= map_screen.map_w
+    if map_screen.world.loop_map and map_screen.world.map_w:
+        camera_x %= map_screen.world.map_w
     origin = (-camera_x * camera.zoom, horizon)
     tile = ui_bars.get_checkerboard_tile(menu.MENU_CHECKERBOARD_COLOR)
     old_clip = surface.get_clip()
@@ -108,8 +108,8 @@ def draw_map_screen(map_screen, surface):
         surface.fill((10, 10, 15)) # Deep black/blue
         
         font = fonts.get("title")
-        display_name = map_screen.nation_data.get(map_screen.player_country, {}).get("name", map_screen.player_country)
-        txt = font.render(f"Player {map_screen.current_player_index + 1} ({display_name}) Ready?", True, (255, 255, 255))
+        display_name = map_screen.world.nation_data.get(map_screen.session.player_country, {}).get("name", map_screen.session.player_country)
+        txt = font.render(f"Player {map_screen.session.current_player_index + 1} ({display_name}) Ready?", True, (255, 255, 255))
         surface.blit(txt, txt.get_rect(center=(surface.get_width()//2, surface.get_height()//2 - 50)))
 
         btn_font = fonts.get("heading2")
@@ -120,7 +120,7 @@ def draw_map_screen(map_screen, surface):
         return # Skip drawing the map and UI completely!
 
     # --- MULTI-TURN RENDER SKIP OPTIMIZATION ---
-    if map_screen.multi_turns_total > 0 and map_screen.multi_turns_completed < map_screen.multi_turns_total:
+    if map_screen.session.progress["multi_turns"].total > 0 and map_screen.session.progress["multi_turns"].completed < map_screen.session.progress["multi_turns"].total:
         surface.fill((10, 10, 15))
         turn_progress.draw_turn_loading_screen(map_screen, surface)
         return
@@ -138,8 +138,8 @@ def draw_map_screen(map_screen, surface):
     # this in range, but direct screen handoffs can draw before that update;
     # render the equivalent wrapped position instead of asking subsurface()
     # for pixels outside the source map.
-    if map_screen.loop_map and map_screen.map_w:
-        x1_world %= map_screen.map_w
+    if map_screen.world.loop_map and map_screen.world.map_w:
+        x1_world %= map_screen.world.map_w
     
     # --- NEW: Extract negative Y for screen offset and skybox ---
     render_y_offset = 0
@@ -150,9 +150,9 @@ def draw_map_screen(map_screen, surface):
 
     x1, y1 = int(x1_world), int(y1_world)
     
-    if map_screen.loop_map:
-        w1 = int(min(vw, map_screen.map_w - x1))
-        h1 = int(min(vh, map_screen.map_h - y1))
+    if map_screen.world.loop_map:
+        w1 = int(min(vw, map_screen.world.map_w - x1))
+        h1 = int(min(vh, map_screen.world.map_h - y1))
         if w1 > 0 and h1 > 0:
             # Base Map
             source_rect = pygame.Rect(x1, y1, w1, h1)
@@ -176,7 +176,7 @@ def draw_map_screen(map_screen, surface):
             # exceed 2x the map width. This code only draws one wrap-around
             # copy, so anything beyond a full extra map-width would ask
             # subsurface() for pixels past current_base's actual edge.
-            wrap_w = min(int(vw - w1), map_screen.map_w)
+            wrap_w = min(int(vw - w1), map_screen.world.map_w)
             if wrap_w > 0:
                 scaled_wrap_w = int(wrap_w*map_screen.camera.zoom)
                 scaled_h1 = int(h1*map_screen.camera.zoom*map_screen.camera.tilt_factor)
@@ -221,13 +221,13 @@ def draw_map_screen(map_screen, surface):
     # If we render thousands of units, arrows, and buildings at 60 FPS while the AI is thinking,
     # the Python GIL chokes the background thread and makes turn processing take forever!
     # By short-circuiting the render loop here, we save massive amounts of CPU time.
-    if map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.is_saving:
-        if map_screen.is_saving:
-            turn_progress.draw_simple_refresh_bar(surface, map_screen.loading_status_text, map_screen.save_progress_completed, map_screen.save_progress_total)
+    if map_screen.session.ai_is_thinking or map_screen.session.is_refreshing or map_screen.session.is_saving:
+        if map_screen.session.is_saving:
+            turn_progress.draw_simple_refresh_bar(surface, map_screen.session.loading_status_text, map_screen.session.progress["save"].completed, map_screen.session.progress["save"].total)
         else:
             turn_progress.draw_turn_loading_screen(map_screen, surface)
         ui_bars.draw_ui_bars(map_screen, surface)
-        if not map_screen.selection_mode:
+        if not map_screen.session.selection_mode:
             top_bar_text.draw_top_text(map_screen, surface, show_country=False)
         return
 
@@ -265,18 +265,18 @@ def draw_map_screen(map_screen, surface):
                 owner = unit.get("owner")
 
                 # Only show the arrows for the CURRENT player taking their turn!
-                is_current_player_unit = (owner == map_screen.player_country)
+                is_current_player_unit = (owner == map_screen.session.player_country)
 
                 # Hide the arrows if it's not the current player's unit, the player isn't spectating,
                 # and the game isn't actively resolving AI/global turns.
-                if not queries.can_view_unit_orders(unit, map_screen.player_country,
-                                                    map_screen.viewing_ai_moves):
+                if not queries.can_view_unit_orders(unit, map_screen.session.player_country,
+                                                    map_screen.session.viewing_ai_moves):
                     continue
 
                 # --- NEW: Tell the renderer to bypass Fog of War if the player owns this specific unit ---
                 # Fix for tactical mode: only force visible if it's the specific tactical unit
-                is_tactical = map_screen.tactical_mode and map_screen.player_unit
-                force_vis = (unit is map_screen.player_unit) if is_tactical else is_current_player_unit
+                is_tactical = map_screen.session.tactical_mode and map_screen.session.player_unit
+                force_vis = (unit is map_screen.session.player_unit) if is_tactical else is_current_player_unit
 
                 if order.get("type") == "BOMBARD":
                     target_id = order.get("target_id")
@@ -299,7 +299,7 @@ def draw_map_screen(map_screen, surface):
 
                         # If we are resolving global turns (viewing_ai_moves), hide future queued moves
                         # by truncating the path to only what happens this turn to prevent hotseat leaks
-                        if map_screen.viewing_ai_moves:
+                        if map_screen.session.viewing_ai_moves:
                             path = path[:speed]
                             if not path:
                                 continue
@@ -319,7 +319,7 @@ def draw_map_screen(map_screen, surface):
     
     # --- LAYER 3.8: PROVINCE MENU OVERLAYS ---
     if map_screen.selected_province:
-        if map_screen.selection_mode:
+        if map_screen.session.selection_mode:
             # Use the transparent black for country selection confirmation
             # Only the map area is dimmed here, not the UI bars, so this is a
             # rect panel rather than draw_fullscreen_overlay.
@@ -337,7 +337,7 @@ def draw_map_screen(map_screen, surface):
     # --- LAYER 4: UI BARS & HUD ---
     ui_bars.draw_ui_bars(map_screen, surface)
     
-    if not map_screen.selection_mode:
+    if not map_screen.session.selection_mode:
         # Call our clean, separated functions instead!
         flag_renderer.draw_flag(map_screen, surface)
         top_bar_text.draw_top_text(map_screen, surface)
@@ -360,15 +360,15 @@ def draw_map_screen(map_screen, surface):
     # --- LAYER 5: SELECTION MODE ---
     else:
         if map_screen.pending_selection:
-            disp_name = map_screen.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
+            disp_name = map_screen.world.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
             
             # Contextual prompt formatting for Tactical Mode
-            if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
+            if map_screen.session.tactical_mode and getattr(map_screen, 'pending_unit', None):
                 prompt_txt = f"Play as {queries.get_unit_display_name(map_screen.pending_unit.get('type'), context=map_screen)} ({disp_name})?"
             else:
                 prompt_txt = f"Play as {disp_name}?"
         else:
-            if map_screen.tactical_mode:
+            if map_screen.session.tactical_mode:
                 prompt_txt = "Select a Unit to Control"
             else:
                 prompt_txt = "Select a Country to Play As"
@@ -381,11 +381,11 @@ def draw_map_screen(map_screen, surface):
 
         # --- NEW: Scripted Events Checkmark ---
         if not map_screen.pending_selection:
-            has_events = queries.scenario_has_scripted_events(map_screen.nation_data)
+            has_events = queries.scenario_has_scripted_events(map_screen.world.nation_data)
             cb_font = fonts.get("normal")
 
             if has_events:
-                se_val = queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, map_screen.scenario_settings)
+                se_val = queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, map_screen.world.scenario_settings)
                 if se_val:
                     cb_text = "Scripted Events Enabled"
                 else:
@@ -416,9 +416,9 @@ def draw_map_screen(map_screen, surface):
             box_rect = pygame.Rect(0, 0, 400, 200)
             box_rect.center = (surface.get_width()//2, surface.get_height()//2)
 
-            disp_name = map_screen.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
+            disp_name = map_screen.world.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
             # Contextual instructions for Tactical Mode
-            if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
+            if map_screen.session.tactical_mode and getattr(map_screen, 'pending_unit', None):
                 instr_txt = f"Start Game as {queries.get_unit_display_name(map_screen.pending_unit.get('type'), context=map_screen)}?"
             else:
                 instr_txt = f"Start Game as {disp_name}?"
@@ -430,7 +430,7 @@ def draw_map_screen(map_screen, surface):
                 bg=style["color"], gradient_strength=style["gradient_strength"])
 
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
-    show_hover = not map_screen.selected_province or (map_screen.base_layer == "RELATIONS" and not map_screen.selection_mode)
+    show_hover = not map_screen.selected_province or (map_screen.base_layer == "RELATIONS" and not map_screen.session.selection_mode)
     if show_hover and not map_screen.hide_tooltip:
         tooltip.draw_tooltip(map_screen, surface)
         
@@ -453,32 +453,32 @@ def draw_map_screen(map_screen, surface):
     
 def draw_badges(map_screen, surface):
     """Draws notification badges on top of buttons after the main UI renders."""
-    if not map_screen.selection_mode and not map_screen.hide_raised_rect:
+    if not map_screen.session.selection_mode and not map_screen.hide_raised_rect:
         # These are derived game-state queries, so keep the answers alongside
         # the other planning presentation caches instead of asking them again
         # after every frame's map blits.
         revision = map_screen._presentation_cache_revision
-        cache_key = (revision, map_screen.player_country)
+        cache_key = (revision, map_screen.session.player_country)
         cached = map_screen._badge_state_cache
         if cached is not None and cached[0] == cache_key:
             (unread_msgs, free_research, incoming_claims,
              leadership_contested, politics_arrow) = cached[1]
         else:
             unread_msgs = queries.get_unread_message_count(
-                map_screen.player_country, map_screen.nation_data)
+                map_screen.session.player_country, map_screen.world.nation_data)
             free_research = queries.has_free_research_slots(
-                map_screen.player_country, map_screen.nation_data)
+                map_screen.session.player_country, map_screen.world.nation_data)
             incoming_claims = queries.get_incoming_justifications_count(
-                map_screen.player_country, map_screen.nation_data,
-                map_screen.id_to_province)
+                map_screen.session.player_country, map_screen.world.nation_data,
+                map_screen.world.id_to_province)
             # Everyone in the faction sees this, not only the leader and not
             # only the challenger: a handover changes who negotiates for the
             # bloc and who can put your provinces on the table.
-            my_faction = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
+            my_faction = queries.get_country_faction(map_screen.session.player_country, map_screen.world.nation_data)
             leadership_contested = bool(
-                faction_leadership.contenders(map_screen.nation_data, my_faction))
+                faction_leadership.contenders(map_screen.world.nation_data, my_faction))
             politics_arrow = (POLITICS_DRIFT_BADGE if any(
-                politics.axis_drift(map_screen.nation_data, map_screen.player_country, axis["id"])
+                politics.axis_drift(map_screen.world.nation_data, map_screen.session.player_country, axis["id"])
                 for axis in politics.AXES) else None)
             map_screen._badge_state_cache = (
                 cache_key, (unread_msgs, free_research, incoming_claims,

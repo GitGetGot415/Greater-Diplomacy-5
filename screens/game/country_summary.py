@@ -38,7 +38,7 @@ class CountrySummaryScreen(Screen):
         self.country_id = country_id
         self.bg_color = (25, 30, 40)
         self.summary = queries.get_country_summary(map_screen, country_id)
-        self.flag = flag_icons.flag_surface(country_id, map_screen.nation_data, HEADER_FLAG_SIZE)
+        self.flag = flag_icons.flag_surface(country_id, map_screen.world.nation_data, HEADER_FLAG_SIZE)
         self._layout_width = None
         self.refresh_ui()
         sound_effects.play_ui_sound("paper")
@@ -48,8 +48,8 @@ class CountrySummaryScreen(Screen):
         for country in country_ids:
             if parts:
                 parts.append((", ", None))
-            parts.append((queries.get_country_display_name(country, self.map_screen.nation_data),
-                          flag_icons.flag_surface(country, self.map_screen.nation_data)))
+            parts.append((queries.get_country_display_name(country, self.map_screen.world.nation_data),
+                          flag_icons.flag_surface(country, self.map_screen.world.nation_data)))
         return parts or [("None", None)]
 
     def _military_lines(self):
@@ -207,6 +207,6 @@ class CountrySummaryScreen(Screen):
 
 def open_country_summary(map_screen, country_id):
     """Open a country inspection without changing the selected tile or player."""
-    if country_id not in map_screen.nation_data or country_id in c.UNPLAYABLE_NATIONS:
+    if country_id not in map_screen.world.nation_data or country_id in c.UNPLAYABLE_NATIONS:
         return
     screen_runner._run_pygame_sub_screen(map_screen, CountrySummaryScreen(map_screen, country_id))

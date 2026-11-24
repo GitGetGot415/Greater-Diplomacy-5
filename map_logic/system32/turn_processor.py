@@ -114,16 +114,16 @@ async def prepare_turn(context):
 
         # Since AI is off, we still need to clear proactive tasks to avoid errors
         session_state.proactive_llm_tasks = []
-        session_state.proactive_tasks_total = 0
-        session_state.proactive_tasks_completed = 0
-        session_state.proactive_llm_tasks_total = 0
-        session_state.proactive_llm_tasks_completed = 0
-        session_state.movement_tasks_total = 0
-        session_state.movement_tasks_completed = 0
-        session_state.letters_total = 0
-        session_state.letters_completed = 0
-        session_state.responsive_tasks_total = 0
-        session_state.responsive_tasks_completed = 0
+        session_state.progress["proactive_tasks"].total = 0
+        session_state.progress["proactive_tasks"].completed = 0
+        session_state.progress["proactive_llm_tasks"].total = 0
+        session_state.progress["proactive_llm_tasks"].completed = 0
+        session_state.progress["movement_tasks"].total = 0
+        session_state.progress["movement_tasks"].completed = 0
+        session_state.progress["letters"].total = 0
+        session_state.progress["letters"].completed = 0
+        session_state.progress["responsive_tasks"].total = 0
+        session_state.progress["responsive_tasks"].completed = 0
 
     # --- Process Scripted Events ---
     # Moved here so AI can't immediately issue orders to units spawned by events this turn
@@ -283,8 +283,8 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
 
     if c.RECORD_HISTORY:
         # --- MULTI-TURN OPTIMIZATION ---
-        is_multi = session_state.multi_turns_total > 0
-        is_last_multi = not is_multi or (session_state.multi_turns_completed >= session_state.multi_turns_total - 1)
+        is_multi = session_state.progress["multi_turns"].total > 0
+        is_last_multi = not is_multi or (session_state.progress["multi_turns"].completed >= session_state.progress["multi_turns"].total - 1)
         is_spectator = session_state.player_country == "Spectator"
         
         if is_multi and not is_last_multi and not is_spectator:

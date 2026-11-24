@@ -8,6 +8,7 @@ from unittest.mock import patch
 from data import migrations, queries
 from map_logic.ai import ai_research, ai_tech_eval, ai_unit_eval
 from tests.research_fixtures import fixture_metadata
+from tests.stub_map_screen import map_double
 
 
 class UnitMetadataTests(unittest.TestCase):
@@ -67,7 +68,7 @@ class UnitMetadataTests(unittest.TestCase):
         tree = {key: {"max_lvl": 2, "cost": 100, "years": [2000, 2001], "req": {}}
                 for key in ("fixture_track", "other")}
         research = {"fixture_track": 1}
-        game = SimpleNamespace(map_data={}, time_manager=SimpleNamespace(year=2001), nation_data={
+        game = map_double(map_data={}, time_manager=SimpleNamespace(year=2001), nation_data={
             name: {"research": dict(research), "research_queue": []} for name in ("A", "B")})
         with ExitStack() as stack:
             for name, result in (("get_tech_tree", tree), ("get_unit_library", library),
@@ -79,13 +80,13 @@ class UnitMetadataTests(unittest.TestCase):
                                                      wraps=queries.get_unit_research_index))
             ai_research.process_ai_research(game)
             self.assertEqual(checks.call_count, 1)
-            self.assertEqual(game.nation_data["A"]["research_queue"], game.nation_data["B"]["research_queue"])
-            self.assertEqual({project["tech_name"] for project in game.nation_data["A"]["research_queue"]},
+            self.assertEqual(game.world.nation_data["A"]["research_queue"], game.world.nation_data["B"]["research_queue"])
+            self.assertEqual({project["tech_name"] for project in game.world.nation_data["A"]["research_queue"]},
                              set(tree))
             self.assertEqual(ai_tech_eval.units_unlocked_by("fixture_track", research, library), ("later",))
             checks.reset_mock()
             library["later"]["metadata"]["requirements"].append({"tech": "locked", "level": 1})
-            for country in game.nation_data.values():
+            for country in game.world.nation_data.values():
                 country["research_queue"].clear()
             ai_research.process_ai_research(game)
             self.assertEqual(checks.call_count, 1)

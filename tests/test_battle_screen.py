@@ -22,6 +22,8 @@ from map_logic.system32 import combat_rules
 from screens.game import battle_screen, battle_editor
 from tests import app_harness
 from ui.panels import army_panel
+from tests.stub_map_screen import state_owner
+from data.session_state import LOCAL_PLAY, REALTIME
 
 
 class BattleScreenTestCase(unittest.TestCase):
@@ -42,8 +44,9 @@ class BattleScreenTestCase(unittest.TestCase):
         game_map = self.map
         # Battle commands require an ordinary player planning phase, rather
         # than the scenario-selection state in which the harness boots.
-        for attribute in ("selection_mode", "is_editor", "ai_is_thinking", "viewing_ai_moves"):
-            self.enterContext(mock.patch.object(game_map, attribute, False))
+        for attribute, value in (("selection_mode", False), ("mode", LOCAL_PLAY), ("ai_is_thinking", False),
+                                 ("viewing_ai_moves", False)):
+            self.enterContext(mock.patch.object(state_owner(game_map, attribute), attribute, value))
         stats = {"attack": 20, "defense": 0, "health": 100, "speed": 1,
                  "cost_materials": 50, "cost_manpower": 10, "cost_fuel": 0,
                  "production_time": 1, "naval_unit": False}
@@ -59,15 +62,15 @@ class BattleScreenTestCase(unittest.TestCase):
                         previous_camera_target.x, previous_camera_target.y)
         game_map.camera.pos.update(0, 0)
         game_map.camera.target_pos.update(0, 0)
-        names = [n for n in game_map.nation_data
-                 if queries.is_playable(n, game_map.nation_data)][:4]
+        names = [n for n in game_map.world.nation_data
+                 if queries.is_playable(n, game_map.world.nation_data)][:4]
         self.a, self.b, self.x, self.y = names
 
         for name, faction, enemies in ((self.a, "Fixture Coalition", [self.x, self.y]),
                                        (self.b, "Fixture Coalition", [self.x, self.y]),
                                        (self.x, "", [self.a, self.b, self.y]),
                                        (self.y, "", [self.a, self.b, self.x])):
-            self.enterContext(mock.patch.dict(game_map.nation_data[name],
+            self.enterContext(mock.patch.dict(game_map.world.nation_data[name],
                                              faction=faction, at_war_with=list(enemies)))
 
         from map_logic.diplomacy import faction_records
@@ -75,7 +78,7 @@ class BattleScreenTestCase(unittest.TestCase):
         self.addCleanup(faction_records.restore, game_map, original_factions)
         faction_records.restore(game_map)
 
-        self.province = next(p for p in game_map.map_data.values()
+        self.province = next(p for p in game_map.world.map_data.values()
                              if not queries.is_water_province(p))
         # More than a side's lane cap can seat, so there is always a genuine
         # reserve left over to list -- at COMBAT_WIDTH's current tuning a
@@ -86,7 +89,7 @@ class BattleScreenTestCase(unittest.TestCase):
 
         game_map.selected_province = self.province
         game_map.visible_provinces = None
-        game_map.player_country = self.a
+        game_map.session.player_country = self.a
         self.addCleanup(self.province.pop, "units", None)
 
     def screen(self):
@@ -94,7 +97,7 @@ class BattleScreenTestCase(unittest.TestCase):
 
     def battle(self):
         return combat_rules.build_battle(
-            [self.province["units"]], self.map.nation_data,
+            [self.province["units"]], self.map.world.nation_data,
             terrain=self.province.get("terrain"))
 
     def mine(self, battle):
@@ -284,7 +287,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
         loser["attack"] = 0
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [[winner], [loser]], self.map.nation_data)
+            [[winner], [loser]], self.map.world.nation_data)
 
         self.assertEqual(outcome["winner_side"], 0)
         self.assertEqual(outcome["turns"], 1)
@@ -924,7 +927,7 @@ class BattleEditorTests(BattleScreenTestCase):
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         screen.drop_unit(front, battle_screen.PANE_RESERVE)
         with mock.patch.object(dialogs, "ask_yes_no") as ask, \
-                mock.patch.object(self.map, "player_country", self.x):
+                mock.patch.object(self.map.session, "player_country", self.x):
             screen.update()
         ask.assert_not_called()
         self.assertTrue(screen.done)
@@ -956,12 +959,12 @@ class BattleEditorTests(BattleScreenTestCase):
         self.assertEqual(self.province["units"], before)
 
     def test_tactical_reset_leaves_other_divisions_unchanged(self):
-        self.map.tactical_mode = True
-        self.map.player_unit = next(unit for unit in self.province["units"] if unit["owner"] == self.a)
-        self.addCleanup(setattr, self.map, "tactical_mode", False)
-        self.addCleanup(setattr, self.map, "player_unit", None)
+        self.map.session.tactical_mode = True
+        self.map.session.player_unit = next(unit for unit in self.province["units"] if unit["owner"] == self.a)
+        self.addCleanup(setattr, self.map.session, "tactical_mode", False)
+        self.addCleanup(setattr, self.map.session, "player_unit", None)
         screen = self.editor()
-        others = [unit for unit in self.province["units"] if unit is not self.map.player_unit]
+        others = [unit for unit in self.province["units"] if unit is not self.map.session.player_unit]
         for unit in others:
             unit["combat_stance"] = "RESERVE"
         before = copy.deepcopy(others)
@@ -1133,7 +1136,7 @@ class BattleEditorTests(BattleScreenTestCase):
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         player = SimpleNamespace(submitted=True, eliminated=False)
         session = SimpleNamespace(phase="TURN", players={"fixture": player})
-        with mock.patch.object(self.map, "realtime_multiplayer", True), \
+        with mock.patch.object(self.map.session, "mode", REALTIME), \
                 mock.patch.object(self.map, "realtime_session", session), \
                 mock.patch.object(self.map, "realtime_player_id", "fixture"):
             before = copy.deepcopy(self.province["units"])
@@ -1245,25 +1248,25 @@ class SideReserveTests(BattleScreenTestCase):
         """One division is the player's; the other four are their host's, and
         the front column already lists them without giving anything away."""
         resting = self.screen().seated()
-        self.map.tactical_mode = True
-        self.map.player_unit = next(u for u in self.province["units"]
+        self.map.session.tactical_mode = True
+        self.map.session.player_unit = next(u for u in self.province["units"]
                                     if u["owner"] == self.a and id(u) not in resting)
-        self.addCleanup(setattr, self.map, "tactical_mode", False)
-        self.addCleanup(setattr, self.map, "player_unit", None)
+        self.addCleanup(setattr, self.map.session, "tactical_mode", False)
+        self.addCleanup(setattr, self.map.session, "player_unit", None)
 
         screen = self.screen()
         bench = screen.side_bench(self.our_side(screen))
 
         self.assertEqual([u for u in bench if screen.can_command(u)],
-                         [self.map.player_unit])
+                         [self.map.session.player_unit])
         self.assertGreater(len([u for u in bench if u["owner"] == self.a]), 1)
 
     def test_an_observer_still_sees_both_sides(self):
-        self.map.player_country = next(
-            n for n in self.map.nation_data
-            if queries.is_playable(n, self.map.nation_data)
+        self.map.session.player_country = next(
+            n for n in self.map.world.nation_data
+            if queries.is_playable(n, self.map.world.nation_data)
             and n not in (self.a, self.b, self.x, self.y))
-        self.addCleanup(setattr, self.map, "player_country", self.a)
+        self.addCleanup(setattr, self.map.session, "player_country", self.a)
 
         screen = self.screen()
         _lane, near, far = screen.current()
@@ -1279,9 +1282,9 @@ class ObserverTests(BattleScreenTestCase):
     def setUp(self):
         super().setUp()
         # Somebody with no units anywhere near this tile.
-        self.map.player_country = next(
-            n for n in self.map.nation_data
-            if queries.is_playable(n, self.map.nation_data)
+        self.map.session.player_country = next(
+            n for n in self.map.world.nation_data
+            if queries.is_playable(n, self.map.world.nation_data)
             and n not in (self.a, self.b, self.x, self.y))
 
     def test_both_sides_of_a_foreign_lane_are_shown(self):
@@ -1368,22 +1371,22 @@ class TacticalModeTests(BattleScreenTestCase):
 
     def setUp(self):
         super().setUp()
-        self.map.tactical_mode = True
-        self.map.player_unit = next(u for u in self.province["units"]
+        self.map.session.tactical_mode = True
+        self.map.session.player_unit = next(u for u in self.province["units"]
                                     if u["owner"] == self.a)
-        self.addCleanup(setattr, self.map, "tactical_mode", False)
-        self.addCleanup(setattr, self.map, "player_unit", None)
+        self.addCleanup(setattr, self.map.session, "tactical_mode", False)
+        self.addCleanup(setattr, self.map.session, "player_unit", None)
 
     def test_only_the_tactical_unit_is_yours_to_move(self):
         screen = self.screen()
 
         self.assertEqual([id(u) for u in screen.my_units()],
-                         [id(self.map.player_unit)])
+                         [id(self.map.session.player_unit)])
 
     def test_your_own_countrymen_are_not_editable(self):
         screen = self.screen()
         theirs = [u for u in self.province["units"]
-                  if u["owner"] == self.a and u is not self.map.player_unit]
+                  if u["owner"] == self.a and u is not self.map.session.player_unit]
 
         self.assertTrue(theirs)
         for unit in theirs:
@@ -1393,18 +1396,18 @@ class TacticalModeTests(BattleScreenTestCase):
         screen = self.screen()
 
         for unit in screen.bench():
-            self.assertIs(unit, self.map.player_unit)
+            self.assertIs(unit, self.map.session.player_unit)
 
     def test_overview_cards_cannot_issue_orders_in_tactical_mode(self):
         screen = self.screen()
         self.assertFalse([el for el in screen.elements
                           if getattr(el, "pane", None) in battle_screen.UNIT_PANES])
-        self.assertEqual(screen.my_units(), [self.map.player_unit])
+        self.assertEqual(screen.my_units(), [self.map.session.player_unit])
 
     def test_clearing_lane_orders_leaves_the_rest_of_the_army_alone(self):
         screen = self.screen()
         others = [u for u in self.province["units"]
-                  if u["owner"] == self.a and u is not self.map.player_unit]
+                  if u["owner"] == self.a and u is not self.map.session.player_unit]
         for unit in others:
             unit["combat_stance"] = "RESERVE"
 
@@ -1453,14 +1456,14 @@ class ReadOnlyOrdersTests(BattleScreenTestCase):
     def orders_screen(self, player):
         from screens.game.orders import Orders_Screen
 
-        self.map.player_country = player
+        self.map.session.player_country = player
         screen = Orders_Screen()
         screen.start_with_province(self.province, self.map)
         return screen
 
     def test_a_foreign_province_lists_every_unit_read_only(self):
-        outsider = next(n for n in self.map.nation_data
-                        if queries.is_playable(n, self.map.nation_data)
+        outsider = next(n for n in self.map.world.nation_data
+                        if queries.is_playable(n, self.map.world.nation_data)
                         and n not in (self.a, self.b, self.x, self.y))
         screen = self.orders_screen(outsider)
 
@@ -1471,8 +1474,8 @@ class ReadOnlyOrdersTests(BattleScreenTestCase):
     def test_a_read_only_province_accepts_no_move_orders(self):
         import pygame as pg
 
-        outsider = next(n for n in self.map.nation_data
-                        if queries.is_playable(n, self.map.nation_data)
+        outsider = next(n for n in self.map.world.nation_data
+                        if queries.is_playable(n, self.map.world.nation_data)
                         and n not in (self.a, self.b, self.x, self.y))
         screen = self.orders_screen(outsider)
         before = [list(u.get("order", {}).get("path", [])) for u in self.province["units"]]
@@ -1496,10 +1499,10 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
     def orders_screen(self, player=None):
         from screens.game.orders import Orders_Screen
 
-        self.map.player_country = self.a if player is None else player
-        previous_selection_mode = self.map.selection_mode
-        self.map.selection_mode = False
-        self.addCleanup(setattr, self.map, "selection_mode", previous_selection_mode)
+        self.map.session.player_country = self.a if player is None else player
+        previous_selection_mode = self.map.session.selection_mode
+        self.map.session.selection_mode = False
+        self.addCleanup(setattr, self.map.session, "selection_mode", previous_selection_mode)
         screen = Orders_Screen()
         screen.start_with_province(self.province, self.map)
         return screen
@@ -1510,9 +1513,9 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         return before
 
     def test_leaving_orders_clears_the_map_unit_selection(self):
-        was_selection_mode = self.map.selection_mode
-        self.map.selection_mode = False
-        self.addCleanup(setattr, self.map, "selection_mode", was_selection_mode)
+        was_selection_mode = self.map.session.selection_mode
+        self.map.session.selection_mode = False
+        self.addCleanup(setattr, self.map.session, "selection_mode", was_selection_mode)
         self.map.clear_map_unit_selection()
         self.addCleanup(self.map.clear_map_unit_selection)
 
@@ -1536,7 +1539,7 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         }
         foreign_order = {"type": "MOVE", "path": [self.province["id"]]}
         foreign["order"] = foreign_order
-        nation = self.map.nation_data[self.a]
+        nation = self.map.world.nation_data[self.a]
         materials_before = self.preserve_materials(nation)
 
         screen = self.orders_screen()
@@ -1558,7 +1561,7 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
                        "cost_fuel": 0},
         }
         unit["order"] = order
-        nation = self.map.nation_data[self.a]
+        nation = self.map.world.nation_data[self.a]
         materials_before = self.preserve_materials(nation)
         screen = self.orders_screen()
         screen.start_renaming(index)
@@ -1570,8 +1573,8 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         self.assertEqual(screen.renaming_unit_index, index)
 
     def test_clear_orders_key_is_ignored_on_a_read_only_roster(self):
-        outsider = next(nation for nation in self.map.nation_data
-                        if queries.is_playable(nation, self.map.nation_data)
+        outsider = next(nation for nation in self.map.world.nation_data
+                        if queries.is_playable(nation, self.map.world.nation_data)
                         and nation not in (self.a, self.b, self.x, self.y))
         unit = self.province["units"][0]
         order = {"type": "MOVE", "path": [self.province["id"]]}
@@ -1592,12 +1595,12 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
                        "cost_fuel": 0},
         }
         unit["order"] = order
-        nation = self.map.nation_data[self.a]
+        nation = self.map.world.nation_data[self.a]
         materials_before = self.preserve_materials(nation)
-        self.map.tactical_mode = True
-        self.map.player_unit = unit
-        self.addCleanup(setattr, self.map, "tactical_mode", False)
-        self.addCleanup(setattr, self.map, "player_unit", None)
+        self.map.session.tactical_mode = True
+        self.map.session.player_unit = unit
+        self.addCleanup(setattr, self.map.session, "tactical_mode", False)
+        self.addCleanup(setattr, self.map.session, "player_unit", None)
         screen = self.orders_screen()
 
         screen.handle_clear_orders_key()
@@ -1609,9 +1612,9 @@ class OrdersScreenRegressionTests(BattleScreenTestCase):
         # The test harness starts in selection mode, which deliberately blocks
         # map commands.  Orders' map-wide roster is exercised in the normal
         # playable Units view instead.
-        was_selection_mode = self.map.selection_mode
-        self.map.selection_mode = False
-        self.addCleanup(setattr, self.map, "selection_mode", was_selection_mode)
+        was_selection_mode = self.map.session.selection_mode
+        self.map.session.selection_mode = False
+        self.addCleanup(setattr, self.map.session, "selection_mode", was_selection_mode)
         owned_indices = [index for index, unit in enumerate(self.province["units"])
                          if unit["owner"] == self.a]
         for index in owned_indices:
@@ -1709,9 +1712,9 @@ class ButtonSwapTests(BattleScreenTestCase):
 
     def test_a_battle_you_are_not_in_still_offers_orders(self):
         """Reading somebody else's front is available through Orders too."""
-        self.map.player_country = next(
-            n for n in self.map.nation_data
-            if queries.is_playable(n, self.map.nation_data)
+        self.map.session.player_country = next(
+            n for n in self.map.world.nation_data
+            if queries.is_playable(n, self.map.world.nation_data)
             and n not in (self.a, self.b, self.x, self.y))
 
         from screens.game import map_buttons
@@ -1816,10 +1819,10 @@ class TacticalOrdersScreenTests(BattleScreenTestCase):
     def setUp(self):
         super().setUp()
         for attribute, value in (("tactical_mode", True), ("player_country", self.a)):
-            self.enterContext(mock.patch.object(self.map, attribute, value))
+            self.enterContext(mock.patch.object(state_owner(self.map, attribute), attribute, value))
         own = [unit for unit in self.province["units"] if unit["owner"] == self.a]
         self.player_unit, self.peer = own[0], own[1]
-        self.enterContext(mock.patch.object(self.map, "player_unit", self.player_unit))
+        self.enterContext(mock.patch.object(self.map.session, "player_unit", self.player_unit))
         self.addCleanup(self.map.clear_map_unit_selection)
         self.map.clear_map_unit_selection()
 
@@ -1834,7 +1837,7 @@ class TacticalOrdersScreenTests(BattleScreenTestCase):
         from screens.game import map_input
 
         self.assertEqual(map_input.orders_state(self.map), "TACTICAL_ORDERS")
-        with mock.patch.object(self.map, "tactical_mode", False):
+        with mock.patch.object(self.map.session, "tactical_mode", False):
             self.assertEqual(map_input.orders_state(self.map), "ORDERS")
 
         old_navigation = c.MAP_NAVIGATION_MODE
@@ -1842,7 +1845,7 @@ class TacticalOrdersScreenTests(BattleScreenTestCase):
         # go_to_orders_screen leaves a one-shot flag for the screen it opens.
         self.addCleanup(lambda: vars(self.map).pop("_orders_return_to_province_menu", None))
         for attribute in ("done", "next_state", "secondary_mode"):
-            self.enterContext(mock.patch.object(self.map, attribute, getattr(self.map, attribute)))
+            self.enterContext(mock.patch.object(state_owner(self.map, attribute), attribute, getattr(state_owner(self.map, attribute), attribute)))
         for navigation in ("CLASSIC", "PREEMPTIVE"):
             with self.subTest(navigation=navigation):
                 c.MAP_NAVIGATION_MODE = navigation
@@ -1855,7 +1858,7 @@ class TacticalOrdersScreenTests(BattleScreenTestCase):
 
     def test_closing_a_direct_battle_returns_to_tactical_orders(self):
         for attribute in ("done", "next_state"):
-            self.enterContext(mock.patch.object(self.map, attribute, getattr(self.map, attribute)))
+            self.enterContext(mock.patch.object(state_owner(self.map, attribute), attribute, getattr(state_owner(self.map, attribute), attribute)))
         self.map.done = False
         battle = battle_screen.Battle_Screen(self.map, self.province)
 
@@ -1893,15 +1896,15 @@ class TacticalOrdersScreenTests(BattleScreenTestCase):
         self.assertNotIn(self.peer, [unit for unit, _province in self.map.selected_unit_records()])
 
     def test_army_peers_elsewhere_are_not_listed(self):
-        far = next(p for p in self.map.map_data.values()
+        far = next(p for p in self.map.world.map_data.values()
                    if p is not self.province and not queries.is_water_province(p))
         far_peer = queries.create_unit_dict("Infantry", self.a, queries.get_unit_library(self.map))
         self.enterContext(mock.patch.dict(far, units=[far_peer]))
-        nation = self.map.nation_data[self.a]
+        nation = self.map.world.nation_data[self.a]
         self.enterContext(mock.patch.dict(nation, armies=list(nation.get("armies", []))))
-        queries.ensure_unit_ids(self.map.map_data)
+        queries.ensure_unit_ids(self.map.world.map_data)
         queries.create_army(self.a, [self.player_unit["unit_id"], far_peer["unit_id"]],
-                            self.map.nation_data, self.map.map_data)
+                            self.map.world.nation_data, self.map.world.map_data)
 
         screen = self.tactical_screen()
 
@@ -1911,7 +1914,7 @@ class TacticalOrdersScreenTests(BattleScreenTestCase):
                             for _key, _unit, province, _index in screen._other_rows))
 
     def test_clicking_another_stack_lists_that_tile_without_commands(self):
-        far = next(p for p in self.map.map_data.values()
+        far = next(p for p in self.map.world.map_data.values()
                    if p is not self.province and not queries.is_water_province(p))
         screen = self.tactical_screen()
 

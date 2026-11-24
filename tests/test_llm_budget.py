@@ -17,12 +17,13 @@ import unittest
 
 
 from map_logic.ai import ai_diplomacy, ai_llm_runner
+from tests.stub_map_screen import MapDouble
 
 
-class FakeScreen:
+class FakeScreen(MapDouble):
     def __init__(self, nations, turn=1):
-        self.nation_data = {n: {} for n in nations}
-        self.time_manager = type("T", (), {"total_turns": turn})()
+        self.world.nation_data = {n: {} for n in nations}
+        self.world.time_manager = type("T", (), {"total_turns": turn})()
         self.notes = []
 
     def show_feedback(self, text):
@@ -48,20 +49,20 @@ class FairnessTests(unittest.TestCase):
 
     def test_a_nation_just_consulted_goes_to_the_back(self):
         screen = FakeScreen(self.NATIONS, turn=5)
-        screen.nation_data["N00"]["llm_last_turn"] = 5
+        screen.world.nation_data["N00"]["llm_last_turn"] = 5
         self.assertEqual(self.order(screen)[-1], "N00")
 
     def test_the_longest_wait_comes_first(self):
         screen = FakeScreen(self.NATIONS, turn=10)
         for i, n in enumerate(self.NATIONS):
-            screen.nation_data[n]["llm_last_turn"] = 10 - i
+            screen.world.nation_data[n]["llm_last_turn"] = 10 - i
         self.assertEqual(self.order(screen)[0], self.NATIONS[-1])
 
     def test_someone_never_consulted_beats_everyone_who_has_been(self):
         screen = FakeScreen(self.NATIONS, turn=10)
         for n in self.NATIONS:
-            screen.nation_data[n]["llm_last_turn"] = 1
-        del screen.nation_data["N03"]["llm_last_turn"]
+            screen.world.nation_data[n]["llm_last_turn"] = 1
+        del screen.world.nation_data["N03"]["llm_last_turn"]
         self.assertEqual(self.order(screen)[0], "N03")
 
     def test_a_budget_of_one_call_still_reaches_everyone_eventually(self):
@@ -71,9 +72,9 @@ class FairnessTests(unittest.TestCase):
         screen = FakeScreen(self.NATIONS)
         served = []
         for turn in range(1, len(self.NATIONS) + 1):
-            screen.time_manager.total_turns = turn
+            screen.world.time_manager.total_turns = turn
             first = ai_diplomacy._longest_waiting_first(screen, jobs_for(self.NATIONS))[0]
-            screen.nation_data[first["nation"]]["llm_last_turn"] = turn
+            screen.world.nation_data[first["nation"]]["llm_last_turn"] = turn
             served.append(first["nation"])
         self.assertEqual(sorted(served), sorted(self.NATIONS),
                          f"the budget went to {served}")
@@ -202,15 +203,15 @@ class StampTests(unittest.TestCase):
 
         game = StubMapScreen(["A", "B", "C"], human_players=[])
         game.set_war("A", "B")
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
 
         bag = ac.Collector("A", {})
         bag.add(ac.make("CEASEFIRE", "B", 0.9, "because"))
         bag.add(ac.make("TRADE", "C", 0.5, "because"))
         ranked = bag.ranked()
-        game.proactive_choices = [{
+        game.session.proactive_choices = [{
             "nation": "A",
-            "pending": game.nation_data["A"].setdefault("pending_diplomacy", {}),
+            "pending": game.world.nation_data["A"].setdefault("pending_diplomacy", {}),
             "candidates": ranked,
             "chosen": ranked[:1],
             "messages": {},
@@ -220,14 +221,14 @@ class StampTests(unittest.TestCase):
 
     def test_being_consulted_moves_a_nation_to_the_back_of_the_queue(self):
         game = self.run_pass({"picks": ["0"], "messages": {"0": "We agree."}})
-        self.assertIsNotNone(game.nation_data["A"].get("llm_last_turn"),
+        self.assertIsNotNone(game.world.nation_data["A"].get("llm_last_turn"),
                              "nothing recorded that A had its turn at the model")
 
     def test_a_wasted_call_still_counts_as_a_turn(self):
         """A nation whose provider keeps erroring must not sit at the front of
         the queue burning the budget forever."""
         game = self.run_pass({"error": "provider died"})
-        self.assertIsNotNone(game.nation_data["A"].get("llm_last_turn"))
+        self.assertIsNotNone(game.world.nation_data["A"].get("llm_last_turn"))
 
 
 class ReportingTests(unittest.TestCase):

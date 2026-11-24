@@ -35,12 +35,12 @@ def two_blocs(human_players=("A",)):
     # One shared frontier between all four. Land only moves to a nation that
     # can reach it (map_logic/diplomacy/reach.py), and a bloc of islands could
     # not cede anything to anybody.
-    game.border(*[p["id"] for p in game.map_data.values()])
+    game.border(*[p["id"] for p in game.world.map_data.values()])
     return game
 
 
 def at_war(game, a, b):
-    return queries.are_at_war(a, b, game.nation_data)
+    return queries.are_at_war(a, b, game.world.nation_data)
 
 
 def old_enough_to_settle(game):
@@ -53,7 +53,7 @@ def old_enough_to_settle(game):
     at which point three of them were asserting that a treaty which never
     happened had no effects, and passing.
     """
-    for data in game.nation_data.values():
+    for data in game.world.nation_data.values():
         if not isinstance(data, dict):
             continue
         data["war_durations"] = {enemy: ai_tuning.MIN_TURNS_FOR_CEASEFIRE
@@ -67,7 +67,7 @@ class BlocPeaceTests(unittest.TestCase):
         self.game = two_blocs()
 
     def sides(self):
-        return peace_scope.deal_sides("A", "G", self.game.nation_data)
+        return peace_scope.deal_sides("A", "G", self.game.world.nation_data)
 
     def test_a_leaders_white_peace_ends_the_war_for_everyone(self):
         mine, theirs = self.sides()
@@ -92,7 +92,7 @@ class BlocPeaceTests(unittest.TestCase):
         self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["S"]["truces"]["T"], c.TRUCE_TURNS)
+        self.assertEqual(self.game.world.nation_data["S"]["truces"]["T"], c.TRUCE_TURNS)
 
     def test_a_leader_can_cede_a_members_territory(self):
         theirs_prov = self.game.add_province("T", cores=["T"])
@@ -118,7 +118,7 @@ class RatificationTests(unittest.TestCase):
         self.game = two_blocs(human_players=("A", "S"))
         self.at_stake = self.game.add_province("S", cores=["S"])
         self.game.border(self.game.home_of("G")["id"], self.at_stake["id"])
-        mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("A", "G", self.game.world.nation_data)
         self.deal = deal.new(deal.KIND_PEACE, mine, theirs, [
             deal.white_peace(),
             deal.tiles_clause("S", "G", [self.at_stake["id"]]),
@@ -133,7 +133,7 @@ class RatificationTests(unittest.TestCase):
     def test_a_bound_member_is_asked_before_it_takes_effect(self):
         self.reach_acceptance()
 
-        asked = ratification.pending_for(self.game.nation_data, "S")
+        asked = ratification.pending_for(self.game.world.nation_data, "S")
         self.assertTrue(asked)
         self.assertEqual(asked["signatory"], "A")
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "S",
@@ -142,35 +142,35 @@ class RatificationTests(unittest.TestCase):
 
     def test_ratifying_lets_the_treaty_through(self):
         self.reach_acceptance()
-        ratification.answer(self.game.nation_data, "S", ratification.RATIFY)
+        ratification.answer(self.game.world.nation_data, "S", ratification.RATIFY)
         self.game.run_turn()
 
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "G")
         self.assertFalse(at_war(self.game, "S", "G"))
-        self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
+        self.assertEqual(self.game.world.nation_data["S"]["faction"], "Entente")
 
     def test_pending_ratification_blocks_a_second_treaty_for_the_same_war(self):
         self.reach_acceptance()
-        original = self.game.nation_data["A"]["pending_treaty"]
-        mine, theirs = peace_scope.deal_sides("G", "A", self.game.nation_data)
+        original = self.game.world.nation_data["A"]["pending_treaty"]
+        mine, theirs = peace_scope.deal_sides("G", "A", self.game.world.nation_data)
         second = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
         result = treaty_effects.apply_treaty_effect(self.game, "PEACE_TREATY", "G", "A", second)
 
         self.assertEqual(result.status, "blocked")
-        self.assertIs(self.game.nation_data["A"]["pending_treaty"], original)
-        self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["treaty_id"], original["treaty_id"])
+        self.assertIs(self.game.world.nation_data["A"]["pending_treaty"], original)
+        self.assertEqual(ratification.pending_for(self.game.world.nation_data, "S")["treaty_id"], original["treaty_id"])
         self.assertTrue(at_war(self.game, "S", "G"))
 
     def test_both_countries_choosing_the_same_treaty_opens_its_ratification_only(self):
-        self.game.active_players = ["A", "G", "S"]
+        self.game.session.active_players = ["A", "G", "S"]
         self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
-        mine, theirs = peace_scope.deal_sides("G", "A", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("G", "A", self.game.world.nation_data)
         self.game.propose("G", "A", "PEACE_TREATY", parameters=deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()]))
         self.game.run_turn()
         for accepter, proposer in (("G", "A"), ("A", "G")):
             self.game.answer(accepter, proposer, diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
-        data = self.game.nation_data
+        data = self.game.world.nation_data
         round_id = peace_scope.pending_choice(data, "A", "G")["round_id"]
         self.assertFalse(ratification.pending_for(data, "S"))
         self.assertTrue(peace_scope.choose_offer(data, "A", "G", round_id, "A"))
@@ -186,27 +186,27 @@ class RatificationTests(unittest.TestCase):
         self.game.run_turn()
 
         def announcements():
-            return [entry for entry in self.game.nation_data.get("GLOBAL_EVENTS", {}).get("log", [])
+            return [entry for entry in self.game.world.nation_data.get("GLOBAL_EVENTS", {}).get("log", [])
                     if entry.startswith(("PEACE:", "Diplomatic agreement reached"))]
 
-        self.assertTrue(ratification.pending_for(self.game.nation_data, "S"))
+        self.assertTrue(ratification.pending_for(self.game.world.nation_data, "S"))
         self.assertEqual(announcements(), [])
-        ratification.answer(self.game.nation_data, "S", ratification.RATIFY)
+        ratification.answer(self.game.world.nation_data, "S", ratification.RATIFY)
         self.game.run_turn()
         self.assertEqual([entry.split(":", 1)[0] for entry in announcements()], ["PEACE"])
 
     def test_refusing_costs_the_faction_and_keeps_the_war(self):
         self.reach_acceptance()
-        ratification.answer(self.game.nation_data, "S", ratification.REFUSE)
+        ratification.answer(self.game.world.nation_data, "S", ratification.REFUSE)
         self.game.run_turn()
 
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "S", "kept its land")
-        self.assertEqual(self.game.nation_data["S"]["faction"], "", "lost its faction")
+        self.assertEqual(self.game.world.nation_data["S"]["faction"], "", "lost its faction")
         self.assertTrue(at_war(self.game, "S", "G"), "fights on alone")
 
     def test_the_rest_of_the_treaty_survives_a_refusal(self):
         self.reach_acceptance()
-        ratification.answer(self.game.nation_data, "S", ratification.REFUSE)
+        ratification.answer(self.game.world.nation_data, "S", ratification.REFUSE)
         self.game.run_turn()
 
         self.assertFalse(at_war(self.game, "A", "G"),
@@ -219,10 +219,10 @@ class RatificationTests(unittest.TestCase):
             self.game.run_turn()
 
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "G")
-        self.assertFalse(ratification.pending_for(self.game.nation_data, "S"))
+        self.assertFalse(ratification.pending_for(self.game.world.nation_data, "S"))
 
     def test_a_member_with_nothing_at_stake_is_not_asked(self):
-        mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("A", "G", self.game.world.nation_data)
         plain = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
         self.game.propose("A", "G", "PEACE_TREATY", parameters=plain)
@@ -230,7 +230,7 @@ class RatificationTests(unittest.TestCase):
         self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
-        self.assertFalse(ratification.pending_for(self.game.nation_data, "S"))
+        self.assertFalse(ratification.pending_for(self.game.world.nation_data, "S"))
         self.assertFalse(at_war(self.game, "S", "G"))
 
 
@@ -251,7 +251,7 @@ class AcceptingBlocRatificationTests(unittest.TestCase):
         self.at_stake = self.game.add_province("T", cores=["T"])
         self.game.border(self.game.home_of("A")["id"], self.at_stake["id"])
 
-        mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("A", "G", self.game.world.nation_data)
         self.deal = deal.new(deal.KIND_PEACE, mine, theirs, [
             deal.white_peace(),
             deal.tiles_clause("T", "A", [self.at_stake["id"]]),
@@ -266,7 +266,7 @@ class AcceptingBlocRatificationTests(unittest.TestCase):
     def test_the_member_being_signed_away_is_asked(self):
         self.reach_acceptance()
 
-        asked = ratification.pending_for(self.game.nation_data, "T")
+        asked = ratification.pending_for(self.game.world.nation_data, "T")
         self.assertTrue(asked, "T lost a province in a deal it never saw")
         self.assertEqual(asked["signatory"], "G",
                          "asked in the name of the leader that bound it")
@@ -275,11 +275,11 @@ class AcceptingBlocRatificationTests(unittest.TestCase):
 
     def test_and_can_refuse_it(self):
         self.reach_acceptance()
-        ratification.answer(self.game.nation_data, "T", ratification.REFUSE)
+        ratification.answer(self.game.world.nation_data, "T", ratification.REFUSE)
         self.game.run_turn()
 
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "T", "kept its land")
-        self.assertEqual(self.game.nation_data["T"]["faction"], "", "lost its faction")
+        self.assertEqual(self.game.world.nation_data["T"]["faction"], "", "lost its faction")
         self.assertTrue(at_war(self.game, "T", "A"), "fights on alone")
 
     def test_a_puppet_is_not_asked_and_does_not_walk_out(self):
@@ -289,11 +289,11 @@ class AcceptingBlocRatificationTests(unittest.TestCase):
         refused would be struck out of the treaty, keep its faction anyway, and
         be left fighting alone while its overlord was at peace.
         """
-        self.game.nation_data["T"]["master"] = "G"
-        self.game.nation_data["G"]["puppets"] = ["T"]
+        self.game.world.nation_data["T"]["master"] = "G"
+        self.game.world.nation_data["G"]["puppets"] = ["T"]
         self.reach_acceptance()
 
-        self.assertFalse(ratification.pending_for(self.game.nation_data, "T"))
+        self.assertFalse(ratification.pending_for(self.game.world.nation_data, "T"))
         self.assertEqual(self.game.owner_of(self.at_stake["id"]), "A")
 
 
@@ -308,7 +308,7 @@ class RatificationRouteTests(unittest.TestCase):
         self.game = two_blocs(human_players=("A", "S"))
         at_stake = self.game.add_province("S", cores=["S"])
         self.game.border(self.game.home_of("G")["id"], at_stake["id"])
-        mine, theirs = peace_scope.deal_sides("A", "G", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("A", "G", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [
             deal.white_peace(), deal.tiles_clause("S", "G", [at_stake["id"]])])
 
@@ -316,10 +316,10 @@ class RatificationRouteTests(unittest.TestCase):
         self.game.run_turn()
         self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
-        self.game.player_country = "S"
+        self.game.session.player_country = "S"
 
     def test_the_member_is_told_there_is_something_to_answer(self):
-        self.assertTrue(ratification.pending_for(self.game.nation_data, "S"))
+        self.assertTrue(ratification.pending_for(self.game.world.nation_data, "S"))
 
     def test_the_ask_arrives_in_the_inbox(self):
         received = self.game.inbound("S", "A")
@@ -327,24 +327,24 @@ class RatificationRouteTests(unittest.TestCase):
 
     def test_ratifying_through_the_player_handler_records_a_verdict(self):
         player_diplomacy_actions.handle_ratify_treaty(self.game, True)
-        self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["verdict"],
+        self.assertEqual(ratification.pending_for(self.game.world.nation_data, "S")["verdict"],
                          ratification.RATIFY)
 
     def test_refusing_through_the_player_handler_records_a_verdict(self):
         player_diplomacy_actions.handle_ratify_treaty(self.game, False)
-        self.assertEqual(ratification.pending_for(self.game.nation_data, "S")["verdict"],
+        self.assertEqual(ratification.pending_for(self.game.world.nation_data, "S")["verdict"],
                          ratification.REFUSE)
 
     def test_the_answer_is_acted_on_next_turn(self):
         player_diplomacy_actions.handle_ratify_treaty(self.game, False)
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["S"]["faction"], "")
-        self.assertFalse(ratification.pending_for(self.game.nation_data, "S"))
+        self.assertEqual(self.game.world.nation_data["S"]["faction"], "")
+        self.assertFalse(ratification.pending_for(self.game.world.nation_data, "S"))
 
     def test_a_nation_with_nothing_pending_is_not_asked_to_answer(self):
-        self.game.player_country = "A"
-        self.assertFalse(ratification.pending_for(self.game.nation_data, "A"))
+        self.game.session.player_country = "A"
+        self.assertFalse(ratification.pending_for(self.game.world.nation_data, "A"))
         self.assertEqual(player_diplomacy_actions.handle_ratify_treaty(self.game, True), "")
 
 
@@ -356,19 +356,19 @@ class MemberSeparatePeaceTests(unittest.TestCase):
         old_enough_to_settle(self.game)
 
     def test_a_member_settling_with_an_enemy_leader_keeps_its_faction(self):
-        mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("S", "G", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
         self.game.propose("S", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
+        self.assertEqual(self.game.world.nation_data["S"]["faction"], "Entente")
         self.assertFalse(at_war(self.game, "S", "G"))
         self.assertFalse(at_war(self.game, "S", "T"))
 
     def test_its_faction_fights_the_enemy_leader_on(self):
-        mine, theirs = peace_scope.deal_sides("S", "G", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("S", "G", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
         self.game.propose("S", "G", "PEACE_TREATY", parameters=agreement)
@@ -385,7 +385,7 @@ class MemberSeparatePeaceTests(unittest.TestCase):
         self.game.run_turn()
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["S"]["faction"], "Entente")
+        self.assertEqual(self.game.world.nation_data["S"]["faction"], "Entente")
 
 
 class LeaderToMemberPeaceTests(unittest.TestCase):
@@ -396,7 +396,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
         old_enough_to_settle(self.game)
 
     def test_the_limited_deal_ends_only_the_named_members_front(self):
-        mine, theirs = peace_scope.deal_sides("A", "T", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("A", "T", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
         self.game.propose("A", "T", "PEACE_TREATY", parameters=agreement)
@@ -409,11 +409,11 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
                              f"{ours} should be at peace with the named member")
             self.assertTrue(at_war(self.game, ours, "G"),
                             f"{ours} should still be fighting the enemy leader")
-        self.assertEqual(self.game.nation_data["T"]["faction"], "Alliance")
+        self.assertEqual(self.game.world.nation_data["T"]["faction"], "Alliance")
 
     def test_map_peace_button_routes_to_terms_when_only_an_ally_fights(self):
-        self.game.nation_data["A"]["at_war_with"].remove("T")
-        self.game.nation_data["T"]["at_war_with"].remove("A")
+        self.game.world.nation_data["A"]["at_war_with"].remove("T")
+        self.game.world.nation_data["T"]["at_war_with"].remove("A")
         self.game.selected_province = self.game.home_of("T")
 
         with mock.patch("screens.game.deal_screen.open_peace_menu") as open_menu:
@@ -422,7 +422,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
         open_menu.assert_called_once_with(self.game, "T")
 
     def test_leader_can_accept_a_members_offer_without_ejecting_them(self):
-        mine, theirs = peace_scope.deal_sides("T", "A", self.game.nation_data)
+        mine, theirs = peace_scope.deal_sides("T", "A", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
         self.game.propose("T", "A", "PEACE_TREATY", parameters=agreement)
@@ -436,7 +436,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
         self.assertFalse(at_war(self.game, "T", "A"))
         self.assertFalse(at_war(self.game, "T", "S"))
         self.assertTrue(at_war(self.game, "G", "A"))
-        self.assertEqual(self.game.nation_data["T"]["faction"], "Alliance")
+        self.assertEqual(self.game.world.nation_data["T"]["faction"], "Alliance")
 
 
 class AlliesAreNotTrucedTests(unittest.TestCase):
@@ -455,12 +455,12 @@ class AlliesAreNotTrucedTests(unittest.TestCase):
         game.set_war("S", "A")
 
         from map_logic.diplomacy.faction_actions import finalize_faction_join
-        finalize_faction_join(game.map_data, game.nation_data, "A", "S")
+        finalize_faction_join(game.world.map_data, game.world.nation_data, "A", "S")
 
-        self.assertEqual(game.nation_data["S"]["faction"], "Entente")
+        self.assertEqual(game.world.nation_data["S"]["faction"], "Entente")
         self.assertFalse(at_war(game, "S", "A"))
-        self.assertNotIn("A", game.nation_data["S"].get("truces", {}))
-        self.assertNotIn("S", game.nation_data["A"].get("truces", {}))
+        self.assertNotIn("A", game.world.nation_data["S"].get("truces", {}))
+        self.assertNotIn("S", game.world.nation_data["A"].get("truces", {}))
 
     def test_an_ordinary_peace_still_writes_its_truce(self):
         """Only faction-mates are exempt -- the truce is what stops a war being
@@ -469,19 +469,19 @@ class AlliesAreNotTrucedTests(unittest.TestCase):
         game.set_war("A", "B")
 
         from map_logic.diplomacy.war_actions import finalize_neutral
-        finalize_neutral(game.nation_data, "A", "B")
+        finalize_neutral(game.world.nation_data, "A", "B")
 
-        self.assertEqual(game.nation_data["A"]["truces"]["B"], c.TRUCE_TURNS)
+        self.assertEqual(game.world.nation_data["A"]["truces"]["B"], c.TRUCE_TURNS)
 
     def test_no_faction_mates_are_truced_after_a_run_of_turns(self):
         game = two_blocs(human_players=("A",))
         for _ in range(6):
             game.run_turn()
 
-        for nation, data in game.nation_data.items():
+        for nation, data in game.world.nation_data.items():
             for other in data.get("truces", {}):
                 self.assertFalse(
-                    queries.are_in_same_faction(nation, other, game.nation_data),
+                    queries.are_in_same_faction(nation, other, game.world.nation_data),
                     f"{nation} holds a truce against its own ally {other}")
 
 
@@ -499,7 +499,7 @@ class FactionMateCeasefireTests(unittest.TestCase):
         which is what an unresolvable target silently became.
         """
         diplomacy_processor._process_ai_retaliation(
-            self.game, sorted(self.game.nation_data), self.delayed, sender,
+            self.game, sorted(self.game.world.nation_data), self.delayed, sender,
             {"action": "CEASEFIRE", "action_target": target, "message": ""},
             default_target=default_target)
 
@@ -532,7 +532,7 @@ class FactionMateCeasefireTests(unittest.TestCase):
 
     def test_a_follow_up_ceasefire_is_validated_too(self):
         """_flush_queued_ai_actions injected these with no checks at all."""
-        self.game.nation_data["S"]["queued_ai_actions"] = [
+        self.game.world.nation_data["S"]["queued_ai_actions"] = [
             {"target": "A", "action": "CEASEFIRE"}]
 
         diplomacy_processor._flush_queued_ai_actions(self.game)
@@ -540,7 +540,7 @@ class FactionMateCeasefireTests(unittest.TestCase):
         self.assertEqual(self.game.pending_action("S", "A"), "")
 
     def test_a_legitimate_follow_up_still_lands(self):
-        self.game.nation_data["A"]["queued_ai_actions"] = [
+        self.game.world.nation_data["A"]["queued_ai_actions"] = [
             {"target": "G", "action": "CEASEFIRE"}]
 
         diplomacy_processor._flush_queued_ai_actions(self.game)
@@ -554,8 +554,8 @@ class FactionMateCeasefireTests(unittest.TestCase):
             self.game.run_turn()
 
         for a, b in (("A", "S"), ("G", "T")):
-            self.assertNotIn(b, self.game.nation_data[a].get("truces", {}))
-            self.assertNotIn(a, self.game.nation_data[b].get("truces", {}))
+            self.assertNotIn(b, self.game.world.nation_data[a].get("truces", {}))
+            self.assertNotIn(a, self.game.world.nation_data[b].get("truces", {}))
 
 
 if __name__ == "__main__":

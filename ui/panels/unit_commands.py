@@ -245,8 +245,8 @@ class UnitCommandControls:
         if (previous is app.states["BATTLE_EDITOR"]
                 and previous.overview is self.battle_screen
                 and self.battle_screen is not None
-                and previous.player == game_map.player_country
-                and previous.opened_turn == game_map.time_manager.total_turns):
+                and previous.player == game_map.session.player_country
+                and previous.opened_turn == game_map.world.time_manager.total_turns):
             # Returning from the full-screen editor keeps the existing Orders
             # workspace, selected units, scroll position, and battle panel.
             self.target_province = self.battle_screen.province
@@ -265,7 +265,7 @@ class UnitCommandControls:
         if not self.map_screen or not self.target_province:
             return
         if not queries.is_province_in_active_combat(
-                self.target_province, self.map_screen.nation_data):
+                self.target_province, self.map_screen.world.nation_data):
             self.refresh_ui()
             return
         self.open_battle_panel()
@@ -283,7 +283,7 @@ class UnitCommandControls:
         if not self.map_screen or not self.target_province:
             return
         if not queries.is_province_in_active_combat(
-                self.target_province, self.map_screen.nation_data):
+                self.target_province, self.map_screen.world.nation_data):
             self.refresh_ui()
             return
         if self.battle_screen is None:
@@ -351,12 +351,12 @@ class UnitCommandControls:
             return True
         if self.read_only:
             return True
-        if hasattr(map_ref, "player_country") and unit.get("owner") != map_ref.player_country:
+        if unit.get("owner") != map_ref.session.player_country:
             return True
         can_command = getattr(map_ref, "can_select_map_units", None)
         if can_command and not can_command():
             return True
-        return map_ref.tactical_mode and unit is not map_ref.player_unit
+        return map_ref.session.tactical_mode and unit is not map_ref.session.player_unit
 
     def _command_blocked(self, unit):
         """Like _command_blocked_silent, but also surfaces feedback to the player."""
@@ -429,7 +429,7 @@ class UnitCommandControls:
         is_convoy = unit_name.startswith("Convoy")
         is_truck = unit_name.startswith("Truck")
         is_naval = queries.is_naval_unit(unit_name, context=self.map_screen)
-        is_tactical = self.map_screen.tactical_mode
+        is_tactical = self.map_screen.session.tactical_mode
         buttons = []
 
         def add(slot, color, help_text, callback, icon_name, enabled=True, sound_kind="click"):
@@ -498,7 +498,7 @@ class UnitCommandControls:
         if order_type == "DISBAND":
             btn_disband = add(ACTION_COL_DISBAND, "red", "Cancel disband order",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Disbanding", sound_kind=None)
-        elif is_tactical and unit is self.map_screen.player_unit:
+        elif is_tactical and unit is self.map_screen.session.player_unit:
             btn_disband = add(ACTION_COL_DISBAND, "grey", "Disband: unavailable in tactical mode",
                               lambda: None, "Disbanding", enabled=False)
         elif unit.get("air_cargo"):
@@ -681,7 +681,7 @@ class UnitCommandControls:
 
     def repair_unit(self, index, province=None):
         province = province or self.target_province
-        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, province, self.map_screen.nation_data)
+        in_combat = queries.is_nation_in_combat_here(self.map_screen.session.player_country, province, self.map_screen.world.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot repair during combat!")
             return
@@ -693,7 +693,7 @@ class UnitCommandControls:
         if self._command_blocked(unit):
             return
         try:
-            unit_actions.apply_action(self.map_screen, self.map_screen.player_country,
+            unit_actions.apply_action(self.map_screen, self.map_screen.session.player_country,
                                       province, unit, {"type": "REPAIR"})
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
@@ -704,7 +704,7 @@ class UnitCommandControls:
 
     def upgrade_unit(self, index, target_type, province=None):
         province = province or self.target_province
-        in_combat = queries.is_nation_in_combat_here(self.map_screen.player_country, province, self.map_screen.nation_data)
+        in_combat = queries.is_nation_in_combat_here(self.map_screen.session.player_country, province, self.map_screen.world.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot upgrade during combat!")
             return
@@ -722,7 +722,7 @@ class UnitCommandControls:
         unit = units[index]
         if self._command_blocked(unit):
             return
-        research = self.map_screen.nation_data[unit["owner"]].get("research", {})
+        research = self.map_screen.world.nation_data[unit["owner"]].get("research", {})
         expected = queries.get_upgrade_target(unit.get("type", ""), research,
                                              self.unit_library, queries.get_tech_tree(self.map_screen))
         if expected is None or target_type != expected:
@@ -754,7 +754,7 @@ class UnitCommandControls:
         self.cancel_bombard_targeting(refresh=False)
         self.targeting_label = "bombardment"
         self.bombard_target_preview = queries.get_bombardment_targets(
-            province, self.map_screen.id_to_province, queries.get_bombardment_range(unit.get("type", ""), context=self.map_screen))
+            province, self.map_screen.world.id_to_province, queries.get_bombardment_range(unit.get("type", ""), context=self.map_screen))
 
         self.bombarding_unit_index = index if row_key is None else row_key
         self.bombarding_unit_province = province
@@ -799,7 +799,7 @@ class UnitCommandControls:
             return
 
         bomb_range = queries.get_bombardment_range(u_type, context=self.map_screen)
-        in_range = queries.get_bombardment_targets(province, self.map_screen.id_to_province, bomb_range)
+        in_range = queries.get_bombardment_targets(province, self.map_screen.world.id_to_province, bomb_range)
 
         if dest["id"] not in in_range:
             self.map_screen.show_feedback("Target out of bombardment range!")
@@ -830,8 +830,8 @@ class UnitCommandControls:
     def convert_unit(self, index, province=None):
         province = province or self.target_province
         # --- Prevent conversion during combat just in case ---
-        player_country = self.map_screen.player_country
-        in_combat = queries.is_nation_in_combat_here(player_country, province, self.map_screen.nation_data)
+        player_country = self.map_screen.session.player_country
+        in_combat = queries.is_nation_in_combat_here(player_country, province, self.map_screen.world.nation_data)
         if in_combat:
             self.map_screen.show_feedback("Cannot convert during combat!")
             return
@@ -856,7 +856,7 @@ class UnitCommandControls:
             elif u_type.startswith("Convoy"):
                 target_type = "Land Unit"
                 turns = 1
-            elif (conversion := queries.truck_ship_conversion_order(unit, self.map_screen.scenario_settings, context=self.map_screen)):
+            elif (conversion := queries.truck_ship_conversion_order(unit, self.map_screen.world.scenario_settings, context=self.map_screen)):
                 try:
                     conversion = queries.canonical_unit_order(
                         self.map_screen, unit["owner"], province, unit, conversion)
@@ -892,7 +892,7 @@ class UnitCommandControls:
     def _air_mission_unit_index(self, unit, province, unit_indexes=None):
         # The selector may outlive a snapshot, a country switch, or a unit's
         # current form. Recheck its live identity and permissions on selection.
-        if self.map_screen.id_to_province.get(province["id"]) is not province:
+        if self.map_screen.world.id_to_province.get(province["id"]) is not province:
             return None
         index = (unit_indexes.get(id(unit)) if unit_indexes is not None else
                  next((i for i, current in enumerate(province.get("units", [])) if current is unit), None))
@@ -935,7 +935,7 @@ class UnitCommandControls:
         if (self._air_mission_unit_index(plane, province) is None
                 or "TRANSPORT" not in queries.available_air_missions(self.map_screen, plane, province)):
             return
-        queries.ensure_unit_ids(self.map_screen.map_data)
+        queries.ensure_unit_ids(self.map_screen.world.map_data)
         capacity = queries.air_transport_capacity(plane, context=self.map_screen)
 
         def picker_items():
@@ -982,7 +982,7 @@ class UnitCommandControls:
         else:
             return False
         try:
-            queries.set_air_cargo(self.map_screen, self.map_screen.player_country, plane, province, cargo_ids)
+            queries.set_air_cargo(self.map_screen, self.map_screen.session.player_country, plane, province, cargo_ids)
         except ValueError as exc:
             self.map_screen.show_feedback(str(exc))
             return False
@@ -1371,7 +1371,7 @@ class UnitCommandControls:
             self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - UNIT_ROW_X_OFFSET - 2,
             self.row_height)
-        is_own = unit.get("owner") == self.map_screen.player_country
+        is_own = unit.get("owner") == self.map_screen.session.player_country
         selectable = is_own and not self._command_blocked_silent(unit)
         selected = selectable and self.map_screen.is_unit_selected(unit)
 
@@ -1430,10 +1430,10 @@ class UnitCommandControls:
                 summary, summary_color = self._row_order_summaries[row_key]
             else:
                 owner_id = unit.get("owner", "Unknown")
-                summary = queries.get_country_display_name(owner_id, self.map_screen.nation_data)
+                summary = queries.get_country_display_name(owner_id, self.map_screen.world.nation_data)
                 summary_color = c.UI_TEXT_MUTED
             volunteer_note = (" | Volunteer: " + queries.get_country_display_name(
-                                  unit["volunteer_host"], self.map_screen.nation_data)
+                                  unit["volunteer_host"], self.map_screen.world.nation_data)
                               if unit.get("volunteer_host") else "")
             location = f"P{province['id']} | "
             status = fit_text(f"{location}HP {int(hp_ratio * 100)}% | {summary}{volunteer_note}",
@@ -1472,22 +1472,22 @@ class UnitCommandControls:
     def draw_target_markers(self, surface, origin_node, prov_ids, color):
         """Rings every tile the player is currently allowed to click (move steps or bombard targets)."""
         for p_id in prov_ids:
-            prov = self.map_screen.id_to_province.get(p_id)
+            prov = self.map_screen.world.id_to_province.get(p_id)
             if not prov:
                 continue
 
             cx, cy = list(prov["center"])
 
             # Account for map wrap to get the shortest distance
-            if self.map_screen.loop_map:
+            if self.map_screen.world.loop_map:
                 world_dx = cx - origin_node["center"][0]
-                if world_dx > self.map_screen.map_w / 2:
-                    cx -= self.map_screen.map_w
-                elif world_dx < -self.map_screen.map_w / 2:
-                    cx += self.map_screen.map_w
+                if world_dx > self.map_screen.world.map_w / 2:
+                    cx -= self.map_screen.world.map_w
+                elif world_dx < -self.map_screen.world.map_w / 2:
+                    cx += self.map_screen.world.map_w
 
             # Loop the pathmaking circles so they draw on the seam
-            offsets = [0, -self.map_screen.map_w, self.map_screen.map_w] if self.map_screen.loop_map else [0]
+            offsets = [0, -self.map_screen.world.map_w, self.map_screen.world.map_w] if self.map_screen.world.loop_map else [0]
             for offset in offsets:
                 sx, sy = queries.world_to_screen([cx, cy], self.map_screen, offset)
 
@@ -1507,21 +1507,21 @@ class UnitCommandControls:
         previous_clip = surface.get_clip()
         radius_x = radius * camera.zoom
         radius_y = radius_x * camera.tilt_factor
-        offsets = (0, -map_ref.map_w, map_ref.map_w) if map_ref.loop_map else (0,)
+        offsets = (0, -map_ref.world.map_w, map_ref.world.map_w) if map_ref.world.loop_map else (0,)
         cx, cy = base["center"]
         edges = []
-        for x in (0, map_ref.map_w):
+        for x in (0, map_ref.world.map_w):
             remaining = radius * radius - (x - cx) ** 2
             if remaining >= 0:
                 span = sqrt(remaining)
-                low, high = max(0, cy - span), min(map_ref.map_h, cy + span)
+                low, high = max(0, cy - span), min(map_ref.world.map_h, cy + span)
                 if low <= high:
                     edges.append(((x, low), (x, high)))
-        for y in (0, map_ref.map_h):
+        for y in (0, map_ref.world.map_h):
             remaining = radius * radius - (y - cy) ** 2
             if remaining >= 0:
                 span = sqrt(remaining)
-                low, high = max(0, cx - span), min(map_ref.map_w, cx + span)
+                low, high = max(0, cx - span), min(map_ref.world.map_w, cx + span)
                 if low <= high:
                     edges.append(((low, y), (high, y)))
         for offset in offsets:
@@ -1529,7 +1529,7 @@ class UnitCommandControls:
             rect = pygame.Rect(round(sx - radius_x), round(sy - radius_y),
                                max(1, round(2 * radius_x)), max(1, round(2 * radius_y)))
             left, top = queries.world_to_screen((0, 0), map_ref, offset)
-            right, bottom = queries.world_to_screen((map_ref.map_w, map_ref.map_h), map_ref, offset)
+            right, bottom = queries.world_to_screen((map_ref.world.map_w, map_ref.world.map_h), map_ref, offset)
             map_rect = pygame.Rect(round(left), round(top), round(right - left), round(bottom - top))
             clip = previous_clip.clip(map_rect).clip(pygame.Rect(
                 0, map_ref.top_ui_height, surface.get_width(), surface.get_height() - map_ref.total_ui_h))
@@ -1555,7 +1555,7 @@ class UnitCommandControls:
         camera = map_ref.camera
         clip = surface.get_clip()
         key = (self._air_range_preview_key, camera.zoom, camera.tilt_factor,
-               tuple(camera.pos), map_ref.map_w, map_ref.map_h, map_ref.loop_map,
+               tuple(camera.pos), map_ref.world.map_w, map_ref.world.map_h, map_ref.world.loop_map,
                map_ref.top_ui_height, map_ref.total_ui_h, surface.get_size(), tuple(clip))
         if key != self._air_range_layer_key:
             layer = self._air_range_layer
@@ -1606,9 +1606,9 @@ class UnitCommandControls:
         map_ref = self.map_screen
         # Lightweight UI test maps can omit the map's cache revision and selection IDs.
         state = (map_ref._presentation_cache_revision,
-                 map_ref.player_country, map_ref.time_manager.total_turns,
-                 map_ref.tactical_mode, frozenset(map_ref.selected_unit_ids))
-        if map_ref.realtime_multiplayer:
+                 map_ref.session.player_country, map_ref.world.time_manager.total_turns,
+                 map_ref.session.tactical_mode, frozenset(map_ref.selected_unit_ids))
+        if map_ref.session.is_realtime:
             player = map_ref.realtime_session.players.get(map_ref.realtime_player_id)
             state += (map_ref.realtime_session.phase,
                       (player.submitted, player.eliminated) if player else None)
@@ -1621,7 +1621,7 @@ class UnitCommandControls:
             self.refresh_ui()
         if self.battle_screen is not None:
             if not queries.is_province_in_active_combat(
-                    self.target_province, self.map_screen.nation_data):
+                    self.target_province, self.map_screen.world.nation_data):
                 self.battle_screen = None
             else:
                 self.battle_screen.update()

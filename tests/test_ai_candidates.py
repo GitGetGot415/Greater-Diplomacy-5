@@ -200,7 +200,7 @@ class LegalityTests(unittest.TestCase):
         ai_diplomacy.process_basic_proactive_ai(game)
         ai_diplomacy.process_proactive_llm_tasks(game)
         out = []
-        for name, data in game.nation_data.items():
+        for name, data in game.world.nation_data.items():
             if not isinstance(data, dict):
                 continue
             for target, info in (data.get("pending_diplomacy") or {}).items():
@@ -211,23 +211,23 @@ class LegalityTests(unittest.TestCase):
     def test_no_war_is_declared_on_a_faction_mate(self):
         game = StubMapScreen(["A", "B", "X"], human_players=[])
         game.set_faction("Pact", "A", "B")
-        game.nation_data["A"]["claims"] = [2]
+        game.world.nation_data["A"]["claims"] = [2]
         for name, target, action in self.emitted(game):
             if action == "WAR_DECLARATION":
                 self.assertFalse(
-                    game.nation_data[name].get("faction")
-                    and game.nation_data[name]["faction"] == game.nation_data[target].get("faction"),
+                    game.world.nation_data[name].get("faction")
+                    and game.world.nation_data[name]["faction"] == game.world.nation_data[target].get("faction"),
                     f"{name} declared war on faction-mate {target}")
 
     def test_no_war_is_declared_under_a_truce(self):
         game = StubMapScreen(["A", "B"], human_players=[])
-        game.nation_data["A"]["truces"] = {"B": 10}
-        game.nation_data["A"]["claims"] = [2]
+        game.world.nation_data["A"]["truces"] = {"B": 10}
+        game.world.nation_data["A"]["claims"] = [2]
         self.assertNotIn(("A", "B", "WAR_DECLARATION"), self.emitted(game))
 
     def test_nothing_is_proposed_to_a_nation_that_is_gone(self):
         game = StubMapScreen(["A", "B"], human_players=[])
-        game.map_data["2"]["owner"] = "A"      # B no longer owns anything
+        game.world.map_data["2"]["owner"] = "A"      # B no longer owns anything
         living = {name for name, _t, _a in self.emitted(game)}
         for name, target, _action in self.emitted(game):
             self.assertNotEqual(target, "B", "proposed to a dead nation")
@@ -243,7 +243,7 @@ class LegalityTests(unittest.TestCase):
             game.set_war("N0", f"N{i}")
         ai_diplomacy.process_basic_proactive_ai(game)
         ai_diplomacy.process_proactive_llm_tasks(game)
-        for name, data in game.nation_data.items():
+        for name, data in game.world.nation_data.items():
             if not isinstance(data, dict):
                 continue
             fresh = [i for i in (data.get("pending_diplomacy") or {}).values()
@@ -260,8 +260,8 @@ class LegalityTests(unittest.TestCase):
 class NearbySeaTargetTests(unittest.TestCase):
     def make_game(self):
         game = StubMapScreen(["A", "B", "C", "D"], human_players=[])
-        game.scenario_settings["turns_to_wait_before_war"] = 0
-        game.scenario_settings["ai_war_declaration_chance"] = 1.0
+        game.world.scenario_settings["turns_to_wait_before_war"] = 0
+        game.world.scenario_settings["ai_war_declaration_chance"] = 1.0
         waters = [game.add_province("Ocean", terrain="coastal_sea")
                   for _ in range(c.AI_NEARBY_SEA_TILES + 1)]
         lake = game.add_province("Lakes", terrain="lakes")
@@ -272,8 +272,8 @@ class NearbySeaTargetTests(unittest.TestCase):
         game.border(waters[c.AI_NEARBY_SEA_TILES]["id"], game.home_of("C")["id"])
         game.border(game.home_of("A")["id"], lake["id"])
         game.border(lake["id"], game.home_of("D")["id"])
-        game.nation_data["A"]["materials"] = 1000000
-        game.nation_data["A"]["fuel"] = 1000000
+        game.world.nation_data["A"]["materials"] = 1000000
+        game.world.nation_data["A"]["fuel"] = 1000000
         return game
 
     def test_only_nations_within_the_navigable_water_limit_are_nearby(self):
@@ -292,13 +292,13 @@ class NearbySeaTargetTests(unittest.TestCase):
         self.assertTrue(world.is_weaker_neighbor("A", "B"))
         active = {"A", "B", "C", "D"}
         ai_diplomacy._fabricate_claims_on_weaker_neighbors(
-            game, "A", game.nation_data["A"], "", [], active, world)
-        self.assertEqual([q["prov_id"] for q in game.nation_data["A"]["claim_queue"]],
+            game, "A", game.world.nation_data["A"], "", [], active, world)
+        self.assertEqual([q["prov_id"] for q in game.world.nation_data["A"]["claim_queue"]],
                          [game.home_of("B")["id"]])
 
-        game.nation_data["A"]["claims"] = [game.home_of("B")["id"]]
+        game.world.nation_data["A"]["claims"] = [game.home_of("B")["id"]]
         world = ai_world.build(game)
-        bag = ac.Collector("A", game.nation_data["A"]["pending_diplomacy"])
+        bag = ac.Collector("A", game.world.nation_data["A"]["pending_diplomacy"])
         ai_diplomacy._declare_war_for_cores_and_claims(
             bag, game, "A", [], "", "", False, active, world)
         self.assertEqual([(choice.action, choice.target) for choice in bag.ranked()],

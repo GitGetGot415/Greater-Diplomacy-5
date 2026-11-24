@@ -44,7 +44,7 @@ class BaselineTests(unittest.TestCase):
         self.neutrals = self.game.add_province("C", cores=["C"])
 
         for nation in ("A", "B", "C"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_war("A", "B")
         self.theirs["owner"] = "A"
         self.also_theirs["owner"] = "A"
@@ -53,7 +53,7 @@ class BaselineTests(unittest.TestCase):
     def baseline(self, kind=deal_mod.KIND_PEACE, a=("A",), b=("B",)):
         return deal_mod.baseline_owners(
             deal_mod.new(kind, list(a), list(b), []),
-            self.game.map_data, self.game.nation_data)
+            self.game.world.map_data, self.game.world.nation_data)
 
     def test_land_taken_from_the_other_side_reverts(self):
         baseline = self.baseline()
@@ -77,7 +77,7 @@ class BaselineTests(unittest.TestCase):
         drift apart the way they did when each had its own copy of the rule."""
         expected = self.baseline()
         deal_effects.execute(self.game, deal_mod.ceasefire_deal("A", "B"))
-        for prov in self.game.map_data.values():
+        for prov in self.game.world.map_data.values():
             with self.subTest(province=prov["id"]):
                 self.assertEqual(prov["owner"], expected[prov["id"]])
 
@@ -94,7 +94,7 @@ class ValuationTests(unittest.TestCase):
         self.stray = self.game.add_province("C", cores=["C"])
 
         for nation in ("A", "B", "Bee", "C"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_war("A", "B")
         self.game.set_war("A", "Bee")
         for prov in self.theirs:
@@ -105,7 +105,7 @@ class ValuationTests(unittest.TestCase):
     def ledger(self, *clauses, nation="B"):
         agreement = deal_mod.new(deal_mod.KIND_PEACE, ["A"], ["B"],
                                  [deal_mod.white_peace()] + list(clauses))
-        return deal_mod.ledger(agreement, nation, self.game.map_data, self.game.nation_data)
+        return deal_mod.ledger(agreement, nation, self.game.world.map_data, self.game.world.nation_data)
 
     def test_demanding_land_you_occupy_costs_the_nation_it_belongs_to(self):
         self.assertGreater(self.ledger(
@@ -132,12 +132,12 @@ class ValuationTests(unittest.TestCase):
         agreement = deal_mod.new(deal_mod.KIND_PEACE, ["A"], ["B", "Bee"],
                                  [deal_mod.white_peace(),
                                   deal_mod.tiles_clause("A", "Bee", self.occupied)])
-        book = deal_mod.ledger(agreement, "Bee", self.game.map_data,
-                               self.game.nation_data, whole_side=False)
+        book = deal_mod.ledger(agreement, "Bee", self.game.world.map_data,
+                               self.game.world.nation_data, whole_side=False)
         self.assertGreater(book["got_land"], 0.0)
 
-        loser = deal_mod.ledger(agreement, "B", self.game.map_data,
-                                self.game.nation_data, whole_side=False)
+        loser = deal_mod.ledger(agreement, "B", self.game.world.map_data,
+                                self.game.world.nation_data, whole_side=False)
         self.assertGreater(loser["given_land"], 0.0,
                            "B is losing land it would otherwise have got back")
 
@@ -153,15 +153,15 @@ class ValuationTests(unittest.TestCase):
         agreement = deal_mod.new(deal_mod.KIND_PEACE, ["A"], ["B"],
                                  [deal_mod.white_peace(),
                                   deal_mod.tiles_clause("B", "A", self.occupied)])
-        self.assertEqual(deal_mod.validate(agreement, self.game.map_data,
-                                           self.game.nation_data), [])
+        self.assertEqual(deal_mod.validate(agreement, self.game.world.map_data,
+                                           self.game.world.nation_data), [])
 
     def test_demanding_a_province_neither_side_has_title_to_is_still_refused(self):
         agreement = deal_mod.new(deal_mod.KIND_PEACE, ["A"], ["B"],
                                  [deal_mod.white_peace(),
                                   deal_mod.tiles_clause("B", "A", [self.stray["id"]])])
-        self.assertTrue(deal_mod.validate(agreement, self.game.map_data,
-                                          self.game.nation_data))
+        self.assertTrue(deal_mod.validate(agreement, self.game.world.map_data,
+                                          self.game.world.nation_data))
 
 
 class VerdictTests(unittest.TestCase):
@@ -172,10 +172,10 @@ class VerdictTests(unittest.TestCase):
         self.game.add_province("A", cores=["A"])
         self.theirs = [self.game.add_province("B", cores=["B"]) for _ in range(6)]
         for nation in ("A", "B"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_war("A", "B")
-        self.game.nation_data["A"]["war_durations"] = {"B": 20}
-        self.game.nation_data["B"]["war_durations"] = {"A": 20}
+        self.game.world.nation_data["A"]["war_durations"] = {"B": 20}
+        self.game.world.nation_data["B"]["war_durations"] = {"A": 20}
         for prov in self.theirs[:4]:
             prov["owner"] = "A"
             prov["units"] = [{"owner": "A", "size": 100}]
@@ -227,13 +227,13 @@ class LandCapTests(unittest.TestCase):
             self.game.add_province("BigAlly", cores=["BigAlly"])
 
         for nation in ("Attacker", "Victim", "BigAlly"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_faction("Allies", "Victim", "BigAlly")
         self.game.set_war("Attacker", "Victim")
         self.game.set_war("Attacker", "BigAlly")
-        self.game.nation_data["Attacker"]["war_durations"] = {"Victim": 20, "BigAlly": 20}
-        self.game.nation_data["Victim"]["war_durations"] = {"Attacker": 20}
-        self.game.nation_data["BigAlly"]["war_durations"] = {"Attacker": 20}
+        self.game.world.nation_data["Attacker"]["war_durations"] = {"Victim": 20, "BigAlly": 20}
+        self.game.world.nation_data["Victim"]["war_durations"] = {"Attacker": 20}
+        self.game.world.nation_data["BigAlly"]["war_durations"] = {"Attacker": 20}
 
         # Attacker overruns half the Victim -- and none of its enormous ally.
         for prov in self.victim_land[:5]:
@@ -249,12 +249,12 @@ class LandCapTests(unittest.TestCase):
     def test_the_two_halves_of_the_cap_are_the_same_measurement(self):
         agreement = deal_mod.new(deal_mod.KIND_PEACE, ["Attacker"], ["Victim", "BigAlly"],
                                  [deal_mod.white_peace()])
-        occupied = deal_mod.occupied_fraction(agreement, "Victim", self.game.map_data,
-                                              self.game.nation_data, whole_side=False)
+        occupied = deal_mod.occupied_fraction(agreement, "Victim", self.game.world.map_data,
+                                              self.game.world.nation_data, whole_side=False)
         demanded = deal_mod.demand_fraction(
             deal_mod.add_clause(agreement,
                                 deal_mod.tiles_clause("Victim", "Attacker", self.held)),
-            "Victim", self.game.map_data, self.game.nation_data, whole_side=False)
+            "Victim", self.game.world.map_data, self.game.world.nation_data, whole_side=False)
         self.assertAlmostEqual(occupied, demanded, places=6,
                                msg="asking for exactly what you hold must read as "
                                    "exactly what you hold")
@@ -279,10 +279,10 @@ class LandCapTests(unittest.TestCase):
             deal_mod.white_peace(),
             deal_mod.tiles_clause("Victim", "Attacker",
                                   [p["id"] for p in self.victim_land])])
-        alone = deal_mod.demand_fraction(agreement, "Victim", self.game.map_data,
-                                         self.game.nation_data, whole_side=False)
-        bloc = deal_mod.demand_fraction(agreement, "Victim", self.game.map_data,
-                                        self.game.nation_data, whole_side=True)
+        alone = deal_mod.demand_fraction(agreement, "Victim", self.game.world.map_data,
+                                         self.game.world.nation_data, whole_side=False)
+        bloc = deal_mod.demand_fraction(agreement, "Victim", self.game.world.map_data,
+                                        self.game.world.nation_data, whole_side=True)
         self.assertGreater(alone, bloc * 3, "the fixture does not exercise the gap")
         self.assertFalse(ai_opinion.peace_verdict(
             self.world, "Victim", "Attacker", agreement).accepted)

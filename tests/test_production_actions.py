@@ -86,20 +86,48 @@ class ProductionActionTests(unittest.TestCase):
         self.assertEqual(command["new_costs"], [])
         self.assertEqual(command["cancelled"], [])
 
-    def test_ai_building_manpower_policy_is_explicit(self):
+    def test_a_negative_stockpile_blocks_only_drafts_that_charge_it(self):
+        country = {"materials": -50, "manpower": 10, "fuel": 10}
+        actions.validate_queue_budget(country, [{"type": "unit_order", "order": {"type": "MOVE", "path": []}}])
+        actions.validate_queue_budget(country, [{"type": "province_queue", "cancelled": [],
+                                                 "new_costs": [{"cost_manpower": 5}]}])
+        with self.assertRaises(ValueError):
+            actions.validate_queue_budget(country, [{"type": "province_queue", "cancelled": [],
+                                                     "new_costs": [{"cost_materials": 1}]}])
+
+    def test_building_orders_charge_their_manpower(self):
         fixture = {"Fixture Building": {"group": "fixture", "time": 3,
                                         "cost_materials": 4, "cost_manpower": 5, "cost_fuel": 1}}
         intent = {"order_type": "BUILDING", "item_name": "Fixture Building"}
         with patch("data.queries.get_building_required_tech", return_value=(None, 0)):
-            player = actions.prepare_production(self.context, "A", self.province, "building_queue", intent,
-                                                 building_library=fixture)
-            ai = actions.prepare_production(self.context, "A", self.province, "building_queue", intent,
-                                             building_library=fixture, policy=actions.AI_POLICY)
-        self.assertEqual(player.cost["cost_manpower"], fixture["Fixture Building"]["cost_manpower"])
-        self.assertEqual(ai.cost["cost_manpower"], 0)
-        for resource in c.ECON_RESOURCE_KEYS:
-            if resource != "manpower":
-                self.assertEqual(ai.cost[f"cost_{resource}"], player.cost[f"cost_{resource}"])
+            result = actions.prepare_production(self.context, "A", self.province, "building_queue", intent,
+                                                building_library=fixture)
+        self.assertEqual(result.cost["cost_manpower"], fixture["Fixture Building"]["cost_manpower"])
+
+    def test_ai_buildings_pay_manpower_and_wait_until_it_is_affordable(self):
+        from map_logic.ai import ai_construction, ai_tuning
+        stats = {"group": "industry", "time": 2, "cost_materials": 1, "cost_manpower": 5, "cost_fuel": 0}
+        fixture = {"Fixture Works": stats}
+        country = self.context.world.nation_data["A"]
+        country.update(materials=ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 10, fuel=0)
+        with patch("data.queries.get_building_required_tech", return_value=(None, 0)):
+            cost = actions.prepare_production(self.context, "A", self.province, "building_queue",
+                                              {"order_type": "BUILDING", "item_name": "Fixture Works"},
+                                              building_library=fixture).cost
+            country["manpower"] = cost["cost_manpower"] - 1
+            ai_construction._apply_construction_logic(self.context, "A", country, [self.province], fixture)
+            self.assertEqual(self.province["building_queue"], [])
+            country["manpower"] = cost["cost_manpower"]
+            ai_construction._apply_construction_logic(self.context, "A", country, [self.province], fixture)
+        self.assertEqual([entry["item_name"] for entry in self.province["building_queue"]], ["Fixture Works"])
+        self.assertEqual(country["manpower"], 0)
+
+    def test_every_building_queue_order_takes_at_least_one_turn(self):
+        for order_type in ("BUILDING", "CORE"):
+            with self.subTest(order_type=order_type):
+                entry = actions.canonical_queue_entry("building_queue", name="Fixture", cost={"time": 0, "group": "fixture"},
+                                                      order_type=order_type)
+                self.assertEqual(entry["turns_remaining"], 1)
 
 
 class AdministrativeLegalityTests(unittest.TestCase):

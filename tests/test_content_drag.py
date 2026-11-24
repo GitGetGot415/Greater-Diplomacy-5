@@ -9,6 +9,8 @@ import pygame
 from ui.navigation.screen import Screen
 from screens.game import map_input
 from screens.game.messages import Messages_Screen
+from tests.stub_map_screen import map_double
+from data.session_state import SessionState
 
 
 def drag_events(start=(50, 50), delta=(0, 30)):
@@ -85,7 +87,7 @@ class ContentDragTests(unittest.TestCase):
             with self.subTest(panel=panel):
                 screen = self.screen()
                 screen.selected_province = {"id": 1}
-                screen.selection_mode = False
+                screen.session = SessionState(selection_mode=False)
                 for name in ("country_actions", *map_input.MAP_PANELS):
                     setattr(screen, f"{name}_scroll_rect", None)
                     setattr(screen, f"{name}_scroll_y", 150)
@@ -97,7 +99,7 @@ class ContentDragTests(unittest.TestCase):
 
     def test_message_thread_drag_pulls_the_thread_down(self):
         screen = Messages_Screen()
-        screen.map_screen = SimpleNamespace(tactical_mode=False, player_country="A", nation_data={})
+        screen.map_screen = map_double(tactical_mode=False, player_country="A", nation_data={})
         screen.selected_recipient = "B"
         screen.thread_rect = pygame.Rect(280, 64, 1000, 512)
         screen.msg_scroll_y = 150

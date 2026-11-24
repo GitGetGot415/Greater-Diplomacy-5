@@ -10,6 +10,7 @@ from data import queries
 from map_logic.ai import ai_construction
 from map_logic.system32 import combat_processor
 from ui.widgets import ui_elements
+from tests.stub_map_screen import MapDouble, map_double
 
 
 def unit(owner, attack=0, defense=0, health=100000):
@@ -83,7 +84,7 @@ class FortTests(unittest.TestCase):
         self.assertEqual(target["health"], before - max(0, 100 - bonus))
 
     def test_artillery_damages_fort_and_refunds_queued_upgrade(self):
-        class Screen:
+        class Screen(MapDouble):
             pass
 
         screen = Screen()
@@ -103,9 +104,9 @@ class FortTests(unittest.TestCase):
                             "cost_manpower": 0, "cost_fuel": 0},
             }],
         }
-        screen.map_data = {1: source, 2: target}
-        screen.id_to_province = {1: source, 2: target}
-        screen.nation_data = {
+        screen.world.map_data = {1: source, 2: target}
+        screen.world.id_to_province = {1: source, 2: target}
+        screen.world.nation_data = {
             "A": {"materials": 0, "at_war_with": ["B"]},
             "B": {"at_war_with": ["A"]},
         }
@@ -114,7 +115,7 @@ class FortTests(unittest.TestCase):
 
         self.assertEqual(queries.get_fort_level(target), 4)
         self.assertEqual(target["building_queue"], [])
-        self.assertEqual(screen.nation_data["A"]["materials"], 7000)
+        self.assertEqual(screen.world.nation_data["A"]["materials"], 7000)
         self.assertEqual(gun["order"], {"type": "MOVE", "path": []})
 
     def test_ui_shows_fort_defense_as_a_separate_bonus(self):
@@ -128,10 +129,8 @@ class FortTests(unittest.TestCase):
         self.assertIn((c.ICON_DEFENSE, "0 + 50"), entries)
 
     def test_ai_never_queues_fortifications(self):
-        class Screen:
-            map_data = {"1": {}}
-
-        prov = Screen.map_data["1"]
+        screen = map_double(map_data={"1": {}})
+        prov = screen.world.map_data["1"]
         prov.update({"owner": "A", "cores": ["A"], "buildings": [],
                      "building_queue": []})
         data = {"materials": ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 1,
@@ -144,7 +143,7 @@ class FortTests(unittest.TestCase):
         # reach its fort list instead of depending on shuffle randomness.
         with patch.object(ai_construction.random, "shuffle", lambda values: None):
             ai_construction._apply_construction_logic(
-                Screen(), "A", data, [prov], building_library)
+                screen, "A", data, [prov], building_library)
 
         self.assertEqual(prov["building_queue"], [])
 

@@ -5,6 +5,7 @@ import concurrent.futures
 import shutil
 
 from data.state_access import world_for, session_for
+from data.session_state import TOURNAMENT
 import os
 import json
 import hashlib
@@ -36,10 +37,10 @@ def active_owners_of(context):
     "no filter".
     """
     world_state = world_for(context)
-    if not context.map_data:
+    if not context.world.map_data:
         return set()
     return queries.get_politically_active_nations(
-        world_state.map_data, context.nation_data)
+        world_state.map_data, context.world.nation_data)
 
 
 def run_with_progress(jobs, worker, caption, on_result):
@@ -130,7 +131,7 @@ def strip_sensitive_data_for_player(context, country_id):
     snapshot applier replaces the map's state with the result.
     """
     session_state = session_for(context)
-    session_state.multiplayer_mode = True
+    session_state.mode = TOURNAMENT
     session_state.player_country = country_id
     session_state.active_players = [country_id]
     session_state.current_player_index = 0
@@ -150,7 +151,7 @@ def strip_sensitive_data_for_tournament_spectator(context):
     world_state = world_for(context)
     session_state = session_for(context)
     context.country_economy_summaries = {}
-    session_state.multiplayer_mode = True
+    session_state.mode = TOURNAMENT
     session_state.player_country = c.TOURNAMENT_SPECTATOR
     session_state.active_players = [c.TOURNAMENT_SPECTATOR]
     session_state.current_player_index = 0
@@ -261,7 +262,7 @@ def write_host_keys(context, keys_dict, output_dir=None):
     keys_path = os.path.join(output_dir, "Host_Keys.txt")
     
     active_owners = active_owners_of(context)
-    nation_data = context.nation_data
+    nation_data = context.world.nation_data
     
     with open(all_keys_path, 'w') as f:
         f.write("Every key for every possible country:\n\n")
@@ -299,22 +300,22 @@ def export_tournament(context, file_path, master_key, keys_dict):
     os.makedirs(output_dir, exist_ok=True)
     
     # Process pending key regenerations if any
-    pending_regen = context.multiplayer_pending_key_regen
+    pending_regen = context.session.multiplayer_pending_key_regen
     regenerated_keys = {}
     if pending_regen:
         for cid in list(pending_regen):
             new_key = secrets.token_hex(4)
             keys_dict[cid] = new_key
-            context.multiplayer_keys_dict[cid] = new_key
-            nation_data = context.nation_data
+            context.session.multiplayer_keys_dict[cid] = new_key
+            nation_data = context.world.nation_data
             name = queries.get_country_display_name(cid, nation_data)
             regenerated_keys[cid] = (name, new_key)
-        context.multiplayer_pending_key_regen.clear()
+        context.session.multiplayer_pending_key_regen.clear()
 
     keys_path, all_keys_path = write_host_keys(context, keys_dict, output_dir=output_dir)
     
     if regenerated_keys:
-        turn = world_state.time_manager.total_turns if hasattr(context, 'time_manager') else 0
+        turn = world_state.time_manager.total_turns
         regen_keys_path = os.path.join(output_dir, f"Turn_{turn}_Regenerated_Keys.txt")
         with open(regen_keys_path, 'w') as f:
             f.write(f"Regenerated keys for Turn {turn}:\n\n")
@@ -334,9 +335,8 @@ def export_tournament(context, file_path, master_key, keys_dict):
             save_dict["nation_data"][cid] = projected
     
     # Embed the raw geometry so the tournament file is self-contained
-    if hasattr(context, 'raw_json_data'):
-        save_dict["_raw_map_data"] = queries.build_map_geometry_save(
-            world_state.raw_json_data, save_dict["provinces"])
+    save_dict["_raw_map_data"] = queries.build_map_geometry_save(
+        world_state.raw_json_data, save_dict["provinces"])
         
     temp_img_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, "temp_img_export")
     os.makedirs(temp_img_dir, exist_ok=True)
@@ -360,12 +360,12 @@ def export_tournament(context, file_path, master_key, keys_dict):
     
     save_dict["_images"] = images
     
-    session_key = context.multiplayer_session_key
+    session_key = context.session.multiplayer_session_key
     if not session_key:
         session_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
-        context.multiplayer_session_key = session_key
+        context.session.multiplayer_session_key = session_key
 
-    player_enc_cache = context.multiplayer_player_enc_cache
+    player_enc_cache = context.session.multiplayer_player_enc_cache
     
     active_owners = active_owners_of(context)
 
@@ -430,7 +430,7 @@ def export_tournament(context, file_path, master_key, keys_dict):
             if summary:
                 entry["enc_player_supply"] = encrypt_dict(summary, keys_dict[cid], compress=True)
 
-    context.multiplayer_player_enc_cache = player_enc_cache
+    context.session.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key, compress=True)
     spectator_game_data_enc = encrypt_dict(
@@ -602,11 +602,10 @@ def export_move_file(context, file_path, player_key):
     commands = collect_map_commands(context, cid)
     player_data = {"game_version": c.GAME_VERSION, "player_intents": commands}
 
-    session_key = context.multiplayer_session_key
+    session_key = context.session.multiplayer_session_key
     if session_key:
         player_data["tournament_session"] = session_key
-    if hasattr(context, "time_manager"):
-        player_data["tournament_turn"] = world_state.time_manager.total_turns
+    player_data["tournament_turn"] = world_state.time_manager.total_turns
 
     payload = {
         "country_id": cid,
@@ -629,13 +628,13 @@ def _move_context_error(context, player_data):
     an in-progress tournament created by an earlier release.  Every newly
     exported move carries both values and is checked strictly.
     """
-    expected_session = context.multiplayer_session_key
+    expected_session = context.session.multiplayer_session_key
     move_session = player_data.get("tournament_session")
     if move_session is not None and move_session != expected_session:
         return "belongs to a different tournament"
 
     if "tournament_turn" in player_data:
-        time_manager = context.time_manager
+        time_manager = context.world.time_manager
         expected_turn = getattr(time_manager, "total_turns", None)
         if player_data["tournament_turn"] != expected_turn:
             return f"is for turn {player_data['tournament_turn']!r}; the host expects turn {expected_turn}"
@@ -746,7 +745,7 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_older_version
         processed_move_cids.add(cid)
 
         # Also mark this country as having submitted a move
-        context.submitted_moves.add(cid)
+        context.session.submitted_moves.add(cid)
         summary["loaded"] += 1
         summary["converted"] += older_release
         summary["loaded_countries"].append(cid)

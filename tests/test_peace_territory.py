@@ -41,7 +41,7 @@ class RestoreOccupiedTests(unittest.TestCase):
                          self.theirs["id"], self.also_theirs["id"])
 
         for nation in ("A", "B"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_war("A", "B")
         self.theirs["owner"] = "A"
         self.also_theirs["owner"] = "A"
@@ -79,7 +79,7 @@ class RestoreOccupiedTests(unittest.TestCase):
         settles one war, not every war on the map."""
         self.game._add_nation("C")
         theirs = self.game.add_province("C")
-        war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, "C")
+        war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, "C")
         self.game.set_war("A", "C")
         theirs["owner"] = "A"
 
@@ -143,18 +143,18 @@ class PreWarSnapshotTests(unittest.TestCase):
         self.prov = self.game.add_province("A")
 
     def snapshot(self, nation):
-        war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
-        return self.game.nation_data.get("WAR_PRE_MAPS", {}).get(nation)
+        war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
+        return self.game.world.nation_data.get("WAR_PRE_MAPS", {}).get(nation)
 
     def test_a_nation_with_no_faction_gets_one(self):
-        mine = {str(p["id"]): "A" for p in self.game.map_data.values()
+        mine = {str(p["id"]): "A" for p in self.game.world.map_data.values()
                 if p.get("owner") == "A"}
         self.assertEqual(self.snapshot("A"), mine)
         self.assertIn(str(self.prov["id"]), mine)
 
     def test_it_is_merged_into_the_pre_war_index(self):
         self.snapshot("A")
-        index = deal.prewar_index(self.game.nation_data)
+        index = deal.prewar_index(self.game.world.nation_data)
         self.assertEqual(index.get(str(self.prov["id"])), "A")
 
     def test_a_second_war_does_not_ratify_the_first_one_s_conquests(self):
@@ -168,14 +168,14 @@ class PreWarSnapshotTests(unittest.TestCase):
 
     def test_it_is_dropped_once_the_wars_are_over(self):
         self.snapshot("A")
-        war_actions.clear_own_pre_war_map_if_peace(self.game.nation_data, "A")
-        self.assertNotIn("A", self.game.nation_data.get("WAR_PRE_MAPS", {}))
+        war_actions.clear_own_pre_war_map_if_peace(self.game.world.nation_data, "A")
+        self.assertNotIn("A", self.game.world.nation_data.get("WAR_PRE_MAPS", {}))
 
     def test_but_not_while_one_is_still_running(self):
         self.snapshot("A")
         self.game.set_war("A", "B")
-        war_actions.clear_own_pre_war_map_if_peace(self.game.nation_data, "A")
-        self.assertIn("A", self.game.nation_data.get("WAR_PRE_MAPS", {}))
+        war_actions.clear_own_pre_war_map_if_peace(self.game.world.nation_data, "A")
+        self.assertIn("A", self.game.world.nation_data.get("WAR_PRE_MAPS", {}))
 
     def test_a_member_walking_out_mid_war_takes_its_borders_with_it(self):
         """A separate peace is a nation leaving its faction, and the faction's
@@ -186,13 +186,13 @@ class PreWarSnapshotTests(unittest.TestCase):
         from map_logic.diplomacy import faction_actions
 
         self.game.set_faction("The Pact", "B", "A")
-        self.game.set_war("A", "B2" if "B2" in self.game.nation_data else "B")
-        queries.save_faction_pre_war_map("The Pact", self.game.map_data,
-                                         self.game.nation_data)
+        self.game.set_war("A", "B2" if "B2" in self.game.world.nation_data else "B")
+        queries.save_faction_pre_war_map("The Pact", self.game.world.map_data,
+                                         self.game.world.nation_data)
 
-        faction_actions.leave_faction(self.game.nation_data, "A")
+        faction_actions.leave_faction(self.game.world.nation_data, "A")
 
-        kept = self.game.nation_data.get("WAR_PRE_MAPS", {}).get("A")
+        kept = self.game.world.nation_data.get("WAR_PRE_MAPS", {}).get("A")
         self.assertTrue(kept, "the leaver kept no record of its own borders")
         self.assertIn(str(self.prov["id"]), kept)
         self.assertTrue(all(owner == "A" for owner in kept.values()),

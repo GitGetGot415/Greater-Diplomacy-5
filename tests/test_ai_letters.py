@@ -32,7 +32,7 @@ class LetterTestCase(unittest.TestCase):
         # No turn budget, whatever the local settings file says.
         self.patch(ai_llm_runner, "turn_deadline", lambda context=None, share=1.0: None)
         self.game = StubMapScreen(["A", "B", "C"], human_players=[])
-        self.game.force_skip_llm = False
+        self.game.session.force_skip_llm = False
         self.prompts = []
 
     def patch(self, module, name, value):
@@ -49,7 +49,7 @@ class LetterTestCase(unittest.TestCase):
     def stub(self, answers):
         """`answers` maps a writer to a function of its user prompt, or to a reply."""
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
-            writer = next(n for n in self.game.nation_data
+            writer = next(n for n in self.game.world.nation_data
                           if f"You are the leader of {n}." in user)
             self.prompts.append((writer, user))
             answer = answers.get(writer, {"letters": [], "opinions": {}})
@@ -65,11 +65,11 @@ class LetterTestCase(unittest.TestCase):
         """A player's plain message as the send phase leaves it: delivered, awaiting a reply."""
         from map_logic.diplomacy import diplomacy_messages
         diplomacy_messages.send_message(self.game, sender, receiver, text, "TEXT")
-        diplomacy_messages.set_pending(self.game.nation_data, sender, receiver, f"MSG:{text}",
+        diplomacy_messages.set_pending(self.game.world.nation_data, sender, receiver, f"MSG:{text}",
                                        turns=1, message=text)
 
     def letters_to(self, nation):
-        return [m for m in self.game.nation_data[nation]["inbox"]
+        return [m for m in self.game.world.nation_data[nation]["inbox"]
                 if m.get(ai_letters.LETTER) and not m["sender"].startswith("To: ")]
 
     def write(self, sender, receiver, text):
@@ -96,7 +96,7 @@ class DeliveryTests(LetterTestCase):
         self.assertEqual(self.letters_to("B"), [])
         ai_letters.send_queued_letters(self.game)
         self.assertEqual([m["content"] for m in self.letters_to("B")], ["We should talk about C."])
-        self.assertEqual(self.game.queued_letters, [])
+        self.assertEqual(self.game.session.queued_letters, [])
 
     def test_the_diplomacy_send_phase_delivers_them(self):
         from map_logic.diplomacy import diplomacy_processor
@@ -124,7 +124,7 @@ class DeliveryTests(LetterTestCase):
         """Its own-initiative proposals come from delivered correspondence only."""
         def offered_to_b():
             ai_diplomacy.process_basic_proactive_ai(self.game)
-            choice = {c["nation"]: c for c in self.game.proactive_choices}.get("A")
+            choice = {c["nation"]: c for c in self.game.session.proactive_choices}.get("A")
             return [cand for cand in (choice["candidates"] if choice else [])
                     if ac.is_initiative(cand) and cand.target == "B"]
 
@@ -141,7 +141,7 @@ class DeliveryTests(LetterTestCase):
         schemas = {}
 
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
-            writer = next(n for n in self.game.nation_data if f"You are the leader of {n}." in user)
+            writer = next(n for n in self.game.world.nation_data if f"You are the leader of {n}." in user)
             schemas.setdefault(writer, schema)
             return {"letters": [], "opinions": {}}
 
@@ -160,15 +160,15 @@ class DeliveryTests(LetterTestCase):
         self.write("A", "B", "First words.")
         self.stub({})
         self.run_letters()
-        self.assertEqual(ai_letters.unread_letters(self.game.nation_data, "B"), [])
+        self.assertEqual(ai_letters.unread_letters(self.game.world.nation_data, "B"), [])
         sittings = [writer for writer, _ in self.prompts]
         self.assertEqual(sittings.count("B"), 1)
 
     def test_a_players_plain_message_is_not_a_letter(self):
         from map_logic.diplomacy import diplomacy_messages
         diplomacy_messages.send_message(self.game, "A", "B", "Hello from a player.", "TEXT")
-        self.assertEqual(ai_letters.unread_letters(self.game.nation_data, "B"), [])
-        self.assertEqual(ai_letters.correspondents(self.game.nation_data, "B", {"A", "B", "C"}),
+        self.assertEqual(ai_letters.unread_letters(self.game.world.nation_data, "B"), [])
+        self.assertEqual(ai_letters.correspondents(self.game.world.nation_data, "B", {"A", "B", "C"}),
                          ["A"])
 
 
@@ -178,7 +178,7 @@ class PlayerMessageTests(LetterTestCase):
     def setUp(self):
         super().setUp()
         self.game = StubMapScreen(["P", "B", "C"], human_players=["P"])
-        self.game.force_skip_llm = False
+        self.game.session.force_skip_llm = False
 
     def custom_tasks(self):
         from map_logic.diplomacy import diplomacy_processor
@@ -195,11 +195,11 @@ class PlayerMessageTests(LetterTestCase):
         self.assertTrue(ai_letters.answered_by_letter(self.game, "P", "B"))
         self.assertEqual(self.custom_tasks(), [])
 
-        inbox = len(self.game.nation_data["P"]["inbox"])
-        info = self.game.nation_data["P"]["pending_diplomacy"]["B"]
+        inbox = len(self.game.world.nation_data["P"]["inbox"])
+        info = self.game.world.nation_data["P"]["pending_diplomacy"]["B"]
         self.assertTrue(diplomacy_processor._resolve_awaited_action(
             self.game, {}, ["P", "B", "C"], [], "P", "B", info["action"], info))
-        self.assertEqual(len(self.game.nation_data["P"]["inbox"]), inbox,
+        self.assertEqual(len(self.game.world.nation_data["P"]["inbox"]), inbox,
                          "the response phase replied a second time")
         self.assertEqual([m["content"] for m in self.letters_to("P")], ["We will consider it."])
 
@@ -212,7 +212,7 @@ class PlayerMessageTests(LetterTestCase):
         self.assertEqual([(t["sender"], t["target"]) for t in self.custom_tasks()], [("P", "B")])
 
     def test_an_ai_that_writes_no_letters_still_gets_the_response_phase_reply(self):
-        self.game.nation_data["B"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
+        self.game.world.nation_data["B"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.await_answer("P", "B", "Will you stand with us?")
         self.stub({})
         self.run_letters()
@@ -221,7 +221,7 @@ class PlayerMessageTests(LetterTestCase):
 
     def test_a_player_can_receive_letters(self):
         game = StubMapScreen(["A", "B"], human_players=["A"])
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
         self.game = game
         # Not "A word in private.": the recipient here is named "A", and a
         # letter that names its recipient is not sent (names_recipient).
@@ -232,7 +232,7 @@ class PlayerMessageTests(LetterTestCase):
 
 class ValidationTests(LetterTestCase):
     def test_recipients_must_be_countries_that_read_letters(self):
-        self.game.nation_data["C"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
+        self.game.world.nation_data["C"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.stub({"A": {"letters": [{"to": "C", "text": "Nobody reads this."},
                                      {"to": "A", "text": "Talking to ourselves."},
                                      {"to": "Atlantis", "text": "Lost at sea."}]}})
@@ -242,17 +242,17 @@ class ValidationTests(LetterTestCase):
 
     def test_one_letter_per_country_and_a_cap_per_sitting(self):
         self.game = StubMapScreen(["A", "B", "C", "D", "E"], human_players=[])
-        self.game.force_skip_llm = False
+        self.game.session.force_skip_llm = False
         self.stub({"A": {"letters": [{"to": "B", "text": "One."}, {"to": "B", "text": "Two."},
                                      {"to": "C", "text": "Three."}, {"to": "D", "text": "Four."},
                                      {"to": "E", "text": "Five."}]}})
         self.run_letters()
-        sent = [m for m in self.game.nation_data["A"]["inbox"] if m["sender"].startswith("To: ")]
+        sent = [m for m in self.game.world.nation_data["A"]["inbox"] if m["sender"].startswith("To: ")]
         self.assertEqual(len(sent), ai_tuning.AI_LETTERS_PER_CALL)
         self.assertEqual([m["content"] for m in self.letters_to("B")], ["One."])
 
     def test_a_display_name_finds_its_country(self):
-        self.game.nation_data["B"]["name"] = "Republic of B"
+        self.game.world.nation_data["B"]["name"] = "Republic of B"
         self.stub({"A": {"letters": [{"to": "republic of b", "text": "Greetings."}]}})
         self.run_letters()
         self.assertEqual([m["content"] for m in self.letters_to("B")], ["Greetings."])
@@ -293,7 +293,7 @@ class ValidationTests(LetterTestCase):
 
 class OpinionTests(LetterTestCase):
     def general(self, reader, author):
-        mods = self.game.nation_data[reader].get("temp_modifiers", {}).get(author, {})
+        mods = self.game.world.nation_data[reader].get("temp_modifiers", {}).get(author, {})
         return queries.modifier_value(mods.get("general", 0))
 
     def test_reading_a_letter_moves_the_readers_opinion(self):
@@ -315,22 +315,22 @@ class OpinionTests(LetterTestCase):
 
     def test_a_replys_opinion_change_has_the_same_limit(self):
         """A player's letter to an AI moves its opinion through the reply."""
-        queries.add_opinion_change("B", "A", 999, self.game.nation_data)
+        queries.add_opinion_change("B", "A", 999, self.game.world.nation_data)
         self.assertEqual(self.general("B", "A"), c.AI_OPINION_CHANGE_MAX)
-        self.assertEqual(queries.add_opinion_change("B", "A", "lots", self.game.nation_data), 0)
+        self.assertEqual(queries.add_opinion_change("B", "A", "lots", self.game.world.nation_data), 0)
 
 
 class NotebookTests(LetterTestCase):
     def test_the_notebook_is_kept_and_cut_to_length(self):
         self.stub({"A": {"letters": [], "notebook": "n" * (ai_tuning.AI_NOTEBOOK_LENGTH + 10)}})
         self.run_letters()
-        self.assertEqual(len(ai_letters.notebook(self.game.nation_data, "A")), ai_tuning.AI_NOTEBOOK_LENGTH)
+        self.assertEqual(len(ai_letters.notebook(self.game.world.nation_data, "A")), ai_tuning.AI_NOTEBOOK_LENGTH)
 
     def test_a_reply_without_a_notebook_keeps_the_old_one(self):
-        self.game.nation_data["A"][ai_letters.NOTEBOOK] = "Trust nobody."
+        self.game.world.nation_data["A"][ai_letters.NOTEBOOK] = "Trust nobody."
         self.stub({"A": {"letters": []}})
         self.run_letters()
-        self.assertEqual(ai_letters.notebook(self.game.nation_data, "A"), "Trust nobody.")
+        self.assertEqual(ai_letters.notebook(self.game.world.nation_data, "A"), "Trust nobody.")
 
     def test_each_reader_and_letter_carries_its_relationship(self):
         """A war listed among a dozen others was outweighed by the model's history."""
@@ -355,14 +355,14 @@ class NotebookTests(LetterTestCase):
         self.assertTrue("Your neighbors:" in prompt or "You border no country by land." in prompt)
 
     def test_the_writer_reads_its_own_notebook(self):
-        self.game.nation_data["A"][ai_letters.NOTEBOOK] = "C is the danger."
+        self.game.world.nation_data["A"][ai_letters.NOTEBOOK] = "C is the danger."
         self.stub({})
         self.run_letters()
         prompt = next(user for writer, user in self.prompts if writer == "A")
         self.assertIn("C is the danger.", prompt)
 
     def test_the_director_reads_it_too(self):
-        self.game.nation_data["A"][ai_letters.NOTEBOOK] = "Ally with B."
+        self.game.world.nation_data["A"][ai_letters.NOTEBOOK] = "Ally with B."
         seen = []
 
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
@@ -376,11 +376,11 @@ class NotebookTests(LetterTestCase):
         self.assertTrue(any("Ally with B." in user for user in seen))
 
     def test_other_countries_never_see_it_in_a_multiplayer_snapshot(self):
-        self.game.nation_data["A"][ai_letters.NOTEBOOK] = "Secret plans."
-        for key, province in self.game.map_data.items():
+        self.game.world.nation_data["A"][ai_letters.NOTEBOOK] = "Secret plans."
+        for key, province in self.game.world.map_data.items():
             province["json_key"] = key
         snapshot = queries.player_snapshot_projection(
-            self.game, {"nation_data": {k: dict(v) for k, v in self.game.nation_data.items()}}, "B")
+            self.game, {"nation_data": {k: dict(v) for k, v in self.game.world.nation_data.items()}}, "B")
         self.assertNotIn(ai_letters.NOTEBOOK, snapshot["nation_data"]["A"])
 
 
@@ -390,7 +390,7 @@ class PhaseTests(LetterTestCase):
         self.stub({"A": {"letters": [{"to": "B", "text": "Hello."}]}})
         self.run_letters()
         self.assertEqual(self.prompts, [])
-        self.assertEqual(self.game.letters_total, 0)
+        self.assertEqual(self.game.session.progress["letters"].total, 0)
 
     def test_nothing_is_written_below_the_major_tier(self):
         self.set_mode("CLAUDE", "FULL")
@@ -400,28 +400,28 @@ class PhaseTests(LetterTestCase):
 
     def test_force_skip_leaves_letters_unread(self):
         self.write("A", "B", "Answer when you can.")
-        self.game.force_skip_llm = True
+        self.game.session.force_skip_llm = True
         self.stub({})
         self.run_letters()
         self.assertEqual(self.prompts, [])
-        self.assertEqual(len(ai_letters.unread_letters(self.game.nation_data, "B")), 1)
+        self.assertEqual(len(ai_letters.unread_letters(self.game.world.nation_data, "B")), 1)
 
     def test_a_provider_error_leaves_letters_unread(self):
         self.write("A", "B", "Answer when you can.")
         self.patch(ai_handler, "_run_provider",
                    lambda *a, **k: ai_handler._provider_error("API ERROR: boom"))
         self.run_letters()
-        self.assertEqual(len(ai_letters.unread_letters(self.game.nation_data, "B")), 1)
-        self.assertIsNotNone(self.game.nation_data["B"].get(ai_letters.LAST_SAT))
+        self.assertEqual(len(ai_letters.unread_letters(self.game.world.nation_data, "B")), 1)
+        self.assertIsNotNone(self.game.world.nation_data["B"].get(ai_letters.LAST_SAT))
 
     def test_the_bar_counts_every_country_that_sits(self):
         self.stub({})
         self.run_letters()
         sat = len({writer for writer, _ in self.prompts})
-        self.assertEqual((self.game.letters_completed, self.game.letters_total), (sat, sat))
+        self.assertEqual((self.game.session.progress["letters"].completed, self.game.session.progress["letters"].total), (sat, sat))
 
     def test_unread_letters_come_first_then_whoever_waited_longest(self):
-        nd = self.game.nation_data
+        nd = self.game.world.nation_data
         nd["A"][ai_letters.LAST_SAT] = 5
         nd["B"][ai_letters.LAST_SAT] = 2
         self.write("A", "C", "Hello.")
@@ -429,7 +429,7 @@ class PhaseTests(LetterTestCase):
 
     def test_the_instructions_name_no_country(self):
         """The system half follows the shared world context for every writer."""
-        world_state = self.game
+        world_state = self.game.world
         alive = {"A", "B", "C"}
         first = ai_letters.build_prompt(world_state, "A", [], ["A", "B", "C"], alive, "now")
         second = ai_letters.build_prompt(world_state, "B", [], ["A", "B", "C"], alive, "now")
@@ -455,7 +455,7 @@ class InitiativeTests(LetterTestCase):
         request asks for nothing. The UK and France asked anyway, then refused."""
         from map_logic.diplomacy.action_definitions import availability
         for nation in ("A", "B"):
-            self.game.nation_data[nation]["faction"] = "Pact"
+            self.game.world.nation_data[nation]["faction"] = "Pact"
         verdict = availability(self.game, "A", "B", "REQ_MILITARY_ACCESS")
         self.assertFalse(verdict.allowed)
         self.assertIn("already have military access", verdict.reason)
@@ -488,7 +488,7 @@ class InitiativeTests(LetterTestCase):
 
     def menu(self):
         ai_diplomacy.process_basic_proactive_ai(self.game)
-        return {choice["nation"]: choice for choice in self.game.proactive_choices}
+        return {choice["nation"]: choice for choice in self.game.session.proactive_choices}
 
     def test_a_correspondent_gets_proposals_no_rule_asked_for(self):
         self.write("B", "A", "Shall we stand together?")
@@ -530,7 +530,7 @@ class InitiativeTests(LetterTestCase):
     def test_no_proposal_mirrors_one_waiting_for_an_answer(self):
         """France refused the Soviet Union's request for access and asked it for
         access in the same turn."""
-        data = self.game.nation_data
+        data = self.game.world.nation_data
         data["B"]["pending_diplomacy"]["A"] = {"action": "REQ_MILITARY_ACCESS", "turns": 1}
         bag = ac.Collector("A", {}, context=self.game)
         self.assertFalse(bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "B", 0.0, "near")))
@@ -542,7 +542,7 @@ class InitiativeTests(LetterTestCase):
     def test_no_faction_request_mirrors_an_invitation(self):
         """Spain refused the Reich's invitation into the Axis and asked to join
         it in the same turn."""
-        data = self.game.nation_data
+        data = self.game.world.nation_data
         data["B"]["pending_diplomacy"]["A"] = {"action": "FACTION_INVITE", "turns": 1}
         self.assertTrue(ac.mirrors_waiting_proposal(data, "A", "B", "JOIN_FACTION_REQ"))
         data["B"]["pending_diplomacy"]["A"] = {"action": "JOIN_FACTION_REQ", "turns": 1}
@@ -555,19 +555,19 @@ class InitiativeTests(LetterTestCase):
         letters, _opinions, _notebook = ai_letters.parse_reply(
             {"letters": [{"to": "B", "text": "We would make peace with you if you join us."},
                          {"to": "C", "text": "We trust you will stand with us."}]},
-            "A", ["A", "B", "C"], [], self.game.nation_data)
+            "A", ["A", "B", "C"], [], self.game.world.nation_data)
         self.assertEqual(letters, [("C", "We trust you will stand with us.")])
 
     def test_a_proposal_still_being_drafted_gives_no_warning(self):
         """Only a delivered proposal counts: a draft has not reached its target."""
-        self.game.nation_data["B"]["pending_diplomacy"]["A"] = {
+        self.game.world.nation_data["B"]["pending_diplomacy"]["A"] = {
             "action": "REQ_MILITARY_ACCESS", "turns": 0}
-        self.assertFalse(ac.mirrors_waiting_proposal(self.game.nation_data, "A", "B",
+        self.assertFalse(ac.mirrors_waiting_proposal(self.game.world.nation_data, "A", "B",
                                                      "REQ_MILITARY_ACCESS"))
 
     def test_the_canned_access_request_names_the_enemy(self):
         """Italy, at war with Albania, read "we share an enemy" as its own war."""
-        pending = self.game.nation_data["A"]["pending_diplomacy"]
+        pending = self.game.world.nation_data["A"]["pending_diplomacy"]
         ai_diplomacy._queue_proactive_proposal(self.game, pending, "A", "B",
                                                "REQ_MILITARY_ACCESS", context_target="C")
         self.assertRegex(pending["B"]["message"], r"\bC\b")
@@ -589,11 +589,11 @@ class InitiativeTests(LetterTestCase):
         letters, _opinions, _notebook = ai_letters.parse_reply(
             {"letters": [{"to": "B", "text": "We fear that B will betray the pact."},
                          {"to": "C", "text": "We trust you will stand with us."}]},
-            "A", ["A", "B", "C"], [], self.game.nation_data)
+            "A", ["A", "B", "C"], [], self.game.world.nation_data)
         self.assertEqual(letters, [("C", "We trust you will stand with us.")])
 
     def test_the_sitting_does_not_order_a_letter(self):
-        _system, user = ai_letters.build_prompt(self.game, "A", [], ["A", "B"],
+        _system, user = ai_letters.build_prompt(self.game.world, "A", [], ["A", "B"],
                                                 ["A", "B", "C"], "1 January, 1939")
         self.assertNotIn("Sit down and write", user)
         self.assertIn("an empty list of letters is fine", user)

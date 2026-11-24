@@ -192,7 +192,7 @@ class SupplyTests(SupplyFixture):
         self.assertEqual(snapshot.fractions(ground), (0, 0, 1))
         for unit in (transport, cargo, ship):
             self.assertIsNone(snapshot.fractions(unit))
-        economies = queries.calculate_all_economies(world.map_data, world.nation_data, context=world)
+        economies = queries.calculate_all_economies(world.world.map_data, world.world.nation_data, context=world)
         self.assertEqual(economies["A"]["upkeep"], {"manpower": 160, "materials": 160, "fuel": 110})
 
     def test_access_transits_friendly_output_without_taking_it(self):
@@ -202,7 +202,7 @@ class SupplyTests(SupplyFixture):
         unit = division(front)
         world = game(front, bridge, factories)
         self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (0, 0, 0))
-        world.nation_data["C"]["military_access"] = ["A"]
+        world.world.nation_data["C"]["military_access"] = ["A"]
         self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (0.3, 0.4, 0.5))
 
     def test_allies_share_only_surplus_after_domestic_upkeep(self):
@@ -213,9 +213,9 @@ class SupplyTests(SupplyFixture):
         ally = division(first, "C")
         wounded_ally = division(second, "D", health=50)
         world = game(donor, first, second)
-        world.nation_data["D"] = {}
+        world.world.nation_data["D"] = {}
         for member in ("A", "C", "D"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
         for order in ((ally, wounded_ally), (wounded_ally, ally)):
             snapshot = queries.SupplySnapshot(world)
             for unit in order:
@@ -231,9 +231,9 @@ class SupplyTests(SupplyFixture):
         first_unit = division(first)
         second_unit = division(second, "D")
         world = game(shared, first, second, transit, dedicated)
-        world.nation_data.update({"D": {}, "E": {}, "F": {"military_access": ["A"]}})
+        world.world.nation_data.update({"D": {}, "E": {}, "F": {"military_access": ["A"]}})
         for member in ("A", "C", "D", "E"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
         snapshot = queries.SupplySnapshot(world)
 
         self.assertEqual(snapshot.fractions(first_unit), (1, 1, 1))
@@ -244,8 +244,8 @@ class SupplyTests(SupplyFixture):
         source = province(2, "C", [1], output=(100, 100, 100))
         unit = division(front)
         world = game(front, source)
-        world.nation_data["A"]["master"] = "C"
-        world.nation_data["C"]["puppets"] = ["A"]
+        world.world.nation_data["A"]["master"] = "C"
+        world.world.nation_data["C"]["puppets"] = ["A"]
         snapshot = queries.SupplySnapshot(world)
         self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
 
@@ -256,15 +256,15 @@ class SupplyTests(SupplyFixture):
         source = province(4, "C", [3], output=(100, 100, 100))
         unit = division(front)
         world = game(front, allied_border, bridge, source)
-        world.nation_data["D"] = {"military_access": ["C"]}
+        world.world.nation_data["D"] = {"military_access": ["C"]}
         for member in ("A", "C"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
         snapshot = queries.SupplySnapshot(world)
         donor = snapshot.for_country("C")
         self.assertEqual(donor.province_area[2], donor.province_area[4])
         self.assertEqual(snapshot.fractions(unit), (0, 0, 0))
 
-        world.nation_data["D"]["military_access"].append("A")
+        world.world.nation_data["D"]["military_access"].append("A")
         self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (1, 1, 1))
 
     def test_contested_group_can_choose_allied_supply_without_joining_areas(self):
@@ -275,7 +275,7 @@ class SupplyTests(SupplyFixture):
         division(contested, "B")
         world = game(stranded, contested, source)
         for member in ("A", "C"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
         snapshot = queries.SupplySnapshot(world)
         network = snapshot.for_country("A")
 
@@ -293,7 +293,7 @@ class SupplyTests(SupplyFixture):
         division(north, "B", kind="Supply Test Ship")
         world = game(front, north, south, source)
         for member in ("A", "C"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
         snapshot = queries.SupplySnapshot(world)
         self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
         self.assertEqual(snapshot.fractions(unit, network=snapshot.sea_projection("A", block=(3,), blocker="B")), (0, 0, 0))
@@ -315,7 +315,7 @@ class SupplyTests(SupplyFixture):
         # Any hostile unit on the sea tile blocks it.
         division(south, "B", kind="Supply Test Plane")
         self.assertEqual(queries.SupplySnapshot(world).fractions(unit), (0, 0, 0))
-        world.scenario_settings["fog_of_war"] = True
+        world.world.scenario_settings["fog_of_war"] = True
         raw = queries.build_save_dict(world)
         self.assertNotIn("player_supply", raw)
         projection = queries.player_snapshot_projection(world, raw, "A")
@@ -381,7 +381,7 @@ class SupplyTests(SupplyFixture):
             asyncio.run(turn_processor.resolve_turn_logic(world))
             self.assertEqual(bridge["owner"], "B")
             self.assertEqual(unit["health"], 90)
-            self.assertTrue(any(row["details"] == "Supply attrition" for row in world.unit_event_log["events"]))
+            self.assertTrue(any(row["details"] == "Supply attrition" for row in world.world.unit_event_log["events"]))
             bridge["units"].remove(invading)
             enemy["units"].append(invading)
             division(supply, order={"type": "MOVE", "path": [2]})
@@ -398,7 +398,7 @@ class SupplyTests(SupplyFixture):
         queries.prepare_presentation_supply(world)
         sidebar_info.prepare_unit_roster(world, tile)
         row = world._unit_roster_cache[1][2][id(unit)]
-        full_supply = sidebar_info.unit_roster_row(unit, tile, world.nation_data, False)
+        full_supply = sidebar_info.unit_roster_row(unit, tile, world.world.nation_data, False)
         self.assertIn("10%", row["supply"][0])
         self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.1)
         with queries.combat_supply(queries.freeze_combat_supply(world)):
@@ -446,7 +446,7 @@ class SupplyTests(SupplyFixture):
         unit = division(tile, speed=5)
         foreign = division(tile, "C", speed=5)
         world = game(tile)
-        world.scenario_settings["fog_of_war"] = True
+        world.world.scenario_settings["fog_of_war"] = True
         snapshot = queries.player_snapshot_projection(world, queries.build_save_dict(world), "A")
         world.player_supply_projection = queries.normalize_supply_projection(snapshot["player_supply"])
 
@@ -470,7 +470,7 @@ class SupplyTests(SupplyFixture):
         unit = division(tile, speed=5, custom_name="Long division name")
         foreign = division(tile, "C", speed=5, order={"type": "MOVE", "path": [99]})
         world = game(tile)
-        world.scenario_settings["fog_of_war"] = True
+        world.world.scenario_settings["fog_of_war"] = True
         world.visible_provinces = {tile["id"]}
         queries.prepare_presentation_supply(world)
         screen = bare_orders_screen()

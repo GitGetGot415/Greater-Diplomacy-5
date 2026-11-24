@@ -11,11 +11,12 @@ from data import queries
 from data.map import history_io, load_map
 from map_logic.system32.turn_processor import snapshot_history
 from screens.menus import load_game
+from tests.stub_map_screen import map_double
 
 
 class HistoryMechanicTests(unittest.TestCase):
     def setUp(self):
-        self.map_screen = SimpleNamespace(
+        self.map_screen = map_double(
             history={},
             time_manager=SimpleNamespace(
                 total_turns=7,
@@ -49,16 +50,16 @@ class HistoryMechanicTests(unittest.TestCase):
 
     def test_snapshot_preserves_resource_mapping_and_nested_state(self):
         snapshot_history(self.map_screen)
-        snapshot = self.map_screen.history["7"]
+        snapshot = self.map_screen.world.history["7"]
 
         self.assertEqual(snapshot["provinces"]["(7, 0, 0)"]["resources"],
                          {"Iron": 30, "Oil": 12})
-        self.assertEqual(snapshot["nation_data"], self.map_screen.nation_data)
+        self.assertEqual(snapshot["nation_data"], self.map_screen.world.nation_data)
 
         # A later live-state mutation must not edit the historical turn.
-        self.map_screen.map_data[(7, 0, 0)]["resources"]["Iron"] = 0
-        self.map_screen.nation_data["Avaria"]["research"]["infantry_type"] = 9
-        self.map_screen.nation_data["Avaria"]["pending_deals"][0]["clauses"][0]["amount"] = 99
+        self.map_screen.world.map_data[(7, 0, 0)]["resources"]["Iron"] = 0
+        self.map_screen.world.nation_data["Avaria"]["research"]["infantry_type"] = 9
+        self.map_screen.world.nation_data["Avaria"]["pending_deals"][0]["clauses"][0]["amount"] = 99
 
         self.assertEqual(snapshot["provinces"]["(7, 0, 0)"]["resources"]["Iron"], 30)
         self.assertEqual(snapshot["nation_data"]["Avaria"]["research"]["infantry_type"], 3)
@@ -71,7 +72,7 @@ class HistoryMechanicTests(unittest.TestCase):
         snapshot_history(self.map_screen)
         history_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, history_dir, True)
-        history_io.write(history_dir, self.map_screen.history)
+        history_io.write(history_dir, self.map_screen.world.history)
         loaded_history = history_io.read(history_dir)
 
         save_meta = {
@@ -86,7 +87,7 @@ class HistoryMechanicTests(unittest.TestCase):
 
     def test_applying_history_does_not_alias_the_loaded_timeline(self):
         snapshot_history(self.map_screen)
-        history = copy.deepcopy(self.map_screen.history)
+        history = copy.deepcopy(self.map_screen.world.history)
         save_meta = {"date": {}}
 
         self.assertTrue(load_map._apply_history_snapshot(save_meta, history, 7))

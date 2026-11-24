@@ -158,7 +158,7 @@ class _PersonInfoModal(_MessageModal):
             if is_hovered:
                 pygame.draw.line(surface, color, (rect.left, rect.bottom), (rect.right, rect.bottom), 2)
 
-def show_person_info(name, info_text="", links=None, align="center", tk_parent=None, on_result=None, *, images=None):
+def show_person_info(name, info_text="", links=None, align="center", on_result=None, *, images=None):
     """Popup with free-text info about `name`, plus a list of clickable links below it.
 
     links is a list of {"text": str, "url": str} dicts; each renders as its own
@@ -171,4 +171,4 @@ def show_person_info(name, info_text="", links=None, align="center", tk_parent=N
     content scrolls like every message popup (see _MessageModal) while OK stays visible.
     """
     open_dialog(lambda surface: _PersonInfoModal(surface, name, info_text, links, align, images),
-                on_result, tk_parent)
+                on_result)

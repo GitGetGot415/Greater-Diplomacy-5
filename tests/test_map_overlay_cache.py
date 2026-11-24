@@ -32,6 +32,7 @@ from data import queries
 from ui.rendering import overlay_renderer, symbol_loader
 from tests import app_harness
 from tests.stub_map_screen import map_double
+from data.session_state import LOCAL_PLAY
 
 
 class CombatBubbleRecordCacheTests(unittest.TestCase):
@@ -44,7 +45,7 @@ class CombatBubbleRecordCacheTests(unittest.TestCase):
             nation_data={"A": {}},
             map_data={},
             id_to_province={},
-            is_editor=False,
+            mode=LOCAL_PLAY,
         )
 
         with mock.patch.object(queries, "get_combat_predictions", return_value=[]) as predictions:
@@ -249,7 +250,7 @@ class CombatDisplayTests(unittest.TestCase):
             player_country="A",
             visible_provinces=None,
             partial_visible_provinces=set(),
-            is_editor=False,
+            mode=LOCAL_PLAY,
             id_to_province={"battle": self.province},
             nation_data={},
         )
@@ -287,7 +288,7 @@ class CombatDisplayTests(unittest.TestCase):
     def test_army_group_zoom_suppresses_combat_bubbles_and_forecasts(self):
         self.map.camera = SimpleNamespace(
             zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM)
-        self.map.tactical_mode = False
+        self.map.session.tactical_mode = False
         self.map.secondary_mode = "UNITS"
         surface = pygame.Surface((200, 200), pygame.SRCALPHA)
 
@@ -565,7 +566,7 @@ class CullingTests(unittest.TestCase):
 
     def a_visible_garrison(self):
         """A province with units on it that the player is allowed to see."""
-        return next(p for p in self.map.map_data.values()
+        return next(p for p in self.map.world.map_data.values()
                     if p.get("units")
                     and (self.map.visible_provinces is None
                          or p["id"] in self.map.visible_provinces))

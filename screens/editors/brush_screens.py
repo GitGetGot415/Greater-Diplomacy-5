@@ -119,7 +119,7 @@ class Unit_Transfer_Screen(EditorOverlayScreen):
         self.elements = [make_back_button(self.exit_screen, style="map"), confirm]
 
         units = self.province.get("units", [])
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         row_top = p.y + 70
         view_h = p.height - 140
         row_x = p.x + 20
@@ -151,7 +151,7 @@ class Unit_Transfer_Screen(EditorOverlayScreen):
             except ValueError as error:
                 dialogs.show_error("Transfer Units", str(error))
                 return
-            name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+            name = queries.get_country_display_name(country_id, self.map_screen.world.nation_data)
             noun = "unit" if len(chosen) == 1 else "units"
             self.map_screen.show_feedback(f"Transferred {len(chosen)} {noun} to {name}")
             self.done = True
@@ -308,7 +308,7 @@ class Bulk_Edit_Screen(EditorOverlayScreen):
                 "Unit families and health percentages stay unchanged.\n"
                 "Orders on changed units are cleared. Map Undo can reverse this change.", apply)
         dialogs.ask_integer("Set Army Equipment", prompt, selected, minvalue=1,
-                            initial=self.map_screen.time_manager.year)
+                            initial=self.map_screen.world.time_manager.year)
 
     def reset_diplomacy(self):
         def apply():
@@ -343,9 +343,9 @@ class Clear_Map_Screen(EditorOverlayScreen):
         self.selected_resource_type = ""
 
         # Unit owners are included so a country with units but no land can still be picked.
-        existing_owners = {p.get("owner") for p in map_screen.map_data.values()}
+        existing_owners = {p.get("owner") for p in map_screen.world.map_data.values()}
         existing_unit_types = set()
-        for prov in map_screen.map_data.values():
+        for prov in map_screen.world.map_data.values():
             for unit in prov.get("units", []):
                 existing_owners.add(unit.get("owner"))
                 if "type" in unit:
@@ -394,7 +394,7 @@ class Clear_Map_Screen(EditorOverlayScreen):
     def pick_country(self):
         pickers.open_attribute_picker(self, "selected_country", "Select Country", "Choose a country:",
                                       queries.country_picker_items(self.available_countries,
-                                                                   self.map_screen.nation_data))
+                                                                   self.map_screen.world.nation_data))
 
     def pick_unit_type(self):
         pickers.open_attribute_picker(self, "selected_unit_type", "Select Unit Type", "Choose a unit type:",
@@ -430,7 +430,7 @@ class Clear_Map_Screen(EditorOverlayScreen):
             if not ok:
                 return
 
-            map_data = self.map_screen.map_data
+            map_data = self.map_screen.world.map_data
             for prov_id, prov_data in map_data.items():
                 owner = prov_data.get("owner", "Unclaimed")
 

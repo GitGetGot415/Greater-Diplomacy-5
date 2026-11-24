@@ -32,6 +32,7 @@ from map_logic.system32 import combat_processor, movement_processor
 from map_logic import custom_battle
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -95,8 +96,8 @@ class MidTurnSwapTests(unittest.TestCase):
         # Neither should have completed the crossing into the other's tile.
         self.assertEqual(unit_a["_current_province_id"], "p2")
         self.assertEqual(unit_b["_current_province_id"], "p3")
-        self.assertNotIn(unit_a, screen.id_to_province["p3"]["units"])
-        self.assertNotIn(unit_b, screen.id_to_province["p2"]["units"])
+        self.assertNotIn(unit_a, screen.world.id_to_province["p3"]["units"])
+        self.assertNotIn(unit_b, screen.world.id_to_province["p2"]["units"])
 
 
 class TacticalSwapTests(unittest.TestCase):
@@ -111,7 +112,7 @@ class TacticalSwapTests(unittest.TestCase):
         screen = StubBattleMap(terrain="plains")
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
-        screen.tactical_mode = True
+        screen.session.tactical_mode = True
         return screen
 
     def mover(self, owner, path, **stats):
@@ -130,7 +131,7 @@ class TacticalSwapTests(unittest.TestCase):
                 player, opponent = (first, second) if player_country == "A" else (second, first)
                 player.update(health=1, max_health=1, attack=0, defense=0)
                 opponent.update(attack=100000, defense=0)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 origin, destination = (p1, p2) if player_country == "A" else (p2, p1)
 
                 combat_processor.process_pinning(screen)
@@ -150,7 +151,7 @@ class TacticalSwapTests(unittest.TestCase):
         screen = self.screen()
         player = self.mover("A", ["p2", "p3", "p5"], speed=3, health=1, attack=0, defense=0)
         opponent = self.mover("B", ["p3", "p2"], speed=2, attack=100000, defense=0)
-        screen.player_unit = player
+        screen.session.player_unit = player
         screen.add_province("p1", "A", units=[player])
         screen.add_province("p2", "A")
         destination = screen.add_province("p3", "B")
@@ -180,16 +181,16 @@ class TacticalSwapTests(unittest.TestCase):
                 second = self.mover("B", ["p1"])
                 p1 = screen.add_province("p1", "A", units=[first])
                 p2 = screen.add_province("p2", "B", units=[second])
-                screen.player_unit = first
+                screen.session.player_unit = first
                 if mode == "ordinary":
-                    screen.tactical_mode = False
+                    screen.session.tactical_mode = False
                 elif mode == "tournament":
-                    screen.multiplayer_mode = True
+                    screen.session.mode = TOURNAMENT
                 elif mode == "realtime":
-                    screen.realtime_multiplayer = True
+                    screen.session.mode = REALTIME
                 else:
-                    screen.player_unit = self.mover("A", [])
-                    screen.add_province("p3", "A", units=[screen.player_unit])
+                    screen.session.player_unit = self.mover("A", [])
+                    screen.add_province("p3", "A", units=[screen.session.player_unit])
                 combat_processor.process_meeting_engagements(screen)
                 movement_processor.process_movement(screen)
                 self.assertEqual(p1["units"], [first])
@@ -200,11 +201,11 @@ class TacticalSwapTests(unittest.TestCase):
     def test_neutral_crossing_bystander_is_not_held_for_the_tactical_fight(self):
         screen = self.screen()
         screen.add_nation("C")
-        screen.nation_data["A"]["military_access"] = ["C"]
+        screen.world.nation_data["A"]["military_access"] = ["C"]
         player = self.mover("A", ["p2"])
         opponent = self.mover("B", ["p1"])
         bystander = self.mover("C", ["p1"])
-        screen.player_unit = player
+        screen.session.player_unit = player
         origin = screen.add_province("p1", "A", units=[player])
         destination = screen.add_province("p2", "B", units=[opponent, bystander])
         combat_processor.process_pinning(screen)
@@ -223,7 +224,7 @@ class TacticalSwapTests(unittest.TestCase):
                 opponent = self.mover("B", ["p1"])
                 origin = screen.add_province("p1", "A", units=[player])
                 destination = screen.add_province("p2", "B", units=[opponent])
-                screen.player_unit = player
+                screen.session.player_unit = player
                 if problem == "dead":
                     player["health"] = 0
                 elif problem == "immobile":
@@ -247,7 +248,7 @@ class TacticalSwapTests(unittest.TestCase):
                 origin = screen.add_province("p1", "Unclaimed", units=[player], terrain="ocean")
                 destination = screen.add_province("p2", "Unclaimed" if terrain == "ocean" else "A", units=[opponent], terrain=terrain)
                 destination["is_coastal"] = coastal
-                screen.player_unit = player
+                screen.session.player_unit = player
                 side = custom_battle.tactical_meeting_side(screen, origin, destination, [player], [opponent])
                 # A ship can dock in its own port, but a battle there is a land battle a warship cannot fight.
                 self.assertEqual(side, 0 if terrain == "ocean" else None)
@@ -263,7 +264,7 @@ class TacticalSwapTests(unittest.TestCase):
                 opponent = self.mover("B", ["p1"], attack=0, defense=0)
                 third = self.mover("C", ["p2"], attack=100, defense=0)
                 fourth = self.mover("D", ["p1"], attack=100, defense=0)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 origin = screen.add_province("p1", "A", units=[player, third])
                 destination = screen.add_province("p2", "B", units=[opponent, fourth])
                 if not mid_turn:
@@ -297,7 +298,7 @@ class TacticalSwapTests(unittest.TestCase):
                 opponent = self.mover("B", [] if player_attacks else ["p1"],
                                       health=1000 if player_attacks else 1,
                                       attack=100000 if player_attacks else 0, defense=0)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 p1 = screen.add_province("p1", "A", units=[player])
                 p2 = screen.add_province("p2", "B", units=[opponent])
                 before = player["health"], opponent["health"]
@@ -316,12 +317,12 @@ class TacticalSwapTests(unittest.TestCase):
                 player = self.mover("A", ["p2"], attack=100000, defense=0)
                 head_on = self.mover("B", ["p1"], health=1, attack=0, defense=0)
                 flanker = self.mover("B", ["p1"], health=1, attack=0, defense=0)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 origin = screen.add_province("p1", "A", units=[player])
                 destination = screen.add_province("p2", "B", units=[head_on])
                 screen.add_province("p3", "B", units=[flanker])
                 if reverse_order:
-                    screen.map_data = dict(reversed(list(screen.map_data.items())))
+                    screen.world.map_data = dict(reversed(list(screen.world.map_data.items())))
 
                 self.assertIsNone(custom_battle.tactical_meeting_side(
                     screen, origin, destination, [player], [head_on]))
@@ -338,15 +339,14 @@ class TacticalSwapTests(unittest.TestCase):
                 for reverse_order in (False, True):
                     with self.subTest(mode=mode, later_step=later_step, reverse_order=reverse_order):
                         screen = self.screen()
-                        screen.tactical_mode = mode == "tactical"
-                        screen.multiplayer_mode = mode == "tournament"
-                        screen.realtime_multiplayer = mode == "realtime"
+                        screen.session.tactical_mode = mode == "tactical"
+                        screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                         screen.add_nation("C", at_war_with=["B"])
-                        screen.nation_data["B"]["at_war_with"].append("C")
+                        screen.world.nation_data["B"]["at_war_with"].append("C")
                         player = self.mover("A", ["p1", "p2", "p4"] if later_step else ["p2", "p4"], speed=3 if later_step else 2, attack=0, defense=0)
                         attacker = self.mover("B", ["p3", "p1"] if later_step else ["p1"], speed=2, health=1, attack=0, defense=0)
                         interceptor = self.mover("C", ["p1", "p3"] if later_step else ["p3"], speed=2, attack=100000, defense=0)
-                        screen.player_unit = player
+                        screen.session.player_unit = player
                         origin = screen.add_province("p1", "B", units=[] if later_step else [player, interceptor])
                         screen.add_province("p2", "B")
                         screen.add_province("p3", "B", units=[] if later_step else [attacker])
@@ -356,7 +356,7 @@ class TacticalSwapTests(unittest.TestCase):
                             screen.add_province("p5", "B", units=[attacker])
                             screen.add_province("p6", "C", units=[interceptor])
                         if reverse_order:
-                            screen.map_data = dict(reversed(list(screen.map_data.items())))
+                            screen.world.map_data = dict(reversed(list(screen.world.map_data.items())))
 
                         combat_processor.process_pinning(screen)
                         self.assertTrue(player["order"]["path"], "An intention alone must not erase the route.")
@@ -368,7 +368,7 @@ class TacticalSwapTests(unittest.TestCase):
                         self.assertTrue(any(unit is player for unit in destination["units"]))
                         self.assertFalse(any(unit is player for unit in origin["units"]))
                         self.assertEqual(player["order"]["path"], [])
-                        self.assertTrue(all(unit is not attacker for province in screen.map_data.values() for unit in province["units"]))
+                        self.assertTrue(all(unit is not attacker for province in screen.world.map_data.values() for unit in province["units"]))
                         self.assertNotIn("_skip_remaining_steps", player)
 
     def test_an_attacker_stopped_at_its_origin_does_not_cost_the_defender_movement(self):
@@ -376,21 +376,20 @@ class TacticalSwapTests(unittest.TestCase):
             for reverse_order in (False, True):
                 with self.subTest(mode=mode, reverse_order=reverse_order):
                     screen = self.screen()
-                    screen.tactical_mode = mode == "tactical"
-                    screen.multiplayer_mode = mode == "tournament"
-                    screen.realtime_multiplayer = mode == "realtime"
+                    screen.session.tactical_mode = mode == "tactical"
+                    screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                     screen.add_nation("C", at_war_with=["B"])
-                    screen.nation_data["B"]["at_war_with"].append("C")
+                    screen.world.nation_data["B"]["at_war_with"].append("C")
                     player = self.mover("A", ["p2", "p4"], speed=2, attack=0, defense=0)
                     attacker = self.mover("B", ["p1"], attack=0, defense=0)
                     opponent = self.mover("C", [], attack=0, defense=0)
-                    screen.player_unit = player
+                    screen.session.player_unit = player
                     screen.add_province("p1", "A", units=[player])
                     screen.add_province("p2", "B")
                     origin = screen.add_province("p3", "B", units=[attacker, opponent])
                     destination = screen.add_province("p4", "B")
                     if reverse_order:
-                        screen.map_data = dict(reversed(list(screen.map_data.items())))
+                        screen.world.map_data = dict(reversed(list(screen.world.map_data.items())))
 
                     combat_processor.process_pinning(screen)
                     combat_processor.process_meeting_engagements(screen)
@@ -405,12 +404,11 @@ class TacticalSwapTests(unittest.TestCase):
         for mode in ("ordinary", "tactical", "tournament", "realtime"):
             with self.subTest(mode=mode):
                 screen = self.screen()
-                screen.tactical_mode = mode == "tactical"
-                screen.multiplayer_mode = mode == "tournament"
-                screen.realtime_multiplayer = mode == "realtime"
+                screen.session.tactical_mode = mode == "tactical"
+                screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                 player = self.mover("A", ["p2"], attack=100000, defense=0)
                 attacker = self.mover("B", ["p1"], health=1, attack=0, defense=0)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 origin = screen.add_province("p1", "B", units=[player])
                 screen.add_province("p2", "B")
                 screen.add_province("p3", "B", units=[attacker])
@@ -434,18 +432,17 @@ class TacticalSwapTests(unittest.TestCase):
             for reverse_order in (False, True):
                 with self.subTest(mode=mode, reverse_order=reverse_order):
                     screen = self.screen()
-                    screen.tactical_mode = mode == "tactical"
-                    screen.multiplayer_mode = mode == "tournament"
-                    screen.realtime_multiplayer = mode == "realtime"
+                    screen.session.tactical_mode = mode == "tactical"
+                    screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                     player = self.mover("A", ["p2", "p4"], speed=2, attack=0, defense=0)
                     attacker = self.mover("B", ["p1"], attack=0, defense=0)
-                    screen.player_unit = player
+                    screen.session.player_unit = player
                     screen.add_province("p1", "A", units=[player])
                     screen.add_province("p2", "B")
                     origin = screen.add_province("p3", "B", units=[attacker])
                     destination = screen.add_province("p4", "B")
                     if reverse_order:
-                        screen.map_data = dict(reversed(list(screen.map_data.items())))
+                        screen.world.map_data = dict(reversed(list(screen.world.map_data.items())))
                     can_enter = movement_processor.queries.can_land_units_enter
                     with patch("data.queries.can_land_units_enter", side_effect=lambda owner, province, nations: False if owner == "B" and province["id"] == "p1" else can_enter(owner, province, nations)):
                         combat_processor.process_pinning(screen)
@@ -462,17 +459,17 @@ class TacticalSwapTests(unittest.TestCase):
             with self.subTest(reverse_order=reverse_order):
                 screen = self.screen()
                 screen.add_nation("C", at_war_with=["B"])
-                screen.nation_data["B"]["at_war_with"].append("C")
+                screen.world.nation_data["B"]["at_war_with"].append("C")
                 player = self.mover("A", ["p2"], attack=0, defense=0)
                 head_on = self.mover("B", ["p1"], attack=0, defense=0)
                 flanker = self.mover("B", ["p1"], attack=0, defense=0)
                 opponent = self.mover("C", [], attack=0, defense=0)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 screen.add_province("p1", "A", units=[player])
                 destination = screen.add_province("p2", "B", units=[head_on])
                 screen.add_province("p3", "B", units=[flanker, opponent])
                 if reverse_order:
-                    screen.map_data = dict(reversed(list(screen.map_data.items())))
+                    screen.world.map_data = dict(reversed(list(screen.world.map_data.items())))
 
                 combat_processor.process_pinning(screen)
                 combat_processor.process_meeting_engagements(screen)
@@ -480,13 +477,13 @@ class TacticalSwapTests(unittest.TestCase):
                 combat_processor.process_combat(screen)
 
                 self.assertEqual({id(unit) for unit in destination["units"]}, {id(player), id(head_on)})
-                self.assertTrue(any(unit is flanker for unit in screen.id_to_province["p3"]["units"]))
+                self.assertTrue(any(unit is flanker for unit in screen.world.id_to_province["p3"]["units"]))
 
     def test_returning_to_own_land_still_pins_a_hostile_division(self):
         screen = self.screen()
         player = self.mover("A", ["p2"])
         opponent = self.mover("B", ["p1"])
-        screen.player_unit = player
+        screen.session.player_unit = player
         origin = screen.add_province("p1", "B", units=[player])
         screen.add_province("p2", "B")
         screen.add_province("p3", "B", units=[opponent])
@@ -499,12 +496,11 @@ class TacticalSwapTests(unittest.TestCase):
         for mode in ("ordinary", "tactical", "tournament", "realtime"):
             with self.subTest(mode=mode):
                 screen = self.screen()
-                screen.tactical_mode = mode == "tactical"
-                screen.multiplayer_mode = mode == "tournament"
-                screen.realtime_multiplayer = mode == "realtime"
+                screen.session.tactical_mode = mode == "tactical"
+                screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                 player = self.mover("A", ["p2", "p3"], speed=2)
                 opponent = self.mover("B", ["p1"])
-                screen.player_unit = player
+                screen.session.player_unit = player
                 origin = screen.add_province("p1", "A", units=[player])
                 screen.add_province("p2", "A")
                 screen.add_province("p3", "B")
@@ -520,12 +516,11 @@ class TacticalSwapTests(unittest.TestCase):
             for destination_fighting in (False, True):
                 with self.subTest(mode=mode, destination_fighting=destination_fighting):
                     screen = self.screen()
-                    screen.tactical_mode = mode == "tactical"
-                    screen.multiplayer_mode = mode == "tournament"
-                    screen.realtime_multiplayer = mode == "realtime"
+                    screen.session.tactical_mode = mode == "tactical"
+                    screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                     player = self.mover("A", ["p2"])
                     attacker = self.mover("B", ["p1"])
-                    screen.player_unit = player
+                    screen.session.player_unit = player
                     origin = screen.add_province("p1", "A", units=[player, self.mover("B", [])])
                     destination = screen.add_province("p2", "A", units=(
                         [self.mover("B", [])] if destination_fighting else []))
@@ -546,7 +541,7 @@ class TacticalSwapTests(unittest.TestCase):
         for sea_occupied, garrison in ((False, False), (False, True), (True, False)):
             with self.subTest(sea_occupied=sea_occupied, garrison=garrison):
                 screen = self.screen()
-                screen.tactical_mode = False
+                screen.session.tactical_mode = False
                 ship = self.mover("A", ["sea"], health=30, attack=800, defense=0)
                 ship["type"] = "Fixture Ship I"
                 invader = self.mover("B", ["port"], health=20, attack=400, defense=0)
@@ -576,7 +571,7 @@ class TacticalSwapTests(unittest.TestCase):
         self.library["Fixture Ship I"] = {"naval_unit": True}
         self.library["Submarine Fixture I"] = {"naval_unit": True}
         screen = self.screen()
-        screen.tactical_mode = False
+        screen.session.tactical_mode = False
         ship = self.mover("A", ["sea"])
         ship["type"] = "Fixture Ship I"
         guard = self.mover("A", [])
@@ -588,16 +583,16 @@ class TacticalSwapTests(unittest.TestCase):
         screen.add_province("sea", "Ocean", units=[submarine], terrain="ocean", neighbors=["port"])
 
         self.assertFalse(queries.warship_withdraws_to_sea(screen, ship, port))
-        screen.player_country = "A"
+        screen.session.player_country = "A"
         self.assertEqual(queries.get_combat_predictions(screen)[0]["forces"]["A"], [guard])
-        screen.player_country = "B"
+        screen.session.player_country = "B"
         self.assertEqual(queries.get_combat_predictions(screen)[0]["forces"]["A"], [ship, guard])
 
     def test_an_attack_queued_for_a_later_turn_does_not_block_withdrawal(self):
         screen = self.screen()
         player = self.mover("A", ["p2", "p3"], speed=1)
         opponent = self.mover("B", ["p1"])
-        screen.player_unit = player
+        screen.session.player_unit = player
         screen.add_province("p1", "A", units=[player])
         withdrawal = screen.add_province("p2", "A")
         screen.add_province("p3", "B")
@@ -612,12 +607,11 @@ class TacticalSwapTests(unittest.TestCase):
         for mode in ("ordinary", "tactical", "tournament", "realtime"):
             with self.subTest(mode=mode):
                 screen = self.screen()
-                screen.tactical_mode = mode == "tactical"
-                screen.multiplayer_mode = mode == "tournament"
-                screen.realtime_multiplayer = mode == "realtime"
+                screen.session.tactical_mode = mode == "tactical"
+                screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                 player = self.mover("A", ["p2", "p3"], speed=2)
                 opponent = self.mover("B", ["p5", "p2"], speed=2)
-                screen.player_unit = player
+                screen.session.player_unit = player
                 screen.add_province("p1", "A", units=[player])
                 encounter = screen.add_province("p2", "A")
                 screen.add_province("p3", "B")
@@ -634,7 +628,7 @@ class TacticalSwapTests(unittest.TestCase):
         player = self.mover("A", ["p2", "p3"], speed=2)
         head_on = self.mover("B", ["p3", "p2"], speed=2)
         flanker = self.mover("B", ["p5", "p2"], speed=2)
-        screen.player_unit = player
+        screen.session.player_unit = player
         screen.add_province("p1", "A", units=[player])
         encounter = screen.add_province("p2", "A")
         screen.add_province("p3", "B")
@@ -651,7 +645,7 @@ class TacticalSwapTests(unittest.TestCase):
         screen = self.screen()
         player = self.mover("A", ["p2", "p3"], speed=2)
         opponent = self.mover("B", ["p2", "p1"], speed=2)
-        screen.player_unit = player
+        screen.session.player_unit = player
         screen.add_province("p1", "A", units=[player])
         encounter = screen.add_province("p2", "Unclaimed")
         screen.add_province("p3", "B")
@@ -670,7 +664,7 @@ class TacticalSwapTests(unittest.TestCase):
         opponent.update(type="Convoy (Fixture Infantry I)", naval_unit=True,
                         original_type="Fixture Infantry I", original_speed=1,
                         original_max_health=1, original_attack=0, original_defense=0)
-        screen.player_unit = player
+        screen.session.player_unit = player
         encounter = screen.add_province("p1", "A", units=[player])
         screen.add_province("p2", "B", units=[opponent], terrain="ocean")
 
@@ -687,7 +681,7 @@ class TacticalSwapTests(unittest.TestCase):
         opponent.update(type="Convoy (Fixture Infantry I)", naval_unit=True,
                         original_type="Fixture Infantry I", original_speed=1,
                         original_max_health=1, original_attack=0, original_defense=0)
-        screen.player_unit = player
+        screen.session.player_unit = player
         screen.add_province("p1", "A", units=[player, opponent])
 
         self.resolve_without_automatic_combat(screen)
@@ -699,7 +693,7 @@ class TacticalSwapTests(unittest.TestCase):
         screen = self.screen()
         player = self.mover("A", ["p2", "p3"], speed=2)
         opponent = self.mover("B", [])
-        screen.player_unit = player
+        screen.session.player_unit = player
         encounter = screen.add_province("p1", "A", units=[player, opponent])
         screen.add_province("p2", "A")
         screen.add_province("p3", "B")
@@ -714,7 +708,7 @@ class TacticalSwapTests(unittest.TestCase):
         player = self.mover("A", ["p2", "p3"], speed=2)
         opponent = self.mover("B", ["p3", "p2"], speed=2)
         exhausted = self.mover("B", ["p5", "p2"], speed=1)
-        screen.player_unit = player
+        screen.session.player_unit = player
         screen.add_province("p1", "A", units=[player])
         screen.add_province("p2", "A")
         encounter = screen.add_province("p3", "B")
@@ -742,7 +736,7 @@ class TacticalSwapTests(unittest.TestCase):
         neutral = self.mover("C", [])
         ship["type"] = neutral["type"] = "Fixture Ship I"
         plane["type"] = "Fixture Plane I"
-        screen.player_unit = player
+        screen.session.player_unit = player
         encounter = screen.add_province("p1", "A", units=[player, opponent, ship, plane, neutral])
 
         self.resolve_without_automatic_combat(screen)
@@ -771,7 +765,7 @@ class FinishedMoverVisibilityTests(unittest.TestCase):
 
         movement_processor.process_movement(screen)
 
-        c2 = screen.id_to_province["c2"]
+        c2 = screen.world.id_to_province["c2"]
         self.assertIn(unit_c, c2["units"], "the finished unit should still be resting in c2")
         self.assertIn(unit_d, c2["units"], "the arriving unit should have stopped alongside it, not through it")
         self.assertEqual(c2["owner"], "A", "an enemy present should block the capture, not just the advance")

@@ -50,14 +50,11 @@ class _YesNoModal(DialogScreen):
             super().handle_key(event)
 
 
-def ask_yes_no(title, message, on_result, tk_parent=None, yes_label="Yes", no_label="No", back_label=None):
+def ask_yes_no(title, message, on_result, yes_label="Yes", no_label="No", back_label=None):
     """Answers on_result(True/False) once the user picks Yes or No.
 
     An optional back_label adds a third button that returns None.
     Back and Escape also return None when this button is present.
-
-    tk_parent, if given, is a tkinter widget to hide for the dialog's duration --
-    only meaningful for the standalone dev-tool path (no game display up yet).
     """
     open_dialog(lambda surface: _YesNoModal(surface, title, message, yes_label, no_label, back_label),
-                on_result, tk_parent)
+                on_result)

@@ -44,8 +44,8 @@ class Personality_Edit_Screen(EditorSliderScreen):
         # Reading through ai_personality rather than nation_data means a nation
         # that has never been asked gets its procedural traits seeded here, so
         # the sliders open where the AI would actually have played it.
-        traits = ai_personality.get(map_screen.nation_data, country_id,
-                                    map_screen.scenario_settings)
+        traits = ai_personality.get(map_screen.world.nation_data, country_id,
+                                    map_screen.world.scenario_settings)
         self.values = {t: float(traits.get(t, 0.5)) for t in ai_personality.TRAITS}
         self.refresh_ui()
 
@@ -63,31 +63,31 @@ class Personality_Edit_Screen(EditorSliderScreen):
 
     def reset(self):
         """Back to the seeded values, and back to being regenerated on load."""
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         block = nation_data.setdefault(self.country_id, {})
         block.pop("personality", None)
         traits = ai_personality.get(nation_data, self.country_id,
-                                    self.map_screen.scenario_settings)
+                                    self.map_screen.world.scenario_settings)
         self.values = {t: float(traits.get(t, 0.5)) for t in ai_personality.TRAITS}
         self.map_screen.show_feedback(queries.get_country_display_name(
-            self.country_id, self.map_screen.nation_data) + " reset to procedural traits")
+            self.country_id, self.map_screen.world.nation_data) + " reset to procedural traits")
         self.refresh_ui()
 
     def save(self):
-        ai_personality.set_authored(self.map_screen.nation_data, self.country_id, self.values)
+        ai_personality.set_authored(self.map_screen.world.nation_data, self.country_id, self.values)
         self.map_screen.show_feedback("Saved personality for " + queries.get_country_display_name(
-            self.country_id, self.map_screen.nation_data))
+            self.country_id, self.map_screen.world.nation_data))
         self.done = True
 
     def get_panel_title(self):
-        return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Personality"
+        return queries.get_country_display_name(self.country_id, self.map_screen.world.nation_data) + " Personality"
 
     def draw_content(self, surface):
         super().draw_content(surface)
         p = self.panel_rect
         small = fonts.get("small")
-        note = ai_personality.describe(self.map_screen.nation_data, self.country_id,
-                                       self.map_screen.scenario_settings)
+        note = ai_personality.describe(self.map_screen.world.nation_data, self.country_id,
+                                       self.map_screen.world.scenario_settings)
         summary = small.render(f"Currently saved as: {note}", True, c.UI_TEXT_DIM)
         surface.blit(summary, (p.x + 30, p.bottom - 90))
 
@@ -100,9 +100,9 @@ class Personality_List_Screen(NationListOverlayScreen):
     EDIT_SCREEN = Personality_Edit_Screen
 
     def country_button(self, country_id, x, y):
-        stored = self.map_screen.nation_data.get(country_id, {}).get("personality") or {}
+        stored = self.map_screen.world.nation_data.get(country_id, {}).get("personality") or {}
         authored = stored.get("_source") in ai_personality.AUTHORED_SOURCES
-        country_name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        country_name = queries.get_country_display_name(country_id, self.map_screen.world.nation_data)
         label = f"[AUTHORED] {country_name}" if authored else country_name
         return Button(x, y, "list_row", "green" if authored else "blue", label,
                       lambda cid=country_id: self.edit(cid))

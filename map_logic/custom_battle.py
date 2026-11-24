@@ -323,11 +323,9 @@ def tactical_encounter(context, province):
     that can fight there (land fighters on land, ships and convoys at sea) share it. The encounter deals that tile's damage, so campaign combat must skip the tile.
     """
     session = session_for(context)
-    # Lightweight test doubles carry no tactical state.
-    if (getattr(session, "multiplayer_mode", False)
-            or getattr(session, "realtime_multiplayer", False)):
+    if session.is_networked:
         return None
-    unit = getattr(session, "tactical_mode", False) and getattr(session, "player_unit", None)
+    unit = session.tactical_mode and session.player_unit
     if not unit or not any(other is unit for other in province.get("units", [])):
         return None
     return campaign_forces(unit, province, world_for(context).nation_data, queries.get_unit_library(context))
@@ -336,12 +334,10 @@ def tactical_encounter(context, province):
 def tactical_meeting_side(context, prov1, prov2, units1, units2, *, pinned_units=None):
     """The tactical player's movement side, when a hostile crossing can become a tile encounter."""
     session = session_for(context)
-    # Standalone rule tests can omit session fields. Multiplayer has no tactical encounters.
-    if (not getattr(session, "tactical_mode", False)
-            or getattr(session, "multiplayer_mode", False)
-            or getattr(session, "realtime_multiplayer", False)):
+    # Multiplayer has no tactical encounters.
+    if not session.tactical_mode or session.is_networked:
         return None
-    unit = getattr(session, "player_unit", None)
+    unit = session.player_unit
     if unit is None:
         return None
     for index, (side, opponents) in enumerate(((units1, units2), (units2, units1))):

@@ -117,9 +117,9 @@ def _load_default_images(context, *, scrub_images=True):
 
     # Scrub existing massive b64 strings that match defaults instantly upon load to free RAM
     if scrub_images:
-        queries.scrub_default_images(context.nation_data)
+        queries.scrub_default_images(context.world.nation_data)
 
-    for country_name, n_data in context.nation_data.items():
+    for country_name, n_data in context.world.nation_data.items():
         if not n_data.get("flag_data"):
             n_data["flag_data"] = "DEFAULT"
         if not n_data.get("portrait_data"):
@@ -431,8 +431,7 @@ def _restore_tactical_player(context, save_meta):
     session = session_for(context)
     session.tactical_mode = False
     session.player_unit = None
-    if (session.is_editor or session.selection_mode or session.multiplayer_mode
-            or session.realtime_multiplayer):
+    if (session.is_editor or session.selection_mode or session.is_networked):
         return
     unit_id = (save_meta or {}).get("tactical_player_unit_id")
     # Older saves did not record tactical control. Never guess a division.
@@ -701,7 +700,7 @@ def apply_authoritative_snapshot(context, snapshot):
         world_state.scenario_settings = copy.deepcopy(settings)
         rebuild(context)
     # Badges are local preferences. Server broadcasts must not mark them unread again.
-    local_event_reads = unit_events.saved_reads(context) if hasattr(context, "time_manager") else {}
+    local_event_reads = unit_events.saved_reads(context)
     clear_selection = getattr(context, "clear_map_unit_selection", None)
     if clear_selection:
         clear_selection()
@@ -711,8 +710,8 @@ def apply_authoritative_snapshot(context, snapshot):
     # while replacing the authoritative diplomatic/game data, otherwise every
     # state broadcast makes an already handled offer look new again.
     local_message_state = {}
-    player_country = context.player_country
-    current_player = context.nation_data.get(player_country, {})
+    player_country = context.session.player_country
+    current_player = context.world.nation_data.get(player_country, {})
     for message in current_player.get("inbox", []) if isinstance(current_player, dict) else []:
         if not isinstance(message, dict):
             continue
@@ -738,9 +737,6 @@ def apply_authoritative_snapshot(context, snapshot):
         if saved_state:
             message.update(saved_state)
     replace_mapping(world_for(context), "nation_data", nation_data)
-    # Older snapshot fixtures use flat contexts without a declared faction mapping.
-    if not hasattr(world_state, "factions"):
-        world_state.factions = {}
     faction_records.restore(context, snapshot.get("factions"))
     context.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
     by_json_key = {province.get("json_key"): province for province in world_state.map_data.values()}
@@ -752,18 +748,17 @@ def apply_authoritative_snapshot(context, snapshot):
             if key in update:
                 province[key] = copy.deepcopy(update[key])
     date = snapshot.get("date", {})
-    if isinstance(date, dict) and hasattr(context, "time_manager"):
+    if isinstance(date, dict):
         world_state.time_manager.day = date.get("day", world_state.time_manager.day)
         world_state.time_manager.month_index = date.get("month", world_state.time_manager.month_index)
         world_state.time_manager.year = date.get("year", world_state.time_manager.year)
         world_state.time_manager.total_turns = date.get("total_turns", world_state.time_manager.total_turns)
-    if hasattr(context, "time_manager"):
-        unit_events.restore(context, snapshot | {"unit_event_read_turns": local_event_reads})
+    unit_events.restore(context, snapshot | {"unit_event_read_turns": local_event_reads})
     # These are local intent buffers.  The processed server snapshot has now
     # either applied or rejected them. Start the next turn with fresh drafts.
-    if context.realtime_multiplayer:
-        context.pending_faction_rename = None
-        context.pending_subject_appearances = {}
-        context.realtime_volunteer_drafts = {}
+    if context.session.is_realtime:
+        context.session.pending_faction_rename = None
+        context.session.pending_subject_appearances = {}
+        context.session.realtime_volunteer_drafts = {}
     if context.presentation_enabled:
         context.refresh_all_maps()

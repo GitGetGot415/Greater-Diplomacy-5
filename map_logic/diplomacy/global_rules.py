@@ -41,6 +41,7 @@ from dataclasses import dataclass
 from data import queries
 import data.constants as c
 from data.state_access import session_for, world_for
+from data.world_nations import WorldNations
 from map_logic.diplomacy import peace_scope, war_calls
 from map_logic.diplomacy.puppet_actions import apply_to_puppets_recursively
 
@@ -142,10 +143,10 @@ _ACTION_CHECKS = {
 
 def active_rules(context):
     """The rules in force for this game. Disabling scripted events disables them too."""
-    world = world_for(context)
-    if isinstance(world, dict):
-        # Standalone country records from older callers carry no scenario, so no rules reach them.
+    if isinstance(context, dict) and not isinstance(context, WorldNations):
+        # Standalone country records carry no scenario, so no rules reach them.
         return []
+    world = world_for(context)
     if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
                                      world.scenario_settings):
         return []
@@ -177,9 +178,10 @@ def _breaks(rule, side_a, side_b, nation_data):
 
 
 def is_ai_controlled(context, country):
-    # Player screens that pass only country records act for a human player and carry no session.
-    players = getattr(session_for(context), "active_players", None)
-    return players is not None and country not in players
+    # Callers that pass only country records act for a human player and carry no session.
+    if isinstance(context, dict):
+        return False
+    return country not in session_for(context).active_players
 
 
 def forbidden_reason(context, sender, target, action, *, choices=None):

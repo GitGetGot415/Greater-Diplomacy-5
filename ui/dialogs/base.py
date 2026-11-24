@@ -145,11 +145,10 @@ class DialogScreen(ModalScreen):
         self.draw_body_lines(surface)
 
 
-def open_dialog(make_dialog, on_result, tk_parent=None):
+def open_dialog(make_dialog, on_result):
     """Opens a dialog and answers on_result when it closes.
 
-    make_dialog(surface) builds the dialog over the current display. tk_parent
-    is a tkinter widget a standalone tool hides while its dialog is open.
+    make_dialog(surface) builds the dialog over the current display.
     """
     def deliver(dialog):
         if on_result:
@@ -159,4 +158,4 @@ def open_dialog(make_dialog, on_result, tk_parent=None):
                 on_result()
 
     screen_runner.run_screen(lambda: make_dialog(pygame.display.get_surface()), deliver,
-                             tk_parent=tk_parent, caption=_STANDALONE_CAPTION, size=_STANDALONE_SIZE)
+                             caption=_STANDALONE_CAPTION, size=_STANDALONE_SIZE)

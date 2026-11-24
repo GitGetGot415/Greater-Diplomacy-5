@@ -3,7 +3,8 @@
 from unittest import mock
 
 import data.constants as c
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
+from data.session_state import LOCAL_PLAY
 
 
 def neutral_territory():
@@ -26,31 +27,31 @@ def install_neutral_territory(module_globals):
     module_globals["tearDownModule"] = patcher.stop
 
 
-class StubBattleMap:
+class StubBattleMap(MapDouble):
     """Just enough of map_screen to run movement, combat, and capture passes standalone."""
 
     def __init__(self, terrain="hills"):
         self.default_terrain = terrain
-        self.map_data = {}
-        self.id_to_province = {}
-        self.nation_data = {}
-        self.scenario_settings = {}
+        self.world.map_data = {}
+        self.world.id_to_province = {}
+        self.world.nation_data = {}
+        self.world.scenario_settings = {}
         # conquer_province repaints a pygame surface unless one of these says a
         # repaint would be pointless. There is no surface here, so it always is.
-        self.is_editor = False
-        self.viewing_ai_moves = True
-        self.ai_is_thinking = False
+        self.session.mode = LOCAL_PLAY
+        self.session.viewing_ai_moves = True
+        self.session.ai_is_thinking = False
         self.centers_need_update = False
         fill_state_defaults(self)
 
     def add_nation(self, name, at_war_with=(), faction=""):
-        self.nation_data[name] = {
+        self.world.nation_data[name] = {
             "name": name,
             "at_war_with": list(at_war_with),
             "claims": [],
             "faction": faction,
         }
-        return self.nation_data[name]
+        return self.world.nation_data[name]
 
     def add_province(self, pid, owner, units=(), terrain=None, cores=None, neighbors=(),
                      turn_start_owner=None):
@@ -65,8 +66,8 @@ class StubBattleMap:
             "units": list(units),
             "building_queue": [],
         }
-        self.map_data[pid] = prov
-        self.id_to_province[pid] = prov
+        self.world.map_data[pid] = prov
+        self.world.id_to_province[pid] = prov
         return prov
 
 

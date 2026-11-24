@@ -38,7 +38,7 @@ BAR_TEXT_OFFSET_Y = 15
 
 def draw_bottom_text(map_screen, surface):
     """Draws the map screen's bottom resource strip with net income overlays."""
-    if map_screen.hide_resource_hud or map_screen.is_editor:
+    if map_screen.hide_resource_hud or map_screen.session.is_editor:
         return
 
     hud_y = c.SCREEN_HEIGHT - HUD_HEIGHT_OFFSET

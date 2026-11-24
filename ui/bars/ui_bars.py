@@ -528,6 +528,6 @@ def draw_ui_bars(map_screen, surface):
         _draw_map_bar(surface, map_screen.unit_view_bar_rect.move(0, offset), "unit_filter")
         surface.set_clip(old_clip)
     
-    if not map_screen.selection_mode and not map_screen.hide_raised_rect:
+    if not map_screen.session.selection_mode and not map_screen.hide_raised_rect:
         _draw_map_bar(surface, map_screen.raised_rect, "left")
         _draw_map_bar(surface, map_screen.ui_background_rect, "bottom_left")

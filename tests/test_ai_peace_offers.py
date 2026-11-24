@@ -41,19 +41,19 @@ class Overrun:
         self.game.border(self.game.home_of("AV")["id"], self.game.home_of("FOE")["id"],
                          *(p["id"] for p in self.taken), self.kept["id"])
         for nation in ("AV", "FOE"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_war("AV", "FOE")
         for a, b in (("AV", "FOE"), ("FOE", "AV")):
-            self.game.nation_data[a]["war_durations"] = {b: ai_tuning.MIN_TURNS_FOR_CEASEFIRE}
+            self.game.world.nation_data[a]["war_durations"] = {b: ai_tuning.MIN_TURNS_FOR_CEASEFIRE}
         for prov in self.taken:
             prov["owner"] = "FOE"
-        self.world = ai_world.AIWorld(self.game.map_data, self.game.nation_data,
-                                      self.game.id_to_province)
+        self.world = ai_world.AIWorld(self.game.world.map_data, self.game.world.nation_data,
+                                      self.game.world.id_to_province)
         self.asked = []
 
     def moved(self, terms):
         return {str(prov_id) for prov_id
-                in deal.tile_transfers(terms, self.game.map_data, self.game.nation_data)}
+                in deal.tile_transfers(terms, self.game.world.map_data, self.game.world.nation_data)}
 
     def ids(self, provs):
         return {str(p["id"]) for p in provs}
@@ -165,7 +165,7 @@ class DeliveredOfferTests(Overrun, unittest.TestCase):
 
     def test_a_delivered_peace_offer_blocks_a_mirror_offer(self):
         self.assertEqual(len(self.sued()), 1, "the fixture must offer without one")
-        self.game.nation_data["FOE"]["pending_diplomacy"]["AV"] = {
+        self.game.world.nation_data["FOE"]["pending_diplomacy"]["AV"] = {
             "action": "PEACE_TREATY", "turns": 1}
         self.assertEqual(self.sued(), [])
 
@@ -183,11 +183,11 @@ class OccupationAppetiteTests(unittest.TestCase):
         game = StubMapScreen(["AV", "FOE"], human_players=())
         provs = [game.add_province("AV", cores=["AV"]) for _ in range(3)]
         for nation in ("AV", "FOE"):
-            war_actions.save_own_pre_war_map(game.map_data, game.nation_data, nation)
+            war_actions.save_own_pre_war_map(game.world.map_data, game.world.nation_data, nation)
         game.set_war("AV", "FOE")
 
         def appetite():
-            world = ai_world.AIWorld(game.map_data, game.nation_data, game.id_to_province)
+            world = ai_world.AIWorld(game.world.map_data, game.world.nation_data, game.world.id_to_province)
             return ai_opinion.peace_appetite(world, "AV", "FOE")
 
         intact = appetite()

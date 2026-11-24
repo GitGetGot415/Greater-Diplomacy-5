@@ -65,17 +65,17 @@ def unit_fuel_readout(unit, fuel, speed, library, nation_data):
 def prepare_unit_roster(map_screen, province):
     """Cache one province's ground battle and stats at a selection/state boundary."""
     units = queries.filter_visible_units(
-        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
-    is_combat = queries.is_province_in_active_combat(province, map_screen.nation_data)
+        province.get("units", []), map_screen.session.player_country, province, map_screen.world.nation_data)
+    is_combat = queries.is_province_in_active_combat(province, map_screen.world.nation_data)
     battle = combat_rules.build_battle(
-        [units], map_screen.nation_data, terrain=province.get("terrain"), tiles=(province,))
+        [units], map_screen.world.nation_data, terrain=province.get("terrain"), tiles=(province,))
     rows = {}
     supply = queries.presentation_supply(map_screen)
     library = queries.get_unit_library(map_screen)
     with queries.combat_supply(supply):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
-            row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat, library=library)
+            row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.world.nation_data, is_combat, library=library)
             status = queries.unit_supply_status(supply, unit)
             if status is None:
                 continue
@@ -84,7 +84,7 @@ def prepare_unit_roster(map_screen, province):
                 entries = ((RESOURCE_ICONS["manpower"], format_supply_percentage(manpower)),
                            (RESOURCE_ICONS["materials"], format_supply_percentage(materials)))
                 row["supply"] = f"Supply {format_supply_percentage(status.readiness)}   ", entries
-            if fuel < 1 and (fuel_readout := unit_fuel_readout(unit, fuel, row["speed"], library, map_screen.nation_data)):
+            if fuel < 1 and (fuel_readout := unit_fuel_readout(unit, fuel, row["speed"], library, map_screen.world.nation_data)):
                 row["fuel"] = fuel_readout
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
@@ -170,13 +170,13 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             """
             nonlocal current_y
 
-            side_data = map_screen.nation_data.get(side_id, {})
+            side_data = map_screen.world.nation_data.get(side_id, {})
             side_display = side_data.get("name", side_id)
             side_color = map_screen.nation_colors.get(side_id, (200, 200, 200))
 
             # Flag next to the side/category name -- individual unit rows below stay as-is
             name_x = flag_icons.draw_flag_centered(
-                surface, side_id, map_screen.nation_data, text_x, current_y,
+                surface, side_id, map_screen.world.nation_data, text_x, current_y,
                 map_screen.small_font.get_height())
 
             title = map_screen.small_font.render(f"{side_display}:", True, side_color)
@@ -296,7 +296,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
 
             # Owner flag instead of a country name string
             row_x = flag_icons.draw_flag_centered(
-                surface, u_owner_id, map_screen.nation_data, row_x, current_y,
+                surface, u_owner_id, map_screen.world.nation_data, row_x, current_y,
                 name_surf.get_height())
 
             # Condensed, icon-based combat stats, matching the production tab's style
@@ -344,10 +344,10 @@ def draw_sidebar_info(map_screen, surface):
     # Submarines we're not allied with and aren't currently fighting stay off
     # this list entirely -- same rule the map icons and tooltip follow.
     units = queries.filter_visible_units(
-        province.get("units", []), map_screen.player_country, province, map_screen.nation_data)
+        province.get("units", []), map_screen.session.player_country, province, map_screen.world.nation_data)
 
     # 3. Resolve Display Name for the Owner
-    owner_data = map_screen.nation_data.get(owner_id, {})
+    owner_data = map_screen.world.nation_data.get(owner_id, {})
     owner_display = owner_data.get("name", owner_id).upper()
 
     # --- Terrain Image Loading ---
@@ -449,7 +449,7 @@ def draw_owner_portrait(map_screen, surface):
     owner_id = province.get("owner", "Unclaimed")
     if owner_id in c.UNPLAYABLE_NATIONS: return
 
-    owner_data = map_screen.nation_data.get(owner_id, {})
+    owner_data = map_screen.world.nation_data.get(owner_id, {})
     leader_name = owner_data.get("leader_name", "Unknown Leader")
     leader_title = owner_data.get("leader_title", "Unknown Title").strip()
     portrait_str = owner_data.get("portrait_data", "DEFAULT")

@@ -39,7 +39,7 @@ import data.constants as c
 from tests.politics_fixtures import policy_fixtures
 from tests.research_fixtures import research_lock_cases
 import json
-from data import migrations
+from data import migrations, queries
 from data.runtime_rules import RuntimeRules
 from data.multiplayer.realtime.relay import (
     RelayHostTransport,
@@ -68,6 +68,7 @@ from screens.game.map import Map
 from ui.widgets.ui_elements import Button
 from tests.stub_map_screen import map_double
 from ui.dialogs import pickers
+from data.session_state import LOCAL_PLAY, REALTIME
 
 
 class Clock:
@@ -114,9 +115,9 @@ class HostSnapshotTests(unittest.TestCase):
                             conversation_colors={"B": [1, 2, 3]}, refresh_all_maps=mock.Mock())
         apply_authoritative_snapshot(client, {"nation_data": {"A": {}},
                                              "conversation_colors": {"B": [4, 5, 6]}})
-        self.assertEqual(client.conversation_colors, {"B": [1, 2, 3]})
+        self.assertEqual(client.session.conversation_colors, {"B": [1, 2, 3]})
         apply_authoritative_snapshot(client, {"nation_data": {"A": {}}})
-        self.assertEqual(client.conversation_colors, {"B": [1, 2, 3]})
+        self.assertEqual(client.session.conversation_colors, {"B": [1, 2, 3]})
 
     def test_shared_economy_totals_replace_cached_values_and_clear_on_older_snapshots(self):
         client = map_double(player_country="A", nation_data={"A": {}}, map_data={},
@@ -158,9 +159,9 @@ class HostSnapshotTests(unittest.TestCase):
         host_view = object.__new__(Map)
         host_view.selected_unit_ids = set()
         host_view.realtime_server_map = object()
-        host_view.map_data = {"home": province}
-        host_view.nation_data = {"A": {}}
-        host_view.time_manager = SimpleNamespace(day=1, month_index=0, year=1939,
+        host_view.world.map_data = {"home": province}
+        host_view.world.nation_data = {"A": {}}
+        host_view.world.time_manager = SimpleNamespace(day=1, month_index=0, year=1939,
                                                   total_turns=0)
         host_view.refresh_all_maps = mock.Mock()
         snapshot = {
@@ -174,12 +175,12 @@ class HostSnapshotTests(unittest.TestCase):
 
         Map._apply_host_realtime_snapshot(host_view)
         session.public_state.assert_not_called()
-        self.assertEqual(host_view.map_data["home"]["units"], [])
+        self.assertEqual(host_view.world.map_data["home"]["units"], [])
 
         session.phase = "TURN"
         Map._apply_host_realtime_snapshot(host_view)
 
-        self.assertEqual(host_view.map_data["home"]["units"], snapshot["provinces"]["home"]["units"])
+        self.assertEqual(host_view.world.map_data["home"]["units"], snapshot["provinces"]["home"]["units"])
         self.assertEqual(host_view._realtime_snapshot_turn, 2)
         session.public_state.assert_called_once_with()
 
@@ -190,15 +191,14 @@ class HostSnapshotTests(unittest.TestCase):
 
     def test_update_waits_for_the_current_turn_snapshot_before_syncing_a_draft(self):
         board = object.__new__(Map)
-        board.realtime_multiplayer = True
+        board.session.mode = REALTIME
         board.realtime_player_id = "player"
-        board.player_country = "A"
-        board._unit_selection_turn = board.time_manager.total_turns
-        board._unit_selection_player = board.player_country
+        board.session.player_country = "A"
+        board._unit_selection_turn = board.world.time_manager.total_turns
+        board._unit_selection_player = board.session.player_country
         board.show_player_ready_screen = True
         board.show_navigation_intro_when_ready = False
         board.centers_need_update = False
-        board.is_editor = False
         board.elements, board.camera = [], mock.Mock()
         board.realtime_session = SimpleNamespace(
             phase="TURN", turn_number=2, sync_draft=mock.Mock(),
@@ -252,11 +252,11 @@ class HostSnapshotTests(unittest.TestCase):
     def test_snapshot_retains_local_read_and_popup_state_for_the_same_message(self):
         client_map = object.__new__(Map)
         client_map.selected_unit_ids = set()
-        client_map.player_country = "A"
-        client_map.nation_data = {"A": {"inbox": [
+        client_map.session.player_country = "A"
+        client_map.world.nation_data = {"A": {"inbox": [
             {"message_id": "handled", "read": True, "popup_shown": True},
         ]}}
-        client_map.map_data = {}
+        client_map.world.map_data = {}
         client_map.refresh_all_maps = mock.Mock()
         snapshot = {"nation_data": {"A": {"inbox": [
             {"message_id": "handled", "read": False, "popup_shown": False},
@@ -265,7 +265,7 @@ class HostSnapshotTests(unittest.TestCase):
 
         apply_authoritative_snapshot(client_map, snapshot)
 
-        handled, new = client_map.nation_data["A"]["inbox"]
+        handled, new = client_map.world.nation_data["A"]["inbox"]
         self.assertTrue(handled["read"])
         self.assertTrue(handled["popup_shown"])
         self.assertFalse(new["read"])
@@ -549,8 +549,8 @@ class RealtimeExitTests(unittest.TestCase):
         """A remote player may disconnect, but cannot shut down the host match."""
         client = SimpleNamespace(close=mock.Mock())
         session = SimpleNamespace(phase="TURN", host_id="host", end_match=mock.Mock())
-        map_ref = SimpleNamespace(
-            realtime_multiplayer=True,
+        map_ref = map_double(
+            mode=REALTIME,
             realtime_session=session,
             realtime_player_id="guest",
             realtime_client=client,
@@ -577,8 +577,8 @@ class RealtimeExitTests(unittest.TestCase):
             session.phase = "GAME_OVER"
 
         session.end_match = end_match
-        map_ref = SimpleNamespace(
-            realtime_multiplayer=True,
+        map_ref = map_double(
+            mode=REALTIME,
             realtime_session=session,
             realtime_player_id="host",
             realtime_server=server,
@@ -599,7 +599,7 @@ class RealtimeExitTests(unittest.TestCase):
     def test_map_hud_button_click_does_not_fall_through_to_a_tile(self):
         pygame.font.init()
         button = Button(100, 100, "small", "blue", "Details", lambda: None)
-        map_ref = SimpleNamespace(thread_error=None, elements=[button], unit_view_buttons={})
+        map_ref = map_double(thread_error=None, elements=[button], unit_view_buttons={})
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(110, 110))
         with mock.patch("screens.game.map.map_input.handle_map_events") as handle:
             Map.additional_events(map_ref, event)
@@ -833,8 +833,8 @@ class RealtimeSessionTests(unittest.TestCase):
             self.assertEqual(canonical[0]["projects"],
                              [{"tech_name": "test_tech", "points_remaining": 250}])
 
-            map_ref.nation_data["A"]["research_queue"] = canonical[0]["projects"]
-            map_ref.nation_data["A"]["research_queue"][0]["points_remaining"] = 125
+            map_ref.world.nation_data["A"]["research_queue"] = canonical[0]["projects"]
+            map_ref.world.nation_data["A"]["research_queue"][0]["points_remaining"] = 125
             paused = driver.validate_draft("A", [{"type": "research_queue", "tech_names": []}])
         self.assertEqual(paused[0]["research_progress"], {"test_tech": 125})
 
@@ -852,7 +852,7 @@ class RealtimeSessionTests(unittest.TestCase):
             with self.subTest(tech=tech):
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("A", [command])
-                map_ref.nation_data["A"]["research"].update(unlocked)
+                map_ref.world.nation_data["A"]["research"].update(unlocked)
                 canonical = driver.validate_draft("A", [command])
                 self.assertEqual(canonical[0]["projects"],
                                  [{"tech_name": tech, "points_remaining": tree[tech]["cost"]}])
@@ -860,7 +860,7 @@ class RealtimeSessionTests(unittest.TestCase):
                     driver.validate_draft("A", [dict(command, tech_names=tech)])
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("Unknown country", [command])
-                self.assertEqual(map_ref.nation_data["A"]["research_queue"], [])
+                self.assertEqual(map_ref.world.nation_data["A"]["research_queue"], [])
 
     def test_collects_empty_and_nonempty_research_selection(self):
         map_ref = map_double(
@@ -869,7 +869,7 @@ class RealtimeSessionTests(unittest.TestCase):
                                "research_queue": [{"tech_name": "test_tech", "points_remaining": 10}]}})
         commands = collect_map_commands(map_ref, "A")
         self.assertIn({"type": "research_queue", "tech_names": ["test_tech"]}, commands)
-        map_ref.nation_data["A"]["research_queue"] = []
+        map_ref.world.nation_data["A"]["research_queue"] = []
         self.assertIn({"type": "research_queue", "tech_names": []},
                       collect_map_commands(map_ref, "A"))
 
@@ -900,7 +900,7 @@ class RealtimeSessionTests(unittest.TestCase):
 
         # A follow-up draft can retain an accepted claim but cannot forge a
         # shorter countdown to make it complete early.
-        map_ref.nation_data["A"]["claim_queue"] = [{"prov_id": 7, "turns_left": 3}]
+        map_ref.world.nation_data["A"]["claim_queue"] = [{"prov_id": 7, "turns_left": 3}]
         retained = driver.validate_draft("A", [{"type": "claim_draft", "province_ids": [7]}])
         self.assertEqual(retained[0]["queue"], [{"prov_id": 7, "turns_left": 3}])
 
@@ -945,10 +945,10 @@ class RealtimeSessionTests(unittest.TestCase):
                          "B": {"conscription_slider": 1.0}})
         preferences = next(command for command in collect_map_commands(map_ref, "A")
                            if command["type"] == "country_preferences")
-        map_ref.nation_data["A"]["conscription_slider"] = 1.0
+        map_ref.world.nation_data["A"]["conscription_slider"] = 1.0
         driver = MapRealtimeDriver(map_ref)
         canonical = driver.validate_draft("A", [preferences])
-        self.assertEqual(queries.get_conscription_damage_bonus(map_ref.nation_data["A"]), 0.0)
+        self.assertEqual(queries.get_conscription_damage_bonus(map_ref.world.nation_data["A"]), 0.0)
         for invalid in (-0.1, 1.1, True, "0.25", None, float("nan"), float("inf")):
             with self.subTest(invalid=invalid), self.assertRaises(RealtimeError):
                 driver.validate_draft("A", [{**preferences, "conscription_slider": invalid}])
@@ -960,7 +960,7 @@ class RealtimeSessionTests(unittest.TestCase):
 
         async def resolve(server_map):
             resolved_bonuses.update({country: queries.get_conscription_damage_bonus(data)
-                                     for country, data in server_map.nation_data.items()})
+                                     for country, data in server_map.world.nation_data.items()})
 
         with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=prepare), \
                 mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=resolve):
@@ -976,13 +976,13 @@ class RealtimeSessionTests(unittest.TestCase):
             "A": {"research_funding_slider": 0.25}, "B": {"research_funding_slider": 0.75}})
         preferences = next(command for command in collect_map_commands(map_ref, "A")
                            if command["type"] == "country_preferences")
-        map_ref.nation_data["A"]["research_funding_slider"] = 0.0
+        map_ref.world.nation_data["A"]["research_funding_slider"] = 0.0
         driver = MapRealtimeDriver(map_ref)
         for invalid in (-0.01, 1.01, True, "0.25", None, float("nan"), float("inf"), 10 ** 400):
             with self.subTest(invalid=invalid), self.assertRaises(RealtimeError):
                 driver.validate_draft("A", [{**preferences, "research_funding_slider": invalid}])
         canonical = driver.validate_draft("A", [preferences])
-        self.assertEqual(map_ref.nation_data["A"]["research_funding_slider"], 0.0)
+        self.assertEqual(map_ref.world.nation_data["A"]["research_funding_slider"], 0.0)
 
         async def no_op(*_args, **_kwargs):
             pass
@@ -993,7 +993,7 @@ class RealtimeSessionTests(unittest.TestCase):
 
         projected = queries.player_snapshot_projection(map_ref, queries.build_save_dict(map_ref), "A")
         self.assertEqual(projected["nation_data"]["A"]["research_funding_slider"], 0.25)
-        self.assertEqual(map_ref.nation_data["B"]["research_funding_slider"], 0.75)
+        self.assertEqual(map_ref.world.nation_data["B"]["research_funding_slider"], 0.75)
         self.assertNotIn("research_funding_slider", projected["nation_data"]["B"])
 
     def test_wartime_trade_draft_is_validated_and_applied_by_server(self):
@@ -1003,12 +1003,12 @@ class RealtimeSessionTests(unittest.TestCase):
             "B": {"action": "TRADE", "message": "", "parameters": {"give_materials": 30}}}}
         driver = MapRealtimeDriver(game)
         canonical = driver.validate_draft("A", [command])
-        self.assertNotIn("pending_diplomacy", game.nation_data["A"])
+        self.assertNotIn("pending_diplomacy", game.world.nation_data["A"])
         driver.apply_validated_drafts({"A": canonical})
-        request = game.nation_data["A"]["pending_diplomacy"]["B"]
+        request = game.world.nation_data["A"]["pending_diplomacy"]["B"]
         self.assertEqual(request["action"], "TRADE")
         self.assertEqual(request["parameters"], {"give_materials": 30})
-        self.assertEqual(game.nation_data["A"]["at_war_with"], ["B"])
+        self.assertEqual(game.world.nation_data["A"]["at_war_with"], ["B"])
 
     def test_diplomacy_draft_is_collected_and_cannot_replace_inflight_offer(self):
         map_ref = map_double(
@@ -1043,8 +1043,8 @@ class RealtimeSessionTests(unittest.TestCase):
         source = {"message_id": "received-id", "sender": "B", "content": "Original text", "read": False}
         game = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data={
             "A": {"inbox": [source], "pending_diplomacy": {}}, "B": {}, "C": {}})
-        dm.queue_text_message(game.nation_data, "A", "C", "Ordinary text")
-        dm.queue_forwarded_message(game.nation_data, "A", "C", "A", source)
+        dm.queue_text_message(game.world.nation_data, "A", "C", "Ordinary text")
+        dm.queue_forwarded_message(game.world.nation_data, "A", "C", "A", source)
         command = next(item for item in collect_map_commands(game, "A") if item["type"] == "country_diplomacy")
         driver = MapRealtimeDriver(game)
         submitted = command["pending"]["C"]
@@ -1055,7 +1055,7 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(canonical["pending"]["C"]["forwarded_source"], "A")
         self.assertEqual(canonical["draft_lists"], {"C": ["Ordinary text"]})
         driver.apply_validated_drafts({"A": [canonical]})
-        self.assertEqual(dm.get_pending(game.nation_data, "A", "C")["forwarded_message"], source)
+        self.assertEqual(dm.get_pending(game.world.nation_data, "A", "C")["forwarded_message"], source)
         for invalid in (None, {}, {"message_id": "not-received"}):
             with self.subTest(invalid=invalid):
                 bad = copy.deepcopy(command)
@@ -1070,24 +1070,24 @@ class RealtimeSessionTests(unittest.TestCase):
         source = {"message_id": "received-id", "sender": "B", "content": "Original text", "read": False}
         game = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data={
             "A": {"inbox": [source], "pending_diplomacy": {}}, "B": {}, "C": {}})
-        previous = copy.deepcopy(dm.set_pending(game.nation_data, "A", "C", "MSG:Previous turn", turns=1))
-        local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(game.nation_data))
-        dm.queue_forwarded_message(local.nation_data, "A", "C", "A", source)
+        previous = copy.deepcopy(dm.set_pending(game.world.nation_data, "A", "C", "MSG:Previous turn", turns=1))
+        local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(game.world.nation_data))
+        dm.queue_forwarded_message(local.world.nation_data, "A", "C", "A", source)
         command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
         driver = MapRealtimeDriver(game)
         bad = copy.deepcopy(command)
         bad["pending"]["C"]["request_id"] = "expired-request"
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [bad])
-        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), previous)
+        self.assertEqual(dm.get_pending(game.world.nation_data, "A", "C"), previous)
         canonical = driver.validate_draft("A", [command])[0]
         driver.apply_validated_drafts({"A": [canonical]})
-        combined = dm.get_pending(game.nation_data, "A", "C")
+        combined = dm.get_pending(game.world.nation_data, "A", "C")
         self.assertEqual(combined, dict(previous, forwarded_message=source, forwarded_source="A"))
-        dm.cancel_queued_forward(local.nation_data, "A", "C")
+        dm.cancel_queued_forward(local.world.nation_data, "A", "C")
         command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
         driver.apply_validated_drafts({"A": driver.validate_draft("A", [command])})
-        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), previous)
+        self.assertEqual(dm.get_pending(game.world.nation_data, "A", "C"), previous)
 
     def test_text_follow_up_keeps_sent_message_and_forward_in_realtime(self):
         import copy
@@ -1096,28 +1096,28 @@ class RealtimeSessionTests(unittest.TestCase):
         source = {"message_id": "source-id", "sender": "B", "content": "Forward this", "read": False}
         game = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data={
             "A": {"inbox": [source], "pending_diplomacy": {}}, "B": {}, "C": {}})
-        previous = copy.deepcopy(dm.set_pending(game.nation_data, "A", "C", "MSG:Previous turn", turns=1))
-        local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(game.nation_data))
-        dm.queue_forwarded_message(local.nation_data, "A", "C", "A", source)
-        dm.queue_text_message(local.nation_data, "A", "C", "Follow-up")
+        previous = copy.deepcopy(dm.set_pending(game.world.nation_data, "A", "C", "MSG:Previous turn", turns=1))
+        local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(game.world.nation_data))
+        dm.queue_forwarded_message(local.world.nation_data, "A", "C", "A", source)
+        dm.queue_text_message(local.world.nation_data, "A", "C", "Follow-up")
         command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
         driver = MapRealtimeDriver(game)
-        before = copy.deepcopy(game.nation_data)
+        before = copy.deepcopy(game.world.nation_data)
         bad = copy.deepcopy(command)
         bad["draft_lists"]["C"] = {"message": "Invalid shape"}
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [bad])
-        self.assertEqual(game.nation_data, before)
+        self.assertEqual(game.world.nation_data, before)
         canonical = driver.validate_draft("A", [command])
         driver.apply_validated_drafts({"A": canonical})
         combined = dict(previous, forwarded_message=source, forwarded_source="A")
-        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), combined)
-        self.assertEqual(game.nation_data["A"]["draft_lists"], {"C": ["Follow-up"]})
-        dm.cancel_text_message(local.nation_data, "A", "C")
+        self.assertEqual(dm.get_pending(game.world.nation_data, "A", "C"), combined)
+        self.assertEqual(game.world.nation_data["A"]["draft_lists"], {"C": ["Follow-up"]})
+        dm.cancel_text_message(local.world.nation_data, "A", "C")
         command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
         driver.apply_validated_drafts({"A": driver.validate_draft("A", [command])})
-        self.assertEqual(game.nation_data["A"]["draft_lists"], {})
-        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), combined)
+        self.assertEqual(game.world.nation_data["A"]["draft_lists"], {})
+        self.assertEqual(dm.get_pending(game.world.nation_data, "A", "C"), combined)
 
     def test_tls_server_client_join_and_malformed_frame_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1282,7 +1282,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                   "revoke_queue": [], "return_queue": [], "puppets": ["P"],
                   "release_puppet_queue": [], "faction": "Old Pact", "is_faction_leader": True,
                   "pending_ratification": {"terms": {}}, "research_queue": []},
-            "B": {"name": "B", "color": [4, 5, 6], "claims": [1], "faction": "Old Pact"},
+            "B": {"name": "B", "color": [4, 5, 6], "claims": [1], "faction": "Old Pact", "is_faction_leader": False},
             "P": {"name": "P", "color": [7, 8, 9], "puppet_type": c.PUPPET_TYPE_INTEGRATED,
                   "siphon_rates": {"manpower": 0, "materials": 0, "fuel": 0}},
         }
@@ -1293,7 +1293,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
     def test_collects_empty_queues_and_unit_identity_combat_intents(self):
         map_ref = self.make_map()
-        unit = map_ref.map_data["home"]["units"][0]
+        unit = map_ref.world.map_data["home"]["units"][0]
         unit.update({"custom_name": "First Division", "combat_stance": "RESERVE", "lane_target": "B"})
         commands = collect_map_commands(map_ref, "A")
         unit_command = next(command for command in commands if command["type"] == "unit_order")
@@ -1307,14 +1307,14 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
     def test_visible_enemy_hold_preferences_survive_projection_without_private_orders(self):
         from data import queries
         map_ref = self.make_map()
-        map_ref.scenario_settings = {'fog_of_war': True}
+        map_ref.world.scenario_settings = {'fog_of_war': True}
         enemy = {'unit_id': 'visible', 'owner': 'B', 'type': 'Infantry',
                  'combat_stance': 'RESERVE', 'lane_target': 'A',
                  'order': {'type': 'MOVE', 'path': [2]}, 'repair_trip': 2, 'air_cargo': []}
-        map_ref.map_data['home']['units'].extend([enemy, dict(enemy, unit_id='hidden')])
-        map_ref.map_data['foreign']['units'] = [dict(enemy, unit_id='fogged')]
-        snapshot = {'nation_data': map_ref.nation_data, 'provinces': map_ref.map_data,
-                    '_raw_map_data': dict(map_ref.map_data),
+        map_ref.world.map_data['home']['units'].extend([enemy, dict(enemy, unit_id='hidden')])
+        map_ref.world.map_data['foreign']['units'] = [dict(enemy, unit_id='fogged')]
+        snapshot = {'nation_data': map_ref.world.nation_data, 'provinces': map_ref.world.map_data,
+                    '_raw_map_data': dict(map_ref.world.map_data),
                     'standalone_export_settings': {'background_image': 'editor only'}}
         before = json.dumps(snapshot, sort_keys=True)
         with (mock.patch.object(queries, 'get_visible_provinces', return_value=({1}, set())),
@@ -1334,9 +1334,9 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
     def test_battle_editor_draft_is_validated_then_applied_only_by_the_server(self):
         map_ref = self.make_map()
-        map_ref.nation_data["A"]["at_war_with"] = ["B"]
-        map_ref.nation_data["B"]["at_war_with"] = ["A"]
-        units = map_ref.map_data["home"]["units"]
+        map_ref.world.nation_data["A"]["at_war_with"] = ["B"]
+        map_ref.world.nation_data["B"]["at_war_with"] = ["A"]
+        units = map_ref.world.map_data["home"]["units"]
         units[:] = [{"unit_id": identity, "owner": owner, "type": "Battle Fixture"}
                     for identity, owner in (("reserve", "A"), ("front", "A"), ("enemy", "B"))]
         units[0]["lane_target"] = "B"
@@ -1362,8 +1362,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
     def test_volunteer_battle_lane_validation_uses_the_host_enemies(self):
         map_ref = self.make_map()
-        map_ref.nation_data["P"]["at_war_with"] = ["B"]
-        unit = map_ref.map_data["home"]["units"][0]
+        map_ref.world.nation_data["P"]["at_war_with"] = ["B"]
+        unit = map_ref.world.map_data["home"]["units"][0]
         unit.update(unit_id="volunteer", volunteer_host="P")
         command = {"type": "unit_order", "province_id": 1, "unit_id": "volunteer",
                    "order": None, "lane_target": "B", "combat_stance": None}
@@ -1372,25 +1372,25 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
     def test_a_faction_exile_is_not_eliminated_from_a_realtime_match(self):
         map_ref = self.make_map()
-        map_ref.map_data["home"]["owner"] = "B"
+        map_ref.world.map_data["home"]["owner"] = "B"
         driver = MapRealtimeDriver(map_ref)
 
         self.assertFalse(driver.is_eliminated("A"))
-        map_ref.nation_data["A"]["faction"] = ""
+        queries.set_country_faction(map_ref.world.nation_data, "A", "")
         self.assertTrue(driver.is_eliminated("A"))
 
     def test_army_roster_is_collected_and_server_validated(self):
         map_ref = self.make_map()
         commands = collect_map_commands(map_ref, "A")
         roster = next(command for command in commands if command["type"] == "army_roster")
-        unit_id = map_ref.map_data["home"]["units"][0]["unit_id"]
+        unit_id = map_ref.world.map_data["home"]["units"][0]["unit_id"]
         custom_symbol = ([c.ARMY_CUSTOM_SYMBOL_RED + c.ARMY_CUSTOM_SYMBOL_EMPTY * 19]
                          + [c.ARMY_CUSTOM_SYMBOL_EMPTY * 20] * 19)
         roster["armies"] = [{"id": "army-a", "name": "Army 1", "unit_ids": [unit_id],
                               "symbol": "", "symbol_color": [20, 120, 220],
                               "symbol_rotation": 90, "symbol_flipped": True,
                               "custom_symbol": custom_symbol,
-                              "defense_area": [map_ref.map_data["home"]["id"]]}]
+                              "defense_area": [map_ref.world.map_data["home"]["id"]]}]
         validated = MapRealtimeDriver(map_ref).validate_draft("A", [roster])
         self.assertEqual(validated, [{"type": "army_roster", "armies": roster["armies"]}])
         with self.assertRaises(RealtimeError):
@@ -1430,7 +1430,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
     def test_unassigned_is_local_presentation_and_cannot_be_submitted_as_an_army(self):
         map_ref = self.make_map()
-        map_ref.player_country = "A"
+        map_ref.session.player_country = "A"
         from ui.panels import army_panel
         army_panel.prepare(map_ref)
         self.assertTrue(map_ref.unassigned_army_card["unit_ids"])
@@ -1440,7 +1440,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(map_ref).validate_draft("A", [{
                 "type": "army_roster", "armies": [map_ref.unassigned_army_card]}])
-        self.assertEqual(map_ref.nation_data["A"]["armies"], [])
+        self.assertEqual(map_ref.world.nation_data["A"]["armies"], [])
 
     def test_an_idle_complete_draft_is_accepted(self):
         map_ref = self.make_map()
@@ -1477,7 +1477,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         for release_type in c.PUPPET_RELEASE_TYPES:
             with self.subTest(release_type=release_type):
                 map_ref = self.make_map()
-                map_ref.nation_data["A"]["release_puppet_queue"] = [
+                map_ref.world.nation_data["A"]["release_puppet_queue"] = [
                     {"core_nation": "P", "keep_cores": False, "release_type": release_type, "turns_left": 1}]
                 command = next(command for command in collect_map_commands(map_ref, "A")
                                if command["type"] == "puppet_draft")
@@ -1496,7 +1496,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                 driver.validate_draft("A", [dict(command, release_subjects=entries)])
         with self.assertRaises(RealtimeError):
             driver.validate_draft("B", [dict(command, puppet_order=[], release_subjects=[{"core_nation": "P"}])])
-        map_ref.nation_data["A"]["release_puppet_queue"] = [
+        map_ref.world.nation_data["A"]["release_puppet_queue"] = [
             {"core_nation": "P", "keep_cores": False, "release_type": c.PUPPET_TYPE_INTEGRATED,
              "turns_left": 1}]
         with self.assertRaises(RealtimeError):
@@ -1526,8 +1526,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
     def test_repair_cost_is_deducted_by_the_server_not_the_client_order(self):
         map_ref = self.make_map()
-        map_ref.player_country = "None"
-        map_ref.map_data["home"]["units"][0].update({"health": 5, "max_health": 10})
+        map_ref.session.player_country = "None"
+        map_ref.world.map_data["home"]["units"][0].update({"health": 5, "max_health": 10})
         driver = MapRealtimeDriver(map_ref)
         with mock.patch("data.queries.get_unit_library", return_value={"Infantry": {
                 "cost_materials": 20, "cost_manpower": 10, "cost_fuel": 4}}), \
@@ -1540,20 +1540,20 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                                                      "lane_target": None}])
         async def no_op(_map_ref):
             return None
-        before = map_ref.nation_data["A"]["materials"]
+        before = map_ref.world.nation_data["A"]["materials"]
         with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=no_op), \
              mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op), \
              mock.patch("data.queries.get_unit_library", return_value={"Infantry": {
                  "cost_materials": 20, "cost_manpower": 10, "cost_fuel": 4}}), \
              mock.patch("data.queries.get_scenario_flag", return_value=False):
             driver.process_turn({"A": command})
-        self.assertEqual(map_ref.nation_data["A"]["materials"], before - 10)
-        self.assertNotIn("realtime_cost", map_ref.map_data["home"]["units"][0]["order"])
+        self.assertEqual(map_ref.world.nation_data["A"]["materials"], before - 10)
+        self.assertNotIn("realtime_cost", map_ref.world.map_data["home"]["units"][0]["order"])
 
     def test_volunteer_reservations_require_a_matching_authoritative_offer(self):
         map_ref = self.make_map()
-        map_ref.nation_data["B"]["at_war_with"] = ["C"]
-        map_ref.nation_data["C"] = {"name": "C", "at_war_with": ["B"]}
+        map_ref.world.nation_data["B"]["at_war_with"] = ["C"]
+        map_ref.world.nation_data["C"] = {"name": "C", "at_war_with": ["B"]}
         driver = MapRealtimeDriver(map_ref)
         offer = {"type": "country_diplomacy", "pending": {
             "B": {"action": "SEND_VOLUNTEERS", "timer": 0, "message": "We can help."}},
@@ -1592,7 +1592,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                 mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op):
             driver.process_turn({"A": [canonical]})
 
-        self.assertEqual(politics.policy_state(map_ref.nation_data, "A", policy_id)["status"],
+        self.assertEqual(politics.policy_state(map_ref.world.nation_data, "A", policy_id)["status"],
                          politics.POLICY_ACTIVATING)
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [{**preferences, politics.POLICY_KEY: {
@@ -1600,12 +1600,12 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
         # Activating and cancelling before submission serializes as no policy
         # choice, so the authoritative server creates no countdown at all.
-        map_ref.nation_data["A"].pop(politics.POLICY_KEY)
+        map_ref.world.nation_data["A"].pop(politics.POLICY_KEY)
         empty = driver.validate_draft("A", [{**preferences, politics.POLICY_KEY: {}}])[0]
         with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=no_op), \
                 mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op):
             driver.process_turn({"A": [empty]})
-        self.assertNotIn(politics.POLICY_KEY, map_ref.nation_data["A"])
+        self.assertNotIn(politics.POLICY_KEY, map_ref.world.nation_data["A"])
 
     def test_economic_draft_moves_server_position_at_resolution(self):
         from map_logic import politics
@@ -1619,20 +1619,20 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         for axis in politics.AXES:
             with self.subTest(axis=axis["id"]):
                 map_ref = self.make_map()
-                politics.set_axis_value(map_ref.nation_data, "A", axis["id"], 4)
+                politics.set_axis_value(map_ref.world.nation_data, "A", axis["id"], 4)
                 driver = MapRealtimeDriver(map_ref)
                 preferences = {"type": "country_preferences", axis["drift_key"]: -1}
                 canonical = driver.validate_draft("A", [preferences])
-                self.assertEqual(politics.axis_drift(map_ref.nation_data, "A", axis["id"]), 0)
+                self.assertEqual(politics.axis_drift(map_ref.world.nation_data, "A", axis["id"]), 0)
 
                 with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=prepare), \
                         mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=resolve):
                     driver.process_turn({"A": canonical})
 
-                self.assertEqual(politics.axis_value(map_ref.nation_data, "A", axis["id"]), 4 - c.POLITICS_STEP)
-                self.assertEqual(politics.axis_drift(map_ref.nation_data, "A", axis["id"]), -1)
-                self.assertEqual(politics.axis_value(map_ref.nation_data, "B", axis["id"]), c.POLITICS_START)
-                self.assertEqual(politics.axis_drift(map_ref.nation_data, "B", axis["id"]), 0)
+                self.assertEqual(politics.axis_value(map_ref.world.nation_data, "A", axis["id"]), 4 - c.POLITICS_STEP)
+                self.assertEqual(politics.axis_drift(map_ref.world.nation_data, "A", axis["id"]), -1)
+                self.assertEqual(politics.axis_value(map_ref.world.nation_data, "B", axis["id"]), c.POLITICS_START)
+                self.assertEqual(politics.axis_drift(map_ref.world.nation_data, "B", axis["id"]), 0)
 
                 for extra_fields in ({axis["drift_key"]: True}, {axis["drift_key"]: 2},
                                      {axis["value_key"]: 8}):
@@ -1640,7 +1640,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                         driver.validate_draft("A", [{**preferences, **extra_fields}])
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("Unknown", [preferences])
-                politics.set_axis_value(map_ref.nation_data, "A", axis["id"], c.POLITICS_MIN)
+                politics.set_axis_value(map_ref.world.nation_data, "A", axis["id"], c.POLITICS_MIN)
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("A", [preferences])
 
@@ -1650,17 +1650,17 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
         map_ref = self.make_map()
         for axis in politics.AXES:
-            politics.set_axis_drift(map_ref.nation_data, "A", axis["id"], 1)
-            politics.set_axis_value(map_ref.nation_data, "B", axis["id"], -4)
-            politics.set_axis_drift(map_ref.nation_data, "B", axis["id"], -1)
-        snapshot = {"nation_data": map_ref.nation_data}
+            politics.set_axis_drift(map_ref.world.nation_data, "A", axis["id"], 1)
+            politics.set_axis_value(map_ref.world.nation_data, "B", axis["id"], -4)
+            politics.set_axis_drift(map_ref.world.nation_data, "B", axis["id"], -1)
+        snapshot = {"nation_data": map_ref.world.nation_data}
         nations = queries.player_snapshot_projection(map_ref, snapshot, "A")["nation_data"]
         for axis in politics.AXES:
             with self.subTest(axis=axis["id"]):
                 self.assertEqual(nations["A"][axis["drift_key"]], 1)
                 self.assertEqual(nations["B"][axis["value_key"]], -4)
                 self.assertNotIn(axis["drift_key"], nations["B"])
-                self.assertEqual(map_ref.nation_data["B"][axis["drift_key"]], -1)
+                self.assertEqual(map_ref.world.nation_data["B"][axis["drift_key"]], -1)
 
 
 if __name__ == "__main__":

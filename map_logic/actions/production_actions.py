@@ -11,16 +11,6 @@ from data.state_access import world_for, session_for
 from map_logic.diplomacy import restrictions
 
 
-@dataclass(frozen=True)
-class ProductionPolicy:
-    # AI building purchases historically charge no manpower, including factories.
-    charge_building_manpower: bool = True
-    clamp_administrative_time: bool = False
-
-
-PLAYER_POLICY = ProductionPolicy()
-AI_POLICY = ProductionPolicy(charge_building_manpower=False)
-REALTIME_POLICY = ProductionPolicy(clamp_administrative_time=True)
 COST_KEYS = tuple(f"cost_{resource}" for resource in c.ECON_RESOURCE_KEYS)
 
 
@@ -46,22 +36,20 @@ def production_permission(context, country_id, province, *, authority="player"):
             (session.player_country == "Spectator" and c.SPECTATOR_CAN_EDIT_PRODUCTION))
 
 
-def canonical_queue_entry(queue, *, name, cost, order_type="BUILDING", group=None,
-                          clamp_administrative_time=False):
+def canonical_queue_entry(queue, *, name, cost, order_type="BUILDING", group=None):
     """Record the actual payment for future refunds and preserve queue schemas."""
     refund = {key: cost.get(key, 0) for key in COST_KEYS}
     if queue == "unit_queue":
         return {"unit_type": name, "turns_remaining": max(1, cost.get("production_time", 1)),
                 "refund": refund}
-    turns = cost.get("time", 1)
-    if order_type == "BUILDING" or clamp_administrative_time:
-        turns = max(1, turns)
+    # Every order takes at least the turn it is processed in.
+    turns = max(1, cost.get("time", 1))
     return {"order_type": order_type, "item_name": name, "turns_remaining": turns,
             "group": group if group is not None else cost["group"], "refund": refund}
 
 
 def prepare_production(context, country_id, province, queue, intent, *,
-                       policy=PLAYER_POLICY, unit_library=None, building_library=None):
+                       unit_library=None, building_library=None):
     """Query current legality, cost, and canonical order without changing state."""
     world = world_for(context)
     if province.get("owner") != country_id or country_id not in world.nation_data:
@@ -128,13 +116,10 @@ def prepare_production(context, country_id, province, queue, intent, *,
         if requirement and country.get("research", {}).get(requirement, 0) < level:
             raise ValueError("Required building research is not complete.")
         cost = queries.get_building_cost(name, country_id, world.map_data, library, world.nation_data)
-        if not policy.charge_building_manpower:
-            cost = dict(cost, cost_manpower=0)
         group = cost.get("group", "")
     else:
         raise ValueError("Invalid building order.")
-    order = canonical_queue_entry(queue, name=name, cost=cost, order_type=order_type, group=group,
-                                  clamp_administrative_time=policy.clamp_administrative_time)
+    order = canonical_queue_entry(queue, name=name, cost=cost, order_type=order_type, group=group)
     return ProductionResult(queue, order, order["refund"], order_type, province_id=province.get("id"))
 
 
@@ -168,8 +153,13 @@ def cancel_production(context, country_id, province, queue, index, *, authority=
 
 
 def validate_queue_budget(country, commands):
-    """Check cumulative production and repair costs without changing stockpiles."""
+    """Check cumulative production and repair costs without changing stockpiles.
+
+    Like queries.can_afford for one order, a resource fails only when the draft charges it.
+    A stockpile already below zero does not block orders that cost none of it.
+    """
     available = {key: float(country.get(key.removeprefix("cost_"), 0)) for key in COST_KEYS}
+    charged = dict.fromkeys(COST_KEYS, 0.0)
     for command in commands:
         if command.get("type") == "province_queue":
             for item in command.get("cancelled", []):
@@ -179,6 +169,7 @@ def validate_queue_budget(country, commands):
             for cost in command.get("new_costs", []):
                 for key in available:
                     available[key] -= float(cost.get(key, 0))
+                    charged[key] += float(cost.get(key, 0))
         elif command.get("type") == "unit_order":
             for key in available:
                 available[key] += float(command.get("unit_refund", {}).get(key, 0))
@@ -186,7 +177,8 @@ def validate_queue_budget(country, commands):
             if isinstance(order, dict) and order.get("type") == "REPAIR":
                 for key in available:
                     available[key] -= float(order["realtime_cost"].get(key, 0))
-    if any(value < 0 for value in available.values()):
+                    charged[key] += float(order["realtime_cost"].get(key, 0))
+    if any(available[key] < 0 and charged[key] > 0 for key in COST_KEYS):
         raise ValueError("These production and repair orders exceed available resources.")
     return available
 
@@ -228,7 +220,7 @@ def apply_queue_change(context, country_id, command, *, payment_settled=False):
     province[command["queue"]] = copy.deepcopy(command["items"])
 
 
-def reconstruct_queue(context, country_id, province, queue, items, *, policy=PLAYER_POLICY):
+def reconstruct_queue(context, country_id, province, queue, items):
     """Match paid orders once and rebuild new orders under the active rules."""
     if queue not in ("building_queue", "unit_queue") or not isinstance(items, list):
         raise ValueError("Invalid province queue.")
@@ -241,7 +233,7 @@ def reconstruct_queue(context, country_id, province, queue, items, *, policy=PLA
         if index is not None:
             canonical.append(remaining.pop(index))
             continue
-        result = prepare_production(context, country_id, province, queue, item, policy=policy)
+        result = prepare_production(context, country_id, province, queue, item)
         canonical.append(result.order)
         new_costs.append(result.cost)
     return {"type": "province_queue", "province_id": province["id"], "queue": queue,

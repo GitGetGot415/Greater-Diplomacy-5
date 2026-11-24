@@ -6,7 +6,7 @@ import unittest
 from data import queries
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import (diplomacy_processor, military_attaches, treaty_effects, volunteers, war_actions)
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import MapDouble, StubMapScreen
 
 
 def nation(**extra):
@@ -26,7 +26,7 @@ class MilitaryAttacheTests(unittest.TestCase):
             screen, military_attaches.ACTION, "A", "B")
 
         self.assertIsNone(outcome.blocked)
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), ["B"])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), ["B"])
 
     def test_ai_accepts_an_attache_without_enemy_support(self):
         data = {"A": nation(), "B": nation(), "C": nation()}
@@ -60,13 +60,13 @@ class MilitaryAttacheTests(unittest.TestCase):
     def test_sender_can_withdraw_an_attache_unilaterally(self):
         screen = StubMapScreen(["A", "B", "C"])
         screen.set_war("B", "C")
-        screen.nation_data["A"]["military_attaches"] = ["B"]
+        screen.world.nation_data["A"]["military_attaches"] = ["B"]
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "B", military_attaches.WITHDRAW_ACTION)
+            screen, "A", "B", military_attaches.WITHDRAW_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), [])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), [])
 
     def test_ai_hosts_schedule_then_both_revoke_attachés_observing_opposite_sides(self):
         data = {"A": nation(military_attaches=["B", "C"]),
@@ -100,66 +100,66 @@ class MilitaryAttacheTests(unittest.TestCase):
         screen = StubMapScreen(["A", "B", "C"])
         screen.set_war("B", "C")
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "B", military_attaches.ACTION)
+            screen, "A", "B", military_attaches.ACTION)
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "C", military_attaches.ACTION)
+            screen, "A", "C", military_attaches.ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)  # Requests travel.
         diplomacy_processor.process_diplomacy_turn(screen)  # Both AI hosts accept.
 
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), ["B", "C"])
-        self.assertEqual(screen.nation_data["B"].get(military_attaches.PENDING_REVOKE_KEY), ["A"])
-        self.assertEqual(screen.nation_data["C"].get(military_attaches.PENDING_REVOKE_KEY), ["A"])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), ["B", "C"])
+        self.assertEqual(screen.world.nation_data["B"].get(military_attaches.PENDING_REVOKE_KEY), ["A"])
+        self.assertEqual(screen.world.nation_data["C"].get(military_attaches.PENDING_REVOKE_KEY), ["A"])
 
         diplomacy_processor.process_diplomacy_turn(screen)  # Scheduled revocations resolve.
 
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), [])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), [])
 
     def test_ai_host_revokes_existing_attache_during_turn_resolution(self):
         screen = StubMapScreen(["A", "B", "C"])
         screen.set_war("B", "C")
-        screen.nation_data["A"]["military_attaches"] = ["B"]
-        screen.nation_data["A"]["volunteer_missions"] = {
+        screen.world.nation_data["A"]["military_attaches"] = ["B"]
+        screen.world.nation_data["A"]["volunteer_missions"] = {
             "C": {"state": volunteers.OUTBOUND, "travel_turns": 2, "turns_left": 2,
                   "held_units": []}}
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), ["B"])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), ["B"])
         diplomacy_processor.process_diplomacy_turn(screen)
 
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), [])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), [])
 
     def test_player_host_can_revoke_a_foreign_attache(self):
         screen = StubMapScreen(["A", "B", "C"], human_players=("B",))
         screen.set_war("B", "C")
-        screen.nation_data["A"]["military_attaches"] = ["B"]
+        screen.world.nation_data["A"]["military_attaches"] = ["B"]
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "B", "A", military_attaches.REVOKE_ACTION)
+            screen, "B", "A", military_attaches.REVOKE_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
-        self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), [])
+        self.assertEqual(military_attaches.hosts_for("A", screen.world.nation_data), [])
 
     def test_attache_adds_the_host_s_unit_vision(self):
-        class VisionMap:
+        class VisionMap(MapDouble):
             player_country = "A"
             tactical_mode = False
             player_unit = None
 
         screen = VisionMap()
-        screen.nation_data = {"A": nation(), "B": nation(at_war_with=["C"]),
+        screen.world.nation_data = {"A": nation(), "B": nation(at_war_with=["C"]),
                               "C": nation(at_war_with=["B"])}
-        screen.map_data = {
+        screen.world.map_data = {
             "one": {"id": 1, "owner": "A", "neighbors": [], "units": []},
             "two": {"id": 2, "owner": "C", "neighbors": [], "units": []},
             "three": {"id": 3, "owner": "C", "neighbors": [],
                       "units": [{"owner": "B"}]},
         }
-        screen.id_to_province = {p["id"]: p for p in screen.map_data.values()}
+        screen.world.id_to_province = {p["id"]: p for p in screen.world.map_data.values()}
 
         before, _partial = queries.get_visible_provinces(screen)
-        screen.nation_data["A"]["military_attaches"] = ["B"]
+        screen.world.nation_data["A"]["military_attaches"] = ["B"]
         after, _partial = queries.get_visible_provinces(screen)
 
         self.assertNotIn(3, before)

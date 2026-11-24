@@ -121,7 +121,7 @@ class Battle_Screen(ModalScreen):
         # Both set before super(), because ModalScreen.__init__ asks for the
         # title and the title depends on whether any of these units are ours.
         self.map_screen = map_screen
-        self.player = map_screen.player_country
+        self.player = map_screen.session.player_country
         # The screen this battle was pushed over, normally Orders -- see
         # close_and_navigate.
         self.origin_screen = origin_screen or map_screen
@@ -153,13 +153,13 @@ class Battle_Screen(ModalScreen):
         self.combat_width = combat_rules.combat_width_for_terrain(
             self.province.get("terrain"))
         self.battle = combat_rules.build_battle(
-            [self.province.get("units", [])], self.map_screen.nation_data,
+            [self.province.get("units", [])], self.map_screen.world.nation_data,
             width=self.combat_width, terrain=self.province.get("terrain"), tiles=(self.province,))
         self.combat_row_data = {}
         for unit in self.province.get("units", []):
             profile = self.battle.profiles.get(id(unit), unit)
             with queries.combat_supply(queries.presentation_supply(self.map_screen)):
-                row = sidebar_info.unit_roster_row(profile, self.province, self.map_screen.nation_data, True)
+                row = sidebar_info.unit_roster_row(profile, self.province, self.map_screen.world.nation_data, True)
             combat_owner = queries.get_unit_combat_owner(unit)
             row["unit_icon"] = symbol_loader.get_symbol(
                 unit["type"], zoom=1, country=combat_owner,
@@ -239,8 +239,8 @@ class Battle_Screen(ModalScreen):
         """
         mine = [u for u in self.province.get("units", [])
                 if u.get("owner") == self.player and not queries.unit_is_air_drop_recovering(u)]
-        if self.map_screen.tactical_mode:
-            return [u for u in mine if u is self.map_screen.player_unit]
+        if self.map_screen.session.tactical_mode:
+            return [u for u in mine if u is self.map_screen.session.player_unit]
         return mine
 
     def can_command(self, unit):
@@ -300,7 +300,7 @@ class Battle_Screen(ModalScreen):
         # A pin names an enemy nation; build_battle resolves it back to whichever
         # lane has that nation on the other side.
         target = next((enemy for enemy in far.nations
-                       if queries.are_at_war(nation, enemy, self.map_screen.nation_data)), None)
+                       if queries.are_at_war(nation, enemy, self.map_screen.world.nation_data)), None)
         if target is None:
             return
         unit_actions.apply_battle_orders(
@@ -348,7 +348,7 @@ class Battle_Screen(ModalScreen):
             self.done = True
 
     def _editor_closed(self):
-        self.province = self.map_screen.id_to_province.get(self.province["id"], self.province)
+        self.province = self.map_screen.world.id_to_province.get(self.province["id"], self.province)
         self.visible = queries.is_province_visible(self.map_screen, self.province["id"])
         self.refresh_ui()
 
@@ -620,7 +620,7 @@ class Battle_Screen(ModalScreen):
         """
         display_nations = self.side_display_nations(side)
         for nation in display_nations[:max_flags]:
-            x = flag_icons.draw_flag_centered(surface, nation, self.map_screen.nation_data,
+            x = flag_icons.draw_flag_centered(surface, nation, self.map_screen.world.nation_data,
                                               x, rect.y, rect.height)
         extra = len(display_nations) - max_flags
         if extra > 0:
@@ -661,7 +661,7 @@ class Battle_Screen(ModalScreen):
         ]
         with queries.combat_supply(queries.presentation_supply(self.map_screen)):
             return overlay_renderer.estimated_combat_outcome(
-                sides, self.map_screen.nation_data, province=self.province)
+                sides, self.map_screen.world.nation_data, province=self.province)
 
     def _paint_outcome(self, surface, lane, *, rect=None, outcome=None):
         """Shared outlook display for the overview and editor's narrow column."""
@@ -753,13 +753,13 @@ class Battle_Screen(ModalScreen):
             owner = unit.get("owner", "?")
             counts[owner] = counts.get(owner, 0) + 1
         return "  +  ".join(
-            f"{queries.get_country_display_name(nation, self.map_screen.nation_data)} {count}"
+            f"{queries.get_country_display_name(nation, self.map_screen.world.nation_data)} {count}"
             for nation, count in counts.items())
 
     def get_panel_title(self):
         owner = self.province.get("owner", "Unclaimed")
         verb = "Manage" if self.my_units() else "View"
-        owner_name = queries.get_country_display_name(owner, self.map_screen.nation_data)
+        owner_name = queries.get_country_display_name(owner, self.map_screen.world.nation_data)
         return f"{verb} Battle - Province {self.province.get('id')} ({owner_name})"
 
     def draw_body(self, surface):

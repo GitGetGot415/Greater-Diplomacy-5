@@ -9,10 +9,11 @@ import pygame
 from data import constants as c
 from ui.camera import camera_handler
 from ui.camera.camera_handler import MapCamera
+from tests.stub_map_screen import map_double
 
 
 def _map(loop_map):
-    return SimpleNamespace(
+    return map_double(
         loop_map=loop_map,
         map_w=1000,
         map_h=800,
@@ -258,7 +259,7 @@ class MapCameraBoundsTests(unittest.TestCase):
         camera.pos = pygame.Vector2(-500, 100)
         camera.target_pos = pygame.Vector2(-500, 100)
         self_map = _map(loop_map=False)
-        self_map.selection_mode = True
+        self_map.session.selection_mode = True
 
         camera.update(self_map, 720)
 

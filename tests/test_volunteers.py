@@ -35,7 +35,7 @@ class VolunteerTests(unittest.TestCase):
         details, error = volunteers.create_offer(game, "A", "B", [(home, home["units"][0])])
         self.assertFalse(error)
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.ACTION,
+            game, "A", "B", volunteers.ACTION,
             f"We offer {details['count']} volunteer divisions. They arrive in {details['travel_turns']} turns.",
             parameters=details)
         return details
@@ -60,41 +60,41 @@ class VolunteerTests(unittest.TestCase):
         volunteer_units = [u for u in host_home["units"] if u.get("owner") == "A"]
         self.assertEqual(len(volunteer_units), 1)
         self.assertEqual(volunteer_units[0].get("volunteer_host"), "B")
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.DEPLOYED)
 
     def test_ai_rejects_volunteers_from_a_country_aiding_its_enemy(self):
         game = self.game()
-        game.nation_data["A"]["volunteer_missions"] = {
+        game.world.nation_data["A"]["volunteer_missions"] = {
             "C": {"state": volunteers.DEPLOYED}}
 
         verdict = ai_evaluation.evaluate_verdict(
-            game.nation_data, game.map_data, "B", "A", volunteers.ACTION)
+            game.world.nation_data, game.world.map_data, "B", "A", volunteers.ACTION)
 
         self.assertFalse(verdict.accepted)
 
     def test_ai_rejects_volunteers_from_a_country_observing_its_enemy(self):
         game = self.game()
-        game.nation_data["A"]["military_attaches"] = ["C"]
+        game.world.nation_data["A"]["military_attaches"] = ["C"]
 
         verdict = ai_evaluation.evaluate_verdict(
-            game.nation_data, game.map_data, "B", "A", volunteers.ACTION)
+            game.world.nation_data, game.world.map_data, "B", "A", volunteers.ACTION)
 
         self.assertFalse(verdict.accepted)
 
     def test_ai_schedules_conflicting_volunteers_for_next_turn_send_home(self):
         game = self.game()
-        game.nation_data["A"]["volunteer_missions"] = {
+        game.world.nation_data["A"]["volunteer_missions"] = {
             "B": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []},
             "C": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []},
         }
 
-        scheduled = volunteers.schedule_conflict_send_homes_for_ai_hosts(game.nation_data)
+        scheduled = volunteers.schedule_conflict_send_homes_for_ai_hosts(game.world.nation_data)
 
         self.assertEqual(scheduled, [("A", "B"), ("A", "C")])
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.DEPLOYED)
         self.assertEqual(volunteers.process_scheduled_send_homes(game), [("A", "B"), ("A", "C")])
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.RETURNING)
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "C"), volunteers.RETURNING)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.RETURNING)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "C"), volunteers.RETURNING)
 
     def test_simultaneous_opposite_side_offers_accept_before_next_turn_send_home(self):
         game = self.game()
@@ -105,21 +105,21 @@ class VolunteerTests(unittest.TestCase):
                 game, "A", host, [(home, home["units"][0])])
             self.assertFalse(error)
             diplomacy_processor.toggle_diplomacy_action(
-                game.nation_data, "A", host, volunteers.ACTION,
+                game, "A", host, volunteers.ACTION,
                 "We offer volunteer divisions.", parameters=details)
 
         game.run_turn()  # Both offers travel.
         game.run_turn()  # Both AI hosts accept and schedule a send-home.
 
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "C"), volunteers.OUTBOUND)
-        self.assertEqual(game.nation_data["B"].get(volunteers.PENDING_SEND_HOME_KEY), ["A"])
-        self.assertEqual(game.nation_data["C"].get(volunteers.PENDING_SEND_HOME_KEY), ["A"])
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "C"), volunteers.OUTBOUND)
+        self.assertEqual(game.world.nation_data["B"].get(volunteers.PENDING_SEND_HOME_KEY), ["A"])
+        self.assertEqual(game.world.nation_data["C"].get(volunteers.PENDING_SEND_HOME_KEY), ["A"])
 
         game.run_turn()  # Both scheduled send-homes start now.
 
-        self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "C"), volunteers.RETURNING)
+        self.assertFalse(volunteers.mission_state(game.world.nation_data, "A", "B"))
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "C"), volunteers.RETURNING)
 
     def test_player_host_can_send_foreign_volunteers_home(self):
         game = self.game(human_players=("B",))
@@ -127,14 +127,14 @@ class VolunteerTests(unittest.TestCase):
         unit["volunteer_host"] = "B"
         unit["volunteer_origin_id"] = game.home_of("A")["id"]
         game.home_of("B")["units"] = [unit]
-        game.nation_data["A"]["volunteer_missions"] = {
+        game.world.nation_data["A"]["volunteer_missions"] = {
             "B": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []}}
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "B", "A", volunteers.SEND_HOME_ACTION)
+            game, "B", "A", volunteers.SEND_HOME_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(game)
 
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.RETURNING)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.RETURNING)
 
     def test_rejection_restores_the_selected_origin(self):
         game = self.game(human_players=("A", "B"))
@@ -142,10 +142,10 @@ class VolunteerTests(unittest.TestCase):
         origin = game.home_of("A")
         game.run_turn()
         diplomacy_processor.toggle_diplomatic_response(
-            game.nation_data, "B", "A", diplomacy_messages.RESPONSE_REJECT, volunteers.ACTION)
+            game.world.nation_data, "B", "A", diplomacy_messages.RESPONSE_REJECT, volunteers.ACTION)
         game.run_turn()
         self.assertEqual(len(origin["units"]), 1)
-        self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
+        self.assertFalse(volunteers.mission_state(game.world.nation_data, "A", "B"))
 
     def test_same_turn_offer_withdrawal_restores_divisions(self):
         game = self.game()
@@ -161,12 +161,12 @@ class VolunteerTests(unittest.TestCase):
         game.run_turn()
         game.run_turn()
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.RECALL_ACTION,
+            game, "A", "B", volunteers.RECALL_ACTION,
             "We are recalling our volunteer divisions.")
         self.assertEqual(game.pending_action("A", "B"), volunteers.RECALL_ACTION)
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.RECALL_ACTION)
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+            game, "A", "B", volunteers.RECALL_ACTION)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.DEPLOYED)
         self.assertFalse(game.pending_action("A", "B"))
 
     def test_orders_uses_volunteer_host_for_neutral_territory_entry(self):
@@ -178,20 +178,20 @@ class VolunteerTests(unittest.TestCase):
         unit["volunteer_host"] = "B"
         host_home["units"] = [unit]
         self.assertTrue(queries.can_unit_move_step(unit, host_home, host_extension,
-                                                   game.nation_data, context=game))
+                                                   game.world.nation_data, context=game))
 
     def test_recall_uses_return_travel_then_send_unit_home(self):
         game = self.game()
         self.offer(game)
         game.run_turn()
         game.run_turn()
-        mission = game.nation_data["A"]["volunteer_missions"]["B"]
+        mission = game.world.nation_data["A"]["volunteer_missions"]["B"]
         mission["travel_turns"] = 1
         self.assertTrue(volunteers.recall(game, "A", "B"))
         self.assertFalse(game.home_of("A")["units"])
         game.run_turn()
         self.assertEqual(len(game.home_of("A")["units"]), 1)
-        self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
+        self.assertFalse(volunteers.mission_state(game.world.nation_data, "A", "B"))
 
     def test_one_turn_arrival_and_automatic_recall(self):
         game = StubMapScreen(["A", "B", "C"], human_players=("A",))
@@ -203,14 +203,14 @@ class VolunteerTests(unittest.TestCase):
         self.assertEqual(details["travel_turns"], 1)
         game.run_turn()
         game.run_turn()  # accepted; one travel turn remains
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.OUTBOUND)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.OUTBOUND)
         game.run_turn()
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.DEPLOYED)
 
-        game.nation_data["B"]["at_war_with"] = []
-        game.nation_data["C"]["at_war_with"] = []
+        game.world.nation_data["B"]["at_war_with"] = []
+        game.world.nation_data["C"]["at_war_with"] = []
         game.run_turn()
-        self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.RETURNING)
+        self.assertEqual(volunteers.mission_state(game.world.nation_data, "A", "B"), volunteers.RETURNING)
         game.run_turn()
         self.assertEqual(len(game.home_of("A")["units"]), 1)
 
@@ -229,14 +229,14 @@ class VolunteerTests(unittest.TestCase):
         combat_processor.check_for_post_combat_captures(game)
 
         self.assertEqual(enemy_home["owner"], "B")
-        self.assertEqual(queries.get_factory_count("A", game.map_data), 0)
-        self.assertEqual(queries.get_factory_count("B", game.map_data), 3)
+        self.assertEqual(queries.get_factory_count("A", game.world.map_data), 0)
+        self.assertEqual(queries.get_factory_count("B", game.world.map_data), 3)
         self.assertEqual(
-            queries.get_building_cost("Basic Factory", "A", game.map_data, {}, game.nation_data)["cost_manpower"],
+            queries.get_building_cost("Basic Factory", "A", game.world.map_data, {}, game.world.nation_data)["cost_manpower"],
             c.BASIC_FACTORY_BASE_COST_X,
         )
         self.assertEqual(
-            queries.get_building_cost("Basic Factory", "B", game.map_data, {}, game.nation_data)["cost_manpower"],
+            queries.get_building_cost("Basic Factory", "B", game.world.map_data, {}, game.world.nation_data)["cost_manpower"],
             c.BASIC_FACTORY_BASE_COST_X + (3 * c.BASIC_FACTORY_COST_MULTIPLIER),
         )
 
@@ -248,7 +248,7 @@ class VolunteerTests(unittest.TestCase):
             game, "A", "B", [(home, home["units"][0])])
         self.assertFalse(error)
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.ACTION,
+            game, "A", "B", volunteers.ACTION,
             "We offer a volunteer division.", parameters=details)
         game.run_turn()
         game.run_turn()
@@ -257,13 +257,13 @@ class VolunteerTests(unittest.TestCase):
                               if unit.get("owner") != "A"]
 
         self.assertEqual(volunteers.remaining_capacity(game, "A"), 1)
-        self.assertFalse(volunteers.mission_state(game.nation_data, "A", "B"))
+        self.assertFalse(volunteers.mission_state(game.world.nation_data, "A", "B"))
         self.assertTrue(volunteers.available_units(game, "A"))
 
     def test_volunteer_battle_is_donor_controlled_and_gets_an_outlook(self):
         game = self.game()
-        game.nation_data["B"]["color"] = (30, 120, 220)
-        game.nation_data["C"]["color"] = (220, 50, 50)
+        game.world.nation_data["B"]["color"] = (30, 120, 220)
+        game.world.nation_data["C"]["color"] = (220, 50, 50)
         volunteer = division("A")
         volunteer["volunteer_host"] = "B"
         enemy = division("C")
@@ -273,7 +273,7 @@ class VolunteerTests(unittest.TestCase):
         province = game.home_of("B")
         province["units"] = [volunteer, enemy]
 
-        battle = combat_rules.build_battle([province["units"]], game.nation_data)
+        battle = combat_rules.build_battle([province["units"]], game.world.nation_data)
         screen = object.__new__(Battle_Screen)
         screen.player = "A"
         screen.battle = battle
@@ -286,7 +286,7 @@ class VolunteerTests(unittest.TestCase):
         self.assertTrue(screen.is_mine(near))
         self.assertFalse(screen.is_mine(far))
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], game.nation_data, province=province)
+            [province["units"]], game.world.nation_data, province=province)
         self.assertEqual(outcome["winner_nation"], "B")
 
 

@@ -113,8 +113,7 @@ def get_pending_map(nation_data, player_name, writable=False):
 
 def get_pending(nation_data, player_name, target_name):
     """The pending entry aimed at target_name, always as a dict ({} if none)."""
-    info = get_pending_map(nation_data, player_name).get(target_name)
-    return info if isinstance(info, dict) else {}
+    return get_pending_map(nation_data, player_name).get(target_name, {})
 
 def get_pending_action(nation_data, player_name, target_name):
     pending = get_pending_map(nation_data, player_name)
@@ -437,8 +436,8 @@ def queue_forwarded_message(nation_data, player_name, target_name, source_owner,
     pending = get_pending_map(nation_data, player_name, writable=True)
     existing = pending.get(target_name)
     if existing is not None:
-        existing_turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
-        is_text = isinstance(existing, dict) and existing.get("action", "").startswith("MSG:")
+        existing_turns = existing.get("turns", 0)
+        is_text = existing.get("action", "").startswith("MSG:")
         if is_text and has_queued_forward(existing):
             return "A forwarded message is already queued for this country."
         if is_text and existing_turns > 0:

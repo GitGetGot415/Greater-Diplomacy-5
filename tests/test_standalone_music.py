@@ -12,6 +12,8 @@ from data import constants as c, queries
 from data.io import standalone_game, standalone_music
 from data.map import load_map
 from tests.test_scenario_metadata import editor
+from tests.stub_map_screen import state_owner
+from data.session_state import REALTIME, TOURNAMENT
 
 
 class StandaloneMusicTests(unittest.TestCase):
@@ -138,22 +140,22 @@ class StandaloneMusicTests(unittest.TestCase):
         game = editor()
         music = self.music()
         queries.set_standalone_export_setting(game, "music", music)
-        saved = {"standalone_export_settings": json.loads(json.dumps(game.standalone_export_settings))}
+        saved = {"standalone_export_settings": json.loads(json.dumps(game.world.standalone_export_settings))}
         restored = editor()
         load_map.restore_scenario_metadata(restored, saved, "Scenario")
-        self.assertEqual(restored.standalone_export_settings["music"], music)
-        for name in ("multiplayer_mode", "realtime_multiplayer", "is_saving", "ai_is_thinking"):
-            with self.subTest(name=name), mock.patch.object(game, name, True), self.assertRaises(ValueError):
+        self.assertEqual(restored.world.standalone_export_settings["music"], music)
+        for name, value in (("mode", TOURNAMENT), ("mode", REALTIME), ("is_saving", True), ("ai_is_thinking", True)):
+            with self.subTest(name=name, value=value), mock.patch.object(state_owner(game, name), name, value),                     self.assertRaises(ValueError):
                 queries.set_standalone_export_setting(game, "music", dict(music, starting_song=""))
-        self.assertEqual(game.standalone_export_settings["music"], music)
+        self.assertEqual(game.world.standalone_export_settings["music"], music)
 
     def test_invalid_music_does_not_replace_an_existing_export(self):
         from screens.editors import standalone_export
         game = editor()
-        game.editor_scenario_name = "Scenario"
+        game.session.editor_scenario_name = "Scenario"
         music = self.music()
         music["songs"][0]["data"] = "bad base64!"
-        game.standalone_export_settings["music"] = music
+        game.world.standalone_export_settings["music"] = music
         scenarios = self.root / "scenarios"
         (scenarios / "Scenario").mkdir(parents=True)
         destination = self.root / "existing-export"
@@ -174,7 +176,7 @@ class StandaloneMusicTests(unittest.TestCase):
         from screens.editors import standalone_export
         pygame.font.init()
         game = editor()
-        game.editor_scenario_name = "Scenario"
+        game.session.editor_scenario_name = "Scenario"
         app = SimpleNamespace(states={"MAP": game})
         screen = standalone_export.Standalone_Export_Screen()
         with mock.patch.object(queries, "playable_start_countries", return_value=["A"]):
@@ -210,6 +212,6 @@ class StandaloneMusicTests(unittest.TestCase):
                 screen.remove_music_song()
                 remove.call_args.args[4]("Second.ogg")
             self.assertEqual([song["name"] for song in screen.settings()["music"]["songs"]], ["Opening.mp3"])
-            game.multiplayer_mode = True
+            game.session.mode = TOURNAMENT
             screen.import_music_paths([str(second)])
             self.assertEqual([song["name"] for song in screen.settings()["music"]["songs"]], ["Opening.mp3"])

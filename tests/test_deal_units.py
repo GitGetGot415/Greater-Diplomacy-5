@@ -28,12 +28,12 @@ class TradedLandTests(unittest.TestCase):
     def setUp(self):
         self.game = StubMapScreen(["A", "B"])
         self.sold = self.game.add_province("B", cores=["B"])
-        self.home = next(p for p in self.game.map_data.values()
+        self.home = next(p for p in self.game.world.map_data.values()
                          if p["owner"] == "B" and p is not self.sold)
         # A borders the province it is buying. Land has to be within reach of
         # whoever receives it (map_logic/diplomacy/reach.py), so a buyer on the
         # far side of the world is not a buyer at all.
-        self.buyer_home = next(p for p in self.game.map_data.values()
+        self.buyer_home = next(p for p in self.game.world.map_data.values()
                                if p["owner"] == "A")
         self.sold["neighbors"] = [self.home["id"], self.buyer_home["id"]]
         self.home["neighbors"] = [self.sold["id"]]
@@ -76,8 +76,8 @@ class TradedLandTests(unittest.TestCase):
 
     def test_a_seller_with_nowhere_to_go_keeps_its_army_in_place(self):
         """Rather than deleting it. This is its last province."""
-        self.game.map_data.pop(str(self.home["id"]))
-        self.game.id_to_province.pop(self.home["id"])
+        self.game.world.map_data.pop(str(self.home["id"]))
+        self.game.world.id_to_province.pop(self.home["id"])
         self.trade()
         self.assertEqual([u["owner"] for u in self.sold["units"]], ["B", "B", "B"])
 
@@ -89,9 +89,9 @@ class CededLandTests(unittest.TestCase):
         self.game = StubMapScreen(["A", "B"])
         self.game.set_war("A", "B")
         self.ceded = self.game.add_province("B", cores=["B"])
-        self.home = next(p for p in self.game.map_data.values()
+        self.home = next(p for p in self.game.world.map_data.values()
                          if p["owner"] == "B" and p is not self.ceded)
-        winner_home = next(p for p in self.game.map_data.values()
+        winner_home = next(p for p in self.game.world.map_data.values()
                            if p["owner"] == "A")
         self.ceded["neighbors"] = [self.home["id"], winner_home["id"]]
         self.home["neighbors"] = [self.ceded["id"]]

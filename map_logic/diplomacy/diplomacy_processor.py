@@ -34,18 +34,19 @@ from map_logic.territory import ownership
 from map_logic.diplomacy.puppet_actions import finalize_create_puppet
 
 
-def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
+def toggle_diplomacy_action(context, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
     """Queues (or cancels) an OUTGOING proposal aimed at target_name.
 
     Answers to their proposals are a separate channel entirely -- see
     toggle_diplomatic_response -- so the two can never overwrite each other.
     """
+    nation_data = context.world.nation_data
     pending = nation_data[player_name].setdefault("pending_diplomacy", {})
     current_action = get_pending_action(nation_data, player_name, target_name)
 
     if current_action == action_type:
         info = pending.get(target_name, {})
-        if isinstance(info, dict) and info.get("turns", 0) > 0:
+        if info.get("turns", 0) > 0:
             return "Cannot undo! The diplomat has already crossed their borders."
 
         # Nothing is escrowed until an offer is actually sent, so a cancelled
@@ -60,18 +61,18 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
         info = pending.get(target_name, {})
         is_unilateral = current_action in c.UNILATERAL_ACTIONS
 
-        if isinstance(info, dict) and info.get("action", "").startswith("MSG:") and info.get("turns", 0) == 0:
+        if info.get("action", "").startswith("MSG:") and info.get("turns", 0) == 0:
             if not custom_msg:
                 # Inherit the text from the draft if the user didn't provide a new one
                 custom_msg = info.get("action")[4:]
-        elif is_unilateral and isinstance(info, dict) and info.get("turns", 0) > 0:
+        elif is_unilateral and info.get("turns", 0) > 0:
             pass # Safe to overwrite an executed unilateral action
         else:
             # Prevents declaring war while an alliance request is pending, etc.
             return "A diplomatic action is already pending with this nation!"
 
     # Cancelling an unsent request above needs no leadership check.
-    available = availability(nation_data, player_name, target_name, action_type)
+    available = availability(context, player_name, target_name, action_type)
     if not available.allowed:
         return available.reason
     leadership_error = queries.faction_request_leadership_error(
@@ -85,7 +86,7 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
             return "Cannot do this while already in a faction!"
 
         for other_target, info in pending.items():
-            act = info.get("action", "") if isinstance(info, dict) else info
+            act = info.get("action", "")
             if act in c.FACTION_REQUEST_ACTIONS and other_target != target_name:
                 return "You already have a pending faction request!"
     # ------------------------------------------------
@@ -231,7 +232,7 @@ def _flush_queued_ai_actions(context):
                     continue
 
                 # Inject it as a fresh action for this turn, bypassing the LLM
-                if target not in pending or (isinstance(pending[target], dict) and pending[target].get("turns", 0) == 0):
+                if target not in pending or pending[target].get("turns", 0) == 0:
                     if action_type == "JOIN_FACTION_REQ":
                         msg = "We formally request to join your faction."
                     elif action_type == "CREATE_FACTION":
@@ -284,7 +285,7 @@ def _pending_clash_pairs(nation_data):
     for sender, data in nation_data.items():
         for target, info in data.get("pending_diplomacy", {}).items():
             if (target == sender or target not in positions
-                    or not isinstance(info, dict) or info.get("turns", 0) != 0):
+                    or info.get("turns", 0) != 0):
                 continue
             pairs.add(tuple(sorted((positions[sender], positions[target]))))
     nations = list(nation_data)
@@ -307,13 +308,13 @@ def _resolve_simultaneous_clashes(context):
         # A declaration of war also voids whatever answer the other side had
         # queued for us. Responses live outside pending_diplomacy now, so they
         # need checking even when only one side has a pending action.
-        if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and a_info.get("action") == "WAR_DECLARATION":
+        if a_info is not None and a_info.get("turns", 0) == 0 and a_info.get("action") == "WAR_DECLARATION":
             _war_cancels_response(context, nation_a, nation_b)
-        if isinstance(b_info, dict) and b_info.get("turns", 0) == 0 and b_info.get("action") == "WAR_DECLARATION":
+        if b_info is not None and b_info.get("turns", 0) == 0 and b_info.get("action") == "WAR_DECLARATION":
             _war_cancels_response(context, nation_b, nation_a)
 
-        if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and \
-           isinstance(b_info, dict) and b_info.get("turns", 0) == 0:
+        if a_info is not None and a_info.get("turns", 0) == 0 and \
+           b_info is not None and b_info.get("turns", 0) == 0:
 
             a_action = a_info.get("action")
             b_action = b_info.get("action")
@@ -491,8 +492,8 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     ai_results = {}
 
     if not ai_tasks:
-        session_state.responsive_tasks_total = 0
-        session_state.responsive_tasks_completed = 0
+        session_state.progress["responsive_tasks"].total = 0
+        session_state.progress["responsive_tasks"].completed = 0
         return ai_results
 
     # Import this to safely check the mode
@@ -502,7 +503,7 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     mode = ai_handler.get_ai_mode()
     immersion = ai_handler.get_ai_immersion_level()
 
-    session_state.responsive_tasks_completed = 0
+    session_state.progress["responsive_tasks"].completed = 0
     my_turn_id = ai_handler.CURRENT_TURN_ID
 
     # Diplomacy resolves after the AI phases have torn down their snapshot, so
@@ -544,8 +545,7 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     # level the game recommends. The queue below is now the same list the bar is
     # sized from, so there is nothing left to keep in step.
     count = ai_llm_runner.make_progress_counter(
-        context, "Processing Global Responses",
-        "responsive_tasks_completed", "responsive_tasks_total")
+        context, "Processing Global Responses", "responsive_tasks")
 
     # Filtered once, up front. The three paths used to disagree about an
     # action that is neither a known proposal nor a custom message: two
@@ -590,7 +590,7 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
 
     # Sized from the queue itself, so the bar counts the work the player is
     # actually waiting on rather than a separately-maintained guess at it.
-    session_state.responsive_tasks_total = len(asking)
+    session_state.progress["responsive_tasks"].total = len(asking)
     session_state.loading_status_text = f"Processing Global Responses (0/{len(asking)})..."
 
     for task in [t for t in answerable if not _needs_model(t)]:
@@ -885,7 +885,7 @@ def _hold_offer_escrow(context, sender, target, info):
 def _refund_offer_escrow(nation_data, sender, info):
     """Gives back an offer's escrow. Safe to call on an offer that never held any."""
 
-    held = info.pop("escrow", None) if isinstance(info, dict) else None
+    held = info.pop("escrow", None)
     if held:
         deal_effects.release_escrow(nation_data, held, sender)
 
@@ -927,8 +927,6 @@ def _resolve_queued_response(context, country_name, sender, resp):
 
     # The terms being agreed to belong to whoever made the offer.
     their_request = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {}).get(country_name, {})
-    if not isinstance(their_request, dict):
-        their_request = {}
     if not lifecycle.response_matches_request(resp, their_request):
         lifecycle.remove_response(responses, sender)
         return None
@@ -970,7 +968,7 @@ def _resolve_queued_response(context, country_name, sender, resp):
     # Their request has now been answered either way.
     their_pending = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {})
     their_entry = their_pending.get(country_name)
-    if isinstance(their_entry, dict) and their_entry.get("action") == orig_action:
+    if their_entry is not None and their_entry.get("action") == orig_action:
         lifecycle.remove_request(their_pending, country_name, request_id=their_entry.get("request_id"))
 
     # A treaty can eliminate its proposer (for example, by ceding its
@@ -1268,7 +1266,7 @@ def _leadership_contest_winners(context):
         if not isinstance(data, dict):
             continue
         for info in data.get("pending_diplomacy", {}).values():
-            if not isinstance(info, dict) or info.get("action") != "CLAIM_FACTION_LEADERSHIP":
+            if info.get("action") != "CLAIM_FACTION_LEADERSHIP":
                 continue
             timer = info.get("timer", 0)
             if (0 < timer <= 1
@@ -1690,7 +1688,7 @@ def _apply_delayed_responses(context, delayed_responses):
     world_state = world_for(context)
     for sender, receiver, act, tns, msg in delayed_responses:
         pd = world_state.nation_data.get(sender, {}).setdefault("pending_diplomacy", {})
-        if receiver not in pd or (isinstance(pd[receiver], dict) and pd[receiver].get("turns", 0) == 0):
+        if receiver not in pd or pd[receiver].get("turns", 0) == 0:
             lifecycle.put_request(world_state.nation_data, sender, receiver, act, turns=tns, message=msg)
 
 

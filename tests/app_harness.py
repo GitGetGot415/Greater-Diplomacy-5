@@ -114,10 +114,10 @@ def boot_map():
 
     game_map = main.Map(load_path=SCENARIO_PATH, is_scenario=True, num_players=1)
 
-    living = sorted(queries.get_living_nations(game_map.map_data))
-    game_map.player_country = living[0]
-    game_map.active_players = [living[0]]
-    game_map.selected_province = next(p for p in game_map.map_data.values()
+    living = sorted(queries.get_living_nations(game_map.world.map_data))
+    game_map.session.player_country = living[0]
+    game_map.session.active_players = [living[0]]
+    game_map.selected_province = next(p for p in game_map.world.map_data.values()
                                       if p.get("owner") == living[0])
 
     controller.states["MAP"] = game_map
@@ -129,21 +129,7 @@ def boot_map():
 
 
 from contextlib import contextmanager, ExitStack
-from dataclasses import fields
-from data.game_state import WorldState
-from data.session_state import SessionState
-
-_WORLD_FIELDS = {item.name for item in fields(WorldState)}
-_SESSION_FIELDS = {item.name for item in fields(SessionState)}
-
-
-def state_owner(game, name):
-    """Patch the explicit owner rather than a compatibility property."""
-    if name in _WORLD_FIELDS:
-        return game.world
-    if name in _SESSION_FIELDS:
-        return game.session
-    return game
+from tests.stub_map_screen import SESSION_FIELDS, WORLD_FIELDS, state_owner
 
 
 @contextmanager
@@ -151,7 +137,7 @@ def patch_map(game, values=None, **kwargs):
     values = dict(values or {}, **kwargs)
     groups = {"world": {}, "session": {}, "presentation": {}}
     for name, value in values.items():
-        group = "world" if name in _WORLD_FIELDS else "session" if name in _SESSION_FIELDS else "presentation"
+        group = "world" if name in WORLD_FIELDS else "session" if name in SESSION_FIELDS else "presentation"
         groups[group][name] = value
     with ExitStack() as stack:
         stack.enter_context(patch.dict(game.__dict__, groups["presentation"]))

@@ -135,8 +135,8 @@ class Politics_Screen(Screen):
         # the rendering and policy helpers have one subject throughout.  A
         # foreign subject is deliberately read-only: seeing a country's
         # politics must never let an observer steer it or alter its policies.
-        self.player = country_id or map_screen.player_country
-        self.is_read_only = country_id is not None and country_id != map_screen.player_country
+        self.player = country_id or map_screen.session.player_country
+        self.is_read_only = country_id is not None and country_id != map_screen.session.player_country
         self.group = politics.CIVILIAN
         self._set_panel_rects()
         self.policy_scroll_x = 0
@@ -145,9 +145,9 @@ class Politics_Screen(Screen):
         self.policy_scroll_track_rect = None
         self.policy_scroll_handle_rect = None
 
-        self.is_valid_player = (self.player in self.map_screen.nation_data
+        self.is_valid_player = (self.player in self.map_screen.world.nation_data
                                 and self.player not in c.UNPLAYABLE_NATIONS + ["Editor"])
-        self._title = (f"{queries.get_country_display_name(self.player, map_screen.nation_data)} Politics"
+        self._title = (f"{queries.get_country_display_name(self.player, map_screen.world.nation_data)} Politics"
                        if self.is_read_only else "Politics")
 
         self.refresh_ui()
@@ -173,17 +173,17 @@ class Politics_Screen(Screen):
 
     @property
     def value(self):
-        return politics.value(self.map_screen.nation_data, self.player)
+        return politics.value(self.map_screen.world.nation_data, self.player)
 
     @property
     def drift(self):
-        return politics.drift(self.map_screen.nation_data, self.player)
+        return politics.drift(self.map_screen.world.nation_data, self.player)
 
     @property
     def can_edit(self):
         """Whether this screen may change the player's political direction."""
-        if (self.is_read_only or not self.is_valid_player or self.player != self.map_screen.player_country
-                or self.map_screen.tactical_mode):
+        if (self.is_read_only or not self.is_valid_player or self.player != self.map_screen.session.player_country
+                or self.map_screen.session.tactical_mode):
             return False
         return queries.realtime_turn_open(self.map_screen)
 
@@ -201,7 +201,7 @@ class Politics_Screen(Screen):
     def set_drift(self, direction, axis=politics.POLITICAL):
         if not self.can_edit:
             return
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         if not politics.can_shift(politics.axis_value(nation_data, self.player, axis), direction):
             self.map_screen.show_feedback("Already as far as this country can go.")
             return
@@ -227,9 +227,9 @@ class Politics_Screen(Screen):
         # editor), so an editable country's panel reconciles them before it is
         # drawn.  Inspection of a foreign country is strictly read-only.
         if self.can_edit:
-            politics.reconcile_policy(self.map_screen.nation_data, self.player)
+            politics.reconcile_policy(self.map_screen.world.nation_data, self.player)
 
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         self._positions = {axis["id"]: politics.axis_value(nation_data, self.player, axis["id"])
                            for axis in politics.AXES}
         # Directions are private, so a foreign country shows only where it is.
@@ -316,17 +316,17 @@ class Politics_Screen(Screen):
         return "Activate", "blue", not self.can_edit
 
     def toggle_policy(self, policy_id):
-        before = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)
+        before = politics.policy_state(self.map_screen.world.nation_data, self.player, policy_id)
         definition = politics.policy(policy_id)
         if not definition or not self.can_edit:
             return
-        stat_policies = politics.unit_stat_policies(self.map_screen.nation_data, self.player)
-        if not politics.activate_or_cancel_policy(self.map_screen.nation_data, self.player, policy_id):
+        stat_policies = politics.unit_stat_policies(self.map_screen.world.nation_data, self.player)
+        if not politics.activate_or_cancel_policy(self.map_screen.world.nation_data, self.player, policy_id):
             self.map_screen.show_feedback(politics.requirement_text(policy_id))
             return
 
         queries.refresh_policy_unit_stats(self.map_screen, self.player, stat_policies)
-        after = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)
+        after = politics.policy_state(self.map_screen.world.nation_data, self.player, policy_id)
         if before and before["status"] == politics.POLICY_CANCELLING:
             message = "%s cancellation undone." % definition["name"]
         elif before and before["status"] == politics.POLICY_ACTIVATING and after is None:
@@ -369,10 +369,10 @@ class Politics_Screen(Screen):
         if self.is_read_only:
             draw_line("Read-only", TACTICAL_NOTICE_Y, c.UI_TEXT_DIM, center_x=COMPASS_CENTER_X)
             return details
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             draw_line("Directions are locked in Tactical Mode.", TACTICAL_NOTICE_Y, c.UI_TEXT_DIM,
                       center_x=COMPASS_CENTER_X)
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         damage = politics.damage_multiplier(nation_data, self.player)
         research = politics.research_multiplier(nation_data, self.player)
         if (damage != politics.axis_effect(nation_data, self.player, "damage")

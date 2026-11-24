@@ -147,7 +147,7 @@ def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
 
 def _accept_faction_invite(host, action, proposer, accepter, params, escrow):
     # The accepter is being invited into the proposer's faction.
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     if not queries.can_choose_own_faction(accepter, nation_data):
         return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
     if queries.get_country_faction(accepter, nation_data):
@@ -155,13 +155,13 @@ def _accept_faction_invite(host, action, proposer, accepter, params, escrow):
     leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
     if leadership_error:
         return TreatyOutcome("blocked", blocked=leadership_error)
-    finalize_faction_join(host.map_data, nation_data, proposer, accepter)
+    finalize_faction_join(host.world.map_data, nation_data, proposer, accepter)
     return _APPLIED
 
 
 def _accept_join_request(host, action, proposer, accepter, params, escrow):
     # The proposer is asking to join the accepter's faction.
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     if not queries.can_choose_own_faction(proposer, nation_data):
         return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
     if queries.get_country_faction(proposer, nation_data):
@@ -169,23 +169,23 @@ def _accept_join_request(host, action, proposer, accepter, params, escrow):
     leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
     if leadership_error:
         return TreatyOutcome("blocked", blocked=leadership_error)
-    finalize_faction_join(host.map_data, nation_data, accepter, proposer)
+    finalize_faction_join(host.world.map_data, nation_data, accepter, proposer)
     return _APPLIED
 
 
 def _accept_create_faction(host, action, proposer, accepter, params, escrow):
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     if queries.get_country_faction(accepter, nation_data) or queries.get_country_faction(proposer, nation_data):
         return _blocked("CREATE_FACTION_CONFLICT")
-    finalize_create_faction(host.map_data, nation_data, proposer)
-    finalize_faction_join(host.map_data, nation_data, proposer, accepter)
+    finalize_create_faction(host.world.map_data, nation_data, proposer)
+    finalize_faction_join(host.world.map_data, nation_data, proposer, accepter)
     log_global_event(nation_data,
                      f"{proposer} and {accepter} have formed a new global faction!")
     return _APPLIED
 
 
 def _accept_peace(host, action, proposer, accepter, params, escrow, *, chosen_deal=None):
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     # A puppet's wars are its master's business. This is the one place all
     # thirteen paths that can settle a war converge, so the backstop lives
     # here even though the friendlier guards upstream catch it first.
@@ -219,9 +219,9 @@ def _accept_trade(host, action, proposer, accepter, params, escrow):
     # scripted acceptances or offers whose countries went to war while waiting.
     # Return the proposer's payment since the caller has already taken escrow.
     if (accepter not in session_for(host).active_players
-            and queries.are_at_war(proposer, accepter, host.nation_data)):
+            and queries.are_at_war(proposer, accepter, host.world.nation_data)):
         if escrow:
-            deal_effects.release_escrow(host.nation_data, escrow, proposer)
+            deal_effects.release_escrow(host.world.nation_data, escrow, proposer)
         return _blocked("TRADE_AT_WAR")
     agreement = deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_TRADE)
     deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
@@ -229,7 +229,7 @@ def _accept_trade(host, action, proposer, accepter, params, escrow):
 
 
 def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     # The backstop for war_calls, at the point every path converges -- the
     # same place the puppet-peace rule is enforced, and for the same reason:
     # an offer sits in the inbox for turns, and the wars it was about can
@@ -239,25 +239,25 @@ def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
     reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
     if reason:
         return TreatyOutcome("blocked", blocked=reason)
-    join_faction_wars(host.map_data, nation_data, accepter, proposer)
+    join_faction_wars(host.world.map_data, nation_data, accepter, proposer)
     log_global_event(nation_data,
                      f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
     return _APPLIED
 
 
 def _accept_join_wars(host, action, proposer, accepter, params, escrow):
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
     if reason:
         return TreatyOutcome("blocked", blocked=reason)
-    join_faction_wars(host.map_data, nation_data, proposer, accepter)
+    join_faction_wars(host.world.map_data, nation_data, proposer, accepter)
     log_global_event(nation_data,
                      f"ESCALATION: {proposer} has joined the wars of {accepter}!")
     return _APPLIED
 
 
 def _accept_military_access(host, action, proposer, accepter, params, escrow):
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     # The accepter grants the proposer passage through their territory.
     # Deliberately one-way: the proposer gets no say over the reverse.
     if proposer == accepter or queries.are_at_war(proposer, accepter, nation_data):
@@ -275,7 +275,7 @@ def _accept_military_access(host, action, proposer, accepter, params, escrow):
 
 
 def _accept_military_attache(host, action, proposer, accepter, params, escrow):
-    nation_data = host.nation_data
+    nation_data = host.world.nation_data
     sent, reason = military_attaches.send(proposer, accepter, nation_data)
     if not sent:
         return TreatyOutcome("blocked", blocked=reason)
@@ -317,14 +317,14 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     forbidden = global_rules.forbidden_reason(host, proposer, accepter, action, choices=(choice,))
     if forbidden:
         if escrow:
-            deal_effects.release_escrow(host.nation_data, escrow, proposer)
+            deal_effects.release_escrow(host.world.nation_data, escrow, proposer)
         return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
     if chosen_deal is not None:
         outcome = effect(host, action, proposer, accepter, params, escrow, chosen_deal=chosen_deal)
     else:
         outcome = effect(host, action, proposer, accepter, params, escrow)
     if escrow and action in peace_scope.PEACE_ACTIONS and outcome.status == "blocked":
-        deal_effects.release_escrow(host.nation_data, escrow, proposer)
+        deal_effects.release_escrow(host.world.nation_data, escrow, proposer)
     if outcome.status == "applied" and action not in _ACCEPTANCES_WITH_OWN_EVENTS:
-        log_global_event(host.nation_data, f"Diplomatic agreement reached between {accepter} and {proposer}.")
+        log_global_event(host.world.nation_data, f"Diplomatic agreement reached between {accepter} and {proposer}.")
     return outcome

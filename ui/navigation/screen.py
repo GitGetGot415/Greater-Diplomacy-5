@@ -762,7 +762,7 @@ class Screen:
         and each one used to spell them out. They now use the same diplomacy owner.
         """
         msg = diplomacy_processor.toggle_diplomacy_action(
-            self.map_screen.nation_data, self.map_screen.player_country,
+            self.map_screen.world.nation_data, self.map_screen.session.player_country,
             target, action, params)
         self.map_screen.show_feedback(msg)
         self.refresh_ui()
@@ -987,7 +987,7 @@ class MapOverlayScreen(Screen):
     def __init__(self, map_screen, panel_rect=None):
         super().__init__()
         self.map_screen = map_screen
-        self.player = map_screen.player_country
+        self.player = map_screen.session.player_country
         self.panel_rect = panel_rect
         if panel_rect is not None and self.CENTER_PANEL:
             self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
@@ -1179,7 +1179,7 @@ class NationListOverlayScreen(EditorOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, *self.LIST_PANEL_SIZE))
-        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
+        self.active_countries = sorted(queries.get_living_nations(map_screen.world.map_data))
         self.refresh_ui()
 
     def list_header_elements(self):

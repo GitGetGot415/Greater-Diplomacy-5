@@ -6,12 +6,16 @@ from map_logic.system32 import turn_processor
 from ui.panels import diplomatic_popups
 from map_logic.ai import ai_handler
 from data import queries
+from data.session_state import LOCAL_PLAY
+from map_logic.actions.player_actions import PlayerActions, PlayerActionError, collect_map_commands
 import data.constants as c
 
 import traceback
 
 def advance_time(context):
     session_state = session_for(context)
+    if not session_state.viewing_ai_moves and not local_orders_are_valid(context):
+        return
     diplomatic_popups.clear_popups(context)
 
     session_state.turn_start_time = pygame.time.get_ticks()
@@ -47,6 +51,26 @@ def advance_time(context):
     else:
         trigger_ai_thread(context)
         
+def local_orders_are_valid(context):
+    """Check the planning player's orders with the validator that multiplayer submissions use.
+
+    Local play applies orders directly, so this only reports a draft that a host or
+    server would refuse. The turn does not end until the player corrects it.
+    """
+    session_state = session_for(context)
+    country = session_state.player_country
+    # Unplayable countries never hold a seat, so no player submits their orders.
+    if (session_state.mode != LOCAL_PLAY or session_state.tactical_mode
+            or country in c.UNPLAYABLE_NATIONS or country not in world_for(context).nation_data):
+        return True
+    try:
+        PlayerActions(context).validate_draft(country, collect_map_commands(context, country))
+    except PlayerActionError as error:
+        context.show_feedback(f"Order update rejected: {error}")
+        return False
+    return True
+
+
 def trigger_ai_thread(context):
     """Helper to lock the UI and start the background thread."""
     session_state = session_for(context)
@@ -64,27 +88,27 @@ def trigger_ai_thread(context):
     ai_count = len(queries.get_active_ai_nations(context))
     if ai_disabled:
         ai_count = 0
-    session_state.proactive_tasks_total = ai_count
-    session_state.proactive_tasks_completed = 0
-    session_state.movement_tasks_total = ai_count
-    session_state.movement_tasks_completed = 0
+    session_state.progress["proactive_tasks"].total = ai_count
+    session_state.progress["proactive_tasks"].completed = 0
+    session_state.progress["movement_tasks"].total = ai_count
+    session_state.progress["movement_tasks"].completed = 0
     
     # Unknown model workloads stay pending; no AI or no model means N/A.
     model_pending = -1 if ai_count and ai_handler.get_ai_mode() != "OFF" else 0
-    session_state.proactive_llm_tasks_total = model_pending
-    session_state.proactive_llm_tasks_completed = 0
+    session_state.progress["proactive_llm_tasks"].total = model_pending
+    session_state.progress["proactive_llm_tasks"].completed = 0
     session_state.proactive_llm_tasks = []
     
-    session_state.responsive_tasks_total = model_pending
-    session_state.responsive_tasks_completed = 0
+    session_state.progress["responsive_tasks"].total = model_pending
+    session_state.progress["responsive_tasks"].completed = 0
 
     # Clear last turn's work. Model phases with no work remain visible as N/A.
-    session_state.letters_total = model_pending
-    session_state.letters_completed = 0
+    session_state.progress["letters"].total = model_pending
+    session_state.progress["letters"].completed = 0
     
     # Map Refresh always executes exactly 7 background render passes now
-    session_state.refresh_tasks_total = 7
-    session_state.refresh_tasks_completed = 0
+    session_state.progress["refresh_tasks"].total = 7
+    session_state.progress["refresh_tasks"].completed = 0
 
     # Force the loading screen to actually appear before run_background either
     # spawns a thread (desktop) or, on web, blocks the frame running synchronously.
@@ -113,8 +137,8 @@ async def _resolve_turn_and_refresh(context):
         await turn_processor.resolve_turn_logic(context)
 
         # --- MULTI-TURN OPTIMIZATION ---
-        is_multi = session_state.multi_turns_total > 0
-        is_last_multi = not is_multi or (session_state.multi_turns_completed >= session_state.multi_turns_total - 1)
+        is_multi = session_state.progress["multi_turns"].total > 0
+        is_last_multi = not is_multi or (session_state.progress["multi_turns"].completed >= session_state.progress["multi_turns"].total - 1)
 
         # 2. Define Refresh Tasks
         # Presentation is invalidated once below, before the first layer rebuild.
@@ -128,8 +152,8 @@ async def _resolve_turn_and_refresh(context):
             ("Updating Map Labels...", context.update_country_centers)
         ]
 
-        session_state.refresh_tasks_total = len(refresh_steps)
-        session_state.refresh_tasks_completed = 0
+        session_state.progress["refresh_tasks"].total = len(refresh_steps)
+        session_state.progress["refresh_tasks"].completed = 0
         if not is_multi or is_last_multi:
             context.invalidate_map_presentation_cache()
 
@@ -139,11 +163,11 @@ async def _resolve_turn_and_refresh(context):
 
             if is_multi and not is_last_multi:
                 # Skip heavy Numpy visual rebuilds until the final turn
-                session_state.refresh_tasks_completed += 1
+                session_state.progress["refresh_tasks"].completed += 1
                 continue
 
             func() # Execute the refresh
-            session_state.refresh_tasks_completed += 1
+            session_state.progress["refresh_tasks"].completed += 1
             await asyncio.sleep(0)
 
         session_state.viewing_ai_moves = False

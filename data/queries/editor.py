@@ -75,38 +75,38 @@ def _apply_map_state(context, state):
 def save_editor_state(context):
     """Snapshots the current map data for the undo feature, clearing redo history."""
     # Any new physical edit destroys the active redo-timeline
-    context.editor_redo_history = []
+    context.session.editor_redo_history = []
         
-    context.editor_history.append(_get_current_map_state(context))
+    context.session.editor_history.append(_get_current_map_state(context))
     
-    if len(context.editor_history) > MAX_EDITOR_HISTORY:
-        context.editor_history.pop(0)
+    if len(context.session.editor_history) > MAX_EDITOR_HISTORY:
+        context.session.editor_history.pop(0)
 
 
 def restore_editor_state(context):
     """Restores the last map state from the editor history (Undo)."""
-    if not context.editor_history:
+    if not context.session.editor_history:
         context.show_feedback("Nothing to undo!")
         return
         
     # Save the current state to the redo stack before replacing it
-    context.editor_redo_history.append(_get_current_map_state(context))
+    context.session.editor_redo_history.append(_get_current_map_state(context))
         
-    last_state = context.editor_history.pop()
+    last_state = context.session.editor_history.pop()
     _apply_map_state(context, last_state)
     context.show_feedback("Undo Successful")
 
 
 def redo_editor_state(context):
     """Restores the next map state from the redo history (Redo)."""
-    if not context.editor_redo_history:
+    if not context.session.editor_redo_history:
         context.show_feedback("Nothing to redo!")
         return
         
     # Save the current state to the undo stack before replacing it
-    context.editor_history.append(_get_current_map_state(context))
+    context.session.editor_history.append(_get_current_map_state(context))
         
-    next_state = context.editor_redo_history.pop()
+    next_state = context.session.editor_redo_history.pop()
     _apply_map_state(context, next_state)
     context.show_feedback("Redo Successful")
 
@@ -115,7 +115,7 @@ def can_bulk_edit_map(context):
     """Allow bulk setup changes only in an idle local map editor."""
     session = session_for(context)
     return bool(session.is_editor and not session.tactical_mode
-                and not session.multiplayer_mode and not session.realtime_multiplayer
+                and not session.is_tournament and not session.is_realtime
                 and not session.ai_is_thinking and not session.viewing_ai_moves
                 and not session.is_refreshing and not session.is_saving)
 

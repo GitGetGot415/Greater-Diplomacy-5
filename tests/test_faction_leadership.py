@@ -38,19 +38,19 @@ class Bloc(unittest.TestCase):
         self.weigh("Loyal", 1000)
 
     def weigh(self, nation, materials):
-        self.game.nation_data[nation]["materials"] = materials
-        self.game.nation_data[nation]["fuel"] = 0
-        self.game.nation_data[nation]["manpower"] = 0
+        self.game.world.nation_data[nation]["materials"] = materials
+        self.game.world.nation_data[nation]["fuel"] = 0
+        self.game.world.nation_data[nation]["manpower"] = 0
 
     def tick(self, times=1):
         for _ in range(times):
             faction_leadership.tick(self.game)
 
     def held(self, nation):
-        return faction_leadership.turns_held(nation, self.game.nation_data)
+        return faction_leadership.turns_held(nation, self.game.world.nation_data)
 
     def leader(self):
-        return queries.get_faction_leader("The Pact", self.game.nation_data)
+        return queries.get_faction_leader("The Pact", self.game.world.nation_data)
 
 
 class PressureTests(Bloc):
@@ -91,7 +91,7 @@ class PressureTests(Bloc):
         """Its alignment is its master's. Leading a faction out from under the
         overlord that put it in one is the same broken state as joining one
         alone, and can_choose_own_faction is the rule that says so."""
-        self.game.nation_data["Rival"]["master"] = "Outsider"
+        self.game.world.nation_data["Rival"]["master"] = "Outsider"
         self.weigh("Rival", 9999)
         self.tick(10)
         self.assertEqual(self.held("Rival"), 0)
@@ -105,7 +105,7 @@ class PressureTests(Bloc):
 
         self.weigh("Rival", 2000)
         self.tick(4)
-        faction_actions.leave_faction(self.game.nation_data, "Rival")
+        faction_actions.leave_faction(self.game.world.nation_data, "Rival")
         self.assertEqual(self.held("Rival"), 0)
 
     def test_and_when_the_faction_is_disbanded_under_them(self):
@@ -113,7 +113,7 @@ class PressureTests(Bloc):
 
         self.weigh("Rival", 2000)
         self.tick(4)
-        faction_actions.finalize_disband_faction(self.game.nation_data, "Leader")
+        faction_actions.finalize_disband_faction(self.game.world.nation_data, "Leader")
         self.assertEqual(self.held("Rival"), 0)
 
 
@@ -145,11 +145,11 @@ class TransferTests(Bloc):
         super().setUp()
         self.weigh("Rival", 2000)
         self.tick(c.FACTION_CHALLENGE_TURNS)
-        faction_leadership.transfer(self.game.nation_data, "Leader", "Rival")
+        faction_leadership.transfer(self.game.world.nation_data, "Leader", "Rival")
 
     def test_exactly_one_nation_leads_afterwards(self):
         flags = [n for n in ("Leader", "Rival", "Loyal")
-                 if self.game.nation_data[n]["is_faction_leader"]]
+                 if self.game.world.nation_data[n]["is_faction_leader"]]
         self.assertEqual(flags, ["Rival"])
 
     def test_the_faction_itself_is_untouched(self):
@@ -157,7 +157,7 @@ class TransferTests(Bloc):
         not by whoever leads it, so a handover moves two booleans and nothing
         else has to be rewritten."""
         self.assertEqual(sorted(queries.get_faction_members("The Pact",
-                                                            self.game.nation_data)),
+                                                            self.game.world.nation_data)),
                          ["Leader", "Loyal", "Rival"])
 
     def test_every_member_starts_counting_again(self):
@@ -167,10 +167,10 @@ class TransferTests(Bloc):
         self.assertEqual(self.held("Loyal"), 0)
 
     def test_the_deposed_leader_resents_it_and_nobody_else_does(self):
-        mods = self.game.nation_data["Leader"].get("temp_modifiers", {})
+        mods = self.game.world.nation_data["Leader"].get("temp_modifiers", {})
         self.assertIn("deposed", mods.get("Rival", {}))
         self.assertNotIn("deposed",
-                         self.game.nation_data["Loyal"].get("temp_modifiers", {})
+                         self.game.world.nation_data["Loyal"].get("temp_modifiers", {})
                          .get("Rival", {}))
 
     def test_the_old_leader_can_now_start_a_claim_of_its_own(self):
@@ -212,7 +212,7 @@ class TurnTests(Bloc):
         strongest = max(("Rival", "Loyal"),
                         key=lambda nation: faction_leadership.power_of(self.game, nation))
         self.assertEqual(self.leader(), strongest)
-        self.assertEqual(faction_leadership.turns_held("Rival", self.game.nation_data), 0)
+        self.assertEqual(faction_leadership.turns_held("Rival", self.game.world.nation_data), 0)
 
     def test_equal_power_simultaneous_claims_choose_randomly_among_the_strongest(self):
         from random import choice as real_choice
@@ -271,7 +271,7 @@ class AiClaimTests(Bloc):
         from map_logic.ai import ai_candidates, ai_diplomacy
 
         settings = {"ai_personality_overrides": {"Rival": {"ambition": ambition}}}
-        self.game.nation_data["Rival"].pop("personality", None)
+        self.game.world.nation_data["Rival"].pop("personality", None)
         bag = ai_candidates.Collector("Rival", {})
         ai_diplomacy._claim_faction_leadership(bag, self.game, "Rival", None, settings)
         return [candidate.action for candidate in bag.ranked()]
@@ -302,7 +302,7 @@ class ContenderTests(Bloc):
     """
 
     def contenders(self):
-        return faction_leadership.contenders(self.game.nation_data, "The Pact")
+        return faction_leadership.contenders(self.game.world.nation_data, "The Pact")
 
     def test_a_quiet_faction_has_nobody_to_report(self):
         self.tick(20)
@@ -341,7 +341,7 @@ class ContenderTests(Bloc):
         self.assertEqual(self.contenders(), [])
 
     def test_a_nation_in_no_faction_asks_about_nothing(self):
-        self.assertEqual(faction_leadership.contenders(self.game.nation_data, ""), [])
+        self.assertEqual(faction_leadership.contenders(self.game.world.nation_data, ""), [])
 
 
 class SuccessionTests(Bloc):
@@ -358,7 +358,7 @@ class SuccessionTests(Bloc):
     def orphan(self):
         """Take the leader off the map the way a conquest does."""
         from map_logic.territory import ownership 
-        for prov in list(self.game.map_data.values()):
+        for prov in list(self.game.world.map_data.values()):
             if prov.get("owner") == "Leader":
                 ownership.conquer_province(self.game, prov, "Outsider")
 
@@ -374,13 +374,13 @@ class SuccessionTests(Bloc):
 
     def test_the_conquered_leader_remains_in_the_faction(self):
         self.orphan()
-        self.assertEqual(self.game.nation_data["Leader"]["faction"], "The Pact")
-        self.assertTrue(self.game.nation_data["Leader"]["is_faction_leader"])
+        self.assertEqual(self.game.world.nation_data["Leader"]["faction"], "The Pact")
+        self.assertTrue(self.game.world.nation_data["Leader"]["is_faction_leader"])
 
     def test_exactly_one_nation_leads_afterwards(self):
         self.orphan()
         leaders = [n for n in ("Leader", "Rival", "Loyal")
-                   if self.game.nation_data[n].get("is_faction_leader")]
+                   if self.game.world.nation_data[n].get("is_faction_leader")]
         self.assertEqual(len(leaders), 1)
 
     def test_existing_challenges_are_not_reset_by_exile(self):
@@ -393,7 +393,7 @@ class SuccessionTests(Bloc):
     def test_a_save_already_left_leaderless_heals_on_the_next_turn(self):
         """tick used to name this state in a comment and step over it."""
         for member in ("Leader", "Rival", "Loyal"):
-            self.game.nation_data[member]["is_faction_leader"] = False
+            self.game.world.nation_data[member]["is_faction_leader"] = False
         self.weigh("Loyal", 5000)
 
         self.tick(1)
@@ -402,14 +402,14 @@ class SuccessionTests(Bloc):
 
     def test_a_faction_with_no_territory_is_disbanded(self):
         from map_logic.territory import ownership 
-        for prov in list(self.game.map_data.values()):
+        for prov in list(self.game.world.map_data.values()):
             if prov.get("owner") in ("Leader", "Rival", "Loyal"):
                 ownership.conquer_province(self.game, prov, "Outsider")
 
         for member in ("Leader", "Rival", "Loyal"):
-            self.assertEqual(self.game.nation_data[member]["faction"], "")
+            self.assertEqual(self.game.world.nation_data[member]["faction"], "")
             self.assertNotIn(member, queries.get_politically_active_nations(
-                self.game.map_data, self.game.nation_data))
+                self.game.world.map_data, self.game.world.nation_data))
 
 
 class StrengthTests(unittest.TestCase):

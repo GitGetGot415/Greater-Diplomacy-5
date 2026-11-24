@@ -257,10 +257,10 @@ class Edit_Country_Screen(Screen):
         self.map_screen = map_ref
         
         # Uses the explicit editing_country flag set by the map screen
-        self.editing_country = getattr(self.map_screen, "editing_country", self.map_screen.player_country)
+        self.editing_country = getattr(self.map_screen, "editing_country", self.map_screen.session.player_country)
         
         # Load existing data
-        p_data = self.map_screen.nation_data[self.editing_country]
+        p_data = self.map_screen.world.nation_data[self.editing_country]
         self.country_name = p_data.get("name", self.editing_country)
         self.adjective = p_data.get("adjective", "")
         self.leader_name = p_data.get("leader_name", "")
@@ -402,9 +402,9 @@ class Edit_Country_Screen(Screen):
 
     def open_switch_appearance_menu(self):
         """Opens a floating Tkinter tree configuration list to copy assets from another nation."""
-        items = [n for n in sorted(list(self.map_screen.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower()) if n not in c.UNPLAYABLE_NATIONS]
+        items = [n for n in sorted(list(self.map_screen.world.nation_data.keys()), key=lambda k: unicodedata.normalize('NFKD', k).encode('ascii', 'ignore').decode('utf-8').lower()) if n not in c.UNPLAYABLE_NATIONS]
         def cb(chosen_country):
-            src_data = self.map_screen.nation_data[chosen_country]
+            src_data = self.map_screen.world.nation_data[chosen_country]
             self.country_name = src_data.get("name", chosen_country)
             self.adjective = src_data.get("adjective", "")
             self.leader_name = src_data.get("leader_name", "")
@@ -416,10 +416,10 @@ class Edit_Country_Screen(Screen):
             
             self.save_state()
             self.map_screen.show_feedback("Appearance copied from " + queries.get_country_display_name(
-                chosen_country, self.map_screen.nation_data) + "!")
+                chosen_country, self.map_screen.world.nation_data) + "!")
         pickers.open_listbox_selector(
             self, "Switch Appearance Profile", "Select Target Country look:",
-            queries.country_picker_items(items, self.map_screen.nation_data), cb)
+            queries.country_picker_items(items, self.map_screen.world.nation_data), cb)
 
     @property
     def can_edit(self):
@@ -429,23 +429,23 @@ class Edit_Country_Screen(Screen):
         The switch exists so a host can hand out the view without the power;
         it defaults to True, so nothing anybody could do yesterday stops.
         """
-        if self.map_screen and self.map_screen.player_country == "Spectator":
+        if self.map_screen and self.map_screen.session.player_country == "Spectator":
             return c.SPECTATOR_CAN_EDIT_APPEARANCE
         return not self.map_screen or queries.realtime_turn_open(self.map_screen)
 
     def save_and_exit(self):
         if not self.can_edit:
             return
-        if (self.map_screen.realtime_multiplayer
-                and self.editing_country != self.map_screen.player_country):
-            controller = self.map_screen.nation_data.get(self.map_screen.player_country, {})
-            subject = self.map_screen.nation_data.get(self.editing_country, {})
+        if (self.map_screen.session.is_realtime
+                and self.editing_country != self.map_screen.session.player_country):
+            controller = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
+            subject = self.map_screen.world.nation_data.get(self.editing_country, {})
             if (self.editing_country not in controller.get("puppets", [])
                     or subject.get("puppet_type") != c.PUPPET_TYPE_INTEGRATED):
                 self.map_screen.show_feedback("Only your integrated subjects may be edited in real-time multiplayer.")
                 return
-        p_data = self.map_screen.nation_data[self.editing_country]
-        queries.apply_country_appearance(self.map_screen.nation_data, self.editing_country, {
+        p_data = self.map_screen.world.nation_data[self.editing_country]
+        queries.apply_country_appearance(self.map_screen.world.nation_data, self.editing_country, {
             "name": self.country_name, "adjective": self.adjective,
             "leader_name": self.leader_name, "leader_title": self.leader_title,
             "flag_data": queries.encode_surf_to_b64(self.flag_surf),
@@ -460,7 +460,7 @@ class Edit_Country_Screen(Screen):
         # COLOR SAVE LOGIC
         old_color = p_data.get("color")
         if list(old_color) != list(self.new_map_color):
-            queries.apply_country_appearance(self.map_screen.nation_data, self.editing_country,
+            queries.apply_country_appearance(self.map_screen.world.nation_data, self.editing_country,
                                              {"color": self.new_map_color})
             
             # Update the quick-lookup dict in the map screen
@@ -470,9 +470,9 @@ class Edit_Country_Screen(Screen):
             self.map_screen.refresh_map_layers("political", "cores")
 
         # Both multiplayer hosts validate this narrow appearance draft.
-        if ((self.map_screen.multiplayer_mode or self.map_screen.realtime_multiplayer)
-                and self.editing_country != self.map_screen.player_country):
-            self.map_screen.pending_subject_appearances[self.editing_country] = queries.country_appearance_draft(p_data)
+        if (self.map_screen.session.is_networked
+                and self.editing_country != self.map_screen.session.player_country):
+            self.map_screen.session.pending_subject_appearances[self.editing_country] = queries.country_appearance_draft(p_data)
         
         self.map_screen.show_feedback("Country Data Saved!")
         self.force_exit_to_map()

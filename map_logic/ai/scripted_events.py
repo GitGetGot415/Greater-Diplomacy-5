@@ -418,7 +418,7 @@ def _offer_volunteers(run, nation, pending, target, act):
 
 
 def _send_request(run, nation, pending, target, act, action):
-    if target in pending and isinstance(pending[target], dict) and pending[target].get("action") == action:
+    if target in pending and pending[target].get("action") == action:
         return
     # Scripted events bypass the player UI, so they must ask the shared diplomacy
     # guard before entering pending_diplomacy. This keeps an authored event from

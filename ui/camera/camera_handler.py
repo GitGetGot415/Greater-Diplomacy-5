@@ -241,16 +241,16 @@ class MapCamera:
             else:
                 mx, my = self._touch_zoom_anchor or pygame.mouse.get_pos()
                 world_x = (mx / self.zoom) + self.pos.x
-                if self_map.loop_map:
-                    world_x %= self_map.map_w
+                if self_map.world.loop_map:
+                    world_x %= self_map.world.map_w
                 w_pre = pygame.Vector2(
                     world_x,
                     ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor)) + self.pos.y,
                 )
                 self.zoom += (self.target_zoom - self.zoom) * self.lerp_speed
                 self.pos.x = w_pre.x - (mx / self.zoom)
-                if self_map.loop_map:
-                    self.pos.x %= self_map.map_w
+                if self_map.world.loop_map:
+                    self.pos.x %= self_map.world.map_w
                 self.pos.y = w_pre.y - ((my - self_map.top_ui_height) / (self.zoom * self.tilt_factor))
                 self.target_pos = pygame.Vector2(self.pos)
 
@@ -258,29 +258,29 @@ class MapCamera:
         if abs(self.zoom - self.target_zoom) <= 0.001:
             self._touch_zoom_anchor = None
         if self.pos.distance_to(self.target_pos) > 0.1:
-            if self_map.loop_map:
-                dx = ((self.target_pos.x - self.pos.x + self_map.map_w / 2)
-                      % self_map.map_w - self_map.map_w / 2)
+            if self_map.world.loop_map:
+                dx = ((self.target_pos.x - self.pos.x + self_map.world.map_w / 2)
+                      % self_map.world.map_w - self_map.world.map_w / 2)
             else:
                 dx = self.target_pos.x - self.pos.x
             self.pos.x += dx * self.lerp_speed
             self.pos.y += (self.target_pos.y - self.pos.y) * self.lerp_speed
 
         # 3. Clamping & Looping
-        if self_map.loop_map:
-            self.pos.x %= self_map.map_w
+        if self_map.world.loop_map:
+            self.pos.x %= self_map.world.map_w
         else:
             # In normal gameplay the raised left UI bar overlays the map.  Let
             # the view move left by that bar's world-space width so map x=0
             # can be placed immediately beside it rather than underneath it.
             left_ui_offset = 0
-            if not getattr(self_map, "selection_mode", False) and not getattr(self_map, "hide_raised_rect", False):
+            if not self_map.session.selection_mode and not getattr(self_map, "hide_raised_rect", False):
                 left_ui_offset = c.UI_LEFT_OFFSET
             min_x = -left_ui_offset / self.zoom
-            max_x = self_map.map_w - (c.SCREEN_WIDTH / self.zoom)
+            max_x = self_map.world.map_w - (c.SCREEN_WIDTH / self.zoom)
             self.pos.x = max(min_x, min(self.pos.x, max(min_x, max_x)))
 
-        max_y = self_map.map_h - ((SCREEN_HEIGHT - self_map.total_ui_h) / (self.zoom * self.tilt_factor))
+        max_y = self_map.world.map_h - ((SCREEN_HEIGHT - self_map.total_ui_h) / (self.zoom * self.tilt_factor))
         
         # --- NEW: Bottom Squish Logic ---
         if max_y < 0:

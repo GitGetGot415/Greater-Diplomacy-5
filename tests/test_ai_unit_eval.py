@@ -507,9 +507,9 @@ class ThreatProfileTests(unittest.TestCase):
             "p1", "A", units=[unit("B", attack=10)
                               for _ in range(c.COMBAT_WIDTH * 3)])
         world = SimpleNamespace(
-            nation_data=screen.nation_data,
+            nation_data=screen.world.nation_data,
             border_tiles={frozenset(("A", "B")): {"p1"}},
-            id_to_province=screen.id_to_province)
+            id_to_province=screen.world.id_to_province)
         for terrain in ("mountain", "plains", "hills"):
             with self.subTest(terrain=terrain):
                 prov["terrain"] = terrain

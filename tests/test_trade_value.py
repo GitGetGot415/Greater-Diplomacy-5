@@ -63,8 +63,8 @@ class LandCountsTests(Fixture):
 
     def test_scripted_acceptance_cannot_predict_a_wartime_ai_trade_acceptance(self):
         from map_logic.ai.scripted_events import scripted_event_response_preview
-        self.game.scenario_settings["use_scripted_events"] = True
-        self.game.nation_data["B"]["scripted_events"] = [{
+        self.game.world.scenario_settings["use_scripted_events"] = True
+        self.game.world.nation_data["B"]["scripted_events"] = [{
             "conditions": [{"type": "True"}],
             "actions": [{"type": "Accept Proposal", "target": "A"}]}]
         self.game.set_war("A", "B")
@@ -160,8 +160,8 @@ class CoreLandTests(Fixture):
         """Mirror of the rule above, and the reason it lives in trade_verdict
         rather than in the ledger: a war is exactly when core land moves."""
         self.game.set_war("A", "B")
-        self.game.nation_data["A"]["war_durations"] = {"B": 30}
-        self.game.nation_data["B"]["war_durations"] = {"A": 30}
+        self.game.world.nation_data["A"]["war_durations"] = {"B": 30}
+        self.game.world.nation_data["B"]["war_durations"] = {"A": 30}
         self.refresh()
 
         peace = deal_mod.new(deal_mod.KIND_PEACE, ["A"], ["B"], [

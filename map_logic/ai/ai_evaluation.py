@@ -478,7 +478,7 @@ def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
     """
 
     pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
-    params = pending.get("parameters") if isinstance(pending, dict) else None
+    params = pending.get("parameters")
 
     if deal_mod.is_deal(params):
         return params

@@ -78,27 +78,26 @@ class RuntimeRules:
 
 
 def for_world(context):
-    """Initialize world content lazily, including supported flat backend contexts."""
+    """Initialize world content lazily. A library carries the rules of the world it came from."""
     from data import queries
     from data.state_access import world_for
 
+    if isinstance(context, ActiveLibrary):
+        return context.runtime_rules
     world = world_for(context)
-    # Flat contexts predate WorldState and do not declare a runtime owner.
-    runtime = getattr(world, 'runtime_rules', None)
-    if runtime is None:
-        runtime = RuntimeRules()
-        world.runtime_rules = runtime
+    runtime = world.runtime_rules
     if not runtime.libraries:
-        runtime.rebuild(getattr(world, "scenario_settings", {}), {
+        runtime.rebuild(world.scenario_settings, {
             name: queries._load_cached_json(name)
             for name in ('unit_library', 'building_library', 'tech_tree')}, map_editor=_is_map_editor(context))
     return runtime
 
 
 def _is_map_editor(context):
-    from data.state_access import session_for
-    # Flat backend contexts and test doubles have no editor flag. They are never the map editor.
-    return getattr(session_for(context), "is_editor", False)
+    from data.game_state import WorldState
+    from data.world_nations import WorldNations
+    # A world and its country records carry no session. Only a game context can be the map editor.
+    return not isinstance(context, (WorldState, WorldNations)) and context.session.is_editor
 
 
 def rebuild(context, *, reload_defaults=False):

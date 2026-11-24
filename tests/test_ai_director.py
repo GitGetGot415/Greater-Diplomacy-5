@@ -294,7 +294,7 @@ class EndToEndTests(NoNetworkTestCase):
 
     def queued(self, game, nation):
         return {t: i.get("action") for t, i in
-                (game.nation_data[nation].get("pending_diplomacy") or {}).items()}
+                (game.world.nation_data[nation].get("pending_diplomacy") or {}).items()}
 
     def test_with_no_model_the_staff_choice_stands(self):
         self.set_mode("OFF")
@@ -311,7 +311,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         self.set_mode("CLAUDE", "ABSOLUTE")
         skipped = self.make_game()
-        skipped.force_skip_llm = True
+        skipped.session.force_skip_llm = True
         self.run_pass(skipped)
 
         for nation in ("A", "B", "C"):
@@ -328,7 +328,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         self.patch(ai_handler, "_run_provider", fake)
         game = self.make_game()
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
         self.run_pass(game)
         self.assertTrue(seen.get("asked"), "the director never consulted the model")
 
@@ -343,11 +343,11 @@ class EndToEndTests(NoNetworkTestCase):
 
         self.patch(ai_handler, "_run_provider", fake)
         game = self.make_game()
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
         self.run_pass(game)
         self.assertTrue(prompts, "the director never consulted the model")
         for prompt in prompts:
-            self.assertIn(f"Current Date: {game.time_manager.get_date_string()}\n", prompt)
+            self.assertIn(f"Current Date: {game.world.time_manager.get_date_string()}\n", prompt)
             # The turn's world reaches the prompt, so its geography is stated.
             self.assertTrue("Your neighbors:" in prompt or "You border no country by land." in prompt)
 
@@ -361,7 +361,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         self.patch(ai_handler, "_run_provider", fake)
         game = self.make_game()
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
         self.run_pass(game)
         self.assertTrue(asked, "the director never consulted the model")
         for user, schema in asked:
@@ -386,7 +386,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         self.patch(ai_evaluation, "get_world_context", watched)
         game = self.make_game()
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
         ai_diplomacy.process_basic_proactive_ai(game)
         batch = ai_diplomacy.start_proactive_llm_tasks(game)
         self.assertIsNotNone(batch, "the director had nobody to consult")
@@ -403,7 +403,7 @@ class EndToEndTests(NoNetworkTestCase):
         self.patch(ai_handler, "_run_provider",
                    lambda *a, **k: ai_handler._provider_error("API ERROR: boom"))
         broken = self.make_game()
-        broken.force_skip_llm = False
+        broken.session.force_skip_llm = False
         self.run_pass(broken)
 
         for nation in ("A", "B", "C"):
@@ -418,15 +418,15 @@ class TierTests(NoNetworkTestCase):
     def test_a_per_country_setting_beats_the_global_one(self):
         world, game = self.world_for(["A", "B"])
         self.patch(ai_settings, "get_ai_immersion_level", lambda: "LITE")
-        game.nation_data["A"]["llm_tier"] = ai_tuning.AI_TIER_ALWAYS
-        game.nation_data["B"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
+        game.world.nation_data["A"]["llm_tier"] = ai_tuning.AI_TIER_ALWAYS
+        game.world.nation_data["B"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.assertTrue(ai_evaluation.llm_enabled_for("A", world))
         self.assertFalse(ai_evaluation.llm_enabled_for("B", world))
 
     def test_never_wins_even_in_absolute(self):
         world, game = self.world_for(["A", "B"])
         self.patch(ai_settings, "get_ai_immersion_level", lambda: "ABSOLUTE")
-        game.nation_data["A"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
+        game.world.nation_data["A"]["llm_tier"] = ai_tuning.AI_TIER_NEVER
         self.assertFalse(ai_evaluation.llm_enabled_for("A", world))
 
     def test_absolute_covers_everyone(self):
@@ -475,32 +475,32 @@ class RetaliationTests(unittest.TestCase):
             {"action": "WAR_DECLARATION", "action_target": "B", "message": "they insult us"})
 
         self.assertEqual(delayed, [], "declared war on the spot, skipping every prerequisite")
-        self.assertEqual(game.nation_data["A"]["ai_requests"][0]["target"], "B")
+        self.assertEqual(game.world.nation_data["A"]["ai_requests"][0]["target"], "B")
 
     def test_an_illegal_filed_war_never_becomes_one(self):
         """No border, no wargoal, and inside the opening waiting period."""
         from map_logic.ai import ai_diplomacy
 
         game = StubMapScreen(["A", "B"], human_players=[])
-        game.nation_data["A"]["ai_requests"] = [
+        game.world.nation_data["A"]["ai_requests"] = [
             {"action": "WAR_DECLARATION", "target": "B", "reason": "spite", "turn": 0}]
 
         ai_diplomacy.process_basic_proactive_ai(game)
         ai_diplomacy.process_proactive_llm_tasks(game)
 
         self.assertNotEqual(
-            (game.nation_data["A"].get("pending_diplomacy") or {}).get("B", {}).get("action"),
+            (game.world.nation_data["A"].get("pending_diplomacy") or {}).get("B", {}).get("action"),
             "WAR_DECLARATION")
 
     def test_a_filed_request_is_consumed_so_it_cannot_pile_up(self):
         from map_logic.ai import ai_diplomacy
 
         game = StubMapScreen(["A", "B"], human_players=[])
-        game.nation_data["A"]["ai_requests"] = [
+        game.world.nation_data["A"]["ai_requests"] = [
             {"action": "WAR_DECLARATION", "target": "B", "reason": "spite", "turn": 0}]
 
         ai_diplomacy.process_basic_proactive_ai(game)
-        self.assertEqual(game.nation_data["A"]["ai_requests"], [])
+        self.assertEqual(game.world.nation_data["A"]["ai_requests"], [])
 
 
 if __name__ == "__main__":

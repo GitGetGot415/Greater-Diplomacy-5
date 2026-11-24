@@ -19,6 +19,7 @@ from ui.bars import ui_bars
 from ui.dialogs.message_box import _NavigationIntroPopup
 from ui.information import tooltip
 from tests.stub_map_screen import map_double
+from data.session_state import MAP_EDITOR, TOURNAMENT
 
 
 class UnitViewFilterTests(unittest.TestCase):
@@ -175,10 +176,10 @@ class UnitViewFilterTests(unittest.TestCase):
         self.game.camera.pos = pygame.Vector2()
         self.game.top_ui_height = 100
         members = self.province["units"]
-        self.game.nation_data["A"]["armies"] = [{
+        self.game.world.nation_data["A"]["armies"] = [{
             "id": "mixed", "unit_ids": [unit["unit_id"] for unit in members]}]
         army_groups = overlay_renderer.compact_army_groups(self.game, set())
-        self.game.nation_data["A"]["armies"] = []
+        self.game.world.nation_data["A"]["armies"] = []
         area_groups = overlay_renderer.compact_area_unit_groups(self.game, set(), set())
         for groups in (army_groups, area_groups):
             self.assertEqual(len(groups), 3)
@@ -204,7 +205,7 @@ class UnitViewFilterTests(unittest.TestCase):
         updated = overlay_renderer._unit_render_index(self.game)
         self.assertIsNot(index, updated)
         self.assertEqual(updated.stack_keys[id(planes[0])], ("AIR", "STRIKE"))
-        self.game.player_country = "B"
+        self.game.session.player_country = "B"
         self.assertEqual(overlay_renderer._unit_render_index(self.game).stack_keys[id(planes[0])],
                          ("AIR", "NONE"))
 
@@ -233,7 +234,7 @@ class UnitViewFilterTests(unittest.TestCase):
     def test_zoomed_out_aircraft_keep_their_armies_separate(self):
         planes = self.mission_units()
         self.game.camera.zoom = 0.2
-        self.game.nation_data["A"]["armies"] = [
+        self.game.world.nation_data["A"]["armies"] = [
             {"id": "first", "unit_ids": [unit["unit_id"] for unit in planes[:3]]},
             {"id": "second", "unit_ids": [unit["unit_id"] for unit in planes[3:5]]}]
         groups = overlay_renderer.compact_army_groups(self.game, set())
@@ -267,14 +268,14 @@ class UnitViewFilterTests(unittest.TestCase):
 
     def test_foreign_or_fogged_orders_do_not_reveal_missions(self):
         planes = self.mission_units()
-        self.game.player_country = "B"
+        self.game.session.player_country = "B"
         with patch.object(overlay_renderer, "_draw_air_mission", wraps=overlay_renderer._draw_air_mission) as badges:
             overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
                                             200, 200, self.province)
         self.assertTrue(all(call.args[2] is None for call in badges.call_args_list))
         for viewer, preview in (("Spectator", False), ("B", True)):
-            self.game.player_country = viewer
-            self.game.viewing_ai_moves = preview
+            self.game.session.player_country = viewer
+            self.game.session.viewing_ai_moves = preview
             self.assertEqual(overlay_renderer._unit_render_index(self.game).stack_keys[id(planes[4])],
                              ("AIR", "STRIKE"))
         with patch.object(overlay_renderer, "_draw_air_mission") as badges:
@@ -286,9 +287,9 @@ class UnitViewFilterTests(unittest.TestCase):
         pygame.font.init()
         units = [dict(self.units[0], unit_id=f"land-{index}") for index in range(2)]
         self.province.update(owner="A", units=units)
-        self.game.tactical_mode = True
-        self.game.selection_mode = True
-        self.game.player_country = "Spectator"
+        self.game.session.tactical_mode = True
+        self.game.session.selection_mode = True
+        self.game.session.player_country = "Spectator"
         self.game.show_feedback = Mock()
         for zoom in (0.2, 4):
             with self.subTest(zoom=zoom):
@@ -313,11 +314,11 @@ class UnitViewFilterTests(unittest.TestCase):
     def test_tactical_play_draws_only_the_players_division_apart_at_all_zooms(self):
         # The first patrol plane normally shares a stack with the second.
         player = self.mission_units()[0]
-        self.game.tactical_mode = True
-        self.game.player_unit = player
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = player
 
         def stacks(selection_mode):
-            self.game.selection_mode = selection_mode
+            self.game.session.selection_mode = selection_mode
             self.game.unit_stack_hitboxes = []
             self.game._presentation_cache_revision += 1
             overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
@@ -418,8 +419,8 @@ class UnitViewFilterTests(unittest.TestCase):
     def test_only_matching_visible_units_publish_selection_and_hover_boxes(self):
         surface = pygame.Surface((300, 300))
         for tactical in (False, True):
-            self.game.tactical_mode = tactical
-            self.game.player_unit = self.units[2] if tactical else None
+            self.game.session.tactical_mode = tactical
+            self.game.session.player_unit = self.units[2] if tactical else None
             for view_filter, expected in (("NAVAL", [self.units[1]]),
                                           ("LAND", [self.units[0]]),
                                           ("AIR", [self.units[2]]),
@@ -441,12 +442,12 @@ class UnitViewFilterTests(unittest.TestCase):
     def test_mixed_armies_and_foreign_area_markers_count_only_matching_members(self):
         self.game.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM
         self.game.unit_view_filter = "AIR"
-        self.game.nation_data["A"]["armies"] = [{
+        self.game.world.nation_data["A"]["armies"] = [{
             "id": "mixed", "unit_ids": [unit["unit_id"] for unit in self.units]}]
         groups = overlay_renderer.compact_army_groups(self.game, set())
         self.assertEqual([group["units"] for group in groups], [[self.units[2]]])
-        self.game.nation_data["A"]["armies"] = []
-        self.game.player_country = "Spectator"
+        self.game.world.nation_data["A"]["armies"] = []
+        self.game.session.player_country = "Spectator"
         groups = overlay_renderer.compact_area_unit_groups(self.game, set(), set())
         self.assertEqual([group["units"] for group in groups], [[self.units[2]]])
         self.game.visible_provinces = set()
@@ -472,7 +473,7 @@ class UnitViewFilterTests(unittest.TestCase):
         ]
         self.game.unit_view_filter = "AIR"
         self.game._combat_bubble_records_cache = (
-            (self.game._presentation_cache_revision, self.game.player_country,
+            (self.game._presentation_cache_revision, self.game.session.player_country,
              id(None), id(None), c.BATTLE_DISPLAY_MODE), records)
         with (patch.object(overlay_renderer, "combat_bubbles_are_visible", return_value=True),
               patch.object(queries, "get_combat_predictions", side_effect=AssertionError)):
@@ -490,15 +491,15 @@ class UnitViewControlTests(unittest.TestCase):
     def setUpClass(cls):
         app_harness.boot()
         cls.game = Map(load_path=app_harness.SCENARIO_PATH, is_scenario=True)
-        cls.game.player_country = sorted(queries.get_living_nations(cls.game.map_data))[0]
-        cls.game.selection_mode = False
+        cls.game.session.player_country = sorted(queries.get_living_nations(cls.game.world.map_data))[0]
+        cls.game.session.selection_mode = False
 
     def setUp(self):
         self.game.selected_province = None
         self.game.unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
         self.game.unit_view_bar_collapsed = False
         self.game.unit_view_animation_start = None
-        self.game.tactical_mode = False
+        self.game.session.tactical_mode = False
         self.game.set_play_view_defaults()
         update_button_states(self.game)
 
@@ -526,7 +527,7 @@ class UnitViewControlTests(unittest.TestCase):
             self.assertEqual(after, before)
             path = Path("assets/images") / f"{view_filter.title()}.png"
             self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
-        game.selected_province = next(iter(game.map_data.values()))
+        game.selected_province = next(iter(game.world.map_data.values()))
         update_button_states(game)
         self.assertFalse(any(button.visible for button in buttons))
         self.assertIsNone(ui_bars.map_unit_view_bar_rect(game))
@@ -724,12 +725,12 @@ class UnitViewControlTests(unittest.TestCase):
             for changes, visible in (
                     ({"tactical_mode": True}, True),
                     ({"player_country": "Spectator"}, True),
-                    ({"multiplayer_mode": True}, True),
-                    ({"is_editor": True}, True),
+                    ({"mode": TOURNAMENT}, True),
+                    ({"mode": MAP_EDITOR}, True),
                     ({"selection_mode": True}, False),
                     ({"hide_raised_rect": True}, False),
                     ({"ai_is_thinking": True}, False),
-                    ({"selected_province": next(iter(game.map_data.values()))}, False)):
+                    ({"selected_province": next(iter(game.world.map_data.values()))}, False)):
                 with self.subTest(collapsed=collapsed, changes=tuple(changes)):
                     with app_harness.patch_map(game, **changes):
                         update_button_states(game)
@@ -752,7 +753,7 @@ class UnitViewControlTests(unittest.TestCase):
 
     def test_editor_filter_callbacks_keep_editor_tools_and_hide_gameplay_controls(self):
         game = self.game
-        with app_harness.patch_map(game, is_editor=True, player_country="Editor"):
+        with app_harness.patch_map(game, mode=MAP_EDITOR, player_country="Editor"):
             update_button_states(game)
             for view_filter, button in game.unit_view_buttons.items():
                 button.callback()
@@ -768,7 +769,7 @@ class UnitViewControlTests(unittest.TestCase):
         game = self.game
         library = {"Test Land": {}, "Test Ship": {"naval_unit": True},
                    "Test Plane": {"air_role": "fighter"}}
-        units = [{"type": name, "owner": game.player_country,
+        units = [{"type": name, "owner": game.session.player_country,
                   "order": {"type": "MOVE", "path": [index + 2]}}
                  for index, name in enumerate(library)]
         origin = {"id": 1, "center": (100, 100), "units": units}
@@ -807,7 +808,7 @@ class UnitViewControlTests(unittest.TestCase):
         self.addCleanup(setattr, _NavigationIntroPopup, "last_topic_index",
                         _NavigationIntroPopup.last_topic_index)
         with patch.dict(message_box.ui_elements.UI_ICONS, icons):
-            popup = _NavigationIntroPopup(SimpleNamespace(tactical_mode=False))
+            popup = _NavigationIntroPopup(map_double(tactical_mode=False))
             topic, text = self._help_topic_with_inline_icons(popup)
             self.assertLessEqual(set(icons), set(re.findall(r"\[icon:([a-z_]+)", text)))
             popup.select_topic(topic)
@@ -820,7 +821,7 @@ class UnitViewControlTests(unittest.TestCase):
         icon.fill((17, 83, 121))
         note = "[icon:air:32] first\nChanged [icon:naval:12] repeated [icon:air] end"
         with patch.dict(message_box.ui_elements.UI_ICONS, {"air": icon, "naval": icon}):
-            popup = _NavigationIntroPopup(SimpleNamespace(tactical_mode=False))
+            popup = _NavigationIntroPopup(map_double(tactical_mode=False))
             parts = popup._inline_parts(note, (225, 225, 225))
         groups = [image for text, image in parts if image is not None]
         self.assertEqual(len(groups), 3)
@@ -829,7 +830,7 @@ class UnitViewControlTests(unittest.TestCase):
 
     def test_tutorial_without_markers_keeps_plain_text(self):
         note = "Air and Naval can appear without images."
-        popup = _NavigationIntroPopup(SimpleNamespace(tactical_mode=False))
+        popup = _NavigationIntroPopup(map_double(tactical_mode=False))
         self.assertEqual(popup._inline_parts(note, (225, 225, 225)), [(note, None)])
 
 if __name__ == "__main__":

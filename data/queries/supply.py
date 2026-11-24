@@ -287,7 +287,7 @@ class SupplySnapshot:
         if cached is not None and cached[0] == roster:
             return cached[1], cached[2]
         session = session_for(context)
-        player_unit = getattr(session, "player_unit", None)
+        player_unit = session.player_unit
         facts = []
         for unit in units:
             if unit.get("health", 0) <= 0:
@@ -716,7 +716,7 @@ def prepare_presentation_supply(context):
     projection = getattr(context, "player_supply_projection", None)
     context._supply_presentation = {}
     context._movement_speed_presentation = {}
-    if getattr(context, "is_editor", False):
+    if context.session.is_editor:
         return
     if projection is not None:
         # The host sends per-resource coverage. The local upkeep rules supply the weights.

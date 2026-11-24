@@ -416,8 +416,8 @@ def process_letters(context):
     """
     world_state = world_for(context)
     session_state = session_for(context)
-    session_state.letters_total = 0
-    session_state.letters_completed = 0
+    session_state.progress["letters"].total = 0
+    session_state.progress["letters"].completed = 0
     # Answers left by a turn that failed before its send phase must not
     # suppress this turn's replies.
     session_state.letter_answers = []
@@ -456,7 +456,7 @@ def process_letters(context):
     if not jobs:
         return
 
-    session_state.letters_total = len(jobs)
+    session_state.progress["letters"].total = len(jobs)
     session_state.loading_status_text = f"Writing Letters (0/{len(jobs)})..."
 
     def call(job):
@@ -474,7 +474,7 @@ def process_letters(context):
     outcome = ai_llm_runner.run_llm_batch(
         jobs, call, record, record_fallback,
         on_progress=ai_llm_runner.make_progress_counter(
-            context, "Writing Letters", "letters_completed", "letters_total"),
+            context, "Writing Letters", "letters"),
         should_abort=lambda: session_state.force_skip_llm,
         max_workers=queries.get_ai_threads(),
         deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_LETTERS),

@@ -366,7 +366,7 @@ def process_movement(context):
     # Defense areas only reassign units that began this turn idle.  Keep this
     # evidence on the live map controller rather than unit dictionaries so it
     # can never leak into a save or a multiplayer unit snapshot.
-    context._units_with_move_order_this_turn = set()
+    context.session._units_with_move_order_this_turn = set()
     for province in world_state.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
@@ -388,7 +388,7 @@ def process_movement(context):
                         unit["order"] = {"type": "MOVE", "path": []}
                         units_to_keep.append(unit)
                         continue
-                context._units_with_move_order_this_turn.add(id(unit))
+                context.session._units_with_move_order_this_turn.add(id(unit))
                 unit["_current_province_id"] = province["id"]
                 unit["_skip_remaining_steps"] = False
                 moving_units.append(unit)
@@ -456,29 +456,22 @@ def process_movement(context):
         if "_skip_remaining_steps" in unit:
             del unit["_skip_remaining_steps"]
 
-def _find_nearest_owned_province(start_prov, owner, id_to_province):
-    """BFS over the province graph for the closest tile owned by `owner`."""
-    visited = {start_prov["id"]}
-    queue = deque([start_prov["id"]])
-
+def nearest_owned_province(start_id, owner, id_to_province):
+    """BFS over the province graph for the closest tile owned by `owner`, the start included."""
+    if start_id not in id_to_province:
+        return None
+    seen = {start_id}
+    queue = deque([start_id])
     while queue:
-        current_id = queue.popleft()
-        prov = id_to_province.get(current_id)
-        if not prov:
+        province = id_to_province.get(queue.popleft())
+        if not province:
             continue
-
-        for n_id in prov.get("neighbors", []):
-            if n_id in visited:
-                continue
-            visited.add(n_id)
-
-            n_prov = id_to_province.get(n_id)
-            if not n_prov:
-                continue
-            if n_prov.get("owner") == owner:
-                return n_prov
-            queue.append(n_id)
-
+        if province.get("owner") == owner:
+            return province
+        for neighbor_id in province.get("neighbors", []):
+            if neighbor_id not in seen:
+                seen.add(neighbor_id)
+                queue.append(neighbor_id)
     return None
 
 def send_unit_home(context, province, unit):
@@ -490,7 +483,7 @@ def send_unit_home(context, province, unit):
     it is, if its owner has no ground left to stand on.
     """
     world_state = world_for(context)
-    home_prov = _find_nearest_owned_province(province, unit["owner"], world_state.id_to_province)
+    home_prov = nearest_owned_province(province["id"], unit["owner"], world_state.id_to_province)
     if home_prov is None:
         return False  # nation holds no territory to return the unit to
 

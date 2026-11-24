@@ -16,7 +16,7 @@ import unittest
 
 import data.constants as c
 from map_logic.ai import ai_tuning
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_construction, ai_unit_eval
 
 
@@ -53,13 +53,13 @@ def unit(u_type, owner="Avaria"):
             "order": {"type": "MOVE", "path": []}}
 
 
-class Screen:
+class Screen(MapDouble):
     """Two owned provinces, plus one next door that can be given an enemy."""
 
     def __init__(self, provs, at_war=("Borland",)):
-        self.map_data = {str(p["id"]): p for p in provs}
-        self.id_to_province = {p["id"]: p for p in provs}
-        self.nation_data = {
+        self.world.map_data = {str(p["id"]): p for p in provs}
+        self.world.id_to_province = {p["id"]: p for p in provs}
+        self.world.nation_data = {
             "Avaria": {"at_war_with": list(at_war), "puppets": [],
                        "master": "", "faction": "", "research": {}},
             "Borland": {"at_war_with": ["Avaria"], "puppets": [],
@@ -81,7 +81,7 @@ class DisbandChoiceTests(unittest.TestCase):
     def disband(self, provs, deficits=("cost_fuel",), values=None, at_war=("Borland",)):
         screen = Screen(provs, at_war=at_war)
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], [p for p in provs if p["owner"] == "Avaria"],
+            screen, screen.world.nation_data["Avaria"], [p for p in provs if p["owner"] == "Avaria"],
             "Avaria", list(deficits), LIBRARY, values)
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
@@ -114,13 +114,13 @@ class DisbandChoiceTests(unittest.TestCase):
         """Obsolescence stays the first key -- that part was always right."""
         keep, obsolete = unit("Heavy Gun"), unit("Scout Car")
         screen = Screen([province(1, [keep, obsolete])])
-        screen.nation_data["Avaria"]["research"] = {}
+        screen.world.nation_data["Avaria"]["research"] = {}
         import data.queries as queries
         real = queries.is_unit_obsolete
         queries.is_unit_obsolete = lambda t, r: t == "Scout Car"
         try:
             ai_construction._disband_worst_unit_if_deficit(
-                screen, screen.nation_data["Avaria"], list(screen.map_data.values()),
+                screen, screen.world.nation_data["Avaria"], list(screen.world.map_data.values()),
                 "Avaria", ["cost_fuel"], LIBRARY,
                 {"Scout Car": value("Scout Car", 9.0), "Heavy Gun": value("Heavy Gun", 1.0)})
         finally:
@@ -136,7 +136,7 @@ class NeverAtTheFrontTests(unittest.TestCase):
         screen = Screen(provs)
         mine = [p for p in provs if p["owner"] == "Avaria"]
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
+            screen, screen.world.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
@@ -174,10 +174,10 @@ class NeverAtTheFrontTests(unittest.TestCase):
 
     def run_disband_at_peace(self, provs):
         screen = Screen(provs, at_war=())
-        screen.nation_data["Borland"]["at_war_with"] = []
+        screen.world.nation_data["Borland"]["at_war_with"] = []
         mine = [p for p in provs if p["owner"] == "Avaria"]
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
+            screen, screen.world.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
@@ -188,7 +188,7 @@ class NotWhatYouAreBuildingTests(unittest.TestCase):
     def run_disband(self, provs):
         screen = Screen(provs)
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], provs, "Avaria", ["cost_fuel"], LIBRARY, {})
+            screen, screen.world.nation_data["Avaria"], provs, "Avaria", ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
@@ -216,12 +216,14 @@ class PeacetimeMilitiaTests(unittest.TestCase):
 
     def test_militia_stand_down_at_peace(self):
         m = self.militia()
-        ai_construction._disband_peacetime_militia("Avaria", [province(1, [m])], at_war=False)
+        provs = [province(1, [m])]
+        ai_construction._disband_peacetime_militia("Avaria", provs, at_war=False, context=Screen(provs))
         self.assertEqual(m["order"]["type"], "DISBAND")
 
     def test_militia_are_kept_during_a_war(self):
         m = self.militia()
-        ai_construction._disband_peacetime_militia("Avaria", [province(1, [m])], at_war=True)
+        provs = [province(1, [m])]
+        ai_construction._disband_peacetime_militia("Avaria", provs, at_war=True, context=Screen(provs))
         self.assertEqual(m["order"]["type"], "MOVE")
 
     def test_militia_on_order_are_not_scrapped_the_turn_they_are_bought(self):
@@ -230,13 +232,14 @@ class PeacetimeMilitiaTests(unittest.TestCase):
         twin in one turn is the whole bug, whatever the unit is called."""
         m = self.militia()
         prov = province(1, [m], queue=["Militia I"])
-        ai_construction._disband_peacetime_militia("Avaria", [prov], at_war=False)
+        ai_construction._disband_peacetime_militia("Avaria", [prov], at_war=False, context=Screen([prov]))
         self.assertEqual(m["order"]["type"], "MOVE")
 
     def test_someone_elses_militia_are_not_ours_to_disband(self):
         theirs = self.militia()
         theirs["owner"] = "Borland"
-        ai_construction._disband_peacetime_militia("Avaria", [province(1, [theirs])], at_war=False)
+        provs = [province(1, [theirs])]
+        ai_construction._disband_peacetime_militia("Avaria", provs, at_war=False, context=Screen(provs))
         self.assertEqual(theirs["order"]["type"], "MOVE")
 
 
@@ -255,13 +258,13 @@ class TacticalPlayerTests(unittest.TestCase):
                 "order": {"type": "MOVE", "path": []}}
 
     def tactical(self, screen, unit):
-        screen.tactical_mode = True
-        screen.player_unit = unit
+        screen.session.tactical_mode = True
+        screen.session.player_unit = unit
         return screen
 
     def cull(self, screen, provs):
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"],
+            screen, screen.world.nation_data["Avaria"],
             [p for p in provs if p["owner"] == "Avaria"], "Avaria",
             ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
@@ -286,8 +289,9 @@ class TacticalPlayerTests(unittest.TestCase):
     def test_a_player_playing_as_militia_is_not_stood_down_at_peace(self):
         me, spare = self.militia(), self.militia()
 
+        provs = [province(1, [me, spare])]
         ai_construction._disband_peacetime_militia(
-            "Avaria", [province(1, [me, spare])], at_war=False, protected=me)
+            "Avaria", provs, at_war=False, protected=me, context=Screen(provs))
 
         self.assertEqual(me["order"]["type"], "MOVE")
         self.assertEqual(spare["order"]["type"], "DISBAND")
@@ -298,8 +302,8 @@ class TacticalPlayerTests(unittest.TestCase):
         me = unit("Scout Car")
         provs = [province(1, [me])]
         screen = Screen(provs)
-        screen.tactical_mode = False
-        screen.player_unit = me
+        screen.session.tactical_mode = False
+        screen.session.player_unit = me
 
         self.assertEqual(self.cull(screen, provs), [me])
 
@@ -320,7 +324,7 @@ class FuelGuardTests(unittest.TestCase):
         """One purchase pass, and what came out of it."""
         provs = [province(1, [])]
         screen = Screen(provs, at_war=())
-        data = screen.nation_data["Avaria"]
+        data = screen.world.nation_data["Avaria"]
         data.update({"materials": 100000, "manpower": 100000, "fuel": 100000})
 
         values = {"Scout Car": value("Scout Car", 9.0),   # burns fuel, rated best

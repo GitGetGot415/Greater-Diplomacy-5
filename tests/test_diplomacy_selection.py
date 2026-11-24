@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from map_logic.diplomacy import player_diplomacy_actions as actions
 from tests.stub_map_screen import StubMapScreen
+from data.session_state import REALTIME
 
 
 class DiplomacySelectionTests(unittest.TestCase):
@@ -37,9 +38,9 @@ class DiplomacySelectionTests(unittest.TestCase):
                 with self.subTest(selection=selection, callback=callback):
                     self.game.selected_province = selection
                     self.game.feedback.clear()
-                    before = copy.deepcopy(self.game.nation_data)
+                    before = copy.deepcopy(self.game.world.nation_data)
                     callback(self.game)
-                    self.assertEqual(self.game.nation_data, before)
+                    self.assertEqual(self.game.world.nation_data, before)
                     self.assertTrue(self.game.feedback)
 
     def test_valid_selection_still_opens_war_menu(self):
@@ -50,14 +51,14 @@ class DiplomacySelectionTests(unittest.TestCase):
 
     def test_valid_enemy_selection_still_opens_peace_menu(self):
         self.game.selected_province = self.game.home_of("B")
-        self.game.nation_data["A"]["at_war_with"] = ["B"]
-        self.game.nation_data["B"]["at_war_with"] = ["A"]
+        self.game.world.nation_data["A"]["at_war_with"] = ["B"]
+        self.game.world.nation_data["B"]["at_war_with"] = ["A"]
         with patch("screens.game.deal_screen.open_peace_menu") as opened:
             actions.handle_declare_war(self.game)
         opened.assert_called_once_with(self.game, "B")
 
     def test_message_replies_keep_their_explicit_target_without_selection(self):
-        self.game.nation_data["B"]["pending_diplomacy"]["A"] = {
+        self.game.world.nation_data["B"]["pending_diplomacy"]["A"] = {
             "action": "REQ_MILITARY_ACCESS", "turns": 1,
         }
         for callback in (actions.handle_accept_req, actions.handle_reject_req):
@@ -70,7 +71,7 @@ class DiplomacySelectionTests(unittest.TestCase):
         from types import SimpleNamespace
 
         self.game.selected_province = self.game.home_of("B")
-        self.game.realtime_multiplayer = True
+        self.game.session.mode = REALTIME
         self.game.realtime_player_id = "local"
         self.game.realtime_session = SimpleNamespace(
             phase="TURN", players={"local": SimpleNamespace(submitted=True, eliminated=False)})

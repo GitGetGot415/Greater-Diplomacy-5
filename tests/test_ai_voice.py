@@ -23,6 +23,7 @@ import unittest
 
 import data.constants as c
 from map_logic.ai import ai_director, ai_prompts
+from tests.stub_map_screen import MapDouble
 
 
 class VoiceRuleStatedTests(unittest.TestCase):
@@ -288,14 +289,14 @@ class ProactiveWordingTests(unittest.TestCase):
                         "pending_diplomacy": {}, "name": "Austria"},
         }
 
-    class Screen:
+    class Screen(MapDouble):
         class Clock:
             total_turns = 5
         time_manager = Clock()
 
         def __init__(self, nation_data):
-            self.nation_data = nation_data
-            self.map_data = {}
+            self.world.nation_data = nation_data
+            self.world.map_data = {}
 
     def retaliate(self, message, action="CEASEFIRE", llm=True):
         """`llm` marks the words as the model's, as ai_evaluation._reply does.

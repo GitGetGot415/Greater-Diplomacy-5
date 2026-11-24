@@ -37,22 +37,22 @@ class WartimeTradeTests(unittest.TestCase):
                     self.assertEqual(game.pending_action(sender, receiver), "TRADE")
                     game.run_turn()
                     self.assertTrue(game.inbound(receiver, sender))
-                    self.assertEqual(game.nation_data[sender]["materials"], 700)
+                    self.assertEqual(game.world.nation_data[sender]["materials"], 700)
                     if war_stage == "delivery":
                         game.set_war("A", "B")
-                    game.player_country = receiver
+                    game.session.player_country = receiver
                     player_diplomacy_actions.handle_accept_req(game, sender, "")
                     self.assertEqual(diplomacy_messages.get_response_status(
-                        game.nation_data, receiver, sender), (diplomacy_messages.RESPONSE_ACCEPT, "TRADE"))
+                        game.world.nation_data, receiver, sender), (diplomacy_messages.RESPONSE_ACCEPT, "TRADE"))
                     if war_stage == "reply":
                         game.set_war("A", "B")
                     game.run_turn()
-                    self.assertEqual((game.nation_data[sender]["materials"], game.nation_data[sender]["fuel"]),
+                    self.assertEqual((game.world.nation_data[sender]["materials"], game.world.nation_data[sender]["fuel"]),
                                      (700, 1200))
-                    self.assertEqual((game.nation_data[receiver]["materials"], game.nation_data[receiver]["fuel"]),
+                    self.assertEqual((game.world.nation_data[receiver]["materials"], game.world.nation_data[receiver]["fuel"]),
                                      (1300, 800))
-                    self.assertIn(receiver, game.nation_data[sender]["at_war_with"])
-                    self.assertIn(sender, game.nation_data[receiver]["at_war_with"])
+                    self.assertIn(receiver, game.world.nation_data[sender]["at_war_with"])
+                    self.assertIn(sender, game.world.nation_data[receiver]["at_war_with"])
                     self.assertEqual(game.pending_action(sender, receiver), "")
 
     def test_ai_refuses_an_enemy_gift_and_refunds_it_after_delivery(self):
@@ -61,11 +61,11 @@ class WartimeTradeTests(unittest.TestCase):
         game.propose("A", "B", "TRADE", parameters={"give_materials": 300})
         game.run_turn()
         self.assertTrue(game.inbound("B", "A"))
-        self.assertEqual(game.nation_data["A"]["materials"], 700)
+        self.assertEqual(game.world.nation_data["A"]["materials"], 700)
         self.assertEqual(game.inbound("A", "B"), [])
         game.run_turn()
-        self.assertEqual(game.nation_data["A"]["materials"], 1000)
-        self.assertEqual(game.nation_data["B"]["materials"], 1000)
+        self.assertEqual(game.world.nation_data["A"]["materials"], 1000)
+        self.assertEqual(game.world.nation_data["B"]["materials"], 1000)
         self.assertTrue(game.inbound("A", "B"))
         self.assertEqual(game.pending_action("A", "B"), "")
 
@@ -78,7 +78,7 @@ class AiTradeEscrowTests(unittest.TestCase):
         self.game.propose("B", "A", "TRADE", parameters=dict(OFFER))
 
     def stock(self, nation):
-        data = self.game.nation_data[nation]
+        data = self.game.world.nation_data[nation]
         return data["materials"], data["fuel"]
 
     def test_nothing_leaves_the_treasury_while_the_offer_is_only_drafted(self):
@@ -130,7 +130,7 @@ class PlayerTradeEscrowTests(unittest.TestCase):
         self.game.propose("A", "B", "TRADE", parameters=dict(OFFER))
 
     def stock(self, nation):
-        data = self.game.nation_data[nation]
+        data = self.game.world.nation_data[nation]
         return data["materials"], data["fuel"]
 
     def test_sending_escrows_the_players_side(self):
@@ -146,16 +146,16 @@ class PlayerTradeEscrowTests(unittest.TestCase):
         box free: promise anything, be priced on it, pay what you happen to have.
         What a nation may promise is capped at its income instead, and what it
         promises it owes."""
-        self.game.nation_data["A"]["materials"] = 120
+        self.game.world.nation_data["A"]["materials"] = 120
         self.game.propose("A", "B", "TRADE")   # clear the draft from setUp
         self.game.propose("A", "B", "TRADE", parameters=dict(OFFER))
 
         self.game.run_turn()
-        self.assertEqual(self.game.nation_data["A"]["materials"], -180)
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], -180)
 
         self.game.answer("B", "A", diplomacy_messages.RESPONSE_REJECT, "TRADE")
         self.game.run_turn()
-        self.assertEqual(self.game.nation_data["A"]["materials"], 120,
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 120,
                          "refunding the promise rather than the holding would mint")
 
     def test_a_promise_past_the_income_ceiling_is_trimmed_to_it(self):
@@ -165,7 +165,7 @@ class PlayerTradeEscrowTests(unittest.TestCase):
                           parameters={"give_materials": 99999999, "take_fuel": 10})
 
         self.game.run_turn()
-        self.assertEqual(self.game.nation_data["A"]["materials"], 800)
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 800)
 
 
 if __name__ == "__main__":

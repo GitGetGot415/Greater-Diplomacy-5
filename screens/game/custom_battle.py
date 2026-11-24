@@ -635,9 +635,9 @@ class CustomBattleScreen(Screen):
         self.next_state = None
         self.campaign = CampaignBattle(map_screen, province, friendly + enemy, self.rosters, self.columns)
         self.library = queries.get_unit_library(map_screen)
-        self.country_data = map_screen.nation_data
+        self.country_data = map_screen.world.nation_data
         turn, frozen_supply = getattr(map_screen, "tactical_combat_supply", (None, None))
-        if turn != map_screen.time_manager.total_turns:
+        if turn != map_screen.world.time_manager.total_turns:
             frozen_supply = queries.SupplySnapshot(map_screen)
         with queries.combat_supply(frozen_supply):
             self.rosters = [combat.campaign_roster(side, self.library, province.get("terrain")) for side in (friendly, enemy)]
@@ -693,8 +693,8 @@ class CustomBattleScreen(Screen):
             return
         campaign.result_applied = True
         artillery = combat.campaign_artillery(campaign.unit, campaign.province,
-                                              campaign.map_screen.nation_data, self.library)
-        sides = combat.campaign_sides(campaign.unit, campaign.province, campaign.map_screen.nation_data)
+                                              campaign.map_screen.world.nation_data, self.library)
+        sides = combat.campaign_sides(campaign.unit, campaign.province, campaign.map_screen.world.nation_data)
         combat.apply_campaign_result(self.simulation, campaign.units, campaign.province, artillery, side_units=sides, player_unit=campaign.unit)
         player_setup.settle_tactical_tile(campaign.map_screen, campaign.province)
 

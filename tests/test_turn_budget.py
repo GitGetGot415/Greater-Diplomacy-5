@@ -25,7 +25,7 @@ import unittest
 
 import data.constants as c
 from map_logic.ai import ai_handler, ai_letters, ai_llm_runner, ai_settings
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import state_owner, StubMapScreen
 
 
 class Patcher(unittest.TestCase):
@@ -208,7 +208,11 @@ class SkipButtonReachableTests(Patcher):
                     "multi_turns_total": 0, "multi_turn_abort_requested": False}
         counters.update(overrides)
         for name, value in counters.items():
-            setattr(screen, name, value)
+            phase, _, part = name.rpartition("_")
+            if part in ("total", "completed") and phase in screen.session.progress:
+                setattr(screen.session.progress[phase], part, value)
+            else:
+                setattr(state_owner(screen, name), name, value)
         return screen
 
     def drawn(self, screen):
@@ -295,7 +299,7 @@ class LetterClockTests(Patcher):
             self.patch(module, "get_ai_immersion_level", lambda: "ABSOLUTE")
 
         self.game = StubMapScreen(["A", "B", "C"], human_players=[])
-        self.game.force_skip_llm = False
+        self.game.session.force_skip_llm = False
         self.calls = []
         # No measured call time, so no pass is declined as unaffordable.
         self.patch(ai_handler, "_CALL_SECONDS", [0.0])
@@ -325,7 +329,7 @@ class LetterClockTests(Patcher):
         self.stub_provider()
         ai_letters.process_letters(self.game)
         self.assertEqual(len(self.calls), 3)
-        self.assertEqual((self.game.letters_completed, self.game.letters_total), (3, 3))
+        self.assertEqual((self.game.session.progress["letters"].completed, self.game.session.progress["letters"].total), (3, 3))
 
     def test_letters_ask_for_their_own_share_and_not_the_turn(self):
         asked = []
@@ -664,7 +668,7 @@ class ModelBudgetOnlyBoundsModelWorkTests(Patcher):
             {"sender": "C", "target": "B", "action": "TRADE", "content": "Coal for oil."},
         ]
         diplomacy_processor._execute_ai_tasks(game, tasks, ["A", "B", "C"])
-        self.assertEqual(game.responsive_tasks_total, 1,
+        self.assertEqual(game.session.progress["responsive_tasks"].total, 1,
                          "the bar is counting proposals the model never sees")
 
     def test_words_a_human_wrote_are_always_worth_the_model(self):
@@ -704,15 +708,15 @@ class ModelBudgetOnlyBoundsModelWorkTests(Patcher):
         no ceiling had nothing telling them how much was left."""
         game = StubMapScreen(["A", "B", "C"], human_players=[])
         order, _ = self.run_tasks(game, "ABSOLUTE")
-        self.assertEqual(game.responsive_tasks_total, len(order))
-        self.assertGreater(game.responsive_tasks_total, 0)
+        self.assertEqual(game.session.progress["responsive_tasks"].total, len(order))
+        self.assertGreater(game.session.progress["responsive_tasks"].total, 0)
 
     def test_the_bar_counts_up_as_the_queue_drains(self):
         game = StubMapScreen(["A", "B", "C"], human_players=[])
         # A batch skipped before it starts deliberately ticks nothing along --
         # the player asked not to wait for it -- so the flag has to be down for
         # this to be about the bar rather than about Force Skip.
-        game.force_skip_llm = False
+        game.session.force_skip_llm = False
 
         from map_logic.ai import ai_handler, ai_settings
         from map_logic.diplomacy import diplomacy_processor
@@ -724,7 +728,7 @@ class ModelBudgetOnlyBoundsModelWorkTests(Patcher):
 
         diplomacy_processor._execute_ai_tasks(
             game, [dict(t) for t in self.TASKS], ["A", "B", "C"])
-        self.assertEqual(game.responsive_tasks_completed, game.responsive_tasks_total)
+        self.assertEqual(game.session.progress["responsive_tasks"].completed, game.session.progress["responsive_tasks"].total)
 
     def test_the_report_counts_only_what_was_asked_of_the_model(self):
         """"10 of 192 answered" was measuring the wrong thing: 177 of those

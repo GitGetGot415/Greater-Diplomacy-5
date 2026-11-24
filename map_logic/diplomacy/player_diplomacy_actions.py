@@ -17,7 +17,7 @@ def _selected_diplomacy_target(context):
     """Validate the current selection before a country callback uses it."""
     target = (context.selected_province or {}).get("owner")
     if (target is None or target in c.UNPLAYABLE_NATIONS
-            or target not in context.nation_data):
+            or target not in context.world.nation_data):
         context.show_feedback("Select a country before using diplomacy.")
         return None
     return target
@@ -37,7 +37,7 @@ def _queue_and_report(context, target, action_type, custom_msg):
     if not can_edit_diplomacy(context):
         return None
     msg = diplomacy_processor.toggle_diplomacy_action(
-        context.nation_data, context.player_country, target, action_type, custom_msg)
+        context, context.session.player_country, target, action_type, custom_msg)
     context.mail_input_active = False
     context.show_feedback(msg)
 
@@ -45,7 +45,7 @@ def _queue_and_report(context, target, action_type, custom_msg):
 def handle_declare_war(context):
     if not can_edit_diplomacy(context):
         return None
-    player = context.player_country
+    player = context.session.player_country
     target = _selected_diplomacy_target(context)
     if target is None:
         return
@@ -57,8 +57,8 @@ def handle_declare_war(context):
     # their master", which is a true sentence about a thing it was not doing.
     # Whether it may make peace, and the wording of that refusal, belongs to
     # peace_scope via handle_ceasefire.
-    if (queries.are_at_war(player, target, context.nation_data)
-            or peace_scope.has_settleable_war(player, target, context.nation_data)):
+    if (queries.are_at_war(player, target, context.world.nation_data)
+            or peace_scope.has_settleable_war(player, target, context.world.nation_data)):
         handle_ceasefire(context)
         return
 
@@ -88,27 +88,27 @@ def handle_ceasefire(context):
     # map_logic/diplomacy/peace_scope.py for the full set of rules -- the point
     # of routing every refusal through one function is that the player is told
     # which one caught them, and by name.
-    reason = peace_scope.refusal_reason(context.player_country, target, context.nation_data)
+    reason = peace_scope.refusal_reason(context.session.player_country, target, context.world.nation_data)
     if reason:
         context.show_feedback(reason)
         return
 
-    role = peace_scope.negotiation_role(context.player_country, target, context.nation_data)
+    role = peace_scope.negotiation_role(context.session.player_country, target, context.world.nation_data)
     if role is None:
         context.show_feedback("You cannot negotiate this peace.")
         return
-    if not peace_scope.has_settleable_war(context.player_country, target,
-                                          context.nation_data):
+    if not peace_scope.has_settleable_war(context.session.player_country, target,
+                                          context.world.nation_data):
         context.show_feedback("There is no active war to settle with that country.")
         return
     # Refuse before the player writes terms that could never be sent.
-    available = availability(context, context.player_country, target, "PEACE_TREATY")
+    available = availability(context, context.session.player_country, target, "PEACE_TREATY")
     if not available.allowed:
         context.show_feedback(available.reason)
         return
 
     # Guard check: Prevent modifying or opening a peace offer if it has already been sent (turns > 0)
-    pending_action, pending_turns = queries.get_diplomatic_status(context.player_country, target, context.nation_data)
+    pending_action, pending_turns = queries.get_diplomatic_status(context.session.player_country, target, context.world.nation_data)
     if pending_action in ["PEACE_TREATY", "CEASEFIRE"] and pending_turns > 0:
         context.show_feedback("You must wait for their response to your peace offer!")
         return
@@ -133,13 +133,13 @@ def handle_specific_action(context, action_type):
     
     # Block puppets from creating/joining factions independently
     if action_type in ["CREATE_FACTION", "JOIN_FACTION_REQ", "FACTION_INVITE", "LEAVE_FACTION", "DISBAND_FACTION", "KICK_FACTION_MEMBER"]:
-        if context.nation_data.get(context.player_country, {}).get("master"):
+        if context.world.nation_data.get(context.session.player_country, {}).get("master"):
             context.show_feedback("Puppets cannot handle faction diplomacy independently!")
             return
 
     # Pre-flight Check: Ensure we don't accidentally leave/disband while an invite is pending
     if action_type in ["LEAVE_FACTION", "DISBAND_FACTION"]:
-        player_pending = context.nation_data.get(context.player_country, {}).get("pending_diplomacy", {})
+        player_pending = context.world.nation_data.get(context.session.player_country, {}).get("pending_diplomacy", {})
         has_blocking_action = False
         invites_to_cancel = []
         
@@ -175,17 +175,17 @@ def _toggle_commitment(context, rules, undo_action, active_targets):
     target = _selected_diplomacy_target(context)
     if target is None:
         return
-    pending = context.nation_data.get(context.player_country, {}).get(
+    pending = context.world.nation_data.get(context.session.player_country, {}).get(
         "pending_diplomacy", {}).get(target, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    pending_action = pending.get("action")
     if pending_action in (rules.ACTION, undo_action):
         _queue_and_report(context, target, pending_action, "")
         return
-    if target in active_targets(context.player_country, context.nation_data):
+    if target in active_targets(context.session.player_country, context.world.nation_data):
         _queue_and_report(context, target, undo_action, "")
         return
-    legal, reason = rules.is_eligible(context.player_country, target,
-                                      context.nation_data)
+    legal, reason = rules.is_eligible(context.session.player_country, target,
+                                      context.world.nation_data)
     if not legal:
         context.show_feedback(reason)
         return
@@ -209,13 +209,13 @@ def handle_revoke_foreign_military_attache(context):
     sender = _selected_diplomacy_target(context)
     if sender is None:
         return
-    host = context.player_country
-    pending = context.nation_data.get(host, {}).get("pending_diplomacy", {}).get(sender, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    host = context.session.player_country
+    pending = context.world.nation_data.get(host, {}).get("pending_diplomacy", {}).get(sender, {})
+    pending_action = pending.get("action")
     if pending_action == military_attaches.REVOKE_ACTION:
         _queue_and_report(context, sender, pending_action, "")
         return
-    if host not in military_attaches.hosts_for(sender, context.nation_data):
+    if host not in military_attaches.hosts_for(sender, context.world.nation_data):
         context.show_feedback("That country has no military attaché with you.")
         return
     _queue_and_report(context, sender, military_attaches.REVOKE_ACTION, "")
@@ -228,16 +228,16 @@ def _answer_incoming_request(context, target, verdict, custom_msg):
     """
     if not can_edit_diplomacy(context):
         return None
-    action, incoming_turns = queries.get_diplomatic_status(target, context.player_country, context.nation_data)
+    action, incoming_turns = queries.get_diplomatic_status(target, context.session.player_country, context.world.nation_data)
     if incoming_turns <= 0 or action not in c.BILATERAL_ACTIONS:
         return None
 
     # Re-clicking the same verdict is an undo, handled inside the toggle.
     queued_verdict, queued_action = diplomacy_messages.get_response_status(
-        context.nation_data, context.player_country, target)
+        context.world.nation_data, context.session.player_country, target)
     is_undo = (queued_verdict == verdict and queued_action == action)
     if not is_undo:
-        reason = war_calls.request_block_reason(action, target, context.player_country, context.nation_data)
+        reason = war_calls.request_block_reason(action, target, context.session.player_country, context.world.nation_data)
         if reason:
             context.show_feedback(reason)
             return None
@@ -246,11 +246,11 @@ def _answer_incoming_request(context, target, verdict, custom_msg):
         custom_msg = context.mail_draft_text.strip()
 
     # The terms belong to their offer -- carry them so nothing is lost.
-    their_pending = context.nation_data.get(target, {}).get("pending_diplomacy", {}).get(context.player_country, {})
-    params = their_pending.get("parameters") if isinstance(their_pending, dict) else None
+    their_pending = context.world.nation_data.get(target, {}).get("pending_diplomacy", {}).get(context.session.player_country, {})
+    params = their_pending.get("parameters")
 
     msg = diplomacy_processor.toggle_diplomatic_response(
-        context.nation_data, context.player_country, target,
+        context.world.nation_data, context.session.player_country, target,
         verdict, action, custom_msg, parameters=params)
 
     if not is_undo:
@@ -268,18 +268,18 @@ def handle_accept_req(context, target=None, custom_msg=None):
         if target is None:
             return
 
-    action, _turns = queries.get_diplomatic_status(target, context.player_country, context.nation_data)
+    action, _turns = queries.get_diplomatic_status(target, context.session.player_country, context.world.nation_data)
 
     # Undoing an acceptance needs no eligibility check -- it only removes a queued answer.
     queued_verdict, queued_action = diplomacy_messages.get_response_status(
-        context.nation_data, context.player_country, target)
+        context.world.nation_data, context.session.player_country, target)
     if not (queued_verdict == diplomacy_messages.RESPONSE_ACCEPT and queued_action == action):
-        forbidden = global_rules.forbidden_reason(context, target, context.player_country, action,
+        forbidden = global_rules.forbidden_reason(context, target, context.session.player_country, action,
                                                   choices=(global_rules.Choice(False, accepting=True),))
         if forbidden:
             context.show_feedback(f"Cannot accept: {forbidden}.")
             return
-        my_faction = queries.get_country_faction(context.player_country, context.nation_data)
+        my_faction = queries.get_country_faction(context.session.player_country, context.world.nation_data)
 
         if action == "FACTION_INVITE":
             if my_faction:
@@ -287,7 +287,7 @@ def handle_accept_req(context, target=None, custom_msg=None):
                 return
         elif action == "JOIN_FACTION_REQ":
             # They are joining OUR faction, so having one is a requirement, not a blocker.
-            if not queries.is_faction_leader(context.player_country, context.nation_data):
+            if not queries.is_faction_leader(context.session.player_country, context.world.nation_data):
                 context.show_feedback("You are no longer the leader, cannot accept!")
                 return
         elif action == "CREATE_FACTION":
@@ -295,19 +295,19 @@ def handle_accept_req(context, target=None, custom_msg=None):
                 context.show_feedback("Must leave your current faction first!")
                 return
         elif action in ["PEACE_TREATY", "CEASEFIRE"]:
-            reason = peace_scope.refusal_reason(context.player_country, target, context.nation_data)
+            reason = peace_scope.refusal_reason(context.session.player_country, target, context.world.nation_data)
             if reason:
                 context.show_feedback(reason)
                 return
-            request = diplomacy_messages.get_pending(context.nation_data, target, context.player_country)
-            wars = peace_scope.offer_wars(target, context.player_country, request, context.nation_data)
-            blocked = peace_scope.settlement_block(wars, context.nation_data)
+            request = diplomacy_messages.get_pending(context.world.nation_data, target, context.session.player_country)
+            wars = peace_scope.offer_wars(target, context.session.player_country, request, context.world.nation_data)
+            blocked = peace_scope.settlement_block(wars, context.world.nation_data)
             if blocked:
                 context.show_feedback(ai_prompts.AI_FALLBACK_RESPONSES[blocked])
                 return
         elif action == "TRADE":
             # Check shared availability again when answering an offer.
-            available = availability(context.nation_data, target, context.player_country, action)
+            available = availability(context, target, context.session.player_country, action)
             if not available.allowed:
                 context.show_feedback(f"Cannot accept: {available.reason}.")
                 return
@@ -335,7 +335,7 @@ def handle_ratify_treaty(context, accept):
     if not can_edit_diplomacy(context):
         return None
     verdict = ratification.RATIFY if accept else ratification.REFUSE
-    message = ratification.answer(context.nation_data, context.player_country, verdict)
+    message = ratification.answer(context.world.nation_data, context.session.player_country, verdict)
     if message:
         context.show_feedback(message)
     return message
@@ -352,15 +352,15 @@ def _handle_faction_assist(context, action, at_war_msg, not_allied_msg, leaving_
     target = _selected_diplomacy_target(context)
     if target is None:
         return
-    if queries.are_at_war(context.player_country, target, context.nation_data):
+    if queries.are_at_war(context.session.player_country, target, context.world.nation_data):
         context.show_feedback(at_war_msg)
         return
-    if not queries.are_in_same_faction(context.player_country, target, context.nation_data):
+    if not queries.are_in_same_faction(context.session.player_country, target, context.world.nation_data):
         context.show_feedback(not_allied_msg)
         return
 
     # A nation on its way out of the faction cannot commit it to anything.
-    self_action, self_turns = queries.get_diplomatic_status(context.player_country, context.player_country, context.nation_data)
+    self_action, self_turns = queries.get_diplomatic_status(context.session.player_country, context.session.player_country, context.world.nation_data)
     if self_action in ["DISBAND_FACTION", "LEAVE_FACTION"]:
         context.show_feedback(leaving_msg)
         return
@@ -386,11 +386,11 @@ def handle_send_volunteers(context):
         return None
     from ui.dialogs.checkbox_list_screen import CheckboxItem
 
-    donor = context.player_country
+    donor = context.session.player_country
     host = _selected_diplomacy_target(context)
     if host is None:
         return
-    legal, reason = volunteers.is_eligible(donor, host, context.nation_data)
+    legal, reason = volunteers.is_eligible(donor, host, context.world.nation_data)
     if not legal:
         context.show_feedback(reason)
         return
@@ -412,7 +412,7 @@ def handle_send_volunteers(context):
         if not can_edit_diplomacy(context):
             return
         selected = [refs[key] for key in keys if key in refs]
-        if session_for(context).realtime_multiplayer:
+        if session_for(context).is_realtime:
             # The client may preview its selection, but reservations belong to
             # the authoritative server.  Removing the local units here made a
             # valid offer disappear before the server could identify it.
@@ -436,13 +436,13 @@ def handle_send_volunteers(context):
         message = (f"We offer {count} volunteer {'division' if count == 1 else 'divisions'}. "
                    f"They are estimated to arrive {turns} {'turn' if turns == 1 else 'turns'} after acceptance.")
         msg = diplomacy_processor.toggle_diplomacy_action(
-            context.nation_data, donor, host, volunteers.ACTION, message,
+            context, donor, host, volunteers.ACTION, message,
             parameters=details)
-        if session_for(context).realtime_multiplayer:
-            drafts = context.realtime_volunteer_drafts
+        if session_for(context).is_realtime:
+            drafts = context.session.realtime_volunteer_drafts
             if drafts is None:
                 drafts = {}
-                context.realtime_volunteer_drafts = drafts
+                context.session.realtime_volunteer_drafts = drafts
             if msg.startswith("Message drafted"):
                 drafts[host] = refs_for_server
             else:
@@ -458,14 +458,14 @@ def handle_send_volunteers(context):
 
 
 def handle_recall_volunteers(context):
-    donor = context.player_country
+    donor = context.session.player_country
     host = _selected_diplomacy_target(context)
     if host is None:
         return
     if not can_edit_diplomacy(context):
         return None
     msg = diplomacy_processor.toggle_diplomacy_action(
-        context.nation_data, donor, host, volunteers.RECALL_ACTION,
+        context, donor, host, volunteers.RECALL_ACTION,
         "We are recalling our volunteer divisions.")
     context.show_feedback(msg)
 
@@ -477,13 +477,13 @@ def handle_send_home_foreign_volunteers(context):
     donor = _selected_diplomacy_target(context)
     if donor is None:
         return
-    host = context.player_country
-    pending = context.nation_data.get(host, {}).get("pending_diplomacy", {}).get(donor, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    host = context.session.player_country
+    pending = context.world.nation_data.get(host, {}).get("pending_diplomacy", {}).get(donor, {})
+    pending_action = pending.get("action")
     if pending_action == volunteers.SEND_HOME_ACTION:
         _queue_and_report(context, donor, pending_action, "")
         return
-    state = volunteers.mission_state(context.nation_data, donor, host)
+    state = volunteers.mission_state(context.world.nation_data, donor, host)
     if state not in (volunteers.OUTBOUND, volunteers.DEPLOYED):
         context.show_feedback("That country has no volunteers assigned to you.")
         return
@@ -493,18 +493,18 @@ def handle_send_home_foreign_volunteers(context):
 def handle_withdraw_volunteer_offer(context):
     if not can_edit_diplomacy(context):
         return None
-    donor = context.player_country
+    donor = context.session.player_country
     host = _selected_diplomacy_target(context)
     if host is None:
         return
-    if session_for(context).realtime_multiplayer:
+    if session_for(context).is_realtime:
         # An unsubmitted offer has no server reservation yet.  Undo only the
         # local draft; the next sync removes it from the authoritative intent.
-        pending = context.nation_data.get(donor, {}).get("pending_diplomacy", {})
+        pending = context.world.nation_data.get(donor, {}).get("pending_diplomacy", {})
         info = pending.get(host, {})
         if isinstance(info, dict) and info.get("action") == volunteers.ACTION and info.get("turns", 0) == 0:
             pending.pop(host, None)
-        context.realtime_volunteer_drafts.pop(host, None)
+        context.session.realtime_volunteer_drafts.pop(host, None)
         context.show_feedback("Volunteer offer withdrawn before submission.")
         return
     volunteers.cancel_offer(context, donor, host)

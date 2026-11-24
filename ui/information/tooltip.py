@@ -20,11 +20,11 @@ def prepare_building_yields(map_screen):
     if not visible:
         return
     owner = province.get("owner", "Unclaimed")
-    research = map_screen.nation_data.get(owner, {}).get("research", {})
+    research = map_screen.world.nation_data.get(owner, {}).get("research", {})
     library = queries.get_building_library(map_screen)
     modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
-    factory_multiplier = politics.factory_output_multiplier(map_screen.nation_data, owner)
-    non_core_multiplier = politics.axis_effect(map_screen.nation_data, owner, "non_core_building_output")
+    factory_multiplier = politics.factory_output_multiplier(map_screen.world.nation_data, owner)
+    non_core_multiplier = politics.axis_effect(map_screen.world.nation_data, owner, "non_core_building_output")
     for name in province.get("buildings", []):
         building_province = dict(province, buildings=[name], building_queue=[])
         output = queries.get_province_building_output(building_province, research, library,
@@ -39,7 +39,7 @@ def _province_tooltip_lines(map_screen, prov):
     is_visible = show_details and queries.is_province_visible(map_screen, prov["id"])
 
     owner_id = prov.get('owner', 'Unclaimed')
-    owner_display = map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
+    owner_display = map_screen.world.nation_data.get(owner_id, {}).get("name", owner_id)
 
     # Coastal Sea and Inland Sea display
     terrain = prov.get('terrain', 'Unknown')
@@ -56,8 +56,8 @@ def _province_tooltip_lines(map_screen, prov):
         viewpoint = map_screen._relations_viewpoint
         score = map_screen._relations_scores.get(owner_id)
         if (score is not None and not is_water and viewpoint != owner_id
-                and viewpoint in map_screen.nation_data and viewpoint not in c.UNPLAYABLE_NATIONS):
-            name = queries.get_country_display_name(viewpoint, map_screen.nation_data)
+                and viewpoint in map_screen.world.nation_data and viewpoint not in c.UNPLAYABLE_NATIONS):
+            name = queries.get_country_display_name(viewpoint, map_screen.world.nation_data)
             signed_score = f"{score:+d}" if score else "0"
             lines.append(f"{name}'s opinion: {signed_score}")
     else:
@@ -66,7 +66,7 @@ def _province_tooltip_lines(map_screen, prov):
     if map_screen.base_layer == "CORES":
         cores = prov.get("cores", [])
         if cores:
-            core_names = [map_screen.nation_data.get(core, {}).get("name", core) for core in cores]
+            core_names = [map_screen.world.nation_data.get(core, {}).get("name", core) for core in cores]
             lines.append(f"Cores: {', '.join(core_names)}")
 
     # 2. Add contextual info based on secondary view mode
@@ -87,7 +87,7 @@ def _province_tooltip_lines(map_screen, prov):
         # "something is here" partial-fog hint, or its position leaks through
         # the "?" blip despite being otherwise invisible.
         visible_units = queries.filter_visible_units(
-            units, map_screen.player_country, prov, map_screen.nation_data)
+            units, map_screen.session.player_country, prov, map_screen.world.nation_data)
         if not is_visible:
             # Unknown stacks have no visible category, as on the map.
             if (view_filter == "ALL"
@@ -135,7 +135,7 @@ def _province_tooltip_lines(map_screen, prov):
 
     elif map_screen.secondary_mode == "ECONOMY":
         # Base production from the tile itself dynamically calculated
-        owner_data = map_screen.nation_data.get(owner_id, {})
+        owner_data = map_screen.world.nation_data.get(owner_id, {})
         research_data = owner_data.get("research", {})
 
         # Calculate dynamic bonuses based on tech
@@ -184,11 +184,11 @@ def _province_tooltip_lines(map_screen, prov):
 def draw_tooltip(map_screen, surface):
     if map_screen.hovered_province:
         lines = _province_tooltip_lines(map_screen, map_screen.hovered_province)
-    elif (map_screen.base_layer == "RELATIONS" and not map_screen.selection_mode
+    elif (map_screen.base_layer == "RELATIONS" and not map_screen.session.selection_mode
           and not (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack)
           and (province := map_screen._relations_hovered_province)
           and (owner := province.get("owner")) == map_screen._relations_viewpoint):
-        lines = [queries.get_country_display_name(owner, map_screen.nation_data)]
+        lines = [queries.get_country_display_name(owner, map_screen.world.nation_data)]
     else:
         return
 

@@ -93,7 +93,7 @@ class Orders_Screen(UnitCommandControls, Screen):
     def _panel_title(self, player_units):
         """Name the selected army when its membership is unambiguous."""
         army = queries.common_army_for_units(
-            player_units, self.map_screen.nation_data)
+            player_units, self.map_screen.world.nation_data)
         if army is not None and army.get("name"):
             return f"ORDERS | {army['name']}"
         return "ORDERS | MAP COMMAND"
@@ -108,19 +108,19 @@ class Orders_Screen(UnitCommandControls, Screen):
         # A province you command nothing in is still worth reading -- what is
         # standing on the front you are about to walk into, and what orders it
         # already has. The panel shows every unit there and edits none of them.
-        self.read_only = (not any(u.get("owner") == self.map_screen.player_country
+        self.read_only = (not any(u.get("owner") == self.map_screen.session.player_country
                                   for u in units)
-                          or (self.map_screen.realtime_multiplayer
+                          or (self.map_screen.session.is_realtime
                               and (self.map_screen.realtime_session.phase != "TURN"
                                    or self.map_screen.realtime_session.players[
                                        self.map_screen.realtime_player_id].submitted)))
 
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             # TACTICAL MODE: Lock to player unit
-            player_unit_indices = [i for i, u in enumerate(units) if u is self.map_screen.player_unit]
+            player_unit_indices = [i for i, u in enumerate(units) if u is self.map_screen.session.player_unit]
             self.selected_unit_index = player_unit_indices[0] if player_unit_indices else None
         else:
-            player_unit_indices = [i for i, u in enumerate(units) if u.get("owner") == self.map_screen.player_country]
+            player_unit_indices = [i for i, u in enumerate(units) if u.get("owner") == self.map_screen.session.player_country]
 
             if len(player_unit_indices) > 1:
                 self.selected_unit_index = "ALL"
@@ -138,13 +138,13 @@ class Orders_Screen(UnitCommandControls, Screen):
             self.selected_unit_index = None
         elif self.selected_unit_index == "ALL":
             self.map_screen.select_map_units(
-                [unit for unit in units if unit.get("owner") == self.map_screen.player_country])
+                [unit for unit in units if unit.get("owner") == self.map_screen.session.player_country])
         elif isinstance(self.selected_unit_index, int):
             self.map_screen.select_map_units([units[self.selected_unit_index]])
 
         self.refresh_ui()
         if (open_battle_on_entry and queries.is_province_in_active_combat(
-                self.target_province, self.map_screen.nation_data)):
+                self.target_province, self.map_screen.world.nation_data)):
             self.open_battle_panel()
 
     def inspect_province(self, province, preserve_scroll=False):
@@ -157,7 +157,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         self.cancel_bombard_targeting(refresh=False)
         units = province.get("units", [])
         own_indices = [i for i, unit in enumerate(units)
-                       if unit.get("owner") == self.map_screen.player_country]
+                       if unit.get("owner") == self.map_screen.session.player_country]
         selected_indices = [i for i in own_indices
                             if self.map_screen.is_unit_selected(units[i])]
         if len(selected_indices) > 1:
@@ -271,7 +271,7 @@ class Orders_Screen(UnitCommandControls, Screen):
                 self.selected_unit_index = None
                 target = self.target_province
                 self.read_only = bool(target) and not any(
-                    unit.get("owner") == self.map_screen.player_country
+                    unit.get("owner") == self.map_screen.session.player_country
                     for unit in target.get("units", []))
                 self.refresh_ui()
             return True
@@ -291,7 +291,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         if (self.renaming_unit_index is not None
                 or self.read_only
                 or not self.map_screen
-                or self.map_screen.tactical_mode):
+                or self.map_screen.session.tactical_mode):
             return
         if not self.clear_all_orders():
             sound_effects.play_ui_sound("cancel_orders")
@@ -299,16 +299,16 @@ class Orders_Screen(UnitCommandControls, Screen):
     def select_unit(self, index):
         if self.read_only:
             return
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
             return
         units = self.target_province.get("units", [])
         if index == "ALL":
             # Orders is map-wide: all means every commandable owned unit, not
             # merely the stack that opened this workspace.
-            all_units = [unit for province in self.map_screen.map_data.values()
+            all_units = [unit for province in self.map_screen.world.map_data.values()
                          for unit in province.get("units", [])
-                         if unit.get("owner") == self.map_screen.player_country]
+                         if unit.get("owner") == self.map_screen.session.player_country]
             if all_units and all(self.map_screen.is_unit_selected(unit) for unit in all_units):
                 self.map_screen.deselect_map_units(all_units)
                 self.selected_unit_index = None
@@ -362,19 +362,19 @@ class Orders_Screen(UnitCommandControls, Screen):
         combat_by_province = {}
         launch_by_base = {}
         indexes_by_province = {}
-        player_research = self.map_screen.nation_data.get(
-            self.map_screen.player_country, {}).get("research", {})
+        player_research = self.map_screen.world.nation_data.get(
+            self.map_screen.session.player_country, {}).get("research", {})
         if records is None:
             records = self.map_screen.selected_unit_records()
         for unit, province in records:
-            if (unit.get("owner") != self.map_screen.player_country
+            if (unit.get("owner") != self.map_screen.session.player_country
                     or self._command_blocked_silent(unit)):
                 continue
             province_key = id(province)
             if command in ("REPAIR", "UPGRADE"):
                 if province_key not in combat_by_province:
                     combat_by_province[province_key] = queries.is_nation_in_combat_here(
-                        self.map_screen.player_country, province, self.map_screen.nation_data)
+                        self.map_screen.session.player_country, province, self.map_screen.world.nation_data)
                 in_combat = combat_by_province[province_key]
             if command == "DISBAND":
                 if not unit.get("air_cargo"):
@@ -417,7 +417,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         return [
             (unit, province)
             for unit, province in records
-            if (unit.get("owner") == self.map_screen.player_country
+            if (unit.get("owner") == self.map_screen.session.player_country
                 and not self._command_blocked_silent(unit)
                 and isinstance(unit.get("order"), dict)
                 and unit["order"].get("type") == order_type)
@@ -428,7 +428,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         ordered_units = self._selected_units_with_order(order_type)
         if not ordered_units:
             return
-        results = unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+        results = unit_actions.apply_batch(self.map_screen, self.map_screen.session.player_country,
                                  [(unit, province, None) for unit, province in ordered_units])
         self._play_order_sound("cancel_orders", results)
         self._mark_draft_changed()
@@ -439,14 +439,14 @@ class Orders_Screen(UnitCommandControls, Screen):
 
     def disband_selected_units(self):
         candidates = self._batch_command_candidates("DISBAND")
-        unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+        unit_actions.apply_batch(self.map_screen, self.map_screen.session.player_country,
             [(unit, province, {"type": "DISBAND"}) for unit, province in candidates])
         self._finish_batch_command("Disband", len(candidates))
 
     def repair_selected_units(self):
         candidates = self._batch_command_candidates("REPAIR")
         try:
-            unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+            unit_actions.apply_batch(self.map_screen, self.map_screen.session.player_country,
                 [(unit, province, {"type": "REPAIR"}) for unit, province in candidates])
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
@@ -455,7 +455,7 @@ class Orders_Screen(UnitCommandControls, Screen):
 
     def upgrade_selected_units(self):
         candidates = self._batch_command_candidates("UPGRADE")
-        unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+        unit_actions.apply_batch(self.map_screen, self.map_screen.session.player_country,
             [(unit, province, {"type": "UPGRADE", "target_type": target})
              for unit, province, target in candidates])
         self._finish_batch_command("Upgrade", len(candidates))
@@ -538,14 +538,14 @@ class Orders_Screen(UnitCommandControls, Screen):
                                 for unit in self.target_province.get("units", [])]
         visible_records = list(selected_records)
         if selected_records and not self.read_only:
-            nation_data = self.map_screen.nation_data
-            map_data = self.map_screen.map_data
+            nation_data = self.map_screen.world.nation_data
+            map_data = self.map_screen.world.map_data
             if isinstance(nation_data, dict) and isinstance(map_data, dict):
                 records_by_id = {
                     unit.get("unit_id"): (unit, province)
                     for province in map_data.values()
                     for unit in province.get("units", [])
-                    if (unit.get("owner") == self.map_screen.player_country
+                    if (unit.get("owner") == self.map_screen.session.player_country
                         and isinstance(unit.get("unit_id"), str))
                 }
                 ordered_records = []
@@ -598,7 +598,7 @@ class Orders_Screen(UnitCommandControls, Screen):
             for unit, base in selected_records if queries.is_air_unit(unit, context=self.map_screen)]
         self._air_range_input_key = None
         self._refresh_air_range_previews(self._air_range_hover_target)
-        if self.map_screen.realtime_multiplayer:
+        if self.map_screen.session.is_realtime:
             player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
             self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
                               or player.submitted or player.eliminated)
@@ -623,13 +623,13 @@ class Orders_Screen(UnitCommandControls, Screen):
         self.action_buttons = []
         self.unit_row_icons = {}
 
-        is_tactical = self.map_screen.tactical_mode
-        player_country = self.map_screen.player_country
-        player_research = self.map_screen.nation_data.get(player_country, {}).get("research", {})
+        is_tactical = self.map_screen.session.tactical_mode
+        player_country = self.map_screen.session.player_country
+        player_research = self.map_screen.world.nation_data.get(player_country, {}).get("research", {})
         rows = initial_rows
         player_units = [unit for _key, unit, _province, _index in rows
                         if self.map_screen.is_unit_selected(unit)]
-        all_player_units = [unit for province in self.map_screen.map_data.values()
+        all_player_units = [unit for province in self.map_screen.world.map_data.values()
                             for unit in province.get("units", [])
                             if unit.get("owner") == player_country]
         target_player_units = [unit for unit in self.target_province.get("units", [])
@@ -662,7 +662,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         # observers as well as participants: a read-only Orders view can still
         # inspect the fight, but no unit commands are enabled there.
         in_battle = queries.is_province_in_active_combat(
-            self.target_province, self.map_screen.nation_data)
+            self.target_province, self.map_screen.world.nation_data)
         if in_battle:
             battle_label = ("Close Battle" if self.battle_screen is not None else
                             ("Manage Battle" if target_player_units else "View Battle"))
@@ -818,7 +818,7 @@ class Orders_Screen(UnitCommandControls, Screen):
                 continue
 
             row_in_combat = queries.is_nation_in_combat_here(
-                player_country, province, self.map_screen.nation_data)
+                player_country, province, self.map_screen.world.nation_data)
             self._build_unit_action_buttons(
                 row_key, index, unit, province, row_y, row_guard,
                 row_in_combat, queries.is_water_province(province),
@@ -840,9 +840,9 @@ class Orders_Screen(UnitCommandControls, Screen):
         played_sound = False
 
         for unit in units:
-            if unit.get("owner") == self.map_screen.player_country and not self._command_blocked_silent(unit):
+            if unit.get("owner") == self.map_screen.session.player_country and not self._command_blocked_silent(unit):
                 if "order" in unit:
-                    province = next(province for province in self.map_screen.map_data.values()
+                    province = next(province for province in self.map_screen.world.map_data.values()
                                     if any(current is unit for current in province.get("units", [])))
                     had_order = bool(unit["order"])
                     result = unit_actions.cancel_action(self.map_screen, unit["owner"], province, unit)
@@ -861,10 +861,10 @@ class Orders_Screen(UnitCommandControls, Screen):
     def _unit_portrait_tooltip_lines(self, row_key, unit, province):
         owner = unit.get("owner", "Unknown")
         map_screen = self.map_screen
-        nations = map_screen.nation_data
-        is_own = owner == map_screen.player_country
+        nations = map_screen.world.nation_data
+        is_own = owner == map_screen.session.player_country
         if not is_own and (not queries.is_province_visible(map_screen, province["id"])
-                           or not queries.is_unit_visible_to(unit, map_screen.player_country, province, nations)):
+                           or not queries.is_unit_visible_to(unit, map_screen.session.player_country, province, nations)):
             return ()
 
         library = queries.get_unit_library(map_screen)
@@ -979,7 +979,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         tiny_font = fonts.get("tiny")
 
         read_only = self.read_only
-        owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
+        owner_color = self.map_screen.nation_colors.get(self.map_screen.session.player_country, (255, 255, 0))
         rows = self._roster_rows
         player_units = [unit for _key, unit, _province, _index in rows
                         if self.map_screen.is_unit_selected(unit)]

@@ -149,14 +149,14 @@ class CountryRecordCompactionTests(unittest.TestCase):
 
     def test_network_snapshots_remain_full_and_disk_compaction_is_explicit(self):
         screen = sample_map_screen()
-        screen.nation_data.update(copy.deepcopy(self.nations))
+        screen.world.nation_data.update(copy.deepcopy(self.nations))
         network = queries.build_save_dict(screen)
         disk = queries.build_save_dict(screen, include_provinces=False, compact_nations=True)
-        self.assertEqual(network["nation_data"], screen.nation_data)
+        self.assertEqual(network["nation_data"], screen.world.nation_data)
         self.assertEqual(disk["nation_data"]["B"], {})
-        self.assertEqual(disk["nation_data"]["Avaria"], screen.nation_data["Avaria"])
+        self.assertEqual(disk["nation_data"]["Avaria"], screen.world.nation_data["Avaria"])
         self.assertNotIn("provinces", disk)
-        self.assertTrue(screen.nation_data["B"])
+        self.assertTrue(screen.world.nation_data["B"])
 
     def test_cleanup_tool_is_previewable_idempotent_and_only_writes_metadata(self):
         with tempfile.TemporaryDirectory() as temporary:

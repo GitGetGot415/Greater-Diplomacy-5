@@ -23,6 +23,7 @@ from ui.panels.sidebar_info import unit_roster_row
 from ui.widgets.ui_elements import Slider
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import REALTIME
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -82,8 +83,8 @@ class ConscriptionCurveTests(unittest.TestCase):
             with self.subTest(rate=rate):
                 game = sample_map_screen()
                 if rate is not None:
-                    game.nation_data["Avaria"]["conscription_slider"] = rate
-                before = queries.get_conscription_damage_bonus(game.nation_data["Avaria"])
+                    game.world.nation_data["Avaria"]["conscription_slider"] = rate
+                before = queries.get_conscription_damage_bonus(game.world.nation_data["Avaria"])
                 saved = json.loads(json.dumps(queries.build_save_dict(game)))
                 with patch.object(queries, "get_country_data", return_value={"Avaria": {"research": {}}}):
                     loaded = queries.merge_country_templates(saved["nation_data"])
@@ -104,22 +105,22 @@ class ConscriptionCombatTests(unittest.TestCase):
         game = StubBattleMap()
         game.add_nation("A", at_war_with=["B"])
         game.add_nation("B", at_war_with=["A"])
-        game.nation_data["A"]["conscription_slider"] = 0.25
+        game.world.nation_data["A"]["conscription_slider"] = 0.25
         return game
 
     def test_combat_map_forecast_unit_panel_and_ai_projection_agree(self):
         for rate in (1.0, 0.5, 0.25, 0.0):
             with self.subTest(rate=rate):
                 game = self.game()
-                game.nation_data["A"]["conscription_slider"] = rate
+                game.world.nation_data["A"]["conscription_slider"] = rate
                 attacker, defender = fixture_unit("A"), fixture_unit("B")
                 province = game.add_province("p1", "B", units=[attacker, defender])
-                expected = attacker["attack"] * (1.0 + queries.get_conscription_damage_bonus(game.nation_data["A"]))
-                roster = unit_roster_row(attacker, province, game.nation_data, True)
+                expected = attacker["attack"] * (1.0 + queries.get_conscription_damage_bonus(game.world.nation_data["A"]))
+                roster = unit_roster_row(attacker, province, game.world.nation_data, True)
                 friendly, enemy, involved = overlay_renderer.combat_strengths(
-                    [province["units"]], game.nation_data, {"A"})
-                battle = combat_rules.build_battle([province["units"]], game.nation_data)
-                incoming = combat_rules.projected_incoming_damage(battle, game.nation_data)
+                    [province["units"]], game.world.nation_data, {"A"})
+                battle = combat_rules.build_battle([province["units"]], game.world.nation_data)
+                incoming = combat_rules.projected_incoming_damage(battle, game.world.nation_data)
                 self.assertTrue(involved)
                 self.assertAlmostEqual(roster["attack"], expected)
                 self.assertAlmostEqual(friendly, expected)
@@ -132,16 +133,16 @@ class ConscriptionCombatTests(unittest.TestCase):
     @policy_fixtures({"id": "damage_fixture", "effects": {"damage": 1.25}})
     def test_bonus_multiplies_health_politics_and_policy_without_changing_raw_stats(self):
         game = self.game()
-        country = game.nation_data["A"]
+        country = game.world.nation_data["A"]
         country.update({"political_value": c.POLITICS_MAX, politics.QUALITY_VALUE_KEY: c.POLITICS_MAX,
                         politics.POLICY_KEY: {"damage_fixture": {"status": politics.POLICY_ACTIVE}}})
         attacker = fixture_unit("A")
         attacker["health"] /= 2
         original_attack = attacker["attack"]
         expected = (combat_rules.health_damage_multiplier(attacker)
-                    * politics.damage_multiplier(game.nation_data, "A")
+                    * politics.damage_multiplier(game.world.nation_data, "A")
                     * (1.0 + queries.get_conscription_damage_bonus(country)))
-        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(attacker, game.nation_data), expected)
+        self.assertAlmostEqual(combat_rules.effective_damage_multiplier(attacker, game.world.nation_data), expected)
         self.assertEqual(attacker["attack"], original_attack)
         self.assertEqual(combat_rules.effective_damage_multiplier(attacker),
                          combat_rules.health_damage_multiplier(attacker))
@@ -151,9 +152,9 @@ class ConscriptionCombatTests(unittest.TestCase):
         first, second = fixture_unit("A"), fixture_unit("B")
         # Volunteer control does not replace the original owner's national modifiers.
         first["volunteer_host"] = "B"
-        expected = (first["attack"] * (1.0 + queries.get_conscription_damage_bonus(game.nation_data["A"]))
+        expected = (first["attack"] * (1.0 + queries.get_conscription_damage_bonus(game.world.nation_data["A"]))
                     + second["attack"])
-        self.assertAlmostEqual(combat_rules.volley([first, second], nation_data=game.nation_data), expected)
+        self.assertAlmostEqual(combat_rules.volley([first, second], nation_data=game.world.nation_data), expected)
 
     def test_bombardment_and_its_unit_panel_apply_the_same_bonus(self):
         game = self.game()
@@ -162,7 +163,7 @@ class ConscriptionCombatTests(unittest.TestCase):
         origin = game.add_province("p1", "A", units=[gun])
         target = game.add_province("p2", "B", units=[defender])
         origin["neighbors"], target["neighbors"] = ["p2"], ["p1"]
-        expected = unit_roster_row(gun, origin, game.nation_data, False)["bombard"][0]
+        expected = unit_roster_row(gun, origin, game.world.nation_data, False)["bombard"][0]
         with patch.dict(c.BOMBARDMENT_UNITS, {"Conscription fixture": 1}, clear=True):
             combat_processor.process_bombardments(game)
         self.assertGreater(expected, gun["bombard_attack"])
@@ -177,9 +178,9 @@ class ConscriptionSliderTests(unittest.TestCase):
 
     def screen(self, tactical=False):
         game = EconomyMap(["A", "B"])
-        game.tactical_mode = tactical
+        game.session.tactical_mode = tactical
         game.player_manpower = game.player_materials = game.player_fuel = 100
-        game.player_unit = fixture_unit("A") if tactical else None
+        game.session.player_unit = fixture_unit("A") if tactical else None
         game.feedback_text = ""
         game.invalidate_map_presentation_cache = Mock()
         screen = Economy_Screen()
@@ -193,10 +194,10 @@ class ConscriptionSliderTests(unittest.TestCase):
         with patch("pygame.mouse.get_pressed", return_value=(True, False, False)):
             slider.handle_event(pygame.event.Event(
                 pygame.MOUSEMOTION, pos=(slider.rect.x + slider.rect.width // 4, slider.rect.y)))
-        self.assertEqual(game.nation_data["A"]["conscription_slider"], 0.25)
+        self.assertEqual(game.world.nation_data["A"]["conscription_slider"], 0.25)
         self.assertEqual(screen.conscription_damage_caption, damage_caption(0.25))
         game.invalidate_map_presentation_cache.assert_called_once_with()
-        expected = queries.get_economy_projections("A", game.map_data, game.nation_data)
+        expected = queries.get_economy_projections("A", game.world.map_data, game.world.nation_data)
         self.assertEqual(screen.econ_cache, expected)
 
     def test_fractional_bonus_is_shown_and_full_conscription_still_shows_zero(self):
@@ -215,22 +216,22 @@ class ConscriptionSliderTests(unittest.TestCase):
 
     def test_tactical_players_cannot_change_national_conscription(self):
         screen, game = self.screen(tactical=True)
-        before = dict(game.nation_data["A"])
+        before = dict(game.world.nation_data["A"])
         screen.set_conscription(0.0)
-        self.assertEqual(game.nation_data["A"], before)
+        self.assertEqual(game.world.nation_data["A"], before)
 
     def test_submitted_realtime_players_cannot_start_a_drag_or_change_setting(self):
         screen, game = self.screen()
-        game.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.realtime_player_id = "player"
         game.realtime_session = SimpleNamespace(
             phase="TURN", players={"player": SimpleNamespace(submitted=True, eliminated=False)})
         slider = next(element for element in screen.elements if isinstance(element, Slider))
-        before = dict(game.nation_data["A"])
+        before = dict(game.world.nation_data["A"])
         slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center))
         screen.set_conscription(0.0)
         self.assertFalse(slider.dragging)
-        self.assertEqual(game.nation_data["A"], before)
+        self.assertEqual(game.world.nation_data["A"], before)
         game.invalidate_map_presentation_cache.assert_not_called()
 
 

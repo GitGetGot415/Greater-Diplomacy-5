@@ -170,13 +170,13 @@ class ResearchCountrySelectScreen(ListSelectScreen):
 
     def __init__(self, map_screen):
         self.mode = "VIEW"
-        items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.map_data)),
-                                             map_screen.nation_data)
+        items = queries.country_picker_items(sorted(queries.get_living_nations(map_screen.world.map_data)),
+                                             map_screen.world.nation_data)
         super().__init__(map_screen, "Select Nation's Research", "Select Nation to View or Edit Research:",
                          items, self.open_country)
 
     def edit_allowed(self):
-        return bool(self.items and self.map_screen.player_country == "Spectator"
+        return bool(self.items and self.map_screen.session.player_country == "Spectator"
                     and queries.can_edit_country_research(self.map_screen, self.items[0][1]))
 
     def set_mode(self, mode):
@@ -249,10 +249,10 @@ class ResearchDetailsScreen(ModalScreen):
         cost = self.node["cost"]
         subject = self.research.subject
         tech_key, level = self.node["tech_key"], self.node["level"]
-        days_per_turn = queries.get_days_per_turn(map_screen.scenario_settings)
-        base_points = queries.get_base_research_points(map_screen.nation_data, subject, days_per_turn)
-        faction_bonus = queries.get_faction_research_bonus(subject, tech_key, level, map_screen.nation_data)
-        pts_per_turn = queries.get_project_research_rate(base_points, map_screen.nation_data, subject, tech_key, level)
+        days_per_turn = queries.get_days_per_turn(map_screen.world.scenario_settings)
+        base_points = queries.get_base_research_points(map_screen.world.nation_data, subject, days_per_turn)
+        faction_bonus = queries.get_faction_research_bonus(subject, tech_key, level, map_screen.world.nation_data)
+        pts_per_turn = queries.get_project_research_rate(base_points, map_screen.world.nation_data, subject, tech_key, level)
 
         self.funding_surface = None
         if self.node["status"] == "RESEARCHING" and not self.research.editing_research_levels:
@@ -275,8 +275,8 @@ class ResearchDetailsScreen(ModalScreen):
         # --- AHEAD OF TIME SIMULATION ---
         target_year = self.node.get("target_year", 1900)
         actual_turns = 0
-        sim_year = queries.get_research_year(map_screen.nation_data, subject,
-                                             queries.get_exact_year(map_screen.time_manager))
+        sim_year = queries.get_research_year(map_screen.world.nation_data, subject,
+                                             queries.get_exact_year(map_screen.world.time_manager))
         pts_accumulated = 0
         year_inc = days_per_turn / 360.0
 
@@ -312,16 +312,16 @@ class ResearchDetailsScreen(ModalScreen):
         self.modal_body_line_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_LINE_STEP_Y
         self.modal_subhead_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_SUBHEAD_STEP_Y
         self.modal_entity_padding = MODAL_COMPACT_ENTITY_PADDING_Y if compact else MODAL_ENTITY_PADDING_Y
-        factory_multiplier = politics.factory_output_multiplier(map_screen.nation_data, research.subject)
+        factory_multiplier = politics.factory_output_multiplier(map_screen.world.nation_data, research.subject)
         self.modal_building_outputs = {
             name: queries.get_building_output(name, research.subject_data.get("research", {}),
                                              self.building_library, context=map_screen, factory_multiplier=factory_multiplier)
             for name in [self.entity_name, *self.modal_unlocks]
             if name in self.building_library}
         self.modal_building_costs = {
-            name: (queries.get_building_cost(name, research.subject, map_screen.map_data, self.building_library,
-                                             map_screen.nation_data)
-                   if research.subject in map_screen.nation_data
+            name: (queries.get_building_cost(name, research.subject, map_screen.world.map_data, self.building_library,
+                                             map_screen.world.nation_data)
+                   if research.subject in map_screen.world.nation_data
                    else self.building_library[name])
             for name in self.modal_building_outputs}
         has_air_traits = self.unit_library.get(self.entity_name, {}).get("air_role")
@@ -341,7 +341,7 @@ class ResearchDetailsScreen(ModalScreen):
             # The one slot the action button lives in, so an onlooker has no
             # route to start or pause research at all rather than a
             # disabled-looking button that still fires.
-            label = "Tactical: Read Only" if research.map_screen.tactical_mode else "Spectator: Read Only"
+            label = "Tactical: Read Only" if research.map_screen.session.tactical_mode else "Spectator: Read Only"
             return label, "grey", lambda: None
         status = self.node["status"]
         if status == "AVAILABLE":
@@ -528,7 +528,7 @@ class Research_Screen(Screen):
         if self.editor_country:
             return self.editor_country
         chosen = self.map_screen.viewing_research_country
-        return chosen or self.map_screen.player_country
+        return chosen or self.map_screen.session.player_country
 
     @property
     def editing_starting_research(self):
@@ -537,13 +537,13 @@ class Research_Screen(Screen):
     @property
     def editing_research_levels(self):
         return self.editing_starting_research or (
-            self.map_screen.player_country == "Spectator" and self.spectator_research_mode == "EDIT")
+            self.map_screen.session.player_country == "Spectator" and self.spectator_research_mode == "EDIT")
 
     @property
     def subject_data(self):
         if self.spectator_draft is not None and self.subject == self.research_edit_country:
             return self.spectator_draft
-        return self.map_screen.nation_data[self.subject]
+        return self.map_screen.world.nation_data[self.subject]
 
     @property
     def can_edit(self):
@@ -555,14 +555,14 @@ class Research_Screen(Screen):
         """
         if self.editing_starting_research:
             return queries.can_edit_starting_research(self.map_screen, self.subject)
-        if self.map_screen.player_country == "Spectator":
+        if self.map_screen.session.player_country == "Spectator":
             return (self.spectator_research_mode == "EDIT"
                     and queries.can_edit_country_research(self.map_screen, self.subject))
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             return False
         if not queries.realtime_turn_open(self.map_screen):
             return False
-        return self.subject == self.map_screen.player_country
+        return self.subject == self.map_screen.session.player_country
 
     def handle_events(self, events):
         for event in events:
@@ -744,7 +744,7 @@ class Research_Screen(Screen):
     def year_to_x(self, year, include_scroll=True):
         """Screen x of a year on the timeline. The node buttons position
         themselves before the scroll offset is applied, hence the flag."""
-        current_year = self.map_screen.time_manager.year
+        current_year = self.map_screen.world.time_manager.year
         x = (year - current_year) * self.pixels_per_year + (c.SCREEN_WIDTH // 2)
         return x + self.scroll_x if include_scroll else x
 
@@ -765,10 +765,10 @@ class Research_Screen(Screen):
         self.spectator_draft = None
         self.research_edit_original = None
         self.research_edit_country = ""
-        if not editor_country and map_ref.player_country == "Spectator" and self.spectator_research_mode == "EDIT":
+        if not editor_country and map_ref.session.player_country == "Spectator" and self.spectator_research_mode == "EDIT":
             self.research_edit_country = self.subject
-            self.research_edit_original = queries.country_research_edit_state(map_ref.nation_data[self.subject])
-            self.spectator_draft = queries.country_research_edit_state(map_ref.nation_data[self.subject])
+            self.research_edit_original = queries.country_research_edit_state(map_ref.world.nation_data[self.subject])
+            self.spectator_draft = queries.country_research_edit_state(map_ref.world.nation_data[self.subject])
         self.tech_tree = queries.get_tech_tree(map_ref)
         self.unit_library = queries.get_unit_library(map_ref)
         self.building_library = queries.get_building_library(map_ref)
@@ -802,7 +802,7 @@ class Research_Screen(Screen):
         # "is the subject a real nation" rather than "is the player not None":
         # the literal "Spectator" is not a key in nation_data, which is what
         # used to make this screen unreachable for them at all.
-        if not self.map_screen or self.subject not in self.map_screen.nation_data: return
+        if not self.map_screen or self.subject not in self.map_screen.world.nation_data: return
         player_data = self.subject_data
         res_levels = player_data.setdefault("research", {})
         queue = player_data.setdefault("research_queue", [])
@@ -834,8 +834,8 @@ class Research_Screen(Screen):
         """Prepare the country title, output, and editor instructions after changes."""
         font = fonts.get("heading1")
         category = self.current_category
-        name = queries.get_country_display_name(self.subject, self.map_screen.nation_data)
-        prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.player_country else ""
+        name = queries.get_country_display_name(self.subject, self.map_screen.world.nation_data)
+        prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.session.player_country else ""
         self.header_title_surface = font.render(f"{prefix}VIEWING: {category}", True, (255, 255, 255))
         self.header_output_rect = None
         if self.editing_research_levels:
@@ -955,7 +955,7 @@ class Research_Screen(Screen):
             # asks this same query, so the tree cannot promise a bonus that its
             # research points do not receive.
             faction_bonus = queries.get_faction_research_bonus(
-                self.subject, tech_key, lvl, self.map_screen.nation_data)
+                self.subject, tech_key, lvl, self.map_screen.world.nation_data)
             if status != "COMPLETED" and faction_bonus:
                 btn.notification_text = f"+{int(faction_bonus * 100)}%"
                 btn.notification_color = (255, 0, 0)
@@ -1111,7 +1111,7 @@ class Research_Screen(Screen):
         if self.current_category in ["COMPLETED"]:
             return
 
-        current_year = self.map_screen.time_manager.year
+        current_year = self.map_screen.world.time_manager.year
         axis_y = TIMELINE_AXIS_Y
 
         pygame.draw.line(surface, (150, 150, 150), (0, axis_y), (c.SCREEN_WIDTH, axis_y), 3)
@@ -1303,7 +1303,7 @@ class Research_Screen(Screen):
     def enforce_scroll_bounds(self):
         """Prevents the timeline from scrolling past the defined START_YEAR or END_YEAR."""
         if self.map_screen:
-            current_year = self.map_screen.time_manager.year
+            current_year = self.map_screen.world.time_manager.year
             # Negative scroll moves the camera to future years (right), positive to past years (left)
             self.min_scroll_x = -((c.END_YEAR - current_year) * self.pixels_per_year)
             self.max_scroll_x = -((c.START_YEAR - current_year) * self.pixels_per_year)

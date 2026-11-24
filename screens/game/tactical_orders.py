@@ -64,10 +64,10 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, LIST_VISIBLE_ROWS * ROW_HEIGHT)
 
     def _player_unit_record(self):
-        player_unit = self.map_screen.player_unit
+        player_unit = self.map_screen.session.player_unit
         if player_unit is None:
             return None
-        for province in self.map_screen.map_data.values():
+        for province in self.map_screen.world.map_data.values():
             for index, unit in enumerate(province.get("units", [])):
                 if unit is player_unit:
                     return unit, province, index
@@ -86,7 +86,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         self._select_player_unit(None if open_battle_on_entry else "select_unit")
         self.refresh_ui()
         if (open_battle_on_entry and queries.is_province_in_active_combat(
-                self.target_province, self.map_screen.nation_data)):
+                self.target_province, self.map_screen.world.nation_data)):
             self.open_battle_panel()
 
     def inspect_province(self, province, preserve_scroll=False):
@@ -102,7 +102,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
 
     def refresh_ui(self):
         map_ref = self.map_screen
-        player_country = map_ref.player_country
+        player_country = map_ref.session.player_country
         if self.target_province is not None:
             sidebar_info.prepare_unit_roster(map_ref, self.target_province)
         self._player_record = self._player_unit_record()
@@ -124,7 +124,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         self._row_order_summaries = {}
 
         if self.target_province is not None and queries.is_province_in_active_combat(
-                self.target_province, map_ref.nation_data):
+                self.target_province, map_ref.world.nation_data):
             here = self._player_record is not None and self._player_record[1] is self.target_province
             battle_label = ("Close Battle" if self.battle_screen is not None else
                             ("Manage Battle" if here else "View Battle"))
@@ -143,11 +143,11 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
             self._player_row_key = row_key
             self._cache_row_icon(row_key, unit)
             self._row_order_summaries[row_key] = self._order_summary(row_key, unit)
-            research = map_ref.nation_data.get(player_country, {}).get("research", {})
+            research = map_ref.world.nation_data.get(player_country, {}).get("research", {})
             # A fixed row passes no scroll guard.
             self._build_unit_action_buttons(
                 row_key, index, unit, province, PANEL_Y + UNIT_ROW_OFFSET_Y, None,
-                queries.is_nation_in_combat_here(player_country, province, map_ref.nation_data),
+                queries.is_nation_in_combat_here(player_country, province, map_ref.world.nation_data),
                 queries.is_water_province(province), province.get("is_coastal", False),
                 queries.has_industry(province), research)
 
@@ -231,7 +231,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         self.cancel_rects = []
         small_font = fonts.get("small")
         tiny_font = fonts.get("tiny")
-        owner_color = map_ref.nation_colors.get(map_ref.player_country, (255, 255, 0))
+        owner_color = map_ref.nation_colors.get(map_ref.session.player_country, (255, 255, 0))
 
         if self._player_record is not None:
             unit, province, _index = self._player_record

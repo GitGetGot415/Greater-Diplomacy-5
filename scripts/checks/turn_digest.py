@@ -54,21 +54,21 @@ def play_scenario(scenario, turns, output):
     # The check must not call a model or depend on the local LLM setting.
     queries.get_settings()["ai_mode"] = "OFF"
     game = main.Map(load_path=scenario, is_scenario=True)
-    game.selection_mode = False
+    game.session.selection_mode = False
     game.pending_selection = None
     game.show_player_ready_screen = False
-    game.player_country = "Spectator"
-    game.active_players = []
+    game.session.player_country = "Spectator"
+    game.session.active_players = []
     random.seed(SEED)
     digests = []
     for _turn in range(turns):
-        game.ai_is_thinking = True
+        game.session.ai_is_thinking = True
         asyncio.run(turn_processor.prepare_turn(game))
-        game.ai_is_thinking = False
-        game.viewing_ai_moves = True
+        game.session.ai_is_thinking = False
+        game.session.viewing_ai_moves = True
         asyncio.run(turn_processor.resolve_turn_logic(game))
-        game.viewing_ai_moves = False
-        state = [canonical(game.map_data), canonical(game.nation_data), repr(random.getstate())]
+        game.session.viewing_ai_moves = False
+        state = [canonical(game.world.map_data), canonical(game.world.nation_data), repr(random.getstate())]
         digests.append(hashlib.sha256(json.dumps(state).encode()).hexdigest()[:16])
     with open(output, "w", encoding="utf-8") as handle:
         json.dump(digests, handle)

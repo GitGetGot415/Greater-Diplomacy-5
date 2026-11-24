@@ -84,16 +84,16 @@ class Multiplayer_New(MenuListScreen):
                         load_path=os.path.join(directory, scenario_name),
                         is_scenario=True, map_settings=map_settings)
                     temp_map.multiplayer_host_mode = True
-                    temp_map.multiplayer_master_key = master_key
+                    temp_map.session.multiplayer_master_key = master_key
                     temp_map.multiplayer_tournament_name = safe_tour_name
-                    temp_map.multiplayer_tournament_dir = tournament_dir
+                    temp_map.session.multiplayer_tournament_dir = tournament_dir
 
                     keys_dict = {}
-                    for cid, data in temp_map.nation_data.items():
+                    for cid, data in temp_map.world.nation_data.items():
                         if data.get("is_playable"):
                             keys_dict[cid] = secrets.token_hex(4)
 
-                    turn = temp_map.time_manager.total_turns if hasattr(temp_map, 'time_manager') else 0
+                    turn = temp_map.world.time_manager.total_turns
                     export_path = os.path.join(tournament_dir, f"Turn_{turn}_Host.gd5tour")
                     yield "Saving Tournament..."
                     keys_path, all_keys_path = tournament_files.export_tournament(temp_map, export_path, master_key, keys_dict)

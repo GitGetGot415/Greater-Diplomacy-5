@@ -46,9 +46,7 @@ def _apply_vision_radius(prov, id_to_province, visible_set, partial_set):
 def get_viewing_country(context):
     """Keep visibility identity separate from the participant who can issue orders."""
     session = session_for(context)
-    # Older map contexts have only the controlling identity.
-    viewer = getattr(session, "viewing_country", None)
-    return viewer if viewer is not None else session.player_country
+    return session.viewing_country if session.viewing_country is not None else session.player_country
 
 
 def get_visible_provinces(context):
@@ -208,8 +206,7 @@ def can_release_nations_for(context, country_id):
             or session_state.is_editor or session_state.tactical_mode):
         return False
     if session_state.player_country == "Spectator":
-        return not (session_state.multiplayer_mode
-                    or session_state.realtime_multiplayer)
+        return not session_state.is_networked
     return country_id == session_state.player_country
 
 
@@ -220,8 +217,7 @@ def can_use_spectator_country_actions(context):
             and not (session_state.is_editor or session_state.tactical_mode or session_state.selection_mode
                      or session_state.ai_is_thinking or session_state.viewing_ai_moves
                      or session_state.is_refreshing or session_state.is_saving
-                     or session_state.multiplayer_mode
-                     or session_state.realtime_multiplayer))
+                     or session_state.is_networked))
 
 
 def realtime_turn_open(context):
@@ -230,7 +226,7 @@ def realtime_turn_open(context):
     Outside real-time multiplayer there is no shared turn to close. In a real-time
     game the player must be in the turn phase, unsubmitted, and not eliminated.
     """
-    if not session_for(context).realtime_multiplayer:
+    if not session_for(context).is_realtime:
         return True
     session = context.realtime_session
     player = session.players.get(context.realtime_player_id) if session else None
@@ -384,8 +380,8 @@ def get_active_ai_nations(context):
     # Cross-reference with nations that actually own territory
     living_nations = queries.get_living_nations(world_state.map_data)
     
-    submitted = context.submitted_moves
-    protected = context.multiplayer_protected_countries
+    submitted = context.session.submitted_moves
+    protected = context.session.multiplayer_protected_countries
 
     for name, data in world_state.nation_data.items():
         if (submitted and name in submitted) or (protected and name in protected):

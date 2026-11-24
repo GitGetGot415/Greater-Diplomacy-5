@@ -61,7 +61,7 @@ class TerritoryTests(unittest.TestCase):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [deal.tiles_clause("B", "A", [self.contested["id"]])])
         deal_effects.execute(self.game, agreement)
-        self.assertIn(self.contested["id"], self.game.nation_data["B"]["claims"])
+        self.assertIn(self.contested["id"], self.game.world.nation_data["B"]["claims"])
 
 
 class PaymentTests(unittest.TestCase):
@@ -73,8 +73,8 @@ class PaymentTests(unittest.TestCase):
                              [deal.resources_clause("B", "A", "materials", 400)])
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["A"]["materials"], 1400)
-        self.assertEqual(self.game.nation_data["B"]["materials"], 600)
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 1400)
+        self.assertEqual(self.game.world.nation_data["B"]["materials"], 600)
 
     def test_a_payer_short_of_the_bill_goes_into_debt_for_the_rest(self):
         """The rule this reverses is the one the whole exploit ran on.
@@ -85,13 +85,13 @@ class PaymentTests(unittest.TestCase):
         not paid -- which is how a player bought the whole of Bulgaria for one
         material. What a nation cannot cover out of stock it now owes.
         """
-        self.game.nation_data["B"]["fuel"] = 50
+        self.game.world.nation_data["B"]["fuel"] = 50
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [deal.resources_clause("B", "A", "fuel", 999)])
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["B"]["fuel"], -949)
-        self.assertEqual(self.game.nation_data["A"]["fuel"], 1999,
+        self.assertEqual(self.game.world.nation_data["B"]["fuel"], -949)
+        self.assertEqual(self.game.world.nation_data["A"]["fuel"], 1999,
                          "and the receiver is paid the whole of it")
 
     def test_the_debt_is_cleared_by_the_next_turn_of_income(self):
@@ -101,14 +101,14 @@ class PaymentTests(unittest.TestCase):
         never do worse than that."""
         from map_logic.system32 import economy_processor
 
-        self.game.nation_data["B"]["fuel"] = 50
+        self.game.world.nation_data["B"]["fuel"] = 50
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [deal.resources_clause("B", "A", "fuel", 999)])
         deal_effects.execute(self.game, agreement)
-        self.assertLess(self.game.nation_data["B"]["fuel"], 0)
+        self.assertLess(self.game.world.nation_data["B"]["fuel"], 0)
 
         economy_processor.process_economy(self.game)
-        self.assertGreaterEqual(self.game.nation_data["B"]["fuel"], 0)
+        self.assertGreaterEqual(self.game.world.nation_data["B"]["fuel"], 0)
 
     def test_a_term_above_the_payers_income_is_charged_at_the_ceiling(self):
         """One turn's output is the most any deal can move, whichever direction
@@ -118,8 +118,8 @@ class PaymentTests(unittest.TestCase):
                              [deal.resources_clause("B", "A", "materials", 99999999)])
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["B"]["materials"], 750)
-        self.assertEqual(self.game.nation_data["A"]["materials"], 1250)
+        self.assertEqual(self.game.world.nation_data["B"]["materials"], 750)
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 1250)
 
     def test_and_the_shortfall_is_reported_rather_than_swallowed(self):
         """A promise is capped when it is made, and then travels for a turn --
@@ -142,13 +142,13 @@ class PaymentTests(unittest.TestCase):
     def test_an_escrowed_payer_is_not_charged_twice(self):
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
                              [deal.resources_clause("A", "B", "materials", 300)])
-        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A")
-        self.assertEqual(self.game.nation_data["A"]["materials"], 700)
+        held = deal_effects.hold_escrow(self.game.world.nation_data, agreement, "A")
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 700)
 
         deal_effects.execute(self.game, agreement, escrowed={"A": held})
 
-        self.assertEqual(self.game.nation_data["A"]["materials"], 700, "charged once")
-        self.assertEqual(self.game.nation_data["B"]["materials"], 1300)
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 700, "charged once")
+        self.assertEqual(self.game.world.nation_data["B"]["materials"], 1300)
 
     def test_escrow_for_a_pruned_term_goes_home(self):
         prov = self.game.add_province("A")
@@ -156,32 +156,32 @@ class PaymentTests(unittest.TestCase):
             deal.resources_clause("A", "B", "materials", 300),
             deal.tiles_clause("A", "B", [prov["id"]]),
         ])
-        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A")
+        held = deal_effects.hold_escrow(self.game.world.nation_data, agreement, "A")
         # The payment term is what escrowed; strip it and the money is owed to nobody.
         stripped = deal.with_clauses(agreement, [deal.tiles_clause("A", "B", [prov["id"]])])
 
         deal_effects.execute(self.game, stripped, escrowed={"A": held})
 
-        self.assertEqual(self.game.nation_data["A"]["materials"], 1000)
+        self.assertEqual(self.game.world.nation_data["A"]["materials"], 1000)
 
     def test_escrow_takes_the_whole_promise(self):
         """Promising is spending. Escrow used to hold min(promised, stockpile),
         which is the same forgiveness the payment loop used to grant and the same
         hole: an offer of any size cost only what was lying around."""
-        self.game.nation_data["A"]["fuel"] = 20
+        self.game.world.nation_data["A"]["fuel"] = 20
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
                              [deal.resources_clause("A", "B", "fuel", 999)])
 
-        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A")
+        held = deal_effects.hold_escrow(self.game.world.nation_data, agreement, "A")
 
         self.assertEqual(held, {"fuel": 999})
-        self.assertEqual(self.game.nation_data["A"]["fuel"], -979)
+        self.assertEqual(self.game.world.nation_data["A"]["fuel"], -979)
 
     def test_escrow_holds_no_more_than_the_ceiling_either(self):
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
                              [deal.resources_clause("A", "B", "fuel", 99999999)])
 
-        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A",
+        held = deal_effects.hold_escrow(self.game.world.nation_data, agreement, "A",
                                         self.game.economies)
 
         self.assertEqual(held, {"fuel": 5000})
@@ -191,15 +191,15 @@ class PaymentTests(unittest.TestCase):
         but release still reads the held dict rather than the deal -- a term
         trimmed to the ceiling would otherwise be refunded at its written size
         and mint the difference."""
-        self.game.nation_data["A"]["fuel"] = 20
+        self.game.world.nation_data["A"]["fuel"] = 20
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
                              [deal.resources_clause("A", "B", "fuel", 99999999)])
 
-        held = deal_effects.hold_escrow(self.game.nation_data, agreement, "A",
+        held = deal_effects.hold_escrow(self.game.world.nation_data, agreement, "A",
                                         self.game.economies)
-        deal_effects.release_escrow(self.game.nation_data, held, "A")
+        deal_effects.release_escrow(self.game.world.nation_data, held, "A")
 
-        self.assertEqual(self.game.nation_data["A"]["fuel"], 20)
+        self.assertEqual(self.game.world.nation_data["A"]["fuel"], 20)
 
 
 class OtherClauseTests(unittest.TestCase):
@@ -212,37 +212,37 @@ class OtherClauseTests(unittest.TestCase):
                                "puppet_type": c.PUPPET_TYPE_AUTONOMOUS}])
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["B"]["master"], "A")
-        self.assertIn("B", self.game.nation_data["A"]["puppets"])
+        self.assertEqual(self.game.world.nation_data["B"]["master"], "A")
+        self.assertIn("B", self.game.world.nation_data["A"]["puppets"])
 
     def test_demilitarization_is_recorded_in_turns(self):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [{"type": deal.DEMILITARIZE, "nation": "B", "turns": 10}])
         deal_effects.execute(self.game, agreement)
-        self.assertEqual(self.game.nation_data["B"]["restrictions"]["demilitarized"], 10)
+        self.assertEqual(self.game.world.nation_data["B"]["restrictions"]["demilitarized"], 10)
 
     def test_a_longer_demilitarization_wins_over_a_standing_one(self):
-        self.game.nation_data["B"]["restrictions"] = {"demilitarized": 15}
+        self.game.world.nation_data["B"]["restrictions"] = {"demilitarized": 15}
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [{"type": deal.DEMILITARIZE, "nation": "B", "turns": 4}])
         deal_effects.execute(self.game, agreement)
-        self.assertEqual(self.game.nation_data["B"]["restrictions"]["demilitarized"], 15)
+        self.assertEqual(self.game.world.nation_data["B"]["restrictions"]["demilitarized"], 15)
 
     def test_military_access_is_one_way(self):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [{"type": deal.MILITARY_ACCESS, "grantor": "B", "grantee": "A"}])
         deal_effects.execute(self.game, agreement)
 
-        self.assertIn("A", self.game.nation_data["B"]["military_access"])
-        self.assertNotIn("B", self.game.nation_data["A"]["military_access"])
+        self.assertIn("A", self.game.world.nation_data["B"]["military_access"])
+        self.assertNotIn("B", self.game.world.nation_data["A"]["military_access"])
 
     def test_faction_exit_removes_the_membership(self):
         self.game.set_faction("The Pact", "B")
-        self.game.nation_data["C"] = dict(self.game.nation_data["A"], name="C")
+        self.game.world.nation_data["C"] = dict(self.game.world.nation_data["A"], name="C")
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B"],
                              [{"type": deal.FACTION_EXIT, "nation": "B"}])
         deal_effects.execute(self.game, agreement)
-        self.assertEqual(self.game.nation_data["B"]["faction"], "")
+        self.assertEqual(self.game.world.nation_data["B"]["faction"], "")
 
     def test_faction_exit_in_a_trade_does_not_remove_membership(self):
         self.game.set_faction("The Pact", "B")
@@ -251,7 +251,7 @@ class OtherClauseTests(unittest.TestCase):
 
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["B"]["faction"], "The Pact")
+        self.assertEqual(self.game.world.nation_data["B"]["faction"], "The Pact")
 
     def test_war_exit_unlinks_only_that_pair(self):
         self.game.set_war("B", "A")
@@ -259,8 +259,8 @@ class OtherClauseTests(unittest.TestCase):
                              [{"type": deal.WAR_EXIT, "nation": "B", "against": "A"}])
         deal_effects.execute(self.game, agreement)
 
-        self.assertNotIn("A", self.game.nation_data["B"]["at_war_with"])
-        self.assertNotIn("B", self.game.nation_data["A"]["at_war_with"])
+        self.assertNotIn("A", self.game.world.nation_data["B"]["at_war_with"])
+        self.assertNotIn("B", self.game.world.nation_data["A"]["at_war_with"])
 
 
 class DemilitarizationTests(unittest.TestCase):
@@ -273,29 +273,29 @@ class DemilitarizationTests(unittest.TestCase):
         deal_effects.execute(self.game, agreement)
 
     def test_the_signatory_may_not_raise_units(self):
-        self.assertFalse(restrictions.can_raise_units("B", self.game.nation_data))
-        self.assertTrue(restrictions.can_raise_units("A", self.game.nation_data))
+        self.assertFalse(restrictions.can_raise_units("B", self.game.world.nation_data))
+        self.assertTrue(restrictions.can_raise_units("A", self.game.world.nation_data))
 
     def test_it_counts_down_a_turn_at_a_time(self):
-        restrictions.tick(self.game.nation_data["B"])
+        restrictions.tick(self.game.world.nation_data["B"])
         self.assertEqual(
-            restrictions.turns_left("B", self.game.nation_data, "demilitarized"), 2)
+            restrictions.turns_left("B", self.game.world.nation_data, "demilitarized"), 2)
 
     def test_it_expires_and_cleans_up_after_itself(self):
         for _ in range(3):
-            restrictions.tick(self.game.nation_data["B"])
+            restrictions.tick(self.game.world.nation_data["B"])
 
-        self.assertTrue(restrictions.can_raise_units("B", self.game.nation_data))
-        self.assertNotIn("restrictions", self.game.nation_data["B"])
+        self.assertTrue(restrictions.can_raise_units("B", self.game.world.nation_data))
+        self.assertNotIn("restrictions", self.game.world.nation_data["B"])
 
     def test_ticking_a_nation_with_no_restrictions_is_harmless(self):
-        restrictions.tick(self.game.nation_data["A"])
-        self.assertTrue(restrictions.can_raise_units("A", self.game.nation_data))
+        restrictions.tick(self.game.world.nation_data["A"])
+        self.assertTrue(restrictions.can_raise_units("A", self.game.world.nation_data))
 
     def test_the_diplomacy_turn_ages_it(self):
         self.game.run_turn()
         self.assertEqual(
-            restrictions.turns_left("B", self.game.nation_data, "demilitarized"), 2)
+            restrictions.turns_left("B", self.game.world.nation_data, "demilitarized"), 2)
 
 
 class WarEndingTests(unittest.TestCase):
@@ -306,18 +306,18 @@ class WarEndingTests(unittest.TestCase):
     def test_a_peace_deal_ends_the_war_and_writes_a_truce(self):
         deal_effects.execute(self.game, deal.ceasefire_deal("A", "B"))
 
-        self.assertNotIn("B", self.game.nation_data["A"]["at_war_with"])
-        self.assertNotIn("A", self.game.nation_data["B"]["at_war_with"])
-        self.assertEqual(self.game.nation_data["A"]["truces"]["B"], c.TRUCE_TURNS)
+        self.assertNotIn("B", self.game.world.nation_data["A"]["at_war_with"])
+        self.assertNotIn("A", self.game.world.nation_data["B"]["at_war_with"])
+        self.assertEqual(self.game.world.nation_data["A"]["truces"]["B"], c.TRUCE_TURNS)
 
     def test_a_trade_leaves_the_war_running(self):
         agreement = deal.new(deal.KIND_TRADE, ["A"], ["B"],
                              [deal.resources_clause("A", "B", "fuel", 10)])
         deal_effects.execute(self.game, agreement)
-        self.assertIn("B", self.game.nation_data["A"]["at_war_with"])
+        self.assertIn("B", self.game.world.nation_data["A"]["at_war_with"])
 
     def test_a_bloc_peace_ends_every_cross_pair(self):
-        self.game.nation_data["C"] = dict(self.game.nation_data["B"], name="C",
+        self.game.world.nation_data["C"] = dict(self.game.world.nation_data["B"], name="C",
                                           at_war_with=[], truces={})
         self.game.add_province("C")
         self.game.set_war("A", "C")
@@ -325,21 +325,21 @@ class WarEndingTests(unittest.TestCase):
         agreement = deal.new(deal.KIND_PEACE, ["A"], ["B", "C"], [deal.white_peace()])
         deal_effects.execute(self.game, agreement)
 
-        self.assertEqual(self.game.nation_data["A"]["at_war_with"], [])
-        self.assertNotIn("A", self.game.nation_data["C"]["at_war_with"])
+        self.assertEqual(self.game.world.nation_data["A"]["at_war_with"], [])
+        self.assertNotIn("A", self.game.world.nation_data["C"]["at_war_with"])
 
     def test_wargoals_between_the_signatories_are_cleared(self):
-        self.game.nation_data["A"]["wargoals"] = {"B": {"type": c.WARGOAL_TAKE_CLAIMS}}
-        self.game.nation_data["B"]["wargoals"] = {"A": {"type": c.WARGOAL_NO_CB}}
+        self.game.world.nation_data["A"]["wargoals"] = {"B": {"type": c.WARGOAL_TAKE_CLAIMS}}
+        self.game.world.nation_data["B"]["wargoals"] = {"A": {"type": c.WARGOAL_NO_CB}}
 
         deal_effects.execute(self.game, deal.ceasefire_deal("A", "B"))
 
-        self.assertEqual(self.game.nation_data["A"]["wargoals"], {})
-        self.assertEqual(self.game.nation_data["B"]["wargoals"], {})
+        self.assertEqual(self.game.world.nation_data["A"]["wargoals"], {})
+        self.assertEqual(self.game.world.nation_data["B"]["wargoals"], {})
 
     def test_executing_something_that_is_not_a_deal_does_nothing(self):
         self.assertEqual(deal_effects.execute(self.game, "Ceasefire"), [])
-        self.assertIn("B", self.game.nation_data["A"]["at_war_with"])
+        self.assertIn("B", self.game.world.nation_data["A"]["at_war_with"])
 
 
 class TruceSettingTests(unittest.TestCase):
@@ -352,17 +352,17 @@ class TruceSettingTests(unittest.TestCase):
         c.TRUCE_TURNS = self.original_truce_turns
 
     def test_zero_turn_truce_setting_allows_immediate_war(self):
-        self.game.scenario_settings = {"truce_turns": 0}
-        queries.apply_global_scenario_flags(self.game.scenario_settings)
+        self.game.world.scenario_settings = {"truce_turns": 0}
+        queries.apply_global_scenario_flags(self.game.world.scenario_settings)
 
         deal_effects.execute(self.game, deal.ceasefire_deal("A", "B"))
 
-        self.assertNotIn("B", self.game.nation_data["A"]["truces"])
-        self.assertNotIn("A", self.game.nation_data["B"]["truces"])
+        self.assertNotIn("B", self.game.world.nation_data["A"]["truces"])
+        self.assertNotIn("A", self.game.world.nation_data["B"]["truces"])
 
     def test_truce_setting_is_clamped_to_twelve_turns(self):
-        self.game.scenario_settings = {"truce_turns": 99}
-        queries.apply_global_scenario_flags(self.game.scenario_settings)
+        self.game.world.scenario_settings = {"truce_turns": 99}
+        queries.apply_global_scenario_flags(self.game.world.scenario_settings)
 
         self.assertEqual(c.TRUCE_TURNS, c.MAX_TRUCE_TURNS)
 

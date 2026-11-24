@@ -41,35 +41,35 @@ class DealScreenTestCase(unittest.TestCase):
         # earlier modules move provinces around on it -- so who owns what is
         # settled here, from the live map, rather than cached from whatever the
         # scenario looked like when it was first loaded.
-        landed = [n for n in sorted(queries.get_living_nations(self.map.map_data))
-                  if n not in c.UNPLAYABLE_NATIONS and n in self.map.nation_data]
+        landed = [n for n in sorted(queries.get_living_nations(self.map.world.map_data))
+                  if n not in c.UNPLAYABLE_NATIONS and n in self.map.world.nation_data]
         self.assertGreaterEqual(len(landed), 2, "need two nations holding land")
         self.player, self.enemy = landed[0], landed[1]
 
-        self.map.player_country = self.player
-        self.map.active_players = [self.player]
+        self.map.session.player_country = self.player
+        self.map.session.active_players = [self.player]
         self.map.selected_province = self.my_province()
 
         for nation in (self.player, self.enemy):
-            data = self.map.nation_data[nation]
+            data = self.map.world.nation_data[nation]
             data["at_war_with"] = []
             data["pending_diplomacy"] = {}
-            queries.set_country_faction(self.map.nation_data, nation, "")
+            queries.set_country_faction(self.map.world.nation_data, nation, "")
             data["master"] = ""
             data.setdefault("war_durations", {})
-        link_war(self.map.nation_data, self.player, self.enemy)
-        self.map.nation_data[self.player]["war_durations"][self.enemy] = 10
-        self.map.nation_data[self.enemy]["war_durations"][self.player] = 10
+        link_war(self.map.world.nation_data, self.player, self.enemy)
+        self.map.world.nation_data[self.player]["war_durations"][self.enemy] = 10
+        self.map.world.nation_data[self.enemy]["war_durations"][self.player] = 10
 
     def screen(self, kind=deal_mod.KIND_PEACE):
         from screens.game.deal_screen import Deal_Screen
         return Deal_Screen(self.map, self.enemy, kind)
 
     def their_province(self):
-        return next(p for p in self.map.map_data.values() if p.get("owner") == self.enemy)
+        return next(p for p in self.map.world.map_data.values() if p.get("owner") == self.enemy)
 
     def my_province(self):
-        return next(p for p in self.map.map_data.values() if p.get("owner") == self.player)
+        return next(p for p in self.map.world.map_data.values() if p.get("owner") == self.player)
 
 
 class RenderTests(DealScreenTestCase):
@@ -222,7 +222,7 @@ class BalanceLineTests(DealScreenTestCase):
         trade from an enemy whatever it is worth (see the test below).
         """
         for nation, other in ((self.player, self.enemy), (self.enemy, self.player)):
-            self.map.nation_data[nation]["at_war_with"].remove(other)
+            self.map.world.nation_data[nation]["at_war_with"].remove(other)
         screen = self.trade()
         gained, lost = ai_opinion.trade_balance(
             screen.world, self.enemy, self.player, screen.build_deal())
@@ -283,7 +283,7 @@ class PickingTests(DealScreenTestCase):
         genuinely cannot reach on the real map.
         """
         screen = self.screen()
-        remote = next((p for p in self.map.map_data.values()
+        remote = next((p for p in self.map.world.map_data.values()
                        if p.get("owner") not in (self.player, self.enemy)
                        and p.get("owner") not in c.UNPLAYABLE_NATIONS
                        and not screen.reach.reachable(self.player, p)), None)
@@ -306,7 +306,7 @@ class PickingTests(DealScreenTestCase):
         catch: unnamed occupied land goes home, so a conquest has to be
         nameable however far it is from your own border."""
         screen = self.screen()
-        overrun = next((p for p in self.map.map_data.values()
+        overrun = next((p for p in self.map.world.map_data.values()
                         if p.get("owner") == self.player), None)
         self.assertIsNotNone(overrun)
         self.assertTrue(screen.reach.reachable(self.player, overrun))
@@ -316,8 +316,8 @@ class AssemblyTests(DealScreenTestCase):
     def test_an_untouched_peace_screen_offers_a_white_peace(self):
         agreement = self.screen().build_deal()
         self.assertTrue(deal_mod.is_white_peace(agreement))
-        self.assertEqual(deal_mod.validate(agreement, self.map.map_data,
-                                           self.map.nation_data), [])
+        self.assertEqual(deal_mod.validate(agreement, self.map.world.map_data,
+                                           self.map.world.nation_data), [])
 
     def test_every_control_turns_into_a_clause(self):
         screen = self.screen()
@@ -340,8 +340,8 @@ class AssemblyTests(DealScreenTestCase):
         screen = self.screen()
         screen.pick(deal_screen.TAKE, self.their_province()["id"])
         screen.take_fuel_str = "500"
-        self.assertEqual(deal_mod.validate(screen.build_deal(), self.map.map_data,
-                                           self.map.nation_data), [])
+        self.assertEqual(deal_mod.validate(screen.build_deal(), self.map.world.map_data,
+                                           self.map.world.nation_data), [])
 
     def test_a_trade_carries_no_white_peace(self):
         screen = self.screen(deal_mod.KIND_TRADE)
@@ -350,7 +350,7 @@ class AssemblyTests(DealScreenTestCase):
         self.assertNotIn(deal_mod.WHITE_PEACE, kinds)
 
     def test_a_trade_does_not_make_a_faction_member_leave(self):
-        queries.set_country_faction(self.map.nation_data, self.player, "Allies")
+        queries.set_country_faction(self.map.world.nation_data, self.player, "Allies")
 
         screen = self.screen(deal_mod.KIND_TRADE)
         screen.give_mats_str = "100"
@@ -359,7 +359,7 @@ class AssemblyTests(DealScreenTestCase):
         self.assertNotIn(deal_mod.FACTION_EXIT, kinds)
 
     def test_a_separate_peace_still_makes_a_faction_member_leave(self):
-        queries.set_country_faction(self.map.nation_data, self.player, "Allies")
+        queries.set_country_faction(self.map.world.nation_data, self.player, "Allies")
 
         kinds = [cl["type"] for cl in deal_mod.clauses(self.screen().build_deal())]
 
@@ -382,7 +382,7 @@ class AssemblyTests(DealScreenTestCase):
         screen.pick(deal_screen.TAKE, self.their_province()["id"])
         screen.confirm()
 
-        pending = diplomacy_messages.get_pending(self.map.nation_data, self.player, self.enemy)
+        pending = diplomacy_messages.get_pending(self.map.world.nation_data, self.player, self.enemy)
         self.assertEqual(pending.get("action"), "PEACE_TREATY")
         self.assertTrue(deal_mod.is_deal(pending.get("parameters")))
 
@@ -392,7 +392,7 @@ class AssemblyTests(DealScreenTestCase):
         screen = self.screen()
         screen.confirm()
         self.assertEqual(
-            diplomacy_messages.get_pending(self.map.nation_data, self.player, self.enemy)
+            diplomacy_messages.get_pending(self.map.world.nation_data, self.player, self.enemy)
             .get("action"), "CEASEFIRE")
 
     def test_reopening_an_offer_restores_its_terms(self):
@@ -414,7 +414,7 @@ class AssemblyTests(DealScreenTestCase):
 class VerdictTests(DealScreenTestCase):
     def greedy(self):
         screen = self.screen()
-        for prov in self.map.map_data.values():
+        for prov in self.map.world.map_data.values():
             if prov.get("owner") == self.enemy:
                 screen.pick(deal_screen.TAKE, prov["id"])
         screen.refresh_ui()
@@ -440,7 +440,7 @@ class VerdictTests(DealScreenTestCase):
         screen.refresh_ui()
 
         engine = ai_opinion.accepts_peace(screen.world, self.enemy, self.player,
-                                          screen.build_deal(), self.map.scenario_settings)
+                                          screen.build_deal(), self.map.world.scenario_settings)
         self.assertEqual(screen.verdict_accepted, engine)
 
     def test_the_verdict_is_graded_rather_than_a_yes_or_no(self):
@@ -493,7 +493,7 @@ class ProjectedMapTests(DealScreenTestCase):
         agreement = dm.new(dm.KIND_PEACE, [self.enemy], [self.player],
                            [dm.white_peace(),
                             dm.tiles_clause(self.player, self.enemy, [wanted])])
-        self.map.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
+        self.map.world.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
             "action": "PEACE_TREATY", "turns": 1, "parameters": agreement}
         return View_Peace_Treaty_Screen(self.map, self.enemy), wanted
 
@@ -524,7 +524,7 @@ class ProjectedMapTests(DealScreenTestCase):
         original = refresh_map._build_map_surface
 
         def spy(map_screen, get_data):
-            for prov in map_screen.map_data.values():
+            for prov in map_screen.world.map_data.values():
                 painted[prov["id"]] = get_data(prov)
             return original(map_screen, get_data)
 
@@ -535,7 +535,7 @@ class ProjectedMapTests(DealScreenTestCase):
             self.assertEqual(build.call_count, 1)
 
         # The preview must project the transfer without changing live ownership.
-        self.assertEqual(self.map.id_to_province[wanted].get("owner"), self.player,
+        self.assertEqual(self.map.world.id_to_province[wanted].get("owner"), self.player,
                          "nothing has actually changed hands yet")
         self.assertEqual(painted[wanted][0], self.enemy)
 
@@ -547,7 +547,7 @@ class ProjectedMapTests(DealScreenTestCase):
         wanted = self.my_province()["id"]
         agreement = dm.new(dm.KIND_TRADE, [self.enemy], [self.player],
                            [dm.tiles_clause(self.player, self.enemy, [wanted])])
-        self.map.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
+        self.map.world.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
             "action": "TRADE", "turns": 1, "parameters": agreement}
 
         screen = View_Trade_Deal_Screen(self.map, self.enemy)
@@ -562,7 +562,7 @@ class ProjectedMapTests(DealScreenTestCase):
         ratified_province = self.their_province()["id"]
         ratified_deal = deal_mod.new(deal_mod.KIND_PEACE, [self.enemy], [self.player], [
             deal_mod.white_peace(), deal_mod.tiles_clause(self.enemy, self.player, [ratified_province])])
-        data = self.map.nation_data[self.player]
+        data = self.map.world.nation_data[self.player]
         with patch.dict(data, pending_ratification={"signatory": self.enemy, "deal": ratified_deal}):
             messages = Messages_Screen()
             messages.start_messages(self.map)
@@ -584,7 +584,7 @@ class IncomingTradeButtonTests(DealScreenTestCase):
         agreement = dm.new(dm.KIND_TRADE, [self.enemy], [self.player],
                            [dm.tiles_clause(self.player, self.enemy,
                                             [self.my_province()["id"]])])
-        self.map.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
+        self.map.world.nation_data[self.enemy]["pending_diplomacy"][self.player] = {
             "action": "TRADE", "turns": 1, "parameters": agreement}
 
         messages = Messages_Screen()
@@ -605,7 +605,7 @@ class IncomingTradeButtonTests(DealScreenTestCase):
         round_ = {"round_id": "peace-round", "offers": offers}
         past_outcome = {"sender": enemy, "action": peace_scope.CHOICE_ACTION, "type": "DIPLOMACY",
                         "content": "A previous treaty resolved.", "date": "Yesterday"}
-        with patch.dict(self.map.nation_data[player], peace_choices={enemy: round_}, inbox=[past_outcome]):
+        with patch.dict(self.map.world.nation_data[player], peace_choices={enemy: round_}, inbox=[past_outcome]):
             messages = Messages_Screen()
             messages.start_messages(self.map)
             messages.select_recipient(enemy)
@@ -638,7 +638,7 @@ class OccupiedLandTests(DealScreenTestCase):
         from map_logic.diplomacy import war_actions
 
         for nation in (self.player, self.enemy):
-            war_actions.save_own_pre_war_map(self.map.map_data, self.map.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.map.world.map_data, self.map.world.nation_data, nation)
         self.conquered = self.their_province()
         self.conquered["owner"] = self.player
 
@@ -665,7 +665,7 @@ class OccupiedLandTests(DealScreenTestCase):
         one_by_one = self.screen()
         one_by_one.set_picking(deal_screen.TAKE)
         for prov_id in one_by_one.occupied_of_theirs():
-            one_by_one.toggle_province(self.map.id_to_province[prov_id])
+            one_by_one.toggle_province(self.map.world.id_to_province[prov_id])
 
         # A fresh screen, or the draft the first one just saved would come back
         # and the bulk button would read as "deselect all".
@@ -712,10 +712,10 @@ class RecipientTests(DealScreenTestCase):
 
     def setUp(self):
         super().setUp()
-        self.ally = next(n for n in sorted(self.map.nation_data)
+        self.ally = next(n for n in sorted(self.map.world.nation_data)
                          if n not in (self.player, self.enemy)
-                         and isinstance(self.map.nation_data[n], dict)
-                         and self.map.nation_data[n].get("is_playable"))
+                         and isinstance(self.map.world.nation_data[n], dict)
+                         and self.map.world.nation_data[n].get("is_playable"))
 
     def screen_with_ally(self):
         screen = self.screen()
@@ -811,11 +811,11 @@ class DraftTests(DealScreenTestCase):
     def test_a_draft_is_forgotten_once_the_turn_moves_on(self):
         """The map has moved; the picked provinces are about somebody else's."""
         self.half_built()
-        self.map.time_manager.total_turns += 1
+        self.map.world.time_manager.total_turns += 1
         try:
             self.assertEqual(self.screen().take_ids, {})
         finally:
-            self.map.time_manager.total_turns -= 1
+            self.map.world.time_manager.total_turns -= 1
 
     def test_sending_the_offer_clears_the_draft(self):
         screen = self.half_built()

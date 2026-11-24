@@ -7,9 +7,11 @@ from unittest.mock import patch
 import pygame
 
 import data.constants as c
+from data import queries
 from map_logic.diplomacy import faction_leadership
 from screens.game.faction import Faction_Screen
 from tests.stub_map_screen import StubMapScreen
+from data.session_state import REALTIME, TOURNAMENT
 
 
 class FactionScreenTests(unittest.TestCase):
@@ -27,19 +29,19 @@ class FactionScreenTests(unittest.TestCase):
     def test_leaderless_faction_is_repaired_instead_of_calling_members_puppets(self):
         game, nations = self.make_game()
         for nation in nations:
-            game.nation_data[nation]["is_faction_leader"] = False
+            queries.set_faction_leadership(game.world.nation_data, nation, False)
 
         self.assertEqual(faction_leadership.repair_leaderless_factions(game), ["The Pact"])
-        self.assertTrue(any(game.nation_data[nation]["is_faction_leader"]
+        self.assertTrue(any(game.world.nation_data[nation]["is_faction_leader"]
                             for nation in nations))
 
         # The defensive UI fallback remains truthful if an editor creates the
         # transient state between frames.
         screen = Faction_Screen()
         screen.start_faction(game)
-        game.nation_data[nations[0]]["is_faction_leader"] = False
+        queries.set_faction_leadership(game.world.nation_data, nations[0], False)
         for nation in nations[1:]:
-            game.nation_data[nation]["is_faction_leader"] = False
+            queries.set_faction_leadership(game.world.nation_data, nation, False)
         self.assertEqual(screen._claim_button("").text, "Faction Needs A Leader")
 
     def open_rename(self, screen):
@@ -64,7 +66,7 @@ class FactionScreenTests(unittest.TestCase):
         screen = Faction_Screen()
         screen.start_faction(game)
         self.open_rename(screen).call_args.args[2]("  New Pact  ")
-        self.assertEqual(game.nation_data[nations[1]]["faction"], "New Pact")
+        self.assertEqual(game.world.nation_data[nations[1]]["faction"], "New Pact")
         self.assertIsNotNone(self.rename_button(screen))
 
     def test_cancelled_rename_changes_nothing(self):
@@ -72,31 +74,31 @@ class FactionScreenTests(unittest.TestCase):
         screen = Faction_Screen()
         screen.start_faction(game)
         self.open_rename(screen).call_args.args[2](None)
-        self.assertEqual(game.nation_data[nations[0]]["faction"], "The Pact")
+        self.assertEqual(game.world.nation_data[nations[0]]["faction"], "The Pact")
 
     def test_tournament_rename_records_the_host_command(self):
         from map_logic.actions.player_actions import collect_map_commands
 
         game, _nations = self.make_game()
-        game.multiplayer_mode = True
+        game.session.mode = TOURNAMENT
         screen = Faction_Screen()
         screen.start_faction(game)
         self.open_rename(screen).call_args.args[2]("New Pact")
-        commands = collect_map_commands(game, game.player_country)
+        commands = collect_map_commands(game, game.session.player_country)
         self.assertIn({"type": "faction_rename", "name": "New Pact"}, commands)
 
     def test_realtime_rename_is_refused_when_diplomacy_cannot_be_edited(self):
         game, nations = self.make_game()
-        game.realtime_multiplayer = True
+        game.session.mode = REALTIME
         screen = Faction_Screen()
         screen.start_faction(game)
         with patch("screens.game.faction.player_diplomacy_actions.can_edit_diplomacy", return_value=False):
             self.open_rename(screen).call_args.args[2]("New Pact")
-        self.assertEqual(game.nation_data[nations[0]]["faction"], "The Pact")
+        self.assertEqual(game.world.nation_data[nations[0]]["faction"], "The Pact")
 
     def test_members_do_not_get_a_rename_button(self):
         game, nations = self.make_game()
-        game.player_country = nations[1]
+        game.session.player_country = nations[1]
         screen = Faction_Screen()
         screen.start_faction(game)
         self.assertIsNone(self.rename_button(screen))
@@ -119,9 +121,9 @@ class FactionScreenTests(unittest.TestCase):
 
     def test_roster_is_sorted_by_visible_country_name(self):
         game, nations = self.make_game()
-        game.nation_data[nations[0]]["name"] = "Zulu"
-        game.nation_data[nations[1]]["name"] = "alpha"
-        game.nation_data[nations[2]]["name"] = "Bravo"
+        game.world.nation_data[nations[0]]["name"] = "Zulu"
+        game.world.nation_data[nations[1]]["name"] = "alpha"
+        game.world.nation_data[nations[2]]["name"] = "Bravo"
         screen = Faction_Screen()
         screen.start_faction(game)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
@@ -137,12 +139,12 @@ class FactionScreenTests(unittest.TestCase):
         game, nations = self.make_game()
         exile = nations[1]
         province = game.home_of(exile)
-        del game.map_data[str(province["id"])]
-        del game.id_to_province[province["id"]]
+        del game.world.map_data[str(province["id"])]
+        del game.world.id_to_province[province["id"]]
         screen = Faction_Screen()
         screen.start_faction(game)
 
-        self.assertEqual(screen._member_label(exile, game.nation_data),
+        self.assertEqual(screen._member_label(exile, game.world.nation_data),
                          f"{exile} (Government in Exile)")
 
 

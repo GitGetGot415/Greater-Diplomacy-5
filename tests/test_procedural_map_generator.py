@@ -8,6 +8,7 @@ from unittest.mock import patch
 import numpy as np
 
 from map_logic.random_map import procedural_map_generator
+from tests.stub_map_screen import map_double
 
 
 class ProceduralMapGeneratorTests(unittest.TestCase):
@@ -35,14 +36,14 @@ class ProceduralMapGeneratorTests(unittest.TestCase):
                 terrain = "ocean"
             expected[province_id] = center, terrain
 
-        map_screen = SimpleNamespace()
+        map_screen = map_double()
         with patch.object(procedural_map_generator.random, "choice", return_value="plains"):
             procedural_map_generator._process_grid_to_map(
                 map_screen, grid, width=9, height=9, num_provinces=3)
 
         self.assertTrue(np.array_equal(grid, expected_grid))
         for province_id, (center, terrain) in expected.items():
-            province = map_screen.id_to_province[province_id]
+            province = map_screen.world.id_to_province[province_id]
             self.assertEqual(province["center"], center)
             self.assertEqual(province["terrain"], terrain)
 

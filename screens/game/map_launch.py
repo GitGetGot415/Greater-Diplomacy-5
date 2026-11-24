@@ -8,6 +8,7 @@ import copy
 import os
 import shutil
 from data.platform import LoadingSteps
+from data.session_state import REALTIME
 
 
 def _map_loading_total(**settings):
@@ -113,15 +114,15 @@ def _open_tournament_map_steps(app, screen, *, incremental=True):
         force_editor=False, num_players=app.num_players)
     yield "Preparing Tournament View..."
     game_map.loaded_tournament_path = path
-    game_map.multiplayer_tournament_dir = os.path.dirname(path)
-    game_map.multiplayer_session_key = session_key
-    game_map.multiplayer_player_enc_cache = _player_encryption_cache(keys_dict, version_table)
+    game_map.session.multiplayer_tournament_dir = os.path.dirname(path)
+    game_map.session.multiplayer_session_key = session_key
+    game_map.session.multiplayer_player_enc_cache = _player_encryption_cache(keys_dict, version_table)
 
     if role == "HOST":
         game_map.multiplayer_host_mode = True
-        game_map.player_country = "Spectator"
-        game_map.multiplayer_master_key = key
-        game_map.multiplayer_keys_dict = keys_dict
+        game_map.session.player_country = "Spectator"
+        game_map.session.multiplayer_master_key = key
+        game_map.session.multiplayer_keys_dict = keys_dict
     elif role == "PLAYER":
         game_map.multiplayer_player_key = key
         tournament_files.strip_sensitive_data_for_player(game_map, country_id)
@@ -139,14 +140,14 @@ def enter_realtime_map(app, realtime_map, session, player_id, country_id, after_
     """Make a loaded map the active real-time board for one player."""
     from screens.game import map_buttons
 
-    realtime_map.selection_mode = False
+    realtime_map.session.selection_mode = False
     realtime_map.pending_selection = None
     realtime_map.show_player_ready_screen = False
-    realtime_map.realtime_multiplayer = True
+    realtime_map.session.mode = REALTIME
     realtime_map.realtime_session = session
     realtime_map.realtime_player_id = player_id
-    realtime_map.player_country = country_id
-    realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
+    realtime_map.session.player_country = country_id
+    realtime_map.session.active_players = [p.country_id for p in session.players.values() if p.country_id]
     realtime_map.set_play_view_defaults()
     # Map construction initially suppresses fog while scenario country
     # selection is active. Rebuild the player-dependent layers immediately
