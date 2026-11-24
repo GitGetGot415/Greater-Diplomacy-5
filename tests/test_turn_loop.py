@@ -97,8 +97,7 @@ class TurnLoopTests(unittest.TestCase):
         library = queries.get_unit_library(context)
         before = len(province["units"])
         production_actions.submit_production(context, "A", province, "unit_queue",
-                                             {"unit_type": "Fixture"}, authority="ai",
-                                             policy=production_actions.AI_POLICY)
+                                             {"unit_type": "Fixture"}, authority="ai")
         for _ in range(library["Fixture"]["production_time"]):
             economy_processor.process_queues(context)
         self.assertEqual(province["unit_queue"], [])

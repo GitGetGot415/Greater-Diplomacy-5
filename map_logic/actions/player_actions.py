@@ -885,9 +885,7 @@ class PlayerActions:
         if len(items) > self._MAX_QUEUE_ITEMS or any(not isinstance(item, dict) for item in items):
             raise PlayerActionError("Invalid province queue contents.")
         try:
-            return production_actions.reconstruct_queue(
-                self.context, country_id, province, queue_type, items,
-                policy=production_actions.REALTIME_POLICY)
+            return production_actions.reconstruct_queue(self.context, country_id, province, queue_type, items)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
 
@@ -895,9 +893,7 @@ class PlayerActions:
                           intent: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         """Reconstruct untrusted client intent through shared production rules."""
         try:
-            result = production_actions.prepare_production(
-                self.context, country_id, province, queue_type, intent,
-                policy=production_actions.REALTIME_POLICY)
+            result = production_actions.prepare_production(self.context, country_id, province, queue_type, intent)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
         return result.order, result.cost
