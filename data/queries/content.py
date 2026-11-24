@@ -9,7 +9,7 @@ import pygame
 from data.state_access import world_for
 from data.world_nations import WorldNations
 from data.migrations import convert_historical_leader_images, convert_scenario_settings, normalize_cached_json_names
-from data.runtime_rules import rebuild, ActiveLibrary, for_world
+from data.runtime_rules import ActiveLibrary, for_world
 from data.io import settings_schema, starting_defaults
 from data import queries
 
@@ -62,25 +62,6 @@ def get_scenario_flag(flag_name, default=False, scenario_settings=None):
     return bool(value)
 
 
-# Scenario flags that are mirrored onto live constants so gameplay code can read
-# them without threading a settings dict everywhere: {setting key: (constant, default)}.
-GLOBAL_SCENARIO_FLAGS = {
-    "fog_of_war": ("USE_FOG_OF_WAR", c.DEFAULT_FOG_OF_WAR),
-    "casus_belli_required": ("CASUS_BELLI_REQUIRED", c.DEFAULT_CASUS_BELLI),
-    "battle_royale": ("BATTLE_ROYALE_MODE", c.DEFAULT_BATTLE_ROYALE),
-    "disable_factions": ("DISABLE_FACTIONS", c.DEFAULT_DISABLE_FACTIONS),
-    "disable_cores": ("DISABLE_CORES", c.DEFAULT_DISABLE_CORES),
-}
-
-
-# Same idea for numeric scenario settings: {setting key: (constant, default, cast)}.
-GLOBAL_SCENARIO_VALUES = {
-    "damage_at_zero_health": ("DAMAGE_AT_ZERO_HEALTH", c.DAMAGE_AT_ZERO_HEALTH, float),
-    "defense_at_zero_health": ("DEFENSE_AT_ZERO_HEALTH", c.DEFENSE_AT_ZERO_HEALTH, float),
-    "truce_turns": ("TRUCE_TURNS", c.DEFAULT_TRUCE_TURNS, int),
-}
-
-
 def get_truce_turns(scenario_settings=None):
     """Returns the configured post-peace truce length within its legal range.
 
@@ -108,25 +89,6 @@ def context_nation_data(context):
     if context is None or (isinstance(context, dict) and not isinstance(context, WorldNations)):
         return None
     return world_for(context).nation_data
-
-
-def apply_global_scenario_flags(scenario_settings):
-    """Preserve constant updates for older no-context callers.
-
-    Active world loading and gameplay use explicit world settings instead.
-    """
-    for flag_name, (const_name, default) in GLOBAL_SCENARIO_FLAGS.items():
-        setattr(c, const_name, queries.get_scenario_flag(flag_name, default, scenario_settings))
-
-    for key, (const_name, default, cast) in GLOBAL_SCENARIO_VALUES.items():
-        if key == "truce_turns":
-            setattr(c, const_name, get_truce_turns(scenario_settings))
-            continue
-        raw = (scenario_settings or {}).get(key, default)
-        try:
-            setattr(c, const_name, cast(raw))
-        except (TypeError, ValueError):
-            setattr(c, const_name, default)
 
 
 def toggle_scenario_flag(scenario_settings, flag_name, default=False):
@@ -293,15 +255,6 @@ def _load_cached_json(cache_key, *, reload=False):
             cache_obj["data"] = previous_data
             
     return cache_obj["data"]
-
-
-def reload_game_library(cache_key, context=None):
-    """Reload a game library and preserve references held by screens."""
-    if cache_key not in ("unit_library", "building_library", "tech_tree"):
-        raise ValueError(f"Not a game library: {cache_key}")
-    if context is not None:
-        return rebuild(context, reload_defaults=True).libraries[cache_key]
-    return _load_cached_json(cache_key, reload=True)
 
 
 def save_cached_json(cache_key, new_data):

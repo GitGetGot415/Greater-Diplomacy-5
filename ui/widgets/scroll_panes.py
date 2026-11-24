@@ -1,10 +1,8 @@
 """Mixin for screens that show several independently scrolling lists at once.
 
-Five screens -- the diplomacy editor, the historical-leaders editor, the
-scripted-events editor, the asset viewer and the music player -- each grew their
-own copy of the same four pieces: a table of per-pane scroll attribute names, a
-row-layout wrapper, a wheel router, and a draw_elements that clips each pane to
-its own rect. Three of the copies were byte-identical.
+Each pane is a named ScrollState on the screen (see Screen.scroll_state). This
+mixin adds the row-layout wrapper, the wheel router, and a draw_elements that
+clips each pane to its own rect.
 
 Row layout, clipping and click guards share the full pane height, so partially
 visible rows slide behind its edges. Wheel routing hit-tests pane rects rather
@@ -42,22 +40,15 @@ class ScrollPanes:
         """
         return self.regions
 
-    def scroll_attrs(self, name):
-        """The per-pane scroll state attribute names.
-
-        Underscore-prefixed so a pane can never shadow a method: a pane called
-        "events" would otherwise publish its scrollbar handle as
-        self.handle_events and overwrite Screen.handle_events.
-        """
-        return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
-                "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",
-                "drag_attr": f"_drag_{name}", "content_rect_attr": f"_content_{name}"}
+    def pane(self, name):
+        """The ScrollState of one pane."""
+        return self.scroll_state(name, self.pane_scroll_axis(name))
 
     def pane_scroll(self, name):
-        return getattr(self, f"_scroll_{name}", 0)
+        return self.pane(name).value
 
     def pane_scroll_limit(self, name):
-        return getattr(self, f"_max_{name}", 0)
+        return self.pane(name).limit
 
     def pane_scroll_axis(self, name):
         """Screens can opt individual panes into horizontal scrolling."""
@@ -71,17 +62,14 @@ class ScrollPanes:
         have finished sliding behind the bottom edge.
         """
         row_h = row_h or self.ROW_HEIGHT
-        attrs = self.scroll_attrs(name)
         return self.layout_list_rows(count, row_h, top, view_h=view_h,
-                                     cull_top=top, cull_bottom=top + view_h,
-                                     attr=attrs["attr"], limit_attr=attrs["limit_attr"],
-                                     guard_attr=f"_guard_{name}")
+                                     cull_top=top, cull_bottom=top + view_h, scroll=self.pane(name))
 
     def add_pane_row(self, name, element):
         """Tags an element as belonging to `name` and registers it."""
         element.pane = name
         element.is_scrollable = True
-        element.click_guard = getattr(self, f"_guard_{name}", None)
+        element.click_guard = self.pane(name).guard
         self.elements.append(element)
         return element
 
@@ -96,14 +84,12 @@ class ScrollPanes:
             pos = pygame.mouse.get_pos()
             for name, rect in rects.items():
                 if rect and rect.collidepoint(pos):
-                    self.handle_list_scroll(event, axis=self.pane_scroll_axis(name),
-                                            **self.scroll_attrs(name))
+                    self.handle_list_scroll(event, self.pane(name), content=True)
                     return True
             return False
 
         for name in rects:
-            if self.handle_list_scroll(event, axis=self.pane_scroll_axis(name),
-                                       **self.scroll_attrs(name)):
+            if self.handle_list_scroll(event, self.pane(name), content=True):
                 return True
         return False
 
@@ -143,6 +129,4 @@ class ScrollPanes:
 
     def draw_pane_scrollbar(self, surface, name, track_x, track_y, view_h, width=15):
         """Scrollbar for one pane, wired to the same attributes as its rows."""
-        return self.draw_list_scrollbar(surface, track_x, track_y, view_h, width=width,
-                                        axis=self.pane_scroll_axis(name),
-                                        **self.scroll_attrs(name))
+        return self.draw_list_scrollbar(surface, track_x, track_y, view_h, width=width, scroll=self.pane(name))

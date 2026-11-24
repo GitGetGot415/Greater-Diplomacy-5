@@ -14,6 +14,7 @@ from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy import diplomacy_messages, global_rules, guarantees, military_attaches, volunteers
 from map_logic.diplomacy.diplomacy_processor import action_is_legal
 from map_logic.territory import ownership
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS
 
 
 @dataclass(frozen=True)
@@ -387,7 +388,7 @@ def _answer_request(run, nation, target, act, expected_action, verdict):
 def _answer_proposal(run, nation, target, act, verdict):
     # Answering a proposal is its own channel, not a pending action.
     pending_action, pending_turns = queries.get_diplomatic_status(target, nation, run.world.nation_data)
-    if pending_turns > 0 and pending_action in c.BILATERAL_ACTIONS:
+    if pending_turns > 0 and pending_action in BILATERAL_ACTIONS:
         _answer_request(run, nation, target, act, pending_action, verdict)
 
 
@@ -542,7 +543,7 @@ def _scripted_event_response(actions, sender_nation, request_action):
             continue
         expected_action, verdict = definition.response
         if expected_action is None:
-            if request_action not in c.BILATERAL_ACTIONS:
+            if request_action not in BILATERAL_ACTIONS:
                 continue
             expected_action = request_action
         if expected_action != request_action:

@@ -137,25 +137,6 @@ def process_unit_maintenance_orders(context, order_types=None):
         province["units"] = units_to_keep
 
 
-def process_disbands(context):
-    """Processes the 1-turn timer for disbanding units and refunds their cost."""
-    process_unit_maintenance_orders(context, order_types={"DISBAND"})
-
-
-def process_upgrades(context):
-    """Processes the 1-turn timer for upgrading units to a new type."""
-    process_unit_maintenance_orders(context, order_types={"UPGRADE"})
-
-
-def process_repairs(context):
-    """Processes the 1-turn timer for repairing units to full health."""
-    process_unit_maintenance_orders(context, order_types={"REPAIR"})
-
-
-def process_conversions(context):
-    """Processes the timer for transferring units into Convoys/Trucks and back."""
-    process_unit_maintenance_orders(context, order_types={"CONVERT"})
-
 def _resolve_step_swaps(context, moving_units, step, pinned_units, *, eligible_ids=None):
     """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.
 

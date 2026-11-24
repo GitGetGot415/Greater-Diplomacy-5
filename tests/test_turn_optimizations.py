@@ -372,8 +372,8 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.screen._relation_indicator_cache = None
         self.screen.world.nation_data["A"].update({politics.VALUE_KEY: c.POLITICS_MAX, politics.ECONOMIC_VALUE_KEY: c.POLITICS_MIN})
         queries.add_temporary_modifier("B", "A", "general", -30, self.screen.world.nation_data)
-        politics.set_drift(self.screen.world.nation_data, "B", 1)
-        politics.set_economic_drift(self.screen.world.nation_data, "B", -1)
+        politics.set_axis_drift(self.screen.world.nation_data, "B", politics.POLITICAL, 1)
+        politics.set_axis_drift(self.screen.world.nation_data, "B", politics.ECONOMIC, -1)
 
         self.refresh(refresh_map.refresh_relations_map)
         # Everyone sees an authoritarian A with its reputation.
@@ -667,8 +667,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.assertTrue(np.array_equal(before, pygame.surfarray.array3d(self.screen.cores_map)))
 
     def test_fog_reuses_pixels_but_always_updates_visibility_and_hotseat_blanking(self):
-        with mock.patch.object(c, "USE_FOG_OF_WAR", True), \
-                mock.patch.object(queries, "get_visible_provinces", return_value=({1}, {2})) as vision:
+        with mock.patch.object(queries, "get_visible_provinces", return_value=({1}, {2})) as vision:
             self.refresh(refresh_map.refresh_fog_map)
             old = self.screen.fog_map
             self.screen.visible_provinces = set()
@@ -687,8 +686,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
             self.assertTrue(np.all(pygame.surfarray.array_alpha(self.screen.fog_map) == refresh_map.FOG_OF_WAR_ALPHA))
 
     def test_fog_selection_spectator_and_strength_transitions(self):
-        with mock.patch.object(c, "USE_FOG_OF_WAR", True), \
-                mock.patch.object(queries, "get_visible_provinces", return_value=(set(), set())) as vision:
+        with mock.patch.object(queries, "get_visible_provinces", return_value=(set(), set())) as vision:
             self.refresh(refresh_map.refresh_fog_map)
             old = self.screen.fog_map
             self.screen.world.scenario_settings["fog_of_war_strength"] = "extreme"

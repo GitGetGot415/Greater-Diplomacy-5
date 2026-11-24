@@ -102,7 +102,7 @@ def air_threat_profile(world, nation, unit_library):
     ground_attack, air_attack, cover = 0.0, 0.0, 0.0
     defenses, counts = [], []
     for province in world.map_data.values():
-        if queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, getattr(world, "scenario_settings", {})) and visible is not None and province["id"] not in visible:
+        if visible is not None and province["id"] not in visible:
             continue
         aircraft = []
         for unit in queries.filter_visible_units(province.get("units", []), nation,

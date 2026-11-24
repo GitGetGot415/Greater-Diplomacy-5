@@ -27,7 +27,7 @@ from map_logic.diplomacy.faction_actions import (
     why_an_ai_may_not_leave,
 )
 
-from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, WAR_CANCELLED_ACTIONS, availability, handlers_for
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, LITE_RESPONSE_KEYS, UNILATERAL_ACTIONS, WAR_CANCELLED_ACTIONS, availability, handlers_for
 from map_logic.ai import ai_handler, ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod, deal_effects
 from map_logic.territory import ownership
@@ -59,7 +59,7 @@ def toggle_diplomacy_action(context, player_name, target_name, action_type, cust
     elif current_action is not None:
         # NEW: Allow upgrading a drafted text message into a formal diplomatic action
         info = pending.get(target_name, {})
-        is_unilateral = current_action in c.UNILATERAL_ACTIONS
+        is_unilateral = current_action in UNILATERAL_ACTIONS
 
         if info.get("action", "").startswith("MSG:") and info.get("turns", 0) == 0:
             if not custom_msg:
@@ -420,7 +420,7 @@ def _gather_ai_tasks(context):
                 # faction) has nobody to answer it but its own sender. Asking
                 # anyway is how Turkey wrote "No. Our answer is no." to itself.
                 if not is_human_target and target != country_name:
-                    if action in c.UNILATERAL_ACTIONS or action in c.BILATERAL_ACTIONS:
+                    if action in UNILATERAL_ACTIONS or action in BILATERAL_ACTIONS:
                         # `content` is what the offer *is*; `note` is what its
                         # sender said about it. Kept apart so neither can be
                         # read as the other -- see get_bilateral_receive_context.
@@ -463,7 +463,7 @@ def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None,
     action = task["action"]
     if action == "CUSTOM_MSG":
         key, default = "AI_OFF_MESSAGE", "Message received."
-    elif action in c.UNILATERAL_ACTIONS:
+    elif action in UNILATERAL_ACTIONS:
         key, default = LITE_RESPONSE_KEYS.get(action, "GENERIC_MESSAGE"), "Message received."
     else:
         return ai_evaluation.canned_verdict_reply(
@@ -551,8 +551,8 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     # action that is neither a known proposal nor a custom message: two
     # skipped it, the Force Skip path gave it a canned acceptance.
     answerable = [t for t in ai_tasks
-                  if t["action"] in c.UNILATERAL_ACTIONS
-                  or t["action"] in c.BILATERAL_ACTIONS
+                  if t["action"] in UNILATERAL_ACTIONS
+                  or t["action"] in BILATERAL_ACTIONS
                   or t["action"] == "CUSTOM_MSG"]
 
     # The player's own correspondence goes to the front. This batch is the whole
@@ -826,7 +826,7 @@ def _process_ai_retaliation(context, active_nations_list, delayed_responses, cou
         elif ai_action == "WAR_DECLARATION" and queries.has_active_truce(country_name, act_target, world_state.nation_data):
             print(f"[AI GUARDRAIL] Aborting {ai_action}: Truce active.")
             ai_action = "NONE"
-        elif ai_action not in c.BILATERAL_ACTIONS:
+        elif ai_action not in BILATERAL_ACTIONS:
             # Unilateral moves have no answer to wait for, so they still rate-limit
             # on the way out. Proposals are rate-limited when they get turned down.
             queries.set_ai_diplo_cooldown(country_name, act_target, ai_action, world_state.nation_data)
@@ -849,7 +849,7 @@ def _decline_cooldown(context, sender, target, action):
     nation keeps offering help every turn until it is genuinely turned down.
     """
     world_state = world_for(context)
-    if action in c.BILATERAL_ACTIONS:
+    if action in BILATERAL_ACTIONS:
         queries.set_ai_diplo_cooldown(sender, target, action, world_state.nation_data)
 
 
@@ -1314,7 +1314,7 @@ def _process_pass1_immediate_actions(context):
                                     source_owner=info["forwarded_source"])
                 cancel_queued_forward(world_state.nation_data, country_name, target)
 
-            is_unilateral = action in c.UNILATERAL_ACTIONS
+            is_unilateral = action in UNILATERAL_ACTIONS
 
             # --- NEW: COUNTDOWN TIMERS ---
             if timer > 0:
@@ -1350,7 +1350,7 @@ def _process_pass1_immediate_actions(context):
                     # still reaches the other side's inbox instead of silently
                     # advancing to turns=1 with no message.
                     handler = _SEND_HANDLERS.get(
-                        action, _send_announcement if action in c.BILATERAL_ACTIONS else None)
+                        action, _send_announcement if action in BILATERAL_ACTIONS else None)
                     if handler and handler(_OutgoingAction(
                             context, world_state, session_state, country_name, target, action, info,
                             custom_msg, wrote_it, leadership_winners)):
@@ -1616,7 +1616,7 @@ def _resolve_peace_choices(context):
 def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info):
     """Settle an action in its answer turn. Return whether its request is finished."""
     is_human_target = target in session_for(context).active_players
-    if action in c.UNILATERAL_ACTIONS:
+    if action in UNILATERAL_ACTIONS:
         _resolve_unilateral_replies(context, ai_results, active_nations_list, delayed_responses,
                                     sender, target, action, info)
         return True
@@ -1625,7 +1625,7 @@ def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_re
         if not is_human_target and not ai_letters.answered_by_letter(context, sender, target):
             _resolve_ai_message_reply(context, ai_results, active_nations_list, delayed_responses, sender, target)
         return True
-    if action in c.BILATERAL_ACTIONS:
+    if action in BILATERAL_ACTIONS:
         if is_human_target:
             return _resolve_human_answer(context, sender, target, action, info)
         _resolve_ai_answer(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info)
@@ -1662,7 +1662,7 @@ def _process_pass2_delayed_actions(context, ai_results, active_nations_list, del
 
             elif turns > 1:
                 # Auto-decline anything that outlived its response window
-                if action in c.BILATERAL_ACTIONS:
+                if action in BILATERAL_ACTIONS:
                     _auto_decline(context, country_name, target, action, info)
                     actions_to_clear.append(target)
                 else:

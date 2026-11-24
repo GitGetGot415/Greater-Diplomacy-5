@@ -27,12 +27,6 @@ def render_compact_mapping(mapping, newline="\n"):
     return newline.join(lines)
 
 
-def write_compact_mapping(path, mapping, newline="\n"):
-    """Writes ``mapping`` in the project's hand-readable compact format."""
-    with open(path, "w", encoding="utf-8", newline="") as file:
-        file.write(render_compact_mapping(mapping, newline))
-
-
 def load_json_or_empty(path):
     """A JSON file's contents, or {} if it is missing or unreadable.
 

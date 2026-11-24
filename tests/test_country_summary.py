@@ -65,7 +65,7 @@ class CountrySummaryTests(unittest.TestCase):
     def test_own_summary_matches_shared_damage_and_economy_rules(self):
         game = world()
         game.world.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
-        politics.set_economic_value(game.world.nation_data, "A", -4)
+        politics.set_axis_value(game.world.nation_data, "A", politics.ECONOMIC, -4)
         game.world.nation_data["A"][politics.POLICY_KEY] = {
             "damage_fixture": {"status": politics.POLICY_ACTIVE}}
         summary = queries.get_country_summary(game, "A")
@@ -92,8 +92,8 @@ class CountrySummaryTests(unittest.TestCase):
 
     def test_only_the_viewers_own_country_shows_its_political_direction(self):
         game = world()
-        politics.set_drift(game.world.nation_data, "A", 1)
-        politics.set_drift(game.world.nation_data, "B", -1)
+        politics.set_axis_drift(game.world.nation_data, "A", politics.POLITICAL, 1)
+        politics.set_axis_drift(game.world.nation_data, "B", politics.POLITICAL, -1)
         self.assertEqual(queries.get_country_summary(game, "A")["politics"]["drift"], 1)
         self.assertIsNone(queries.get_country_summary(game, "B")["politics"]["drift"])
 
@@ -243,10 +243,10 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
         game.world.nation_data["A"]["puppets"] = ["B"]
         expected = queries.get_country_summary(game, "B")["economy"]
-        tournament_files.strip_sensitive_data_for_player(game, "A")
+        tournament_files.strip_sensitive_data_for_viewer(game, "A")
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Stripped economy queried")):
             self.assertEqual(queries.get_country_summary(game, "B")["economy"], expected)
-        tournament_files.strip_sensitive_data_for_tournament_spectator(game)
+        tournament_files.strip_sensitive_data_for_viewer(game, c.TOURNAMENT_SPECTATOR)
         self.assertEqual(game.country_economy_summaries, {})
         self.assertFalse(queries.get_country_summary(game, "B")["economy"]["available"])
 
@@ -259,7 +259,7 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}], materials=500)
         game.world.nation_data["A"].update(materials=700)
         projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "A")
-        tournament_files.strip_sensitive_data_for_player(game, "A")
+        tournament_files.strip_sensitive_data_for_viewer(game, "A")
         for field in ("inbox", "research_queue", "materials"):
             self.assertNotIn(field, game.world.nation_data["B"])
         self.assertEqual(game.world.nation_data["A"]["materials"], 700)
@@ -344,14 +344,14 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["A"]["puppets"] = [f"Fixture subject {index}" for index in range(150)]
         screen = CountrySummaryScreen(game, "A")
         screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
-        self.assertLess(screen.scroll_y, 0)
-        initial_scroll = screen.scroll_y
+        self.assertLess(screen.scroll.value, 0)
+        initial_scroll = screen.scroll.value
         screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEDOWN))
-        self.assertGreaterEqual(screen.scroll_y, screen.max_scroll)
+        self.assertGreaterEqual(screen.scroll.value, screen.scroll.limit)
         screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEUP))
-        self.assertEqual(screen.scroll_y, initial_scroll)
+        self.assertEqual(screen.scroll.value, initial_scroll)
         screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEUP))
-        self.assertEqual(screen.scroll_y, 0)
+        self.assertEqual(screen.scroll.value, 0)
 
     def test_modal_open_and_back_preserve_country_and_tile_selection(self):
         game = world()

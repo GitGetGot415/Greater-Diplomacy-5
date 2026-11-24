@@ -170,7 +170,7 @@ def load_transport(unit, target, *, context=None):
     """Puts a unit aboard a Convoy or into a Truck, remembering what it was.
 
     The mirror of revert_transport, and the other half of what used to live
-    inline in movement_processor.process_conversions -- pulled out so the
+    inline in the movement processor's CONVERT order handling -- pulled out so the
     stranded-at-sea sweep can re-embark a unit without duplicating the stat
     bookkeeping that makes the round trip lossless.
     """

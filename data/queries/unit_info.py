@@ -536,38 +536,20 @@ def get_unit_requirements(unit_name, unit_library=None, *, context=None):
     return {"all": queries.get_unit_metadata(unit_name, unit_library, context=context)["requirements"]}
 
 
-def get_unit_unlock_requirement(unit_name, unit_library=None, *, context=None):
-    """Preserve the older three-field requirement interface for existing callers."""
-    metadata = queries.get_unit_metadata(unit_name, unit_library, context=context)
-    tech, level = _unit_research_pair(metadata["research"], context=context)
-    if tech in c.VEHICLE_INFANTRY_GATES:
-        for requirement in metadata["requirements"]:
-            if "minimum_year" in requirement:
-                return tech, None, requirement["minimum_year"]
-    return tech, level, None
-
-
 def unit_requirement_is_met(requirement, player_research, *, context=None):
     """Evaluate a parsed rule; shared by exact-tier UI checks and AI indexes."""
-    if isinstance(requirement, dict):
-        for item in requirement["all"]:
-            tech = item["tech"]
-            if "minimum_year" in item:
-                year = get_infantry_family_year(tech, player_research, queries.get_tech_tree(context))
-                minimum = item["minimum_year"]
-                if minimum is None or year is None or year < minimum:
-                    return False
-            else:
-                tech, level = _unit_research_pair(item, context=context)
-                if player_research.get(tech, 0) < level:
-                    return False
-        return True
-    # Older callers can still pass the former three-field requirement.
-    tech_key, required_lvl, year = requirement
-    if required_lvl is None:
-        unlocked_year = get_infantry_family_year(tech_key, player_research, queries.get_tech_tree(context))
-        return year is not None and unlocked_year is not None and year <= unlocked_year
-    return player_research.get(tech_key, 0) >= required_lvl
+    for item in requirement["all"]:
+        tech = item["tech"]
+        if "minimum_year" in item:
+            year = get_infantry_family_year(tech, player_research, queries.get_tech_tree(context))
+            minimum = item["minimum_year"]
+            if minimum is None or year is None or year < minimum:
+                return False
+        else:
+            tech, level = _unit_research_pair(item, context=context)
+            if player_research.get(tech, 0) < level:
+                return False
+    return True
 
 
 def is_unit_unlocked(unit_name, player_research, unit_library=None, *, context=None):

@@ -3,7 +3,7 @@
 import copy
 import data.constants as c
 from data.io import standalone_music
-from data.state_access import session_for, world_for, viewer_context
+from data.state_access import session_for, world_for
 from map_logic import politics
 from map_logic.diplomacy import faction_records, diplomacy_lifecycle, peace_scope
 from data.queries.content import get_research_years
@@ -354,22 +354,18 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
     return save_dict
 
 
+# Country fields only the country itself may see. Every multiplayer and spectator view removes them.
+PRIVATE_COUNTRY_FIELDS = (
+    "production_queue", "current_research", "research_queue", "research_progress", "research", "inbox",
+    "pending_diplomacy", "diplo_responses", "draft_lists", "peace_choices", "queued_ai_actions", "ai_notebook",
+    "orders", "armies", "automation", "materials", "manpower", "fuel", "manpower_pool", "materials_pool",
+    "fuel_pool", *politics.DRIFT_KEYS, "research_funding_slider")
+
+
 def strip_private_unit_orders(unit):
     # Hold preferences still classify the visible enemy reserve panels.
     for field in ("order", "lane_target", "repair_trip"):
         unit.pop(field, None)
-
-
-def player_snapshot_visible_provinces(context, country_id):
-    """Return the province fog mask used for multiplayer unit records."""
-    world = world_for(context)
-    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, world.scenario_settings):
-        return None
-    if country_id not in world.nation_data:
-        return set()
-    view = viewer_context(country_id, world.map_data, world.nation_data,
-                          {p["id"]: p for p in world.map_data.values()})
-    return queries.get_visible_provinces(view)[0]
 
 
 def player_snapshot_projection(context, snapshot, country_id, *, player_supply=None):
@@ -377,7 +373,7 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
     world_state = world_for(context)
     result = copy.deepcopy(snapshot)
     result.pop("tactical_player_unit_id", None)
-    visible = player_snapshot_visible_provinces(context, country_id)
+    visible = queries.viewer_visible_provinces(world_state, country_id)
     result["player_supply"] = queries.SupplySnapshot(context).player_summary(country_id, visible, player_supply)
     # Only the map editor uses these settings, and a background image can be large.
     result.pop("standalone_export_settings", None)
@@ -391,11 +387,6 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
         if owner == country_id and turn == report["turn"]}
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
         country_id, world_state.map_data, world_state.nation_data, context=context)
-    private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
-        "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists", "peace_choices",
-        "queued_ai_actions", "ai_notebook", "orders", "armies", "automation", "materials",
-        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool", *politics.DRIFT_KEYS,
-        "research_funding_slider")
     # New record fields must not bypass the established country visibility policy.
     result["factions"] = {
         identity: {key: copy.deepcopy(record[key])
@@ -404,7 +395,7 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
     for cid, country in result.get("nation_data", {}).items():
         if cid != country_id and isinstance(country, dict):
             peace = country.get("pending_diplomacy", {}).get(country_id, {})
-            for field in private_fields:
+            for field in PRIVATE_COUNTRY_FIELDS:
                 country.pop(field, None)
             # A recipient needs the delivered offer and its identity to answer it.
             # Keep drafts, escrow, and messages addressed to anybody else private.

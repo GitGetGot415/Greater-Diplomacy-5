@@ -385,25 +385,25 @@ class PuppetManagementControlTests(unittest.TestCase):
     def test_release_screen_return_preserves_selection_and_scroll(self):
         self.add_subjects()
         self.screen.select_subject("Fixture4")
-        self.screen.scroll_y = self.screen.max_scroll // 2
+        self.screen.scroll.value = self.screen.scroll.limit // 2
         self.screen.refresh_ui()
-        offset = self.screen.scroll_y
+        offset = self.screen.scroll.value
         with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
             self.click(self.button("Create Nation"))
             self.assertIsInstance(launch.call_args.args[1], puppets_screen.Create_Puppet_Screen)
             launch.call_args.kwargs["on_done"]()
         self.assertEqual(self.screen.selected_subject, "Fixture4")
-        self.assertEqual(self.screen.scroll_y, offset)
+        self.assertEqual(self.screen.scroll.value, offset)
 
     def test_scrolling_is_local_and_clipped_rows_cannot_be_clicked(self):
         self.add_subjects()
         self.screen.select_subject("Second")
         with mock.patch.object(pygame.mouse, "get_pos", return_value=self.screen.detail_rect.center):
             self.screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
-        self.assertEqual(self.screen.scroll_y, 0)
+        self.assertEqual(self.screen.scroll.value, 0)
         with mock.patch.object(pygame.mouse, "get_pos", return_value=self.screen.list_rect.center):
             self.screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
-        self.assertLess(self.screen.scroll_y, 0)
+        self.assertLess(self.screen.scroll.value, 0)
         row = next(element for element in self.screen.elements
                    if isinstance(element, puppets_screen.Button) and element.text.startswith("Core Display\n"))
         self.click(row, (row.rect.centerx, self.screen.list_rect.top - 1))
@@ -411,7 +411,7 @@ class PuppetManagementControlTests(unittest.TestCase):
 
     def test_content_drag_moves_the_list_without_selecting_a_row(self):
         self.add_subjects()
-        self.screen.scroll_y = -self.screen.ROW_HEIGHT
+        self.screen.scroll.value = -self.screen.ROW_HEIGHT
         self.screen.refresh_ui()
         start = self.screen.list_rect.center
         end = (start[0], start[1] + 20)
@@ -420,7 +420,7 @@ class PuppetManagementControlTests(unittest.TestCase):
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1),
                 pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 20), buttons=(1, 0, 0)),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
-        self.assertEqual(self.screen.scroll_y, -self.screen.ROW_HEIGHT + 20)
+        self.assertEqual(self.screen.scroll.value, -self.screen.ROW_HEIGHT + 20)
         self.assertEqual(self.screen.selected_subject, "Core")
 
     def test_callbacks_recheck_subject_control_after_selection(self):

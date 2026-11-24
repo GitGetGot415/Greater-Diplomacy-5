@@ -3,7 +3,7 @@ import math
 import numpy as np
 import data.constants as c
 from data import queries
-from map_logic import custom_battle
+from map_logic import tactical_campaign
 from ui.rendering import map_utils, symbol_loader
 from ui.rendering.font_manager import fonts
 from map_logic.system32 import combat_forecast, combat_rules
@@ -223,62 +223,6 @@ COMBAT_BUBBLE_OUTCOME_COLOR_SATURATION = 0.75
 _COMBAT_WINNER_UNSET = object()
 
 
-def combat_strengths(sides, nation_data, friendly_nations, player_nation=None,
-                    province=None):
-    """What a predicted fight is worth to the player: (friendly, enemy, involved).
-
-    Read off combat_rules.build_battle, the same rule the turn resolver fights
-    by, so the bubble's color cannot promise a result the turn will not
-    produce. Lanes make this arithmetic honest for free: only the lanes a
-    friendly nation actually stands in count, and only the front ranks in them,
-    because that is exactly who will trade fire. The version this replaced had
-    to weight each volley by the share of it aimed at a friendly unit, since
-    damage went everywhere at once.
-
-    `involved` is "a friendly nation holds a front slot", not "a friendly nation
-    is standing here" -- an ally waiting out somebody else's battle on military
-    access draws the grey bubble of a fight that is not yours.
-
-    A lane's half is a whole side, so an ally fighting beside you counts towards
-    the strength of the fight you are reading. That is the honest number: they
-    are the ones the enemy has to shoot at instead of you.
-    """
-    friendly_atk = 0.0
-    enemy_atk = 0.0
-    involved = False
-
-    battle = combat_rules.build_battle(
-        sides, nation_data,
-        terrain=province.get("terrain") if province is not None else None,
-        tiles=(province,) * len(sides) if province is not None else ())
-    for lane in battle.lanes:
-        # A volunteer fights on its host's military side, but remains the
-        # donor's division for control and presentation.  Treat that side as
-        # the player's only in the battle where one of their divisions is
-        # actually present; making the host globally friendly would color
-        # unrelated host battles as though the donor took part in them.
-        def is_friendly_side(side):
-            return (any(nation in friendly_nations for nation in side.nations)
-                    or (player_nation is not None
-                        and any(unit.get("owner") == player_nation
-                                for unit in side.front + side.reserve)))
-
-        mine = [side for side in (lane.a, lane.b) if is_friendly_side(side)]
-        # Two friends fighting each other is not a fight you are in either way.
-        if len(mine) != 1:
-            continue
-
-        involved = True
-        ours = mine[0]
-        theirs = lane.b if ours is lane.a else lane.a
-        friendly_atk += combat_rules.volley(ours.front, battle.shares, nation_data, battle.profiles,
-                                            province=combat_rules.battle_tile(battle, ours))
-        enemy_atk += combat_rules.volley(theirs.front, battle.shares, nation_data, battle.profiles,
-                                         province=combat_rules.battle_tile(battle, theirs))
-
-    return friendly_atk, enemy_atk, involved
-
-
 def _desaturated_country_color(color):
     """Return a muted country color suitable for a distant battle bubble."""
     return tuple(round(COMBAT_BUBBLE_UNKNOWN_COLOR[index]
@@ -301,15 +245,13 @@ def _estimated_combat_winner(units, province, nation_data):
     return simulation["winner_nation"]
 
 
-def combat_outlook_color(sides, nation_data, friendly_nations,
-                         player_nation=None, province=None,
+def combat_outlook_color(sides, nation_data, province=None,
                          information_available=True, capture_owner=_COMBAT_WINNER_UNSET):
     """Return the expected winner's muted country color or neutral grey.
 
-    ``friendly_nations`` and ``player_nation`` remain accepted for callers that
-    used the old outlook API, but the bubble no longer changes color based on
-    whether the local player is involved.  Every informed battle uses the same
-    forecast. Countries outside the battle cannot become its predicted winner.
+    The color does not depend on whether the local player is involved. Every
+    informed battle uses the same forecast. Countries outside the battle cannot
+    become its predicted winner.
     """
     if not information_available:
         return COMBAT_BUBBLE_UNKNOWN_COLOR
@@ -320,13 +262,6 @@ def combat_outlook_color(sides, nation_data, friendly_nations,
     color = _country_color(nation_data, owner)
     return (_desaturated_country_color(color)
             if color is not None else COMBAT_BUBBLE_UNKNOWN_COLOR)
-
-
-def _combat_friendly_nations(map_screen):
-    player = map_screen.session.player_country
-    if player in (None, "", "Spectator", "Editor") or map_screen.session.is_editor:
-        return set()
-    return queries.get_all_friendly_nations(player, map_screen.world.nation_data)
 
 
 def _combat_is_visible(map_screen, province_ids, *, own_unit=False):
@@ -405,7 +340,6 @@ def combat_bubble_records(map_screen):
             return _combat_records_for_unit_view(map_screen, cached[1])
 
     player = map_screen.session.player_country
-    friendly = _combat_friendly_nations(map_screen)
     records = []
 
     for prediction in queries.get_combat_predictions(map_screen):
@@ -436,7 +370,7 @@ def combat_bubble_records(map_screen):
             "category": category,
             "winner_nation": winner_nation,
             "color": combat_outlook_color(
-                sides, map_screen.world.nation_data, friendly, player,
+                sides, map_screen.world.nation_data,
                 province=province,
                 information_available=information_available,
                 capture_owner=winner_nation),
@@ -761,7 +695,7 @@ def midpoint_bounce_outcomes(map_screen):
     """
     outcomes = []
     for pair, prov_a, prov_b, side_a, side_b, pinned in _midpoint_meetings(map_screen):
-        tactical_side = custom_battle.tactical_meeting_side(
+        tactical_side = tactical_campaign.tactical_meeting_side(
             map_screen, prov_a, prov_b, side_a, side_b, pinned_units=pinned)
         if tactical_side is not None:
             origin, target = ((prov_a, prov_b) if tactical_side == 0 else (prov_b, prov_a))

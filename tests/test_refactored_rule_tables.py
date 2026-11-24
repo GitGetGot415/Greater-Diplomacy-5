@@ -4,7 +4,6 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-import data.constants as c
 from data import queries
 from map_logic.ai import ai_movement
 from map_logic.diplomacy import action_definitions, diplomacy_messages, diplomacy_processor
@@ -14,7 +13,7 @@ from tests.stub_map_screen import mock_map, map_double
 class DiplomaticActionTableTests(unittest.TestCase):
     def test_every_unilateral_action_has_a_send_handler(self):
         # A bilateral action can use the shared announcement. A unilateral action would do nothing.
-        self.assertTrue(set(c.UNILATERAL_ACTIONS) <= set(diplomacy_processor._SEND_HANDLERS))
+        self.assertTrue(set(action_definitions.UNILATERAL_ACTIONS) <= set(diplomacy_processor._SEND_HANDLERS))
 
     def test_derived_lists_read_the_definition_fields(self):
         fixture = action_definitions.ActionDefinition("bilateral", "reply", None, announcement="Hello.",

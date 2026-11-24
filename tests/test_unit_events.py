@@ -456,7 +456,7 @@ class UnitEventPersistenceTests(unittest.TestCase):
             self.assertLessEqual(set(projected["unit_event_read_turns"]), {viewer})
             self.assertTrue(all(entry["detail_parts"] == [{"text": entry["details"], "owner": viewer}]
                                 for entry in projected["unit_event_log"]["events"]))
-        spectator = tournament_files.build_tournament_spectator_save(saved)
+        spectator = tournament_files.build_tournament_spectator_save(game, saved)
         self.assertEqual(spectator["unit_event_log"]["events"], [])
         self.assertEqual(spectator["unit_event_read_turns"], {})
         self.assertEqual(len(saved["unit_event_log"]["events"]), 2)
@@ -658,11 +658,11 @@ class UnitEventScreenTests(unittest.TestCase):
                 screen.show_event(screen.rows[0])
                 popup = push.call_args.args[0].screen
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
-                self.assertGreater(popup.scroll_y, 0)
-                self.assertEqual(popup.scroll_y, popup.max_scroll)
+                self.assertLess(popup.scroll.value, 0)
+                self.assertEqual(popup.scroll.value, popup.scroll.limit)
                 popup.draw(pygame.Surface(size))
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=1000)])
-                self.assertEqual(popup.scroll_y, 0)
+                self.assertEqual(popup.scroll.value, 0)
                 popup.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
                 self.assertTrue(popup.done)
 
@@ -755,11 +755,11 @@ class UnitEventScreenTests(unittest.TestCase):
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         screen.draw(surface)
         old_rect = screen.row_hitboxes[0][0]
-        screen.scroll_y = -screen.ROW_HEIGHT
+        screen.scroll.value = -screen.ROW_HEIGHT
         screen.set_event_filter("MOVED")
         self.assertEqual(screen.rows, [])
         self.assertEqual(screen.row_hitboxes, [])
-        self.assertEqual(screen.scroll_y, 0)
+        self.assertEqual(screen.scroll.value, 0)
         with patch.object(unit_events, "entries_for", side_effect=AssertionError("Frame queried reports")):
             screen.draw(surface)
         with patch("ui.dialogs.show_info") as details:

@@ -12,7 +12,7 @@ if __name__ == "__main__" and REPO_ROOT not in sys.path:
 
 import data.constants as c
 from compilation_scripts import build_manifest as manifest
-from compilation_scripts.build_support import export_web_build, include_asset, is_git_ignored, stage_release, verified_build_path
+from compilation_scripts.build_support import export_web_build, stage_release, verified_build_path
 
 # Build-time only tools (not needed to run the game itself, so not in requirements.txt,
 # same convention as PyInstaller/py2app for the other two platform builds):
@@ -24,14 +24,6 @@ STAGE_DIR = "web_stage"
 SOURCE_FILES = manifest.WEB_SOURCE_FILES
 SOURCE_PACKAGES = manifest.SOURCE_PACKAGES
 DATA_DIRS = manifest.DATA_DIRS
-
-# Retain the existing build-filter import paths.
-_is_git_ignored = is_git_ignored
-
-
-def _ignore_web_asset(path):
-    return not include_asset(path, "web")
-
 
 def transcode_web_audio(stage_path):
     """Convert staged MP3 music and effects to the browser mixer's OGG format."""

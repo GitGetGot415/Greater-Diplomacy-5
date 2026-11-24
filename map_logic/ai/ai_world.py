@@ -34,7 +34,7 @@ peace decisions. A country sees its own side exactly, sees enemy units on tiles
 it can see, and guesses the rest from public land. See perceived_military.
 """
 
-from data.state_access import world_for, session_for, viewer_context
+from data.state_access import world_for, session_for
 from data.world_nations import WorldNations
 import collections
 import random
@@ -44,16 +44,6 @@ from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_personality
 from map_logic.diplomacy import deal as deal_mod
-
-
-def visible_to(map_data, nation_data, id_to_province, viewer):
-    """Province ids `viewer` can see now, as the shared fog rules compute it.
-
-    None means the viewer sees everything. This builds the same view a
-    player's map uses, so the AI sees no more and no less than a player would.
-    """
-    visible, _partial = queries.get_visible_provinces(viewer_context(viewer, map_data, nation_data, id_to_province))
-    return visible
 
 
 class AIWorld:
@@ -347,11 +337,8 @@ class AIWorld:
     def visible_provinces(self, viewer):
         """Province ids `viewer` sees this turn, or None when it sees everything."""
         if viewer not in self._visible:
-            fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                                            self.scenario_settings)
-            self._visible[viewer] = (visible_to(self.map_data, self.nation_data,
-                                                self.id_to_province, viewer)
-                                     if fog else None)
+            # This builds the same view a player's map uses, so the AI sees no more and no less.
+            self._visible[viewer] = queries.viewer_visible_provinces(self, viewer)
         return self._visible[viewer]
 
     def land_value(self, nation):

@@ -109,7 +109,7 @@ def _air_base_threats(context, country, visible):
     world_state = world_for(context)
     threatened = set()
     for province in world_state.map_data.values():
-        if queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, context.world.scenario_settings) and visible is not None and province["id"] not in visible:
+        if visible is not None and province["id"] not in visible:
             continue
         for unit in queries.filter_visible_units(province.get("units", []), country,
                                                  province, world_state.nation_data):
@@ -180,7 +180,7 @@ def _air_patrol_threats(context, country, visible, *, range_cache=None):
                      for unit in province.get("units", []))}
     threats = {}
     for base in world_state.map_data.values():
-        if queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, context.world.scenario_settings) and visible is not None and base["id"] not in visible:
+        if visible is not None and base["id"] not in visible:
             continue
         for unit in queries.filter_visible_units(base.get("units", []), country, base, world_state.nation_data):
             if (unit.get("health", 0) <= 0 or not queries.is_air_unit(unit, context=context)
@@ -291,7 +291,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
     # already skips its fog filter.
     visible = world.visible_provinces(country)
     enemies = [province for province in world_state.map_data.values()
-               if (not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, context.world.scenario_settings) or visible is None or province["id"] in visible)
+               if (visible is None or province["id"] in visible)
                and queries.air_target_is_hostile({"owner": country}, province,
                    world_state.nation_data, visible_only=True)]
     threatened = _air_base_threats(context, country, visible)
@@ -2815,7 +2815,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         is_quiet = curr_id not in war_borders and curr_id not in active_battles
         is_near_battle = any(n in active_battles for n in prov.get("neighbors", ()))
         # A unit that wanted repairing and could not afford it must not be sent
-        # to upgrade instead: process_upgrades carries health across as a
+        # to upgrade instead: a completed UPGRADE order carries health across as a
         # *percentage*, so it would spend the turn and still be wounded, only
         # now wounded as a more expensive type.
         #

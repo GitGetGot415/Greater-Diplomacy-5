@@ -379,8 +379,8 @@ class OutputBonusTests(unittest.TestCase):
             province = {"id": 1, "json_key": "1", "terrain": "plains", "neighbors": [], "owner": "A",
                         "cores": ["A"], "units": [], "buildings": ["Basic Factory"]}
             game.world.map_data[1] = game.world.id_to_province[1] = province
-            politics.set_economic_drift(game.world.nation_data, "A", drift)
-            politics.set_drift(game.world.nation_data, "A", drift)
+            politics.set_axis_drift(game.world.nation_data, "A", politics.ECONOMIC, drift)
+            politics.set_axis_drift(game.world.nation_data, "A", politics.POLITICAL, drift)
             asyncio.run(turn_processor.resolve_turn_logic(game))
             self.assertEqual(politics.economic_value(game.world.nation_data, "A"), drift * c.POLITICS_STEP)
             self.assertEqual(politics.value(game.world.nation_data, "A"), drift * c.POLITICS_STEP)

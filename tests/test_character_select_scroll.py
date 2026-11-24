@@ -20,17 +20,17 @@ class CharacterSelectScrollTests(unittest.TestCase):
                 selected = images[index] if index is not None else "missing.png"
                 screen = CharacterSelectScreen(None, selected, lambda path: None)
                 tile_h = c.SIZES["character_portrait_tile"][1]
-                view_h = screen.scroll_content_rect.height
+                view_h = screen.scroll.content_rect.height
                 if index is None:
                     expected = 0
                 else:
                     row = (index + 1) // screen.COLUMNS
                     desired = view_h // 2 - (row * (tile_h + screen.TILE_GAP) + tile_h // 2)
-                    expected = max(screen.max_scroll, min(0, desired))
-                self.assertEqual(screen.scroll_y, expected)
-                screen.scroll_y = screen.max_scroll
+                    expected = max(screen.scroll.limit, min(0, desired))
+                self.assertEqual(screen.scroll.value, expected)
+                screen.scroll.value = screen.scroll.limit
                 screen.refresh_ui()
-                self.assertEqual(screen.scroll_y, screen.max_scroll)
+                self.assertEqual(screen.scroll.value, screen.scroll.limit)
 
 
 if __name__ == "__main__":

@@ -344,32 +344,22 @@ class WarEndingTests(unittest.TestCase):
 
 class TruceSettingTests(unittest.TestCase):
     def setUp(self):
-        self.original_truce_turns = c.TRUCE_TURNS
         self.game = StubMapScreen(["A", "B"])
         self.game.set_war("A", "B")
 
-    def tearDown(self):
-        c.TRUCE_TURNS = self.original_truce_turns
-
     def test_zero_turn_truce_setting_allows_immediate_war(self):
         self.game.world.scenario_settings = {"truce_turns": 0}
-        queries.apply_global_scenario_flags(self.game.world.scenario_settings)
 
         deal_effects.execute(self.game, deal.ceasefire_deal("A", "B"))
 
         self.assertNotIn("B", self.game.world.nation_data["A"]["truces"])
         self.assertNotIn("A", self.game.world.nation_data["B"]["truces"])
 
-    def test_truce_setting_is_clamped_to_twelve_turns(self):
-        self.game.world.scenario_settings = {"truce_turns": 99}
-        queries.apply_global_scenario_flags(self.game.world.scenario_settings)
+    def test_truce_setting_is_clamped_to_the_maximum(self):
+        self.assertEqual(queries.get_truce_turns({"truce_turns": 99}), c.MAX_TRUCE_TURNS)
 
-        self.assertEqual(c.TRUCE_TURNS, c.MAX_TRUCE_TURNS)
-
-    def test_missing_truce_setting_keeps_the_twelve_turn_default(self):
-        queries.apply_global_scenario_flags({})
-
-        self.assertEqual(c.TRUCE_TURNS, c.DEFAULT_TRUCE_TURNS)
+    def test_missing_truce_setting_uses_the_starting_default(self):
+        self.assertEqual(queries.get_truce_turns({}), c.DEFAULT_TRUCE_TURNS)
 
 
 if __name__ == "__main__":

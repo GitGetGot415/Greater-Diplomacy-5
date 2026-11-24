@@ -94,8 +94,8 @@ class UnitEventsScreen(TableScreen):
         self.event_filter = event
         self.rows = self.filtered_rows()
         self.empty_message = self.empty_report_message()
-        self.scroll_y = 0
-        self.max_scroll = 0
+        self.scroll.value = 0
+        self.scroll.limit = 0
         self.row_hitboxes = []
         self.sort_reverse.clear()
         self.refresh_ui()

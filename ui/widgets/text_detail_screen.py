@@ -29,12 +29,12 @@ class TextDetailScreen(Screen):
         self.title = title
         self.subtitle = subtitle
         self.body = str(body or "")
-        self.scroll_y = 0
-        self.max_scroll = 0
+        self.scroll.value = 0
+        self.scroll.limit = 0
         self.elements = [make_back_button(self.exit_screen)]
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def draw(self, surface):
         self.draw_background(surface)
@@ -51,8 +51,8 @@ class TextDetailScreen(Screen):
         view_h = c.SCREEN_HEIGHT - self.BODY_TOP - 40
         clip = pygame.Rect(self.SIDE_MARGIN, self.BODY_TOP - 10, width, view_h)
 
-        # max_scroll is zero or negative here, as everywhere else in this
-        # codebase: scroll_y counts down from 0 towards it.
+        # The pane's limit is zero or negative, as on every standard pane:
+        # its value counts down from 0 towards it.
         self.draw_scrolling_lines(surface, lines, body_font, self.SIDE_MARGIN, self.BODY_TOP, view_h,
                                   self.LINE_HEIGHT, clip, lambda _line: c.UI_TEXT_BRIGHT)
 

@@ -565,9 +565,9 @@ class BattleEditorTests(BattleScreenTestCase):
         orders.start_with_province(self.province, self.map)
         orders.go_to_battle()
         screen = orders.battle_screen
-        orders.scroll_y = orders.max_scroll_y
+        orders.scroll.value = orders.scroll.limit
         orders.refresh_ui()
-        previous_scroll = orders.scroll_y
+        previous_scroll = orders.scroll.value
         previous_selection = set(self.map.selected_unit_ids)
         screen._select(1)
         editor = BattleEditorScreen()
@@ -584,7 +584,7 @@ class BattleEditorTests(BattleScreenTestCase):
         Controller.flip_state(app)
         self.assertIs(app.active_state, orders)
         self.assertIs(orders.battle_screen, screen)
-        self.assertEqual(orders.scroll_y, previous_scroll)
+        self.assertEqual(orders.scroll.value, previous_scroll)
         self.assertEqual(set(self.map.selected_unit_ids), previous_selection)
         self.assertEqual(screen.selected_lane, 1)
         self.assertFalse(screen.done)
@@ -1019,7 +1019,7 @@ class BattleEditorTests(BattleScreenTestCase):
                 screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
             self.assertLess(screen.pane_scroll(pane), 0)
             screen.draw(self.surface)
-            track = getattr(screen, screen.scroll_attrs(pane)["track_attr"])
+            track = screen.pane(pane).track
             self.assertIsNotNone(track)
             pos = (track.right - 1, track.centery)
             screen.handle_events([
@@ -1050,8 +1050,7 @@ class BattleEditorTests(BattleScreenTestCase):
         screen = self.editor()
         screen.draw(self.surface)
         pane = battle_screen.PANE_RESERVE
-        attrs = screen.scroll_attrs(pane)
-        track = getattr(screen, attrs["track_attr"])
+        track = screen.pane(pane).track
         self.assertIsNotNone(track)
         before = copy.deepcopy(self.province["units"])
         pos = (track.centerx, track.bottom - 2)
@@ -1072,7 +1071,7 @@ class BattleEditorTests(BattleScreenTestCase):
         screen = self.editor()
         screen.draw(self.surface)
         pane = battle_editor.PANE_HELD
-        track = getattr(screen, screen.scroll_attrs(pane)['track_attr'])
+        track = screen.pane(pane).track
         before = copy.deepcopy(self.province['units'])
         pos = (track.centerx, track.bottom - 2)
         screen.handle_events([
@@ -1163,7 +1162,7 @@ class SideReserveTests(BattleScreenTestCase):
         listed = set()
         scroll = 0
         while True:
-            setattr(screen, screen.scroll_attrs(pane)["attr"], scroll)
+            screen.pane(pane).value = scroll
             screen.refresh_ui()
             listed.update(id(unit) for _rect, (unit, _note)
                           in screen.row_paint[pane])

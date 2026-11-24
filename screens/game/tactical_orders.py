@@ -59,7 +59,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         # (position, button, clicked stack) for a pending map click.
         self._map_click = None
         self.panel_rect = pygame.Rect(self.PANEL_X, PANEL_Y, self.PANEL_WIDTH, PANEL_HEIGHT)
-        self.scroll_content_rect = pygame.Rect(
+        self.scroll.content_rect = pygame.Rect(
             self.PANEL_X + 2, PANEL_Y + LIST_TOP_OFFSET_Y,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, LIST_VISIBLE_ROWS * ROW_HEIGHT)
 
@@ -95,7 +95,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         self.map_screen.selected_province = province
         self.battle_screen = None
         if not preserve_scroll:
-            self.scroll_y = 0
+            self.scroll.value = 0
         self.cancel_bombard_targeting(refresh=False)
         self._select_player_unit(None)
         self.refresh_ui()
@@ -162,9 +162,9 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
             if unit.get("owner") == player_country:
                 self._row_order_summaries[row_key] = self._order_summary(row_key, unit)
 
-        list_height = self.scroll_content_rect.height
-        self.max_scroll_y = min(0, list_height - len(self._other_rows) * self.row_height)
-        self.scroll_y = max(self.max_scroll_y, min(0, self.scroll_y))
+        list_height = self.scroll.content_rect.height
+        self.scroll.limit = min(0, list_height - len(self._other_rows) * self.row_height)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
         self._presentation_state = self._current_presentation_state()
 
     def _cancel_box_region(self):
@@ -256,20 +256,20 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         label = f"OTHER UNITS | P{self.target_province['id']}"
         surface.blit(tiny_font.render(label, True, c.UI_TEXT_LIGHT),
                      (self.PANEL_X + PANEL_INSET, PANEL_Y + LIST_LABEL_OFFSET_Y))
-        list_rect = self.scroll_content_rect
+        list_rect = self.scroll.content_rect
         pygame.draw.line(surface, DIVIDER_COLOR,
                          (self.PANEL_X + 1, list_rect.y - 1),
                          (self.panel_rect.right - 1, list_rect.y - 1), 1)
 
         # Other units are read-only: rows draw without commands or cancel boxes.
         with ui_bars.clip_scroll_region(surface, list_rect,
-                                        draw_top=self.scroll_y != 0,
-                                        draw_bottom=self.scroll_y > self.max_scroll_y):
+                                        draw_top=self.scroll.value != 0,
+                                        draw_bottom=self.scroll.value > self.scroll.limit):
             if not self._other_rows:
                 surface.blit(tiny_font.render("(No other units)", True, c.UI_TEXT_MUTED),
                              (self.PANEL_X + PANEL_INSET, list_rect.y))
             for display_index, (row_key, unit, province, index) in enumerate(self._other_rows):
-                row_y = list_rect.y + display_index * self.row_height + self.scroll_y
+                row_y = list_rect.y + display_index * self.row_height + self.scroll.value
                 if row_y + self.row_height < list_rect.y or row_y > list_rect.bottom:
                     continue
                 self._draw_unit_row(
@@ -278,7 +278,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
 
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, list_rect.y,
-            list_rect.height, width=SCROLLBAR_WIDTH, limit_attr="max_scroll_y")
+            list_rect.height, width=SCROLLBAR_WIDTH)
 
         resource_hud.draw_resource_bar(surface, map_ref,
                                        start_x=view_mode_buttons.RESOURCE_BAR_OFFSET_X)

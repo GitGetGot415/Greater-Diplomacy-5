@@ -30,16 +30,16 @@ class Faction_Screen(Screen):
         super().__init__()
         self.bg_color = (30, 35, 40)
         self.map_screen = None
-        self.scroll_y = 0
-        self.max_scroll = 0
-        self.scroll_content_rect = None
+        self.scroll.value = 0
+        self.scroll.limit = 0
+        self.scroll.content_rect = None
 
     def on_enter(self, app, previous):
         self.start_faction(app.states["MAP"])
 
     def start_faction(self, map_ref):
         self.map_screen = map_ref
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -180,7 +180,7 @@ class Faction_Screen(Screen):
         self.refresh_ui()
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -221,18 +221,18 @@ class Faction_Screen(Screen):
         standings = faction_leadership.contenders(nation_data, faction)
         left = c.SCREEN_WIDTH // 2 - ROSTER_LEFT_OFFSET
         bottom = c.SCREEN_HEIGHT - ROSTER_BOTTOM_BUTTON_GAP
-        self.scroll_content_rect = pygame.Rect(left, ROSTER_TOP_Y,
+        self.scroll.content_rect = pygame.Rect(left, ROSTER_TOP_Y,
                                                 ROSTER_WIDTH, bottom - ROSTER_TOP_Y)
 
         challenge_height = 0
         if standings:
             challenge_height = ROSTER_ROW_HEIGHT * (len(standings) + 1) + ROSTER_SECTION_GAP
         content_height = challenge_height + ROSTER_ROW_HEIGHT * (len(members) + 1)
-        self.max_scroll = min(0, self.scroll_content_rect.height - content_height)
-        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
+        self.scroll.limit = min(0, self.scroll.content_rect.height - content_height)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
 
-        y = self.scroll_content_rect.top + self.scroll_y
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect):
+        y = self.scroll.content_rect.top + self.scroll.value
+        with ui_bars.clip_scroll_region(surface, self.scroll.content_rect):
             if standings:
                 heading = font_normal.render("Building a claim on the leadership:", True,
                                              c.MSG_NOTIFICATION_COLOR)
@@ -263,10 +263,10 @@ class Faction_Screen(Screen):
                 surface.blit(txt, (text_x, y))
                 y += ROSTER_ROW_HEIGHT
 
-        if self.max_scroll < 0:
-            self.draw_list_scrollbar(surface, self.scroll_content_rect.right - 15,
-                                     self.scroll_content_rect.top,
-                                     self.scroll_content_rect.height, width=12)
+        if self.scroll.limit < 0:
+            self.draw_list_scrollbar(surface, self.scroll.content_rect.right - 15,
+                                     self.scroll.content_rect.top,
+                                     self.scroll.content_rect.height, width=12)
 
     def _member_label(self, member, nation_data):
         """Return a player-facing roster label for a faction member."""

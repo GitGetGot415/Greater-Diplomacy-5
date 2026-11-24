@@ -832,12 +832,12 @@ class AirResolutionTests(unittest.TestCase):
         self.base["is_coastal"] = True
         unit["health"] *= 0.6
         unit["order"] = queries.air_conversion_order(unit)
-        movement_processor.process_conversions(self.game)
+        movement_processor.process_unit_maintenance_orders(self.game, order_types={"CONVERT"})
         self.assertTrue(queries.is_air_transport(unit))
         self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.6)
         unit["health"] *= 0.5
         unit["order"] = queries.air_conversion_order(unit)
-        movement_processor.process_conversions(self.game)
+        movement_processor.process_unit_maintenance_orders(self.game, order_types={"CONVERT"})
         self.assertEqual(unit["type"], "V2 Rocket I")
         self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.3)
         self.assertNotIn("original_type", unit)
@@ -1261,7 +1261,7 @@ class AirGroundTransportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             queries.canonical_unit_order(self.game, "A", self.land, unit, queries.air_conversion_order(unit))
         unit["order"] = queries.air_conversion_order(unit)
-        movement_processor.process_conversions(self.game)
+        movement_processor.process_unit_maintenance_orders(self.game, order_types={"CONVERT"})
         self.assertTrue(queries.is_air_unit(unit))
         queries.load_transport(unit, "Convoy")
         with self.assertRaises(ValueError):
@@ -1371,7 +1371,7 @@ class AirGroundTransportTests(unittest.TestCase):
         with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
         self.assertEqual(unit["order"], queries.air_conversion_order(unit))
-        movement_processor.process_conversions(self.game)
+        movement_processor.process_unit_maintenance_orders(self.game, order_types={"CONVERT"})
         self.assertTrue(queries.is_air_transport(unit))
         with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(unit, self.base)])
@@ -1672,7 +1672,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(self.game).validate_draft("A", [command])
         self.unit["order"] = dict(order, turns_left=1)
-        movement_processor.process_upgrades(self.game)
+        movement_processor.process_unit_maintenance_orders(self.game, order_types={"UPGRADE"})
         self.assertEqual(self.unit["type"], "Monoplane Fighter I")
 
     def test_numbered_aircraft_use_existing_upgrade_button_and_rule(self):
@@ -1692,7 +1692,7 @@ class AirMissionSelectionTests(unittest.TestCase):
             self.assertTrue(button.kwargs["enabled"])
             button.args[5]()
             self.assertEqual(self.unit["order"]["target_type"], target)
-            movement_processor.process_upgrades(self.game)
+            movement_processor.process_unit_maintenance_orders(self.game, order_types={"UPGRADE"})
             self.assertEqual(self.unit["type"], target)
 
     def test_aircraft_upgrades_agree_in_ui_ai_networks_and_resolution(self):
@@ -1736,7 +1736,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                 self.base["units"] = [self.unit]
                 self.unit["order"] = upgrade
                 before = {field: self.unit[field] for field in ("health", "max_health", "attack", "defense", "speed")}
-                movement_processor.process_upgrades(self.game)
+                movement_processor.process_unit_maintenance_orders(self.game, order_types={"UPGRADE"})
                 self.assertEqual(self.unit["type"], target)
                 stats = library[target]
                 self.assertAlmostEqual(self.unit["health"] / self.unit["max_health"], before["health"] / before["max_health"])
@@ -1758,7 +1758,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                     self.base["buildings"] = []
                 else:
                     wing(self.base, "Infantry Type 1910", "B")
-                movement_processor.process_upgrades(self.game)
+                movement_processor.process_unit_maintenance_orders(self.game, order_types={"UPGRADE"})
                 self.assertEqual(self.unit["type"], "Monoplane Fighter I")
                 self.assertNotEqual(self.unit["order"]["type"], "UPGRADE")
 
@@ -2729,7 +2729,7 @@ class AirAppSmokeTests(unittest.TestCase):
                 self.assertTrue(result[0])
                 loaded = Map(load_path=result[3], skip_initial_income=True)
                 self.assertEqual(loaded.world.id_to_province[3]["units"][0]["unit_id"], hidden["unit_id"])
-                tournament_files.strip_sensitive_data_for_player(loaded, "A")
+                tournament_files.strip_sensitive_data_for_viewer(loaded, "A")
                 visible, _partial = queries.get_visible_provinces(loaded)
                 self.assertNotIn(3, visible)
                 self.assertEqual(loaded.world.id_to_province[1]["units"][0]["unit_id"], fighter["unit_id"])

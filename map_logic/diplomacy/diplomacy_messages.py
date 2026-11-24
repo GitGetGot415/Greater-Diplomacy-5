@@ -9,7 +9,7 @@ from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 
 from map_logic.diplomacy import deal as deal_mod, peace_scope
 from map_logic.ai import ai_prompts
-from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
+from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS, BILATERAL_ACTIONS
 
 # How many messages a nation's inbox keeps. Inboxes live in nation_data and
 # are saved wholesale, so an uncapped one grows the save file for the whole
@@ -358,7 +358,7 @@ def is_system_notice(msg):
 
 def _is_legacy_auto_decline(msg):
     content = msg.get("content")
-    if (msg.get("type") != "DIPLOMACY" or msg.get("action") not in c.BILATERAL_ACTIONS
+    if (msg.get("type") != "DIPLOMACY" or msg.get("action") not in BILATERAL_ACTIONS
             or msg.get("llm") or not isinstance(content, str)):
         return False
     if content == _LEGACY_AUTO_DECLINE_TEXT:
@@ -393,7 +393,7 @@ def conversation_message_text(msg, viewer, nation_data):
     legacy_outcome = legacy_shared_outcome(msg)
     if legacy_outcome:
         return ai_prompts.AI_FALLBACK_RESPONSES[legacy_outcome]
-    if msg.get("type") == "DIPLOMACY" and msg.get("action") in c.BILATERAL_ACTIONS and content == _LEGACY_AUTO_DECLINE_TEXT:
+    if msg.get("type") == "DIPLOMACY" and msg.get("action") in BILATERAL_ACTIONS and content == _LEGACY_AUTO_DECLINE_TEXT:
         sender = msg.get("sender", "")
         proposer, recipient = (sender[4:], viewer) if sender.startswith("To: ") else (viewer, sender)
         return automatic_decline_text(proposer, recipient, nation_data)

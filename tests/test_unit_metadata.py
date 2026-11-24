@@ -103,12 +103,6 @@ class UnitMetadataTests(unittest.TestCase):
         unit = queries.create_unit_dict("Fixture Model XII", "A", library)
         self.assertNotIn("metadata", unit)
 
-    def test_older_requirement_tuple_remains_a_compatibility_adapter(self):
-        library = {"Fixture Model XII": {}}
-        self.assertEqual(queries.get_unit_unlock_requirement("Fixture Model XII", library),
-                         ("fixture_model", 12, None))
-        self.assertTrue(queries.unit_requirement_is_met(("fixture_model", 12, None), {"fixture_model": 12}))
-
     def test_invalid_explicit_metadata_is_actionable(self):
         for value in (None, {}, dict(fixture_metadata(), tier_order=-1)):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "Unit custom: metadata"):

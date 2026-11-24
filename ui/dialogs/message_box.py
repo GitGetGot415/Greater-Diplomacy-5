@@ -12,6 +12,7 @@ from ui.bars import ui_bars
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
+from ui.widgets.scroll_state import ScrollState
 from ui import sound_effects
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
 
@@ -75,32 +76,25 @@ class _MessageModal(DialogScreen):
             self.panel_rect.width - 2 * self.TEXT_MARGIN, 0)
         self.content_rect.height = max(
             0, self.ok_rect.top - self.CONTENT_BUTTON_GAP - self.content_rect.top)
-        self.scroll_y = 0
-        self.max_scroll = 0
-        self._scroll_drag_offset = None
         self.set_content_bottom(self.content_rect.top + self.body_height())
 
     # -- scrolling ------------------------------------------------------ #
 
     def set_content_bottom(self, bottom):
         """Records where the unscrolled content ends, which sets how far it scrolls."""
-        self.max_scroll = max(0, bottom - self.content_rect.bottom)
-        self._set_scroll(self.scroll_y)
+        self.scroll.limit = min(0, self.content_rect.bottom - bottom)
+        self._set_scroll(self.scroll.value)
 
     def _scrollbar_rects(self):
         return (self.content_rect.right + self.SCROLLBAR_GAP, self.content_rect.top,
                 self.content_rect.height)
 
     def _set_scroll(self, value):
-        self.scroll_y = max(0, min(self.max_scroll, value))
+        scroll = self.scroll
+        scroll.value = max(scroll.limit, min(0, value))
         # Kept current between frames, so a click before the first draw hits the bar.
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
-            -self.scroll_y, -self.max_scroll, *self._scrollbar_rects(), width=self.SCROLLBAR_WIDTH)
-
-    def _drag_scrollbar(self, mouse_y):
-        track = self.scroll_track_rect
-        self._set_scroll(-ui_bars.calculate_scroll_snap(
-            mouse_y - self._scroll_drag_offset, -self.max_scroll, track.top, track.height))
+        scroll.track, scroll.handle = ui_bars.get_standard_scrollbar_rects(
+            scroll.value, scroll.limit, *self._scrollbar_rects(), width=self.SCROLLBAR_WIDTH)
 
     def _scroll_key_step(self, key):
         return {pygame.K_DOWN: c.SCROLL_STEP, pygame.K_UP: -c.SCROLL_STEP,
@@ -115,7 +109,7 @@ class _MessageModal(DialogScreen):
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE) or self.is_cancel_key(event.key):
             self.cancel()
         else:
-            self._set_scroll(self.scroll_y + self._scroll_key_step(event.key))
+            self._set_scroll(self.scroll.value - self._scroll_key_step(event.key))
 
     def body_height(self):
         if self.inline_lines is None:
@@ -127,8 +121,8 @@ class _MessageModal(DialogScreen):
         surface.set_clip(clip.clip(self.content_rect))
         try:
             if self.inline_lines is None:
-                return super().draw_body_lines(surface, offset_y - self.scroll_y)
-            y = self.content_rect.top + offset_y - self.scroll_y
+                return super().draw_body_lines(surface, offset_y + self.scroll.value)
+            y = self.content_rect.top + offset_y + self.scroll.value
             for line in self.inline_lines:
                 surface.blit(line, (self.content_rect.left, y))
                 y += line.get_height() + 2
@@ -136,30 +130,21 @@ class _MessageModal(DialogScreen):
         finally:
             surface.set_clip(clip)
 
-    def cancel_pointer_input(self):
-        super().cancel_pointer_input()
-        self._scroll_drag_offset = None
-
     def additional_events(self, event):
         if event.type == pygame.KEYDOWN:
             self.handle_key(event)
         elif event.type == pygame.MOUSEWHEEL:
-            self._set_scroll(self.scroll_y - event.y * c.SCROLL_STEP)
-        elif event.type == pygame.MOUSEMOTION and self._scroll_drag_offset is not None:
-            self._drag_scrollbar(event.pos[1])
+            self._set_scroll(self.scroll.value + event.y * c.SCROLL_STEP)
+        elif event.type == pygame.MOUSEMOTION and self.scroll.bar_drag:
+            self.scroll.snap(event.pos)
+            self._set_scroll(self.scroll.value)
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self._scroll_drag_offset = None
+            self.scroll.bar_drag = False
         elif event.type == pygame.WINDOWFOCUSLOST:
-            self._scroll_drag_offset = None
+            self.scroll.bar_drag = False
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):
-                # Keep where the handle was grabbed so the first motion does
-                # not jump. A track click centres the handle on the pointer.
-                if self.scroll_handle_rect.collidepoint(event.pos):
-                    self._scroll_drag_offset = event.pos[1] - self.scroll_handle_rect.centery
-                else:
-                    self._scroll_drag_offset = 0
-                    self._drag_scrollbar(event.pos[1])
+            if self.scroll.press_scrollbar(event.pos):
+                self._set_scroll(self.scroll.value)
             elif not getattr(event, "mobile_drag", False) and self.content_rect.collidepoint(event.pos):
                 self.handle_content_click(event.pos)
 
@@ -179,9 +164,7 @@ class _MessageModal(DialogScreen):
             self.draw_extra_content(surface)
         finally:
             surface.set_clip(clip)
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, -self.scroll_y, -self.max_scroll, *self._scrollbar_rects(),
-            width=self.SCROLLBAR_WIDTH)
+        self.scroll.draw_scrollbar(surface, *self._scrollbar_rects(), width=self.SCROLLBAR_WIDTH)
 
 
 #: Help content.
@@ -359,9 +342,7 @@ class _NavigationIntroPopup:
         self.rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2 + self.INITIAL_CENTER_Y_OFFSET)
         self.is_dragging = False
         self.drag_offset = (0, 0)
-        self.scroll_y = 0
-        self.max_scroll = 0
-        self._scroll_drag_offset = None
+        self.scroll = ScrollState()
         self.title_font = fonts.get("heading2")
         self.label_font = fonts.get("small")
         self.body_font = fonts.get("tiny")
@@ -644,8 +625,8 @@ class _NavigationIntroPopup:
         self.topic_index = index
         type(self).last_topic_index = None if index is None else self._source_topic_indices[index]
         self.prepared = self._prepare_topic(index)
-        self.scroll_y = 0
-        self._scroll_drag_offset = None
+        self.scroll.value = 0
+        self.scroll.bar_drag = False
         self._layout()
         return True
 
@@ -702,22 +683,19 @@ class _NavigationIntroPopup:
         self.content_rect = pygame.Rect(x + self.RAIL_W + self.CONTENT_SIDE_PAD, content_top,
                                         self._content_width(),
                                         max(0, self.rect.bottom - self.FOOTER_H - content_top))
-        self.max_scroll = max(0, self.prepared["content"].get_height() - self.content_rect.height)
-        self._set_scroll(self.scroll_y)
+        self.scroll.limit = min(0, self.content_rect.height - self.prepared["content"].get_height())
+        self._set_scroll(self.scroll.value)
 
     def _set_scroll(self, value):
-        self.scroll_y = max(0, min(self.max_scroll, value))
+        scroll = self.scroll
+        scroll.value = max(scroll.limit, min(0, value))
         # Kept current between frames, so a click before the first draw hits the bar.
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
-            -self.scroll_y, -self.max_scroll, *self._scrollbar_track(), width=self.SCROLLBAR_W)
+        scroll.track, scroll.handle = ui_bars.get_standard_scrollbar_rects(
+            scroll.value, scroll.limit, *self._scrollbar_track(), width=self.SCROLLBAR_W)
 
     def _scrollbar_track(self):
         return (self.content_rect.right + self.SCROLLBAR_GAP, self.content_rect.top, self.content_rect.height)
 
-    def _drag_scrollbar(self, mouse_y):
-        track = self.scroll_track_rect
-        self._set_scroll(-ui_bars.calculate_scroll_snap(
-            mouse_y - self._scroll_drag_offset, -self.max_scroll, track.top, track.height))
 
     def _persist_checkbox(self):
         settings = dict(queries.get_settings() or {})
@@ -772,7 +750,7 @@ class _NavigationIntroPopup:
             # the topic instead of zooming the map behind it.
             if not self.rect.collidepoint(pygame.mouse.get_pos()):
                 return False
-            self._set_scroll(self.scroll_y - event.y * c.SCROLL_STEP)
+            self._set_scroll(self.scroll.value + event.y * c.SCROLL_STEP)
             return True
 
         # Middle/right mouse belong to map pan and unit selection even when
@@ -796,14 +774,8 @@ class _NavigationIntroPopup:
                 self.dont_show_again = not self.dont_show_again
                 self._persist_checkbox()
                 return True
-            if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):
-                # Keep where the handle was grabbed so the first motion does
-                # not jump. A track click centres the handle on the pointer.
-                if self.scroll_handle_rect.collidepoint(event.pos):
-                    self._scroll_drag_offset = event.pos[1] - self.scroll_handle_rect.centery
-                else:
-                    self._scroll_drag_offset = 0
-                    self._drag_scrollbar(event.pos[1])
+            if self.scroll.press_scrollbar(event.pos):
+                self._set_scroll(self.scroll.value)
                 return True
             if self._click_rail(event.pos):
                 return True
@@ -815,8 +787,9 @@ class _NavigationIntroPopup:
             return False
 
         if event.type == pygame.MOUSEMOTION:
-            if self._scroll_drag_offset is not None:
-                self._drag_scrollbar(event.pos[1])
+            if self.scroll.bar_drag:
+                self.scroll.snap(event.pos)
+                self._set_scroll(self.scroll.value)
                 return True
             if self.is_dragging:
                 self._move_to(event.pos[0] - self.drag_offset[0],
@@ -833,9 +806,9 @@ class _NavigationIntroPopup:
             return self.rect.collidepoint(event.pos)
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            was_dragging = self.is_dragging or self._scroll_drag_offset is not None
+            was_dragging = self.is_dragging or self.scroll.bar_drag
             self.is_dragging = False
-            self._scroll_drag_offset = None
+            self.scroll.bar_drag = False
             return was_dragging or self.rect.collidepoint(event.pos)
 
         if hasattr(event, "pos"):
@@ -899,9 +872,8 @@ class _NavigationIntroPopup:
 
         content = self.prepared["content"]
         surface.blit(content, self.content_rect.topleft,
-                     area=pygame.Rect(0, self.scroll_y, self.content_rect.width, self.content_rect.height))
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, -self.scroll_y, -self.max_scroll, *self._scrollbar_track(), width=self.SCROLLBAR_W)
+                     area=pygame.Rect(0, -self.scroll.value, self.content_rect.width, self.content_rect.height))
+        self.scroll.draw_scrollbar(surface, *self._scrollbar_track(), width=self.SCROLLBAR_W)
 
         pygame.draw.rect(surface, (230, 230, 230), self.checkbox_rect, 2)
         if self.dont_show_again:

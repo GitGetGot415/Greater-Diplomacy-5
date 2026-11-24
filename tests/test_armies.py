@@ -1068,7 +1068,7 @@ class ArmyControlTests(unittest.TestCase):
         orders = SimpleNamespace(read_only=False, refresh_ui=Mock())
         tray, armies = army_panel._layout(map_stub, show_create=True)
         army_index = next(index for index, item in enumerate(armies) if item["id"] == army["id"])
-        card = map_top_right_layout.card_rect(tray, army_index, map_stub.army_panel_scroll_y)
+        card = map_top_right_layout.card_rect(tray, army_index, map_stub.scroll_state("army_panel").value)
         army_panel.handle_event(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=3, pos=card.center),
             orders_screen=orders)
@@ -1081,7 +1081,7 @@ class ArmyControlTests(unittest.TestCase):
 
         selected_ids[:] = [first_id]
         tray, armies = army_panel._layout(map_stub, show_create=True)
-        create = army_panel._create_rect(tray, armies, map_stub.army_panel_scroll_y)
+        create = army_panel._create_rect(tray, armies, map_stub.scroll_state("army_panel").value)
         army_panel.handle_event(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=create.center),
             orders_screen=orders)
@@ -1187,7 +1187,7 @@ class UnassignedArmyPanelTests(unittest.TestCase):
 
     def test_virtual_card_has_no_editor_target_reorder_or_delete_controls(self):
         tray, _armies = army_panel._layout(self.map)
-        card = map_top_right_layout.card_rect(tray, 0, self.map.army_panel_scroll_y)
+        card = map_top_right_layout.card_rect(tray, 0, self.map.scroll_state("army_panel").value)
         for control in (army_panel._edit_rect, army_panel._close_rect,
                         army_panel._move_up_rect, army_panel._move_down_rect,
                         army_panel._target_area_rect):
@@ -1243,7 +1243,7 @@ class UnassignedArmyPanelTests(unittest.TestCase):
                          [c.UNASSIGNED_ARMY_ID, second["id"], first["id"]])
         tray, armies = army_panel._layout(self.map)
         card = map_top_right_layout.card_rect(tray, len(armies) - 1,
-                                             self.map.army_panel_scroll_y)
+                                             self.map.scroll_state("army_panel").value)
         self.assertTrue(army_panel.handle_event(self.map, pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, button=1, pos=army_panel._close_rect(card).center)))
         self.assertEqual([army["id"] for army in army_panel._armies(self.map)],

@@ -128,7 +128,7 @@ class CharacterSelectScreen(ModalScreen):
         row_h = tile_h + self.TILE_GAP
         cull_top, cull_bottom = grid_top, self.panel_rect.bottom - 20
         view_h = cull_bottom - grid_top
-        self.scroll_content_rect = pygame.Rect(self.panel_rect.x, cull_top, self.panel_rect.width,
+        self.scroll.content_rect = pygame.Rect(self.panel_rect.x, cull_top, self.panel_rect.width,
                                                cull_bottom - cull_top)
 
         if self._center_current_on_open:
@@ -136,7 +136,7 @@ class CharacterSelectScreen(ModalScreen):
             if self.current_path in self.images:
                 row = (self.images.index(self.current_path) + 1) // cols
                 desired = view_h // 2 - (row * row_h + tile_h // 2)
-                self.scroll_y = max(min(0, view_h - rows * row_h), min(0, desired))
+                self.scroll.value = max(min(0, view_h - rows * row_h), min(0, desired))
 
         font = fonts.get("small")
         for row, y in self.layout_list_rows(rows, row_h, grid_top, view_h=view_h,
@@ -173,7 +173,7 @@ class CharacterSelectScreen(ModalScreen):
             del_btn = Button(x + tile_w - 30, y, "tiny_square", "red", "X",
                              lambda p=rel_path: self.start_delete_custom(p))
 
-            scroll_guard = self.scroll_click_guard
+            scroll_guard = self.scroll.guard
             def tile_guard(dbtn=del_btn, sg=scroll_guard):
                 return not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and sg()
             btn.click_guard = tile_guard
@@ -181,7 +181,7 @@ class CharacterSelectScreen(ModalScreen):
             self.add_list_row(del_btn)
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def draw_body(self, surface):
         if not self.images:

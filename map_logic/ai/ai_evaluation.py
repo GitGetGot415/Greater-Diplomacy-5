@@ -9,7 +9,7 @@ working.
 
 # ai_handler imports and re-exports these evaluation functions. Import the handler locally when a provider request runs.
 
-from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS
+from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, UNILATERAL_ACTIONS
 import collections
 import re
 
@@ -713,7 +713,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     allow_override = verdict.confidence < ai_tuning.AI_VERDICT_OVERRIDE_MAX_CONFIDENCE
 
     # --- Split logic between Proposals and Unilateral Declarations ---
-    if action_type in c.UNILATERAL_ACTIONS:
+    if action_type in UNILATERAL_ACTIONS:
         action_context = ai_prompts.get_unilateral_receive_context(action_type, sender_nation, custom_msg)
         system_prompt = ai_prompts.get_unilateral_system_prompt(action_context)
         user_prompt = f"{context}\n{action_context} Provide your reaction."

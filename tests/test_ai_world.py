@@ -190,8 +190,8 @@ class AIWorldParityTests(unittest.TestCase):
 
     def test_relation_matches_the_full_score(self):
         """Compared against the id_to_province form, i.e. claim penalty included."""
-        politics.set_value(self.nation_data, "Avaria", 10)
-        politics.set_value(self.nation_data, "Carrow", -10)
+        politics.set_axis_value(self.nation_data, "Avaria", politics.POLITICAL, 10)
+        politics.set_axis_value(self.nation_data, "Carrow", politics.POLITICAL, -10)
         for a, b in self.pairs():
             self.assertEqual(
                 self.world.relation(a, b),
@@ -317,7 +317,7 @@ class PerceptionTests(unittest.TestCase):
 
     Unlike the parity tests above, these answers are meant to differ from the
     exact figures: a country sees its own side and the enemy units in view,
-    and guesses the rest. Visibility is fixed by patching ai_world.visible_to,
+    and guesses the rest. Visibility is fixed by patching queries.get_visible_provinces,
     so the rule is tested apart from the fog-of-war rules that compute it.
     """
 
@@ -328,7 +328,7 @@ class PerceptionTests(unittest.TestCase):
         from unittest.mock import patch
         if visible is None:
             visible = set(self.id_to_province)
-        patches = [patch.object(ai_world, "visible_to", return_value=set(visible))]
+        patches = [patch.object(ai_world.queries, "get_visible_provinces", return_value=(set(visible), set()))]
         if traits is not None:
             patches.append(patch.object(ai_world.ai_personality, "get", return_value=traits))
         for item in patches:

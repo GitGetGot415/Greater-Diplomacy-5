@@ -161,12 +161,12 @@ class AdministrativeConstructionTests(unittest.TestCase):
         from map_logic.system32.economy_processor import process_queues
         self.province["cores"] = []
         country = self.game.world.nation_data["A"]
-        politics.set_value(self.game.world.nation_data, "A", c.POLITICS_MAX)
+        politics.set_axis_value(self.game.world.nation_data, "A", politics.POLITICAL, c.POLITICS_MAX)
         result = production_actions.submit_production(self.game, "A", self.province, "building_queue",
                                                        {"order_type": "CORE"}, authority="ai")
         turns = result.order["turns_remaining"]
         self.assertEqual(turns, c.CORE_CONSTRUCTION_TURNS - c.POLITICS_MAX)
-        politics.set_value(self.game.world.nation_data, "A", c.POLITICS_MIN)
+        politics.set_axis_value(self.game.world.nation_data, "A", politics.POLITICAL, c.POLITICS_MIN)
         self.game.session.active_players = ["A"]
         self.game.session.player_country = "A"
         self.game.show_feedback = mock.Mock()

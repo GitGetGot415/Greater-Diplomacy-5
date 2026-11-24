@@ -496,11 +496,6 @@ class HeadOnTests(unittest.TestCase):
 class PredictionBubbleTests(unittest.TestCase):
     """The bubble has to agree with the fight the turn will actually resolve."""
 
-    def weigh(self, screen, prov, friendly_nations):
-        """The real thing draw_combat_bubbles calls, not a restatement of it."""
-        return overlay_renderer.combat_strengths(
-            [prov["units"]], screen.world.nation_data, friendly_nations)
-
     def winner_fixture(self):
         screen = StubBattleMap()
         screen.session.player_country = "A"
@@ -623,7 +618,7 @@ class PredictionBubbleTests(unittest.TestCase):
 
     def test_explicit_unknown_winner_does_not_repeat_the_simulation(self):
         with patch.object(overlay_renderer, "_simulate_combat") as simulate:
-            overlay_renderer.combat_outlook_color([], {}, set(), capture_owner=None)
+            overlay_renderer.combat_outlook_color([], {}, capture_owner=None)
         simulate.assert_not_called()
 
     def test_an_unseen_enemy_order_does_not_remove_a_possible_defender(self):
@@ -676,7 +671,7 @@ class PredictionBubbleTests(unittest.TestCase):
              for prediction in predictions],
             "the player's own movement should create a prediction")
 
-    def test_a_three_way_fight_counts_only_the_lane_you_are_in(self):
+    def test_a_three_way_fight_trades_fire_lane_by_lane(self):
         screen = StubBattleMap()
         screen.add_nation("P", at_war_with=["X"])
         screen.add_nation("X", at_war_with=["P", "Y"])
@@ -685,39 +680,13 @@ class PredictionBubbleTests(unittest.TestCase):
         mine = [unit("P", attack=60)]
         theirs = [unit("X", attack=100), unit("X", attack=100)]
         third = [unit("Y", attack=10)]
-        prov = screen.add_province("p1", "P", units=mine + theirs + third)
-
-        friendly, enemy, involved = self.weigh(screen, prov, {"P"})
+        screen.add_province("p1", "P", units=mine + theirs + third)
 
         # X has two enemies here and two units, so coverage puts one in each
-        # lane: one unit's worth of fire reaches me, not both. Summing X's raw
-        # attack called this a loss; it is a draw, and the bubble now says so
-        # for the same reason the turn will.
-        self.assertTrue(involved)
-        self.assertAlmostEqual(friendly, 60.0, places=6)
-        self.assertAlmostEqual(enemy, 100.0, places=6)
-
+        # lane: one unit's worth of fire reaches P, not both.
         combat_processor.process_combat(screen)
-        self.assertAlmostEqual(damage_taken(mine), 100.0, places=6,
-                               msg="the bubble promised a fight the turn did not run")
+        self.assertAlmostEqual(damage_taken(mine), 100.0, places=6)
         self.assertAlmostEqual(damage_taken(third), 100.0, places=6)
-
-    def test_a_tile_where_only_a_bystander_ally_stands_is_not_your_fight(self):
-        screen = StubBattleMap()
-        screen.add_nation("P")
-        screen.add_nation("ALLY")
-        screen.add_nation("X", at_war_with=["Y"])
-        screen.add_nation("Y", at_war_with=["X"])
-        screen.world.nation_data["P"]["faction"] = screen.world.nation_data["ALLY"]["faction"] = "Fixture Coalition"
-
-        prov = screen.add_province("p1", "X", units=[
-            unit("ALLY", attack=50), unit("X", attack=100), unit("Y", attack=100)])
-
-        friendly, enemy, involved = self.weigh(screen, prov, {"P", "ALLY"})
-
-        self.assertFalse(involved,
-                         "a battle your ally is only standing next to is not yours")
-        self.assertEqual((friendly, enemy), (0.0, 0.0))
 
 
 class ChargeTests(unittest.TestCase):

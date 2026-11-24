@@ -39,8 +39,8 @@ class ShuffleExclusionTests(unittest.TestCase):
         )
         player = object.__new__(Music_Player)
         player.controller = controller
-        player._scroll_album = 0
-        player._scroll_track = 0
+        player.pane("album").value = 0
+        player.pane("track").value = 0
         player.handle_back_key = lambda: None
 
         player.refresh_ui()
@@ -111,8 +111,8 @@ class ShuffleExclusionTests(unittest.TestCase):
         )
         player = object.__new__(Music_Player)
         player.controller = controller
-        player._scroll_album = 0
-        player._scroll_track = 0
+        player.pane("album").value = 0
+        player.pane("track").value = 0
         player.handle_back_key = lambda: None
 
         player.refresh_ui()
@@ -162,8 +162,8 @@ class ShuffleExclusionTests(unittest.TestCase):
         )
         player = object.__new__(Music_Player)
         player.controller = controller
-        player._scroll_album = 0
-        player._scroll_track = 0
+        player.pane("album").value = 0
+        player.pane("track").value = 0
         player.handle_back_key = lambda: None
 
         player.refresh_ui()

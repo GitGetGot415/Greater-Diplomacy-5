@@ -1,7 +1,6 @@
 from data.platform import IS_WEB
 from data import research_display
 from data.io.starting_defaults import get_starting_value
-from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
 
 # Used for logical ownership assignment
 WATER_MAPPING = {
@@ -199,7 +198,6 @@ VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Dipl
 # ==========================================
 
 # --- FOG OF WAR ---
-USE_FOG_OF_WAR = get_starting_value("scenario_settings.json", "fog_of_war") # Toggle Fog of War mechanics on or off
 DEFAULT_FOG_OF_WAR = get_starting_value("scenario_settings.json", "fog_of_war")
 DEFAULT_FOG_OF_WAR_STRENGTH = get_starting_value("scenario_settings.json", "fog_of_war_strength")
 
@@ -211,7 +209,6 @@ TOURNAMENT_SPECTATOR_KEY = "Spectator"
 TOURNAMENT_SPECTATOR_ROLE = "TOURNAMENT_SPECTATOR"
 
 # --- CASUS BELLI ---
-CASUS_BELLI_REQUIRED = get_starting_value("scenario_settings.json", "casus_belli_required")
 DEFAULT_CASUS_BELLI = get_starting_value("scenario_settings.json", "casus_belli_required")
 
 # --- SURPRISE ATTACK ---
@@ -225,12 +222,10 @@ DEFAULT_AI_DISABLED = get_starting_value("scenario_settings.json", "ai_disabled"
 DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH = get_starting_value("scenario_settings.json", "force_time_appropriate_research")
 
 # --- BATTLE ROYALE ---
-BATTLE_ROYALE_MODE = get_starting_value("scenario_settings.json", "battle_royale")
 DEFAULT_BATTLE_ROYALE = get_starting_value("scenario_settings.json", "battle_royale")
 DEFAULT_BOUNCE_TIEBREAKER = get_starting_value("scenario_settings.json", "bounce_tiebreaker")
 
 # --- FACTIONS ---
-DISABLE_FACTIONS = get_starting_value("scenario_settings.json", "disable_factions")
 DEFAULT_DISABLE_FACTIONS = get_starting_value("scenario_settings.json", "disable_factions")
 
 # --- CORES ---
@@ -305,8 +300,6 @@ USE_SOLOUD = not IS_WEB # SoLoud has no browser build; Pygame Mixer is forced on
 
 DEFAULT_SFX_VOLUME = get_starting_value("settings_config.json", "sfx_volume")
 DEFAULT_MUSIC_VOLUME = get_starting_value("settings_config.json", "music_volume")
-# Retain this public alias; music and SFX defaults are read separately by settings_schema.
-DEFAULT_AUDIO_PITCH = get_starting_value("settings_config.json", "music_pitch")
 MUSIC_PITCH_TIMELINE_STATIC = "STATIC"
 MUSIC_PITCH_TIMELINE_DYNAMIC = "DYNAMIC"
 DEFAULT_MUSIC_PITCH_TIMELINE = get_starting_value("settings_config.json", "music_pitch_timeline")
@@ -767,7 +760,7 @@ DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 
 # Each army deploys in at most this many columns (ranks), each holding one or two divisions.
-# The battlefield size (ARENA_SIZE in map_logic/custom_battle.py and map_logic/naval_battle.py)
+# The battlefield size (ARENA_SIZE in map_logic/tactical_rules.py and map_logic/naval_battle.py)
 # is derived from the column count so two full armies fit.
 CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE = 16
 CUSTOM_BATTLE_UNITS_PER_COLUMN = 2

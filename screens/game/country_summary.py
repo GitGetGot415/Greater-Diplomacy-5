@@ -155,12 +155,12 @@ class CountrySummaryScreen(Screen):
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
-        self.scroll_content_rect = pygame.Rect(
+        self.scroll.content_rect = pygame.Rect(
             PAGE_MARGIN, CONTENT_TOP, c.SCREEN_WIDTH - 2 * PAGE_MARGIN,
             c.SCREEN_HEIGHT - CONTENT_TOP - CONTENT_BOTTOM_MARGIN)
         if self._layout_width != c.SCREEN_WIDTH:
             self._layout_width = c.SCREEN_WIDTH
-            self.card_width = (self.scroll_content_rect.width - COLUMN_GAP) // 2
+            self.card_width = (self.scroll.content_rect.width - COLUMN_GAP) // 2
             military = self._card("Military", self._military_lines())
             politics = self._card("Politics", self._politics_lines())
             economy_lines = (["Income, expenses, and net are per turn."]
@@ -177,32 +177,32 @@ class CountrySummaryScreen(Screen):
                 self.summary["name"], font, c.SCREEN_WIDTH - HEADER_TEXT_X - PAGE_MARGIN),
                 True, c.UI_TEXT_BRIGHT)
             self.subtitle = fonts.get("normal").render("Country summary / Read-only", True, c.UI_TEXT_MUTED)
-        self.max_scroll = min(0, self.scroll_content_rect.height - self.content_height)
-        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
-            self.scroll_y, self.max_scroll, c.SCREEN_WIDTH - PAGE_MARGIN // 2,
-            CONTENT_TOP, self.scroll_content_rect.height)
+        self.scroll.limit = min(0, self.scroll.content_rect.height - self.content_height)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
+        self.scroll.track, self.scroll.handle = ui_bars.get_standard_scrollbar_rects(
+            self.scroll.value, self.scroll.limit, c.SCREEN_WIDTH - PAGE_MARGIN // 2,
+            CONTENT_TOP, self.scroll.content_rect.height)
 
     def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_PAGEDOWN:
-                self.scroll_y = max(self.max_scroll, self.scroll_y - self.scroll_content_rect.height)
+                self.scroll.value = max(self.scroll.limit, self.scroll.value - self.scroll.content_rect.height)
                 self.refresh_ui()
             elif event.key == pygame.K_PAGEUP:
-                self.scroll_y = min(0, self.scroll_y + self.scroll_content_rect.height)
+                self.scroll.value = min(0, self.scroll.value + self.scroll.content_rect.height)
                 self.refresh_ui()
 
     def additional_draw(self, surface):
         surface.blit(self.flag, HEADER_FLAG_POS)
         surface.blit(self.heading, (HEADER_TEXT_X, HEADER_FLAG_POS[1]))
         surface.blit(self.subtitle, (HEADER_TEXT_X, HEADER_FLAG_POS[1] + 42))
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect):
+        with ui_bars.clip_scroll_region(surface, self.scroll.content_rect):
             for card, x, y in self.cards:
-                surface.blit(card, (PAGE_MARGIN + x, CONTENT_TOP + y + self.scroll_y))
-        ui_bars.draw_standard_scrollbar(surface, self.scroll_y, self.max_scroll,
+                surface.blit(card, (PAGE_MARGIN + x, CONTENT_TOP + y + self.scroll.value))
+        ui_bars.draw_standard_scrollbar(surface, self.scroll.value, self.scroll.limit,
                                        c.SCREEN_WIDTH - PAGE_MARGIN // 2, CONTENT_TOP,
-                                       self.scroll_content_rect.height)
+                                       self.scroll.content_rect.height)
 
 
 def open_country_summary(map_screen, country_id):

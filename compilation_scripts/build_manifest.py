@@ -71,8 +71,14 @@ HIDDEN_IMPORTS = (
     "screens.game.country_summary",
     "screens.game.battle_editor",
     "screens.game.custom_battle",
+    "screens.game.custom_battle_camera", "screens.game.custom_battle_editor",
+    "screens.game.custom_battle_layout", "screens.game.custom_battle_render",
+    "screens.game.custom_battle_roster", "screens.game.custom_battle_sprites",
+    "screens.game.custom_battle_touch",
     "screens.game.tactical_retreat",
     "map_logic.custom_battle",
+    "map_logic.tactical_campaign", "map_logic.tactical_land_ai", "map_logic.tactical_naval_ai",
+    "map_logic.tactical_rules", "map_logic.tactical_units",
     "map_logic.battle_terrain",
     "map_logic.naval_battle",
     "screens.game.tactical_orders",
@@ -97,6 +103,7 @@ HIDDEN_IMPORTS = (
     "ui.music_playback",
     "ui.widgets.content_browser",
     "ui.navigation.touch_input",
+    "ui.widgets.scroll_state",
 )
 RUNTIME_PACKAGES = (
     "screens", "screens.menus", "screens.setup", "screens.multiplayer",

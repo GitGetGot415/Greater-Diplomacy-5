@@ -64,12 +64,12 @@ class Puppets_Screen(Screen):
         body_top = self.panel_rect.top + self.HEADER_HEIGHT
         self.list_rect = pygame.Rect(inner.left, body_top, self.LIST_WIDTH,
                                      inner.bottom - body_top - self.CONTROL_HEIGHT - self.CONTROL_GAP)
-        self.scroll_content_rect = self.list_rect
+        self.scroll.content_rect = self.list_rect
         detail_left = self.list_rect.right + self.COLUMN_GAP
         self.detail_rect = pygame.Rect(detail_left, body_top, inner.right - detail_left,
                                       inner.bottom - body_top)
         self.selected_subject = None
-        self.scroll_y = 0
+        self.scroll.value = 0
         self._projection = None
         self.resource_totals = []
         self.refresh_ui()
@@ -124,13 +124,13 @@ class Puppets_Screen(Screen):
         if self.selected_subject not in subjects:
             self.selected_subject = subjects[0] if subjects else None
             self._projection = None
-        self.max_scroll = min(0, self.list_rect.height - len(subjects) * self.ROW_HEIGHT)
-        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
+        self.scroll.limit = min(0, self.list_rect.height - len(subjects) * self.ROW_HEIGHT)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
         row_width = self.list_rect.width - self.SCROLLBAR_WIDTH - self.SCROLLBAR_GAP
         guard = self.content_hover_guard()
         font = fonts.get("normal")
         for index, subject in enumerate(subjects):
-            y = self.list_rect.top + index * self.ROW_HEIGHT + self.scroll_y
+            y = self.list_rect.top + index * self.ROW_HEIGHT + self.scroll.value
             if y + self.ROW_HEIGHT <= self.list_rect.top or y >= self.list_rect.bottom:
                 continue
             data = self.map_screen.world.nation_data.get(subject, {})
@@ -157,8 +157,8 @@ class Puppets_Screen(Screen):
             button.apply_state(enabled=editable and self.owns_subject(self.selected_subject)
                                and 0 <= index + direction < len(subjects), color="blue")
             self.elements.append(button)
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
-            self.scroll_y, self.max_scroll, self.list_rect.right - self.SCROLLBAR_WIDTH,
+        self.scroll.track, self.scroll.handle = ui_bars.get_standard_scrollbar_rects(
+            self.scroll.value, self.scroll.limit, self.list_rect.right - self.SCROLLBAR_WIDTH,
             self.list_rect.top, self.list_rect.height, self.SCROLLBAR_WIDTH)
         self._prepare_details(editable)
 
@@ -262,7 +262,7 @@ class Puppets_Screen(Screen):
                 and self.owns_subject(puppets[index])):
             puppets[index], puppets[new_index] = puppets[new_index], puppets[index]
             row_top = new_index * self.ROW_HEIGHT
-            self.scroll_y = min(-row_top, max(self.scroll_y,
+            self.scroll.value = min(-row_top, max(self.scroll.value,
                 self.list_rect.height - row_top - self.ROW_HEIGHT))
         self.refresh_ui()
 
@@ -303,7 +303,7 @@ class Puppets_Screen(Screen):
     def additional_events(self, event):
         if event.type == pygame.MOUSEWHEEL and not self.list_rect.collidepoint(pygame.mouse.get_pos()):
             return
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content=True)
 
     def additional_draw(self, surface):
         ui_bars.draw_screen_panel(surface, self, "Puppets")
@@ -389,7 +389,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         keep.apply_state(enabled=enabled, color=on_off_color(self.keep_cores))
         self.elements.append(keep)
 
-        self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + self.CONTENT_TOP,
+        self.scroll.content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + self.CONTENT_TOP,
                                                self.panel_rect.width - 10,
                                                self.panel_rect.height - self.CONTENT_TOP - self.CONTENT_BOTTOM_GAP)
         queue = self.map_screen.world.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
@@ -417,7 +417,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
                           if entry else c.UI_TEXT_LIGHT)
             self.release_row_surfaces.append(row_font.render(
                 row_text, True, text_color))
-            y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll_y
+            y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll.value
             button = Button(self.panel_rect.x + 320, y_pos, "small", "red" if entry else "green",
                             "Cancel" if entry else "Create",
                             lambda value=subject, cancel=bool(entry): self.cancel_queue(value) if cancel else self.queue_creation(value))
@@ -426,7 +426,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
                                text="No Land" if entry is None and not available else None)
             button.is_scrollable = True
             button.click_guard = self.content_hover_guard()
-            button.base_y = y_pos - self.scroll_y
+            button.base_y = y_pos - self.scroll.value
             self.elements.append(button)
 
         # Cache the map highlights in creation order, using the same territory rule.
@@ -439,13 +439,13 @@ class Create_Puppet_Screen(MapOverlayScreen):
                 entry.get("keep_cores", False), prior)
             self.queued_highlights.extend((province["id"], colors[index % len(colors)]) for province in provinces)
             prior.append(entry)
-        self.max_scroll = min(0, self.scroll_content_rect.height - len(self.valid_subjects) * self.ROW_HEIGHT)
+        self.scroll.limit = min(0, self.scroll.content_rect.height - len(self.valid_subjects) * self.ROW_HEIGHT)
 
     def update(self):
         super().update()
         for element in self.elements:
             if getattr(element, "is_scrollable", False):
-                element.rect.y = element.base_y + self.scroll_y
+                element.rect.y = element.base_y + self.scroll.value
 
     def queue_creation(self, subject):
         if not self.can_edit_realtime():
@@ -482,13 +482,13 @@ class Create_Puppet_Screen(MapOverlayScreen):
             surface.blit(font.render("No nations available to create.", True, c.UI_TEXT_MUTED),
                          (self.panel_rect.x + 30, self.panel_rect.y + self.ROW_TOP))
         else:
-            with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            with ui_bars.clip_scroll_region(surface, self.scroll.content_rect,
+                                            draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
                 for index, text in enumerate(self.release_row_surfaces):
-                    y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll_y
+                    y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll.value
                     surface.blit(text, (self.panel_rect.x + 20, y + 15))
-        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.scroll_content_rect.y,
-                                 self.scroll_content_rect.height, width=10)
+        self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.scroll.content_rect.y,
+                                 self.scroll.content_rect.height, width=10)
 
 
 # Preserve the older screen name for callers and mods.

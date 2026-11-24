@@ -31,27 +31,28 @@ class ContentDragTests(unittest.TestCase):
     def screen(self):
         screen = Screen()
         screen.refresh_ui = mock.Mock()
-        screen.scroll_y = -150
-        screen.max_scroll = -500
-        screen.scroll_content_rect = pygame.Rect(0, 0, 200, 200)
+        screen.scroll.value = -150
+        screen.scroll.limit = -500
+        screen.scroll.content_rect = pygame.Rect(0, 0, 200, 200)
         return screen
 
     def test_direct_content_drag_follows_the_pointer_on_both_axes(self):
         for axis, delta in (("y", (0, 30)), ("y", (0, -30)), ("x", (30, 0)), ("x", (-30, 0))):
             with self.subTest(axis=axis, delta=delta):
                 screen = self.screen()
+                screen.scroll.axis = axis
                 for event in drag_events(delta=delta):
-                    screen.handle_content_drag(event, axis=axis)
-                self.assertEqual(screen.scroll_y, -150 + delta[0 if axis == "x" else 1])
-                self.assertIsNone(screen.content_drag_state)
+                    screen.handle_content_drag(event)
+                self.assertEqual(screen.scroll.value, -150 + delta[0 if axis == "x" else 1])
+                self.assertIsNone(screen.scroll.content_drag)
 
     def test_standard_list_drag_follows_the_pointer_and_cancels_a_pressed_row(self):
         screen = self.screen()
         row = SimpleNamespace(is_pressed=True)
         screen.elements = [row]
         for event in drag_events():
-            screen.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-        self.assertEqual(screen.scroll_y, -120)
+            screen.handle_list_scroll(event, content=True)
+        self.assertEqual(screen.scroll.value, -120)
         self.assertFalse(row.is_pressed)
         self.assertFalse(screen.is_content_dragging())
 
@@ -61,26 +62,26 @@ class ContentDragTests(unittest.TestCase):
         screen.elements = [row]
         for event in drag_events(delta=(0, 2)):
             screen.handle_content_drag(event)
-        self.assertEqual(screen.scroll_y, -150)
+        self.assertEqual(screen.scroll.value, -150)
         self.assertTrue(row.is_pressed)
         for delta, expected in (((0, 1000), 0), ((0, -1000), -500)):
             with self.subTest(delta=delta):
                 for event in drag_events(delta=delta):
                     screen.handle_content_drag(event)
-                self.assertEqual(screen.scroll_y, expected)
+                self.assertEqual(screen.scroll.value, expected)
 
     def test_scrollbar_drag_and_wheel_keep_their_directions(self):
         screen = self.screen()
-        screen.scroll_track_rect = pygame.Rect(180, 0, 20, 200)
-        screen.scroll_handle_rect = pygame.Rect(180, 40, 20, 40)
-        for event in drag_events(start=screen.scroll_handle_rect.center):
-            screen.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-        self.assertLess(screen.scroll_y, -150)
-        self.assertFalse(screen.is_dragging_scrollbar)
+        screen.scroll.track = pygame.Rect(180, 0, 20, 200)
+        screen.scroll.handle = pygame.Rect(180, 40, 20, 40)
+        for event in drag_events(start=screen.scroll.handle.center):
+            screen.handle_list_scroll(event, content=True)
+        self.assertLess(screen.scroll.value, -150)
+        self.assertFalse(screen.scroll.bar_drag)
         self.assertFalse(screen.is_content_dragging())
-        before = screen.scroll_y
+        before = screen.scroll.value
         screen.handle_list_scroll(pygame.event.Event(pygame.MOUSEWHEEL, y=-1, x=0))
-        self.assertLess(screen.scroll_y, before)
+        self.assertLess(screen.scroll.value, before)
 
     def test_map_panels_convert_positive_offsets_to_the_same_content_direction(self):
         for panel in ("country_actions", *map_input.MAP_PANELS):
@@ -89,27 +90,27 @@ class ContentDragTests(unittest.TestCase):
                 screen.selected_province = {"id": 1}
                 screen.session = SessionState(selection_mode=False)
                 for name in ("country_actions", *map_input.MAP_PANELS):
-                    setattr(screen, f"{name}_scroll_rect", None)
-                    setattr(screen, f"{name}_scroll_y", 150)
+                    screen.scroll_state(name).content_rect = None
+                    screen.scroll_state(name).value = 150
                     setattr(screen, f"{name}_scroll_max", 500)
-                setattr(screen, f"{panel}_scroll_rect", screen.scroll_content_rect)
+                screen.scroll_state(panel).content_rect = screen.scroll.content_rect
                 for event in drag_events():
                     map_input._handle_panel_scrolling(screen, event, *event.pos)
-                self.assertEqual(getattr(screen, f"{panel}_scroll_y"), 120)
+                self.assertEqual(screen.scroll_state(panel).value, 120)
 
     def test_message_thread_drag_pulls_the_thread_down(self):
         screen = Messages_Screen()
         screen.map_screen = map_double(tactical_mode=False, player_country="A", nation_data={})
         screen.selected_recipient = "B"
-        screen.thread_rect = pygame.Rect(280, 64, 1000, 512)
-        screen.msg_scroll_y = 150
+        screen.thread_rect = screen.thread_scroll.content_rect = pygame.Rect(280, 64, 1000, 512)
+        screen.thread_scroll.value = 150
         screen.max_msg_scroll = 500
-        screen.scroll_content_rect = pygame.Rect(0, 0, 200, 200)
+        screen.scroll.content_rect = pygame.Rect(0, 0, 200, 200)
         with mock.patch("screens.game.messages.queries.is_diplomat_busy", return_value=True):
             for event in drag_events(start=(700, 100)):
                 screen.additional_events(event)
-        self.assertEqual(screen.msg_scroll_y, 180)
-        self.assertIsNone(screen.message_drag_state)
+        self.assertEqual(screen.thread_scroll.value, 180)
+        self.assertIsNone(screen.thread_scroll.content_drag)
 
 
 if __name__ == "__main__":

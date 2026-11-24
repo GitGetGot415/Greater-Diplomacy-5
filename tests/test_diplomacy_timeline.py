@@ -27,8 +27,8 @@ from map_logic.actions.player_actions import PlayerActions, PlayerActionError, c
 from map_logic.diplomacy import deal, diplomacy_lifecycle, diplomacy_messages, diplomacy_processor, peace_scope, treaty_effects
 from map_logic.diplomacy.war_actions import finalize_neutral
 from map_logic.diplomacy import player_diplomacy_actions
-import data.constants as c
 from data.session_state import REALTIME
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS
 
 ACCEPT = diplomacy_messages.RESPONSE_ACCEPT
 REJECT = diplomacy_messages.RESPONSE_REJECT
@@ -71,7 +71,7 @@ class BilateralDeliveryTests(unittest.TestCase):
         return game
 
     def test_every_bilateral_action_delivers_a_message_on_turn_1(self):
-        for action in c.BILATERAL_ACTIONS:
+        for action in BILATERAL_ACTIONS:
             with self.subTest(action=action):
                 game = self._setup_for(action)
                 game.propose("A", "B", action, message="Our formal proposal.")

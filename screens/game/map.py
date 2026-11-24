@@ -47,7 +47,7 @@ from ui.rendering import map_renderer, overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
 from ui.rendering.country_names import update_country_centers as calc_country_centers
 from screens.setup import player_setup
-from map_logic import custom_battle as tactical_battle
+from map_logic import tactical_campaign
 
 from data.io import country_io
 from ui import dialogs
@@ -127,16 +127,13 @@ class Map(StateAccess, Screen):
     hovered_combat_bubble = None
     strategic_unit_fade_states = None
     army_custom_symbol_state = None
-    army_panel_scroll_y = 0
     army_panel_visible_in_orders = False
     # The turn loading screen's model threads panel (ui/panels/llm_threads_panel.py).
     llm_threads_open = False
     llm_threads_selected = None
     llm_threads_scroll = 0
     _army_tray_right_click_active = False
-    sidebar_scroll_y = 0
     sidebar_scroll_max = 0
-    diplomatic_scroll_y = 0
     diplomatic_scroll_max = 0
     viewing_research_country = ""
     viewing_research_mode = "VIEW"
@@ -256,9 +253,9 @@ class Map(StateAccess, Screen):
         overlay_renderer._unit_render_index(self)
 
     def _init_session_state(self):
-        self.country_actions_scroll_rect = pygame.Rect(
+        self.scroll_state("country_actions").content_rect = pygame.Rect(
             map_buttons.DIPLO_BTN_X, map_buttons.ACTION_BTN_START_Y, map_buttons.ACTION_SCROLL_WIDTH, map_buttons.ACTION_SCROLL_HEIGHT)
-        self.country_actions_scroll_y = 0
+        self.scroll_state("country_actions").value = 0
         self.country_actions_scroll_max = 0
 
         self.session.active_players = [] # Usually empty on boot unless loaded from save
@@ -487,11 +484,11 @@ class Map(StateAccess, Screen):
         if province is None:
             return
         library = queries.get_unit_library(self)
-        forces = tactical_battle.campaign_forces(self.session.player_unit, province, self.world.nation_data, library)
+        forces = tactical_campaign.campaign_forces(self.session.player_unit, province, self.world.nation_data, library)
         if forces is None:
             return
         if not forces[1]:
-            tactical_battle.win_against_artillery(self.session.player_unit, province, self.world.nation_data, library)
+            tactical_campaign.win_against_artillery(self.session.player_unit, province, self.world.nation_data, library)
             player_setup.settle_tactical_tile(self, province)
             return
         self.tactical_battle_request = (province, *forces)
@@ -1128,7 +1125,7 @@ class Map(StateAccess, Screen):
             popup.is_dragging = False
         if self.navigation_intro_popup is not None:
             self.navigation_intro_popup.is_dragging = False
-            self.navigation_intro_popup._scroll_drag_offset = None
+            self.navigation_intro_popup.scroll.cancel()
 
     def has_secondary_action_at(self, position):
         return (self.touch_map_at(position) is self
@@ -1486,18 +1483,18 @@ class Map(StateAccess, Screen):
 
         map_buttons.layout_country_action_buttons(self)
         old_clip = surface.get_clip()
-        surface.set_clip(self.country_actions_scroll_rect)
+        surface.set_clip(self.scroll_state("country_actions").content_rect)
         for button in country_actions:
             button.draw(surface)
         surface.set_clip(old_clip)
 
         if self.country_actions_scroll_max > 0:
-            rect = self.country_actions_scroll_rect
+            rect = self.scroll_state("country_actions").content_rect
             track = pygame.Rect(rect.right - 10, rect.y, 8, rect.height)
             handle_h = max(30, int(rect.height * rect.height /
                                    (rect.height + self.country_actions_scroll_max)))
             travel = rect.height - handle_h
-            ratio = self.country_actions_scroll_y / self.country_actions_scroll_max
+            ratio = self.scroll_state("country_actions").value / self.country_actions_scroll_max
             handle = pygame.Rect(rect.right - 10, rect.y + int(travel * ratio), 8, handle_h)
             ui_elements.draw_slider(surface, track, handle)
 

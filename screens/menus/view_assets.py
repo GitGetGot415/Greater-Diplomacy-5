@@ -68,22 +68,22 @@ class View_Assets(ScrollPanes, Screen):
         self.download_status_color = c.COLOR_SUCCESS_GREEN
         self.download_status_timer = 0
 
-        self._scroll_folder = 0
-        self._scroll_file = 0
-        self._scroll_preview = 0
-        self._max_folder = 0
-        self._max_file = 0
-        self._max_preview = 0
+        self.pane("folder").value = 0
+        self.pane("file").value = 0
+        self.pane("preview").value = 0
+        self.pane("folder").limit = 0
+        self.pane("file").limit = 0
+        self.pane("preview").limit = 0
 
-        self._drag_folder = False
-        self._drag_file = False
-        self._drag_preview = False
-        self._track_folder = None
-        self._handle_folder = None
-        self._track_file = None
-        self._handle_file = None
-        self._track_preview = None
-        self._handle_preview = None
+        self.pane("folder").bar_drag = False
+        self.pane("file").bar_drag = False
+        self.pane("preview").bar_drag = False
+        self.pane("folder").track = None
+        self.pane("folder").handle = None
+        self.pane("file").track = None
+        self.pane("file").handle = None
+        self.pane("preview").track = None
+        self.pane("preview").handle = None
 
         self.folders = self._list_folders()
         self.files = []
@@ -152,7 +152,7 @@ class View_Assets(ScrollPanes, Screen):
 
         avail_h = max(1, c.SCREEN_HEIGHT - HEADER_H - PREVIEW_MARGIN * 2)
         content_h = len(self.preview_lines) * self.preview_line_h
-        self._max_preview = min(0, avail_h - content_h)
+        self.pane("preview").limit = min(0, avail_h - content_h)
 
     # ------------------------------------------------------------------ #
     #                            SELECTION                               #
@@ -160,7 +160,7 @@ class View_Assets(ScrollPanes, Screen):
 
     def select_folder(self, folder):
         self.current_folder = folder
-        self._scroll_file = 0
+        self.pane("file").value = 0
         self.files = self._list_viewable_files(folder)
 
         if self.files:
@@ -171,7 +171,7 @@ class View_Assets(ScrollPanes, Screen):
             self.preview_surface = None
             self.preview_error = None
             self.preview_lines = []
-            self._max_preview = 0
+            self.pane("preview").limit = 0
             self.refresh_ui()
 
     def select_file(self, name):
@@ -180,8 +180,8 @@ class View_Assets(ScrollPanes, Screen):
         self.preview_error = None
         self.preview_surface = None
         self.preview_lines = []
-        self._scroll_preview = 0
-        self._max_preview = 0
+        self.pane("preview").value = 0
+        self.pane("preview").limit = 0
         self.download_status = None
 
         path = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, name)
@@ -236,12 +236,12 @@ class View_Assets(ScrollPanes, Screen):
     def refresh_ui(self):
         self.elements = []
 
-        self._content_folder = pygame.Rect(0, HEADER_H, FOLDER_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
-        self._content_file = pygame.Rect(FOLDER_PANE_W, HEADER_H, FILE_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
-        self._content_preview = pygame.Rect(PREVIEW_X, HEADER_H, PREVIEW_W, c.SCREEN_HEIGHT - HEADER_H)
+        self.pane("folder").content_rect = pygame.Rect(0, HEADER_H, FOLDER_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
+        self.pane("file").content_rect = pygame.Rect(FOLDER_PANE_W, HEADER_H, FILE_PANE_W, c.SCREEN_HEIGHT - HEADER_H)
+        self.pane("preview").content_rect = pygame.Rect(PREVIEW_X, HEADER_H, PREVIEW_W, c.SCREEN_HEIGHT - HEADER_H)
 
         # --- Left: Folders (Scrolling) ---
-        y = HEADER_H + self._scroll_folder
+        y = HEADER_H + self.pane("folder").value
         folder_content_h = 0
         for folder in self.folders:
             btn = make_choice_button(20, y, "asset_folder", folder, folder == self.current_folder,
@@ -253,13 +253,13 @@ class View_Assets(ScrollPanes, Screen):
             y += FOLDER_ROW_H
             folder_content_h += FOLDER_ROW_H
 
-        self._max_folder = min(0, c.SCREEN_HEIGHT - HEADER_H - folder_content_h - 20)
+        self.pane("folder").limit = min(0, c.SCREEN_HEIGHT - HEADER_H - folder_content_h - 20)
 
         # --- Middle: File names (Scrolling) ---
         file_font = fonts.get(FILE_FONT_PRESET)
         file_btn_w = c.SIZES["asset_file"][0]
 
-        y = HEADER_H + self._scroll_file
+        y = HEADER_H + self.pane("file").value
         file_content_h = 0
         for name in self.files:
             is_active = name == self.current_file
@@ -275,7 +275,7 @@ class View_Assets(ScrollPanes, Screen):
             y += FILE_ROW_H
             file_content_h += FILE_ROW_H
 
-        self._max_file = min(0, c.SCREEN_HEIGHT - HEADER_H - file_content_h - 20)
+        self.pane("file").limit = min(0, c.SCREEN_HEIGHT - HEADER_H - file_content_h - 20)
 
         # --- Fixed chrome on top ---
         self.elements.append(ScreenLayer(self, "draw_top_bar"))
@@ -292,7 +292,7 @@ class View_Assets(ScrollPanes, Screen):
     PANE_RECTS = ("folder", "file", "preview")
 
     def pane_rects(self):
-        return {name: getattr(self, f"_content_{name}", None) for name in self.PANE_RECTS}
+        return {name: self.pane(name).content_rect for name in self.PANE_RECTS}
 
     def additional_events(self, event):
         self.route_pane_scroll(event)
@@ -335,8 +335,8 @@ class View_Assets(ScrollPanes, Screen):
     def draw_elements(self, surface):
         """Folder and file rows each crop to their own pane; the preview pane
         holds no buttons, so it is drawn by _draw_text_preview instead."""
-        self.draw_panes(surface, rects={"folder": self._content_folder,
-                                        "file": self._content_file})
+        self.draw_panes(surface, rects={"folder": self.pane("folder").content_rect,
+                                        "file": self.pane("file").content_rect})
 
     def additional_draw(self, surface):
         # Pane backgrounds
@@ -364,10 +364,10 @@ class View_Assets(ScrollPanes, Screen):
         font = fonts.get(PREVIEW_TEXT_FONT)
         line_h = self.preview_line_h
 
-        with ui_bars.clip_scroll_region(surface, self._content_preview,
-                                        draw_top=self._scroll_preview != 0,
-                                        draw_bottom=self._scroll_preview > self._max_preview):
-            y = HEADER_H + PREVIEW_MARGIN + self._scroll_preview
+        with ui_bars.clip_scroll_region(surface, self.pane("preview").content_rect,
+                                        draw_top=self.pane("preview").value != 0,
+                                        draw_bottom=self.pane("preview").value > self.pane("preview").limit):
+            y = HEADER_H + PREVIEW_MARGIN + self.pane("preview").value
             for line in self.preview_lines:
                 if y + line_h > HEADER_H and y < c.SCREEN_HEIGHT:
                     if line:

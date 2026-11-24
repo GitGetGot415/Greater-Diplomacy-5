@@ -17,6 +17,7 @@ import unittest
 import data.constants as c
 from map_logic.diplomacy import diplomacy_messages as dm
 from tests.stub_map_screen import StubMapScreen
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
 
 
 class CategoryTests(unittest.TestCase):
@@ -47,7 +48,7 @@ class CategoryTests(unittest.TestCase):
 
     def test_every_bilateral_and_unilateral_action_has_a_category(self):
         """Otherwise a whole class of message silently reads DIPLOMACY again."""
-        for action in list(c.BILATERAL_ACTIONS) + list(c.UNILATERAL_ACTIONS):
+        for action in list(BILATERAL_ACTIONS) + list(UNILATERAL_ACTIONS):
             with self.subTest(action=action):
                 self.assertIn(action, dm.MESSAGE_CATEGORIES)
 

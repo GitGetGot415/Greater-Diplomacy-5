@@ -39,17 +39,37 @@ class ScrollAttrTests(unittest.TestCase):
         pygame.init()
         self.screen = TwoPaneScreen()
 
-    def test_names_are_underscore_prefixed(self):
-        """A pane called "events" must not publish self.handle_events and
-        clobber Screen.handle_events."""
-        attrs = self.screen.scroll_attrs("events")
-        self.assertTrue(all(name.startswith("_") for name in attrs.values()))
-        self.assertNotIn("handle_events", attrs.values())
+    def test_a_pane_name_never_shadows_a_screen_method(self):
+        handle_events = self.screen.handle_events
+        self.screen.pane("events").value = -10
+        self.assertEqual(self.screen.handle_events, handle_events)
 
-    def test_names_are_distinct_per_pane(self):
-        left = set(self.screen.scroll_attrs("left").values())
-        right = set(self.screen.scroll_attrs("right").values())
-        self.assertEqual(left & right, set())
+    def test_panes_are_distinct(self):
+        self.assertIsNot(self.screen.pane("left"), self.screen.pane("right"))
+        self.assertIs(self.screen.pane("left"), self.screen.pane("left"))
+
+    def test_cancel_releases_every_pane(self):
+        for name in ("left", "right"):
+            pane = self.screen.pane(name)
+            pane.bar_drag, pane.content_drag = True, [0, True]
+        self.screen.cancel_active_drags()
+        for name in ("left", "right"):
+            self.assertFalse(self.screen.pane(name).bar_drag)
+            self.assertIsNone(self.screen.pane(name).content_drag)
+
+    def test_dragging_the_handle_keeps_the_grab_point(self):
+        pane = self.screen.pane("left")
+        pane.limit, pane.value = -300, -100
+        surface = pygame.Surface((200, 200))
+        track, handle = pane.draw_scrollbar(surface, 0, 0, 100)
+        grab = (handle.centerx, handle.bottom - 2)
+        self.assertTrue(pane.press_scrollbar(grab))
+        pane.snap(grab)
+        # Rect coordinates are whole pixels, so the handle centre can round by one.
+        self.assertAlmostEqual(pane.value, -100, delta=2)
+        # A press on the bare track centres the handle on the pointer.
+        self.assertTrue(pane.press_scrollbar((track.centerx, track.bottom - 1)))
+        self.assertEqual(pane.value, pane.limit)
 
     def test_scroll_defaults_to_zero(self):
         self.assertEqual(self.screen.pane_scroll("left"), 0)
@@ -79,18 +99,18 @@ class PaneRowTests(unittest.TestCase):
         top, view_h, row_h, count = 100, 200, 20, 40
         list(self.screen.pane_rows("left", count, top, view_h, row_h))
 
-        self.screen._scroll_left = self.screen.pane_scroll_limit("left")
+        self.screen.pane("left").value = self.screen.pane_scroll_limit("left")
         rows = list(self.screen.pane_rows("left", count, top, view_h, row_h))
 
         last_index, _last_y = rows[-1]
         self.assertEqual(last_index, count - 1, "the final row never becomes reachable")
         with mock.patch.object(pygame.mouse, "get_pos", return_value=(50, top + view_h - 1)):
-            self.assertTrue(self.screen._guard_left())
+            self.assertTrue(self.screen.pane("left").guard())
 
     def test_partially_visible_row_accepts_only_clicks_inside_the_pane(self):
         from ui.widgets.ui_elements import Button
 
-        self.screen._scroll_left = -5
+        self.screen.pane("left").value = -5
         rows = dict(self.screen.pane_rows("left", 40, top=100, view_h=200))
         self.assertIn(10, rows)
         clicked = mock.Mock()
@@ -151,9 +171,9 @@ class HorizontalPaneTests(unittest.TestCase):
         pygame.init()
         self.screen = TwoPaneScreen()
         self.screen.pane_scroll_axis = lambda name: "x" if name == "left" else "y"
-        self.screen._max_left = -300
-        self.screen._max_right = -300
-        self.screen._content_left = self.screen.left
+        self.screen.pane("left").limit = -300
+        self.screen.pane("right").limit = -300
+        self.screen.pane("left").content_rect = self.screen.left
 
     def test_horizontal_and_vertical_wheels_pan_only_the_horizontal_pane(self):
         with mock.patch.object(pygame.mouse, "get_pos", return_value=self.screen.left.center):
@@ -178,11 +198,11 @@ class HorizontalPaneTests(unittest.TestCase):
         self.screen.route_pane_scroll(pygame.event.Event(
             pygame.MOUSEBUTTONUP, pos=(track.left, track.centery), button=1))
         self.assertEqual(self.screen.pane_scroll("left"), 0)
-        self.assertFalse(self.screen._drag_left)
+        self.assertFalse(self.screen.pane("left").bar_drag)
         self.assertEqual(self.screen.pane_scroll("right"), 0)
 
     def test_horizontal_content_drag_follows_the_pointer(self):
-        self.screen._scroll_left = -150
+        self.screen.pane("left").value = -150
         self.screen.route_pane_scroll(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=(50, 150), button=1))
         self.screen.route_pane_scroll(pygame.event.Event(

@@ -188,8 +188,8 @@ class UnitCommandControls:
         # before its first handoff is not a special case.
         self.read_only = False
 
-        self.scroll_y = 0
-        self.max_scroll_y = 0
+        self.scroll.value = 0
+        self.scroll.limit = 0
         self.row_height = 40
 
         self.unit_library = queries.get_unit_library(self.map_screen)
@@ -212,7 +212,7 @@ class UnitCommandControls:
         if hasattr(map_ref, "_orders_entered_from_combat_bubble"):
             delattr(map_ref, "_orders_entered_from_combat_bubble")
         self.battle_screen = None
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.cancel_bombard_targeting(refresh=False)
         self.renaming_unit_index = None
         self.renaming_unit_province = None
@@ -1101,9 +1101,7 @@ class UnitCommandControls:
                     pygame.MOUSEMOTION, pygame.MOUSEWHEEL):
                 event_pos = getattr(event, "pos", pygame.mouse.get_pos())
                 dragging_battle_scrollbar = any(
-                    getattr(self.battle_screen,
-                            self.battle_screen.scroll_attrs(pane)["drag_attr"], False)
-                    for pane in self.battle_screen.pane_rects())
+                    self.battle_screen.pane(pane).bar_drag for pane in self.battle_screen.pane_rects())
                 # Keep a grabbed battle scrollbar in control until release,
                 # including when the cursor leaves the child panel.
                 if (self.battle_screen.panel_rect.collidepoint(event_pos)
@@ -1141,16 +1139,14 @@ class UnitCommandControls:
             # --- Scrollbar click/drag (grab the handle or jump via the track),
             # or grab the panel's own content and drag it directly ---
             if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
-                if self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y",
-                                           content_rect_attr="scroll_content_rect"):
+                if self.handle_list_scroll(event, content=True):
                     return
 
             # --- Handle Mousewheel Scrolling ---
             if event.type == pygame.MOUSEWHEEL:
                 # The header stays fixed; only the roster viewport takes the wheel.
-                if self.scroll_content_rect.collidepoint(pygame.mouse.get_pos()):
-                    self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y",
-                                   speed=WHEEL_SCROLL_STEP)
+                if self.scroll.content_rect.collidepoint(pygame.mouse.get_pos()):
+                    self.scroll_by(event, speed=WHEEL_SCROLL_STEP)
 
             # Screen dispatches additional_events after the widgets. Doing
             # it again can overwrite a mission with movement on the same click.
@@ -1173,10 +1169,9 @@ class UnitCommandControls:
 
         # Dragging the scrollbar handle (or the panel's own content) takes
         # priority over camera panning/hover.
-        if event.type == pygame.MOUSEMOTION and (self.is_dragging_scrollbar
-                                                  or self.is_content_dragging("scroll_y")):
-            self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y",
-                                    content_rect_attr="scroll_content_rect")
+        if event.type == pygame.MOUSEMOTION and (self.scroll.bar_drag
+                                                  or self.is_content_dragging()):
+            self.handle_list_scroll(event, content=True)
             return
 
         mx, my = pygame.mouse.get_pos()
@@ -1714,7 +1709,7 @@ class UnitCommandControls:
 
     def _cancel_box_region(self):
         """The rect that a click must land in to reach a row's cancel box."""
-        return self.scroll_content_rect
+        return self.scroll.content_rect
 
     def _return_to_clicked_province(self, position):
         """Leave for the clicked province's menu after a short empty-map click.

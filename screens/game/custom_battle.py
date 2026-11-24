@@ -1,470 +1,38 @@
 """Edit Battle, read-only Preview Battle, and optional player-controlled combat."""
 
-import math
-import os
-import random
 from collections import deque
-from functools import lru_cache
 from itertools import islice
+import math
+import random
 
 import pygame
 
-import data.constants as c
 from data import queries
 from data.io import starting_defaults
+from map_logic import battle_terrain
 from map_logic import custom_battle as combat
-from map_logic import battle_terrain, naval_battle as naval
+from map_logic import naval_battle as naval
+from map_logic import tactical_campaign
+from map_logic import tactical_rules as rules
+from screens.game import custom_battle_layout as layout
+from screens.game import custom_battle_sprites as sprites
+from screens.game.custom_battle_editor import CustomBattleUnitEditor
+from screens.setup import player_setup
 from ui import dialogs
+from ui import sound_effects
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
-from ui.navigation.modal_screen import ModalScreen
 from ui.navigation.screen import Screen
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
-from ui.widgets import ui_elements
-from ui import sound_effects
 from ui.widgets import flag_icons
-from ui.widgets.text_utils import fit_text
+from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, Slider
-from screens.setup import player_setup
-
-
-PANEL_X = 60
-ROSTER_TOP = 56
-PANEL_WIDTH = 1160
-PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate areas.
-# Edit Battle and preview share one card size and one grid: each column of the grid is a
-# battlefield rank, holding one card or two cards stacked.
-CARD_SIZE = (160, 68)
-CARD_GAP = 12  # Between columns, and between a column's two rows.
-ROSTER_ROWS = c.CUSTOM_BATTLE_UNITS_PER_COLUMN
-ROSTER_HEIGHT = ROSTER_ROWS * CARD_SIZE[1] + (ROSTER_ROWS - 1) * CARD_GAP
-CONTROLLED_CARD_BRIGHTNESS = 100
-TITLE_HELP_GAP = 12
-# Card contents: the icon, health bar, and flag on the left; health, attack, and defense on the right.
-CARD_INSET = 5
-CARD_STATS_WIDTH = 64  # Fits a six-character value such as 999.9K after its icon.
-CARD_LEFT_WIDTH = CARD_SIZE[0] - CARD_STATS_WIDTH - 2 * CARD_INSET
-CARD_NAME_TOP = 2  # Edit Battle only: the unit name shares the top row with the gear button.
-EDIT_ICON_TOP = 20
-EDIT_ICON_MAX_SCALE = 1.4
-PREVIEW_ICON_TOP = 4
-CARD_BAR_TOP = 53
-CARD_BAR_HEIGHT = 10
-CARD_BAR_GRAB_PAD = 6  # Extra pixels above and below the bar that still grab it in editing.
-CARD_BAR_FLAG_GAP = 4
-CARD_BAR_FLAG_SIZE = (18, 12)
-CARD_ICON_BAR_GAP = 4
-EDIT_STATS_TOP = 20
-PREVIEW_STATS_TOP = 11
-CARD_STAT_ROW_HEIGHT = 15
-CONTROLLED_ARROW_Y = 30  # Below the edit card's name row.
-# Pixels at each card's left and right edge where a drop, like a drop in the gap between
-# columns, gives the dragged card a new column instead of dropping it on that card.
-DROP_NEW_COLUMN_EDGE = 14
-HEALTH_BAR_FULL_COLOR = (105, 215, 85)
-HEALTH_BAR_HALF_COLOR = (235, 205, 60)  # Reached at half health.
-HEALTH_BAR_EMPTY_COLOR = (215, 60, 50)  # Reached at zero health; the fill blends between the three colors.
-HEALTH_BAR_SHADE = 30  # Brightness step between the light, middle, and dark bands of the fill.
-HEALTH_BAR_BANDS = 3
-PANEL_BOTTOM_SPACE = 32  # Below the cards: scrollbar row and margin.
-PANEL_HEIGHT = ROSTER_TOP + ROSTER_HEIGHT + PANEL_BOTTOM_SPACE
-CARD_STAT_ICON_SIZE = 12
-BATTLE_FLAG_SIZE = (14, 9)
-BATTLE_FLAG_GAP = 3
-MIXED_LABEL = "Mixed"
-CARD_EDIT_SIZE = 18
-CARD_EDIT_ICON_PAD = 3  # Between the gear button's edge and its icon.
-CARD_EDIT_INSET = 2
-ROSTER_INSET = 20
-ROSTER_WIDTH = 900
-SCROLLBAR_HEIGHT = 14
-BUTTON_WIDTH = 170
-CLEAR_ALL_OFFSET_Y = 20
-CLEAR_ALL_HEIGHT = 32
-TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
-DEATH_EXPLOSION_SECONDS = 0.7
-DEATH_EXPLOSION_RADIUS = 36
-DEATH_EXPLOSION_PARTICLE_SIZE = 12
-DEATH_EXPLOSION_PARTICLE_COUNT = 8
-DEATH_EXPLOSION_PARTICLE_SHAPE = "square"  # "circle" or "square"
-DEATH_EXPLOSION_SPREAD = "circle"  # "circle" or "square"
-DEATH_EXPLOSION_CIRCLE_COLOR = (255, 180, 60)
-DEATH_EXPLOSION_CIRCLE_ALPHA = 180
-DEATH_EXPLOSION_COLORS = ((255, 240, 150), (255, 160, 45), (205, 65, 30), (75, 70, 65))
-DEATH_EXPLOSION_CIRCLE_OFFSETS = tuple((math.cos(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT), math.sin(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT)) for i in range(DEATH_EXPLOSION_PARTICLE_COUNT))
-DEATH_EXPLOSION_OFFSETS = {"circle": DEATH_EXPLOSION_CIRCLE_OFFSETS, "square": tuple((dx / max(abs(dx), abs(dy)), dy / max(abs(dx), abs(dy))) for dx, dy in DEATH_EXPLOSION_CIRCLE_OFFSETS)}[DEATH_EXPLOSION_SPREAD]
-DEATH_EXPLOSION_DRAW_PARTICLE = {"circle": pygame.draw.ellipse, "square": pygame.draw.rect}[DEATH_EXPLOSION_PARTICLE_SHAPE]
-# A torpedo hit on a ship reuses the explosion animation in white and blue, as a splash of water.
-TORPEDO_SPLASH_CIRCLE_COLOR = (190, 225, 255)
-TORPEDO_SPLASH_COLORS = ((255, 255, 255), (220, 240, 255), (120, 185, 240), (45, 110, 200))
-# (expanding circle color, particle colors from start to finish) for each explosion animation.
-DEATH_EXPLOSION_PALETTE = (DEATH_EXPLOSION_CIRCLE_COLOR, DEATH_EXPLOSION_COLORS)
-TORPEDO_SPLASH_PALETTE = (TORPEDO_SPLASH_CIRCLE_COLOR, TORPEDO_SPLASH_COLORS)
-
-EDIT_BATTLE_HELP_TEXT = (
-    "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
-    "Add Friendly and Add Enemy open the unit picker. Choose units to add them; Cancel closes the picker and keeps your additions. Select a card and choose Duplicate to copy that unit, including nationality and starting HP, or Remove to remove that unit. Clear All empties that army.\n\n"
-    "Each column of cards is one rank of the battlefield; the leftmost column deploys in the front rank, closest to the enemy. A column holds one division, centered, or two divisions, one above the other. New units join the last column when it has room. Drop a card on another card to swap them, on a column's empty lower space to stack it there, or between columns to give it a column of its own. Drag cards into the other army to move units between sides. Duplicating and moving units cannot exceed the destination army's unit limit. Scroll long rosters with the mouse wheel, scrollbar, or by dragging the roster background.\n\n"
-    "A card's gear button opens Unit Settings for nationality and starting HP. You can also drag along the card's health bar to change starting HP.\n\n"
-    "To select several units, start in empty roster panel space outside the card area and drag a square across the cards. Every selected card gets a gold outline. The gear button on any selected card opens Group Settings for all selected units; dragging a selected card's health bar changes the group's starting HP. Mixed means the selected units have different values. Click empty space or enter preview to clear the selection.\n\n"
-    "Select a friendly card and choose Control to command that division's middle sub-unit during the battle. The controlled division's button is lighter blue and has a yellow arrow. Release Control lets both armies fight automatically.\n\n"
-    "Random replaces both armies. Year limits the units Random can choose; manual unit selection is unrestricted by Year. The terrain button chooses the custom battlefield's terrain.\n\n"
-    "The normal-game forecast estimates how these armies would fight under the strategic combat rules. The tactical battle can have a different result.\n\n"
-    "Both armies need units before Simulate becomes available. Simulate opens Preview Battle; combat starts only after Start in preview. Exit returns to the menu."
-)
-PREVIEW_BATTLE_HELP_TEXT = (
-    "Here you can review the armies before combat. The battle is paused here, so units do not move or fire.\n\n"
-    "Each column of cards is one rank of the battlefield; the leftmost column deploys in the front rank, closest to the enemy. Drag friendly cards to change deployment: drop a card on another card to swap them, on a column's empty lower space to stack it there, or between columns to give it a column of its own.\n\n"
-    "Start begins the tactical battle with the prepared forces.\n\n"
-)
-PREVIEW_CUSTOM_HELP_TEXT = "Retreat returns to Edit Battle and keeps your army setup."
-PREVIEW_CAMPAIGN_HELP_TEXT = "Retreat opens the map to choose a retreat destination. Back from the retreat chooser returns to this preview."
-
-# Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
-ZOOM_LEVELS = (0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
-DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
-# Battle audio multipliers: 0.0 mutes, 0.5 halves, and 1.0 keeps normal volume.
-# Edit these values and restart the game. Zooming out reduces both further.
-BATTLE_MUSIC_VOLUME = 1.0
-BATTLE_SFX_VOLUME = 1.0
-# Unit sounds fade with distance from the controlled unit, or from the screen's center while spectating.
-# Distances are shares of the battlefield's width, so land and naval arenas fade alike.
-SFX_FULL_VOLUME_DISTANCE = 0.1  # Closer than this plays at full volume.
-SFX_FLOOR_DISTANCE = 0.5  # Farther than this plays at SFX_DISTANCE_FLOOR.
-SFX_DISTANCE_FLOOR = 0.1  # Share of full volume for the most distant sounds; they never go silent.
-AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
-CONTROLLED_MIN_ZOOM = 0.15 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
-MIN_PLAYER_INDICATOR_SCALE = 0.85
-EDGE_INDICATOR_INSET = 48
-EDGE_INDICATOR_TOP = 100
-EDGE_INDICATOR_SIZE = 10
-EDGE_INDICATOR_SPACING = 80
-EDGE_INDICATOR_LABEL_STEP = 25  # Battlefield distance, rounded to keep moving labels readable.
-GRASS_TILE = 64  # Battlefield pixels per square of the battlefield's faint checkerboard.
-TERRAIN_BUTTON_POSITION = (180, 20)
-TERRAIN_BUTTON_SIZE = (220, 40)
-TERRAIN_COLORS = {
-    "plains": (126, 163, 88), "hills": (177, 155, 64), "desert": (194, 124, 58),
-    "forest": (80, 140, 80), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
-    "swamp": (160, 104, 132),
-    "ocean": (25, 65, 115), "coastal_sea": (40, 100, 140), "inland_sea": (45, 90, 130), "lakes": (45, 115, 135),
-    # not used due to color conflicting with canopy leaves: (65, 115, 57)
-}
-# Out of 255. All foliage is partly transparent, so units and trunks show faintly beneath it.
-FOLIAGE_ALPHA = 200
-FOLIAGE_SHADOW_ALPHA = 96  # Translucent darkness behind foliage, separate from opaque sight shadows.
-FOLIAGE_COLOR = (25, 128, 0)  # Each tree's foliage is a circle of this green, lightened or darkened slightly.
-FOLIAGE_GREEN_VARIATION = 14  # Most a tree's shade can lighten or darken the foliage's green channel.
-FEATURE_COLORS = {
-    "rock": ((39, 32, 30), (70, 58, 49), (107, 88, 68), (146, 121, 91)),
-    "chasm": ((72, 47, 36), (40, 30, 30), (20, 22, 27)),
-    "marsh": ((106, 81, 100), (76, 91, 83), (56, 73, 78)),
-}
-FEATURE_PIXEL_STEP = 4
-FEATURE_OUTLINE_POINTS = 24
-HILL_CONTOUR_HEIGHT = 25.0
-HILL_CONTOUR_SHADE = 25
-HILL_BASE_SHADE = -30
-OFF_FIELD_COLOR = (24, 30, 22)  # Outside the battlefield when zoomed out past its edges.
-OUTLINE_COLOR = (22, 30, 22)
-MAX_FRAME_SECONDS = 0.25
-DRAG_THRESHOLD = 6
-GENERATION_SLIDER_POSITION = (c.SCREEN_WIDTH - 270, 48)
-GENERATION_SLIDER_WIDTH = 240
-GENERATION_BUTTON_SIZE = (100, 40)
-GENERATION_BUTTON_POSITION = (GENERATION_SLIDER_POSITION[0] - GENERATION_BUTTON_SIZE[0] - 20, 25)
-SIMULATE_BUTTON_SIZE = (100, 40)
-SIMULATE_BUTTON_POSITION = (GENERATION_BUTTON_POSITION[0] - SIMULATE_BUTTON_SIZE[0] - 10, 25)
-FORECAST_CENTER_Y = 650  # Edit Battle's normal-game forecast line, below the friendly roster.
-PREVIEW_START_POSITION = ("centered", 625)
-PREVIEW_START_SIZE = (220, 50)
-PREVIEW_RETREAT_SIZE = (160, 50)
-PREVIEW_RETREAT_GAP = 20  # Between Start and Retreat.
-# Settings and Music open over a preview or a running battle, along the top right edge.
-OVERLAY_BUTTON_SIZE = (40, 40)
-OVERLAY_ICON_SIZE = (28, 28)
-OVERLAY_BUTTON_GAP = 10
-OVERLAY_BUTTON_TOP = 20
-SCREEN_EDGE_MARGIN = 20
-PAUSE_BUTTON_SIZE = (130, 40)
-BATTLE_STATUS_SIDE_OFFSET = 170
-BATTLE_STATUS_Y = 103
-KILL_FEED_TOP = OVERLAY_BUTTON_TOP + OVERLAY_BUTTON_SIZE[1] + 10
-KILL_FEED_VISIBLE_ROWS = 6
-KILL_FEED_ROW_HEIGHT = 26
-KILL_FEED_INSET = 8
-KILL_FEED_ICON_SIZE = (40, 22)
-KILL_FEED_DIVISION_COLOR = (255, 155, 65)
-KILL_FEED_FLAG_SIZE = (18, 12)
-KILL_FEED_CAUSE_WIDTH = 36
-KILL_FEED_SCROLLBAR_WIDTH = 10
-KILL_FEED_SCROLLBAR_GAP = 4
-KILL_FEED_ACTOR_WIDTH = KILL_FEED_FLAG_SIZE[0] + 6 + KILL_FEED_ICON_SIZE[0]
-KILL_FEED_WIDTH = (2 * KILL_FEED_ACTOR_WIDTH + KILL_FEED_CAUSE_WIDTH + 2 * KILL_FEED_INSET
-                   + KILL_FEED_SCROLLBAR_WIDTH + KILL_FEED_SCROLLBAR_GAP)
-KILL_FEED_HEIGHT = KILL_FEED_VISIBLE_ROWS * KILL_FEED_ROW_HEIGHT + 2 * KILL_FEED_INSET
-# Preview entry animation: edit these durations in seconds, then restart the game.
-# Slide durations must be positive; the hold can be zero.
-PREVIEW_SLIDE_IN_SECONDS = 0.2
-PREVIEW_HOLD_SECONDS = 0.5
-PREVIEW_SLIDE_OUT_SECONDS = 0.2
-# Independent of Messages so the battle bars can be restyled separately.
-PREVIEW_BAR_COLOR = (46, 56, 72)
-PREVIEW_BAR_BORDER = (13, 17, 24)
-PREVIEW_BAR_GRADIENT_STRENGTH = 0.5
-PLAYER_COLOR = (255, 225, 95)
-# Body (width, height) in pixels at scale 1.0, before the barrel line.
-UNIT_SHAPE_SIZES = {shape: body[:2] for shape, body in c.TACTICAL_BODIES.items()}
-TOUCH_PAD_SIZE = 120
-TOUCH_PAD_MARGIN = 24
-TOUCH_PAD_BOTTOM = 176
-TOUCH_DEAD_ZONE = 0.18
-TOUCH_AIM_DISTANCE = 600.0
-TOUCH_WEAPON_SIZE = (94, 38)
-TOUCH_WEAPON_GAP = 6
-TOUCH_WEAPON_MODES = ("Primary", "Secondary", "Both")
-ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
-UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
-ROUNDED_CORNER_RADIUS = 6
-SPRITE_ANGLE_STEP = 4  # Degrees between the cached rotations of each battlefield shape.
-INFANTRY_GUN_SIDE_OFFSET = 0.0  # Share of body height toward the unit's right shoulder. 0.25 was the original value it was set to.
-# Each family selects a chassis and a weapon image independently.
-BATTLE_ART_FAMILIES = {
-    "Armored Car": ("Armored Car", "Armored Car"),
-    "WW1 Armored Car": ("Armored Car", "Armored Car"),
-    "WW1 Tank": ("WW1", "WW1"),
-    "Light Tank": ("Light", "Light"), "Medium Tank": ("Medium", "Medium"),
-    "Heavy Tank": ("Heavy", "Heavy"), "Main Battle Tank": ("MBT", "MBT"),
-    "Super Heavy Tank": ("Super Heavy", "Super Heavy"),
-    "Infantry Type": ("Infantry", "Infantry Gun"),
-    "Cavalry": ("Cavalry", "Infantry Gun"),
-    "Militia": ("Militia", "Infantry Gun"),
-    "Motorized Infantry Type": ("Motorized Infantry", None),
-    "Mechanized Infantry Type": ("Mechanized Infantry", None),
-    "Infantry Fighting Vehicle Type": ("IFV", None),
-}
-BATTLE_ART_DIR = os.path.join(c.ASSETS_ROOT_DIR, "battles")
-TERRAIN_ART_DIR = os.path.join(BATTLE_ART_DIR, "terrain")  # "Trunk N.png" draws each trunk size.
-DEAD_COLOR = (53, 65, 44)
-SHOT_COLOR = (250, 232, 150)
-SHOT_WIDTH = 2
-TANK_SHOT_COLOR = (255, 110, 0)
-TANK_SHOT_WIDTH = 5
-ARTILLERY_SHOT_COLOR = (255, 205, 105)
-ARTILLERY_SHADOW_COLOR = (18, 40, 65)
-TORPEDO_COLOR = (185, 195, 190)
-TORPEDO_WAKE_COLOR = (115, 180, 200)
-SPLASH_COLOR = (170, 220, 240)
-SHELL_HEIGHT_DRAW_SCALE = 0.3
-SUBMARINE_ALPHA = 128  # Half opacity: submarines read as underwater.
-EDIT_ICON_SIZE = (CARD_LEFT_WIDTH, CARD_BAR_TOP - CARD_ICON_BAR_GAP - EDIT_ICON_TOP)
-PREVIEW_CARD_ICON_SIZE = (CARD_LEFT_WIDTH, CARD_BAR_TOP - CARD_ICON_BAR_GAP - PREVIEW_ICON_TOP)
-RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
-TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
-FLESH_HIT_SOUNDS = ("flesh_wound_1", "flesh_wound_2", "flesh_wound_3")
-RICOCHET_SOUNDS = ("bullet_ricochet_1", "bullet_ricochet_2", "bullet_ricochet_3", "bullet_ricochet_4")
-RICOCHET_MAX_HEALTH_SHARE = 0.01
-SHOT_TAIL = 8  # Pixels behind a shot's head.
-RANGE_COLOR = (255, 225, 95)
-AIM_LINE_COLOR = (255, 245, 200)
-CONE_ARC_STEP = math.radians(3)  # Spacing of the points that draw the cone's curved edge.
-PLAYER_RING_RADIUS = 18
-RELOAD_RING_RADIUS = 22
-RELOAD_COLOR = (255, 245, 200)
-CONTROL_STATS_SIZE = (244, 138)  # Fixed space for both weapon cooldowns.
-CONTROL_STATS_INSET = 8
-CONTROL_STATS_TEXT_PADDING = 8
-CONTROL_STATS_ROW_HEIGHT = 26
-CONTROL_STATS_COLOR = (46, 56, 72)
-CONTROL_STATS_BORDER = (13, 17, 24)
-CONTROL_STATS_TEXT_BACKGROUND = (0, 0, 0)
-ARROW_STRETCH = 26  # Extra arrow length at top speed.
-CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d))
-
-_BODY_SPRITES = {}
-_ROTATED_SPRITES = {}
-_BATTLE_ART = {}
-_TRUNK_ART = {}
-
-
-@lru_cache(maxsize=256)
-def _health_fill_surface(size, color):
-    """Cache dithered health shading by fill dimensions and displayed color."""
-    surface = pygame.Surface(size)
-    # Light, middle, and dark bands; a checkerboard of the neighboring shade softens each edge.
-    shades = [tuple(max(0, min(255, channel + HEALTH_BAR_SHADE * (1 - band))) for channel in color) for band in range(HEALTH_BAR_BANDS)]
-    width, height = size
-    for row in range(height):
-        band = row * HEALTH_BAR_BANDS // height
-        first = band > 0 and (row - 1) * HEALTH_BAR_BANDS // height < band
-        last = band < HEALTH_BAR_BANDS - 1 and (row + 1) * HEALTH_BAR_BANDS // height > band
-        for column in range(width):
-            shade = band
-            if (column + row) % 2 == 0:
-                shade += 1 if last else -1 if first else 0
-            surface.set_at((column, row), shades[shade])
-    return surface
-
-
-def _draw_health_fill(surface, fill, ratio):
-    if fill.width <= 0 or fill.height <= 0:
-        return
-    if ratio >= 0.5:
-        low, high, blend = HEALTH_BAR_HALF_COLOR, HEALTH_BAR_FULL_COLOR, (ratio - 0.5) * 2
-    else:
-        low, high, blend = HEALTH_BAR_EMPTY_COLOR, HEALTH_BAR_HALF_COLOR, ratio * 2
-    color = tuple(round(a + (b - a) * blend) for a, b in zip(low, high))
-    surface.blit(_health_fill_surface(fill.size, color), fill)
-
-
-def _trunk_art(size):
-    """The unscaled "Trunk" image of one size, loaded once."""
-    if size not in _TRUNK_ART:
-        _TRUNK_ART[size] = pygame.image.load(os.path.join(TERRAIN_ART_DIR, f"Trunk {size}.png")).convert_alpha()
-    return _TRUNK_ART[size]
-
-
-def _load_battle_art(artwork):
-    """Load the chassis and optional weapon once, before the battlefield starts drawing."""
-    if artwork not in _BATTLE_ART:
-        chassis = pygame.image.load(os.path.join(BATTLE_ART_DIR, "chassis", artwork[0] + ".png")).convert_alpha()
-        centered = None
-        if artwork[1] is not None:
-            turret = pygame.image.load(os.path.join(BATTLE_ART_DIR, "turret", artwork[1] + ".png")).convert_alpha()
-            # Weapons point right, with their base in the leftmost square of the image.
-            # Pad the barrel side symmetrically so rotation keeps the base on the body center.
-            pivot = turret.get_height() // 2
-            centered = pygame.Surface((2 * (turret.get_width() - pivot), turret.get_height()), pygame.SRCALPHA)
-            centered.blit(turret, (centered.get_width() // 2 - pivot, 0))
-        _BATTLE_ART[artwork] = chassis, centered
-    return _BATTLE_ART[artwork]
-
-
-def _battle_sprite(artwork, shape, part, color, scale):
-    key = (artwork, shape, part, tuple(color), scale)
-    if key not in _BODY_SPRITES:
-        chassis, turret = _BATTLE_ART[artwork]
-        width, height = UNIT_SHAPE_SIZES[shape]
-        source = turret if part == "turret" else chassis
-        if part == "turret":
-            factor = width * scale / chassis.get_width()
-            size = tuple(max(1, round(side * factor)) for side in source.get_size())
-        else:
-            size = (max(1, round(width * scale)), max(1, round(height * scale)))
-        if shape in naval.SHAPES:
-            tinted = source.copy()
-            tinted.fill((*color, 255), special_flags=pygame.BLEND_RGBA_MULT)
-        else:
-            tinted = symbol_loader.colorize_red_image(source, color)
-        _BODY_SPRITES[key] = pygame.transform.scale(tinted, size)
-    return _BODY_SPRITES[key]
-
-
-def _unit_sprite(shape, color, scale, barrel):
-    """An unrotated silhouette pointing right; cached because battles draw hundreds per frame."""
-    key = (shape, tuple(color), scale, barrel)
-    if key not in _BODY_SPRITES:
-        width, height = UNIT_SHAPE_SIZES[shape]
-        width, height = round(width * scale), round(height * scale)
-        sprite = pygame.Surface((width + 12, max(height, 24)), pygame.SRCALPHA)
-        body = pygame.Rect(2, (sprite.get_height() - height) // 2, width, height)
-        if shape in {"infantry", "cavalry"}:
-            pygame.draw.ellipse(sprite, OUTLINE_COLOR, body)
-            pygame.draw.ellipse(sprite, color, body.inflate(-4, -4))
-        else:
-            radius = round(ROUNDED_CORNER_RADIUS * scale) if shape in ROUNDED_SHAPES else 0
-            pygame.draw.rect(sprite, OUTLINE_COLOR, body, border_radius=radius)
-            pygame.draw.rect(sprite, color, body.inflate(-4, -4), border_radius=max(0, radius - 2))
-            if barrel and shape not in UNARMED_SHAPES:
-                pygame.draw.line(sprite, OUTLINE_COLOR, body.center,
-                                 (sprite.get_width() - 1, body.centery), max(2, round(3 * scale)))
-        _BODY_SPRITES[key] = sprite
-    return _BODY_SPRITES[key]
-
-
-def clear_rotated_sprites():
-    """Drop the cached rotations, e.g. when the battlefield zoom changes, so old scales do not pile up."""
-    _ROTATED_SPRITES.clear()
-
-
-def _draw_rotated_sprite(surface, sprite, key, center, angle, *, alpha=255):
-    step = round(math.degrees(angle) / SPRITE_ANGLE_STEP) % (360 // SPRITE_ANGLE_STEP)
-    key = (*key, step, alpha)
-    rotated = _ROTATED_SPRITES.get(key)
-    if rotated is None:
-        rotated = pygame.transform.rotate(sprite, -step * SPRITE_ANGLE_STEP)
-        rotated.set_alpha(alpha)
-        _ROTATED_SPRITES[key] = rotated
-    surface.blit(rotated, rotated.get_rect(center=center))
-
-
-def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None, recoil=0.0, secondary_aim=None, mount_recoils=None, alpha=255):
-    """Draw battle artwork or geometric silhouettes in setup cards and on the field.
-
-    With ``aim``, the turret or gun line follows ``aim`` independently of the hull.
-    """
-    if artwork is not None:
-        if shape in naval.SHAPES:
-            sprite = _battle_sprite(artwork, shape, "chassis", color, scale)
-            _draw_rotated_sprite(surface, sprite, (artwork, shape, "chassis", tuple(color), scale), center, angle, alpha=alpha)
-            if artwork[1] is not None:
-                width, height = UNIT_SHAPE_SIZES[shape]
-                sprite = _battle_sprite(artwork, shape, "turret", color, scale)
-                aims = (angle if aim is None else aim, angle + math.pi if secondary_aim is None else secondary_aim)
-                for slot, mount in enumerate(naval.mounts(shape)):
-                    forward, sideways = width * mount.forward * scale, height * mount.sideways * scale
-                    heading = aims[slot]
-                    kick = 4 * mount_recoils[slot] / c.TACTICAL_MUZZLE_SECONDS if mount_recoils else 0.0
-                    part_center = (center[0] + math.cos(angle) * forward - math.sin(angle) * sideways - math.cos(heading) * kick * scale, center[1] + math.sin(angle) * forward + math.cos(angle) * sideways - math.sin(heading) * kick * scale)
-                    _draw_rotated_sprite(surface, sprite, (artwork, shape, "turret", tuple(color), scale), part_center, heading, alpha=alpha)
-            return
-        for part, heading in (("chassis", angle), ("turret", angle if aim is None else aim)):
-            if part == "turret" and artwork[1] is None:
-                continue
-            sprite = _battle_sprite(artwork, shape, part, color, scale)
-            key = (artwork, shape, part, tuple(color), scale)
-            part_center = center
-            if part == "turret" and artwork[1] == "Infantry Gun":
-                # The shoulder follows the body while the weapon turns independently to aim.
-                offset = UNIT_SHAPE_SIZES[shape][1] * INFANTRY_GUN_SIDE_OFFSET * scale
-                part_center = (center[0] - math.sin(angle) * offset,
-                               center[1] + math.cos(angle) * offset)
-            if part == "turret" and recoil:
-                part_center = (part_center[0] - math.cos(heading) * recoil * scale,
-                               part_center[1] - math.sin(heading) * recoil * scale)
-            _draw_rotated_sprite(surface, sprite, key, part_center, heading, alpha=alpha)
-        return
-    key = (shape, tuple(color), scale, aim is None)
-    _draw_rotated_sprite(surface, _unit_sprite(shape, color, scale, aim is None), key, center, angle, alpha=alpha)
-    if aim is not None and shape not in UNARMED_SHAPES:
-        # Same reach as the sprite's own gun line at full scale: half the body plus the sprite's margin.
-        length = (UNIT_SHAPE_SIZES[shape][0] / 2 + 9 - recoil) * scale
-        pygame.draw.line(surface, OUTLINE_COLOR, center,
-                         (center[0] + math.cos(aim) * length, center[1] + math.sin(aim) * length),
-                         max(1, round(3 * scale)))
-
-
-def draw_player_arrow(surface, center, angle, stretch=0.0, scale=1.0):
-    """Mark the controlled unit and point along its hull heading.
-
-    ``stretch`` is the signed share of top speed: the arrow lengthens with speed and points back while reversing.
-    ``scale`` follows the battlefield zoom.
-    """
-    if stretch < 0:
-        angle += math.pi
-    extra = abs(stretch) * ARROW_STRETCH
-    forward = pygame.Vector2(math.cos(angle), math.sin(angle)) * scale
-    sideways = pygame.Vector2(-forward.y, forward.x)
-    origin = pygame.Vector2(center)
-    if extra * scale >= 1:
-        pygame.draw.line(surface, OUTLINE_COLOR, origin + forward * 19, origin + forward * (19 + extra), 4)
-        pygame.draw.line(surface, PLAYER_COLOR, origin + forward * 19, origin + forward * (19 + extra), 2)
-    head = origin + forward * extra
-    points = [head + forward * 33, head + forward * 19 + sideways * 6,
-              head + forward * 23, head + forward * 19 - sideways * 6]
-    pygame.draw.polygon(surface, OUTLINE_COLOR, points)
-    pygame.draw.polygon(surface, PLAYER_COLOR, points, 2)
+import data.constants as c
+from screens.game.custom_battle_camera import BattleCamera
+from screens.game.custom_battle_render import BattleRender
+from screens.game.custom_battle_roster import RosterCards
+from screens.game.custom_battle_touch import TouchControls
 
 
 class CampaignBattle:
@@ -483,9 +51,11 @@ class CampaignBattle:
         self.custom_columns = custom_columns
 
 
-class CustomBattleScreen(Screen):
+class CustomBattleScreen(TouchControls, BattleCamera, RosterCards, BattleRender, Screen):
     back_state = "MENU"
+
     title = "Edit Battle"
+
     title_y = 42
 
     def __init__(self):
@@ -512,7 +82,7 @@ class CustomBattleScreen(Screen):
         self.battle_seed = None
         self.random_candidates = []
         self.rosters = [[], []]
-        # Each roster entry's column, in roster order (see combat.valid_columns). Every roster change goes through _set_columns.
+        # Each roster entry's column, in roster order (see tactical_campaign.valid_columns). Every roster change goes through _set_columns.
         self.columns = [[], []]
         self.selected = [None, None]
         # Roster indices chosen by a selection square; two or more entries per side.
@@ -531,7 +101,7 @@ class CustomBattleScreen(Screen):
         self.touch_weapon_mode = "Primary"
         self.touch_weapon_buttons = []
         self.camera = [0.0, 0.0]  # Battlefield coordinates at the screen's top-left corner.
-        self.zoom_index = DEFAULT_ZOOM_INDEX
+        self.zoom_index = layout.DEFAULT_ZOOM_INDEX
         self.pan_drag = None  # Last pointer position while dragging the battlefield.
         self.card_surfaces = {}
         self.unit_buttons = {}
@@ -552,23 +122,23 @@ class CustomBattleScreen(Screen):
         self.death_explosions = []
         self.death_explosion_circle = None
         self.kill_feed_surface = None
-        self.kill_feed_scroll = self.kill_feed_limit = 0
-        self.kill_feed_dragging = False
-        self.kill_feed_track = self.kill_feed_handle = None
-        self.kill_feed_rect = pygame.Rect(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - KILL_FEED_WIDTH,
-                                          KILL_FEED_TOP, KILL_FEED_WIDTH, KILL_FEED_HEIGHT)
-        self.kill_feed_content = self.kill_feed_rect.inflate(-2 * KILL_FEED_INSET, -2 * KILL_FEED_INSET)
-        self.kill_feed_content.width -= KILL_FEED_SCROLLBAR_WIDTH + KILL_FEED_SCROLLBAR_GAP
+        self.kill_feed_pane.value = self.kill_feed_pane.limit = 0
+        self.kill_feed_pane.bar_drag = False
+        self.kill_feed_pane.track = self.kill_feed_pane.handle = None
+        self.kill_feed_rect = pygame.Rect(c.SCREEN_WIDTH - layout.SCREEN_EDGE_MARGIN - layout.KILL_FEED_WIDTH,
+                                          layout.KILL_FEED_TOP, layout.KILL_FEED_WIDTH, layout.KILL_FEED_HEIGHT)
+        self.kill_feed_pane.content_rect = self.kill_feed_rect.inflate(-2 * layout.KILL_FEED_INSET, -2 * layout.KILL_FEED_INSET)
+        self.kill_feed_pane.content_rect.width -= layout.KILL_FEED_SCROLLBAR_WIDTH + layout.KILL_FEED_SCROLLBAR_GAP
         self.controlled_stats_key = None
         self.controlled_stats_surface = None
         self.forecast_key = None  # The armies the forecast line was calculated for.
         self.forecast_surface = None
-        for side, top in enumerate(PANEL_TOPS):
-            self.panes.append(pygame.Rect(PANEL_X + ROSTER_INSET, top + ROSTER_TOP,
-                                          ROSTER_WIDTH, ROSTER_HEIGHT))
-            setattr(self, f"roster_{side}_scroll", 0)
-            setattr(self, f"roster_{side}_limit", 0)
-            setattr(self, f"roster_{side}_content", self.panes[side])
+        for side, top in enumerate(layout.PANEL_TOPS):
+            self.panes.append(pygame.Rect(layout.PANEL_X + layout.ROSTER_INSET, top + layout.ROSTER_TOP,
+                                          layout.ROSTER_WIDTH, layout.ROSTER_HEIGHT))
+            self._roster_scroll(side).value = 0
+            self._roster_scroll(side).limit = 0
+            self._roster_scroll(side).content_rect = self.panes[side]
         self.refresh_ui()
 
     def on_enter(self, app, previous):
@@ -606,13 +176,13 @@ class CustomBattleScreen(Screen):
         self.library = queries.get_unit_library()
         self.country_data = queries.get_country_data()
         self.gear_icon = symbol_loader.get_symbol(
-            "Gear", zoom=1, fit_size=(CARD_EDIT_SIZE - 2 * CARD_EDIT_ICON_PAD, CARD_EDIT_SIZE - 2 * CARD_EDIT_ICON_PAD))
+            "Gear", zoom=1, fit_size=(layout.CARD_EDIT_SIZE - 2 * layout.CARD_EDIT_ICON_PAD, layout.CARD_EDIT_SIZE - 2 * layout.CARD_EDIT_ICON_PAD))
         self.nationalities = sorted(
             (country for country in self.country_data if queries.is_playable(country, self.country_data)),
             key=lambda country: queries.get_country_display_name(country, self.country_data))
         if not self.nationalities:
             raise ValueError("Custom battles need at least one playable country in countries_data.json.")
-        self.unit_names = sorted(combat.custom_unit_types(self.library), key=lambda name: (
+        self.unit_names = sorted(rules.custom_unit_types(self.library), key=lambda name: (
             queries.get_unit_metadata(name, self.library)["family"],
             queries.get_unit_tier(name, self.library)))
         allowed = set(self.unit_names)
@@ -620,13 +190,13 @@ class CustomBattleScreen(Screen):
         self.group = [[], []]
         self.controlled_index = None
         for side in (0, 1):
-            self._set_columns(side, [[unit for unit in group if combat.battle_unit_type(unit["type"], self.library) in allowed]
+            self._set_columns(side, [[unit for unit in group if rules.battle_unit_type(unit["type"], self.library) in allowed]
                                      for group in self._column_groups(side)])
         self.held_keys.clear()
         self.card_surfaces.clear()
         self.simulation = None
         self.cancel_active_drags()
-        self.random_candidates = combat.custom_unit_types_for_year(self.library, self.generation_year, self.terrain)
+        self.random_candidates = tactical_campaign.custom_unit_types_for_year(self.library, self.generation_year, self.terrain)
         self.refresh_ui()
 
     def _enter_campaign(self, map_screen, province, friendly, enemy):
@@ -640,8 +210,8 @@ class CustomBattleScreen(Screen):
         if turn != map_screen.world.time_manager.total_turns:
             frozen_supply = queries.SupplySnapshot(map_screen)
         with queries.combat_supply(frozen_supply):
-            self.rosters = [combat.campaign_roster(side, self.library, province.get("terrain")) for side in (friendly, enemy)]
-        self.columns = [combat.paired_columns(len(roster)) for roster in self.rosters]
+            self.rosters = [tactical_campaign.campaign_roster(side, self.library, province.get("terrain")) for side in (friendly, enemy)]
+        self.columns = [tactical_campaign.paired_columns(len(roster)) for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = 0
@@ -651,7 +221,7 @@ class CustomBattleScreen(Screen):
         self.mode = "setup"
         self.cancel_active_drags()
         for side in (0, 1):
-            setattr(self, f"roster_{side}_scroll", 0)
+            self._roster_scroll(side).value = 0
         self.preview_battle()
 
     def _end_campaign(self):
@@ -692,10 +262,10 @@ class CustomBattleScreen(Screen):
         if campaign is None or campaign.result_applied:
             return
         campaign.result_applied = True
-        artillery = combat.campaign_artillery(campaign.unit, campaign.province,
+        artillery = tactical_campaign.campaign_artillery(campaign.unit, campaign.province,
                                               campaign.map_screen.world.nation_data, self.library)
-        sides = combat.campaign_sides(campaign.unit, campaign.province, campaign.map_screen.world.nation_data)
-        combat.apply_campaign_result(self.simulation, campaign.units, campaign.province, artillery, side_units=sides, player_unit=campaign.unit)
+        sides = tactical_campaign.campaign_sides(campaign.unit, campaign.province, campaign.map_screen.world.nation_data)
+        tactical_campaign.apply_campaign_result(self.simulation, campaign.units, campaign.province, artillery, side_units=sides, player_unit=campaign.unit)
         player_setup.settle_tactical_tile(campaign.map_screen, campaign.province)
 
     def continue_campaign(self):
@@ -720,22 +290,23 @@ class CustomBattleScreen(Screen):
         if self.mode not in {"setup", "preview"} or self.preview_intro_stage is not None:
             return
         self.cancel_active_drags()
-        text = EDIT_BATTLE_HELP_TEXT if self.mode == "setup" else PREVIEW_BATTLE_HELP_TEXT + (PREVIEW_CAMPAIGN_HELP_TEXT if self.campaign is not None else PREVIEW_CUSTOM_HELP_TEXT)
+        text = layout.EDIT_BATTLE_HELP_TEXT if self.mode == "setup" else layout.PREVIEW_BATTLE_HELP_TEXT + (layout.PREVIEW_CAMPAIGN_HELP_TEXT if self.campaign is not None else layout.PREVIEW_CUSTOM_HELP_TEXT)
         dialogs.show_info(f"{self.get_title()} Help", text)
 
     @property
     def reserved_keys(self):
         if (self.preview_intro_stage is None and self.mode in {"preview", "battle"}
                 and self.simulation.controlled is not None):
-            return CONTROL_KEYS
+            return layout.CONTROL_KEYS
         return ()
 
-    @staticmethod
-    def _scroll_options(side):
-        return dict(attr=f"roster_{side}_scroll", limit_attr=f"roster_{side}_limit",
-                    track_attr=f"roster_{side}_track", handle_attr=f"roster_{side}_handle",
-                    drag_attr=f"roster_{side}_dragging", content_rect_attr=f"roster_{side}_content",
-                    axis="x")
+    def _roster_scroll(self, side):
+        """The horizontal pane of one side's roster cards."""
+        return self.scroll_state(f"roster_{side}", "x")
+
+    @property
+    def kill_feed_pane(self):
+        return self.scroll_state("kill_feed")
 
     def refresh_ui(self):
         self.unit_buttons = {}
@@ -744,118 +315,118 @@ class CustomBattleScreen(Screen):
         if self.mode in {"setup", "preview"}:
             title_width, title_height = fonts.get(self.title_preset).size(self.get_title())
             self.help_button = ui_elements.make_info_button(0, 0, self.show_help)
-            self.help_button.rect.midleft = (c.SCREEN_WIDTH // 2 + title_width - title_width // 2 + TITLE_HELP_GAP, self.title_y + title_height // 2)
+            self.help_button.rect.midleft = (c.SCREEN_WIDTH // 2 + title_width - title_width // 2 + layout.TITLE_HELP_GAP, self.title_y + title_height // 2)
             self.elements.append(self.help_button)
         self.battle_artwork = {}
         for name in dict.fromkeys(unit["type"] for roster in self.rosters for unit in roster):
             family = queries.get_unit_metadata(name, self.library)["family"]
-            shape = combat.unit_shape(name, self.library)
-            artwork = (naval.ARTWORK[shape] if shape in naval.SHAPES else BATTLE_ART_FAMILIES["Motorized Infantry Type"] if combat.packed_ship_type(name, self.library)
-                       else BATTLE_ART_FAMILIES.get(family))
+            shape = rules.unit_shape(name, self.library)
+            artwork = (naval.ARTWORK[shape] if shape in naval.SHAPES else layout.BATTLE_ART_FAMILIES["Motorized Infantry Type"] if rules.packed_ship_type(name, self.library)
+                       else layout.BATTLE_ART_FAMILIES.get(family))
             self.battle_artwork[name] = artwork
             if artwork is not None:
-                _load_battle_art(artwork)
+                sprites.load_battle_art(artwork)
         if self.mode == "setup" or (self.mode in {"battle", "result"} and self.campaign is None):
             self.elements.append(Button(20, 20, "small", "red", "Exit", self.leave,
                                         sound_kind="back"))
         if self.mode in {"preview", "battle", "result"}:
             # Battle and results keep the same Pause, Settings, and Music positions.
-            right = c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN
+            right = c.SCREEN_WIDTH - layout.SCREEN_EDGE_MARGIN
             if self.mode in {"battle", "result"}:
-                right -= PAUSE_BUTTON_SIZE[0] + OVERLAY_BUTTON_GAP
+                right -= layout.PAUSE_BUTTON_SIZE[0] + layout.OVERLAY_BUTTON_GAP
             for symbol, state, color, sound in (("Music", "MUSIC_PLAYER", "blue", "open_music"),
                                                 ("Gear", "SETTINGS", "grey", "open_settings")):
-                right -= OVERLAY_BUTTON_SIZE[0]
-                icon = symbol_loader.get_symbol(symbol, zoom=1, fit_size=OVERLAY_ICON_SIZE)
-                self.elements.append(Button(right, OVERLAY_BUTTON_TOP, OVERLAY_BUTTON_SIZE, color, "",
+                right -= layout.OVERLAY_BUTTON_SIZE[0]
+                icon = symbol_loader.get_symbol(symbol, zoom=1, fit_size=layout.OVERLAY_ICON_SIZE)
+                self.elements.append(Button(right, layout.OVERLAY_BUTTON_TOP, layout.OVERLAY_BUTTON_SIZE, color, "",
                                             lambda state=state: self.open_overlay(state),
                                             image=icon, show_text=False, sound_kind=sound))
-                right -= OVERLAY_BUTTON_GAP
+                right -= layout.OVERLAY_BUTTON_GAP
         if self.mode in {"battle", "result"}:
-            self.pause_button = Button(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - PAUSE_BUTTON_SIZE[0], OVERLAY_BUTTON_TOP,
-                                       PAUSE_BUTTON_SIZE, "yellow",
+            self.pause_button = Button(c.SCREEN_WIDTH - layout.SCREEN_EDGE_MARGIN - layout.PAUSE_BUTTON_SIZE[0], layout.OVERLAY_BUTTON_TOP,
+                                       layout.PAUSE_BUTTON_SIZE, "yellow",
                                        "Resume" if self.mode == "battle" and self.simulation.paused else "Pause",
                                        self.toggle_pause)
             self.pause_button.apply_state(enabled=self.mode == "battle", color="yellow")
             self.elements.append(self.pause_button)
         if self.mode in {"setup", "preview"}:
             self.roster_labels = []
-            for side, top in enumerate(PANEL_TOPS):
+            for side, top in enumerate(layout.PANEL_TOPS):
                 roster = self.rosters[side]
                 name = "Friendly Units" if side == 0 else "Enemy Units"
                 self.roster_labels.append(fonts.get("heading2").render(
-                    f"{name} ({len(roster)})", True, TEAM_COLORS[side]))
+                    f"{name} ({len(roster)})", True, layout.TEAM_COLORS[side]))
                 for index, unit in enumerate(roster):
                     self._cache_card(side, unit)
                     if self.mode == "setup":
                         self.unit_buttons[side, index] = Button(
-                            0, 0, (CARD_EDIT_SIZE, CARD_EDIT_SIZE), "grey", "",
+                            0, 0, (layout.CARD_EDIT_SIZE, layout.CARD_EDIT_SIZE), "grey", "",
                             lambda side=side, unit=unit: self.edit_unit(side, unit),
                             image=self.gear_icon, show_text=False,
                             sound_kind="open_settings")
                 column_count = self.columns[side][-1] + 1 if roster else 0
-                limit = min(0, ROSTER_WIDTH - column_count * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)
-                setattr(self, f"roster_{side}_limit", limit)
-                offset = max(limit, min(0, getattr(self, f"roster_{side}_scroll")))
-                setattr(self, f"roster_{side}_scroll", offset)
+                limit = min(0, layout.ROSTER_WIDTH - column_count * (layout.CARD_SIZE[0] + layout.CARD_GAP) + layout.CARD_GAP)
+                self._roster_scroll(side).limit = limit
+                offset = max(limit, min(0, self._roster_scroll(side).value))
+                self._roster_scroll(side).value = offset
                 if self.mode == "preview":
                     continue
-                x = PANEL_X + PANEL_WIDTH - BUTTON_WIDTH - ROSTER_INSET
-                clear = Button(x, top + CLEAR_ALL_OFFSET_Y, (BUTTON_WIDTH, CLEAR_ALL_HEIGHT), "red", "Clear All", lambda side=side: self.clear_army(side), font_size=18)
+                x = layout.PANEL_X + layout.PANEL_WIDTH - layout.BUTTON_WIDTH - layout.ROSTER_INSET
+                clear = Button(x, top + layout.CLEAR_ALL_OFFSET_Y, (layout.BUTTON_WIDTH, layout.CLEAR_ALL_HEIGHT), "red", "Clear All", lambda side=side: self.clear_army(side), font_size=18)
                 clear.apply_state(enabled=bool(roster), color="red")
-                add = Button(x, top + 70, (BUTTON_WIDTH, 42), "blue" if side == 0 else "red",
+                add = Button(x, top + 70, (layout.BUTTON_WIDTH, 42), "blue" if side == 0 else "red",
                              "Add Friendly" if side == 0 else "Add Enemy",
                              lambda side=side: self.open_picker(side), font_size=20)
                 add.apply_state(enabled=self._roster_has_space(side),
                                 color="blue" if side == 0 else "red")
-                duplicate = Button(x - BUTTON_WIDTH - CARD_GAP, top + CLEAR_ALL_OFFSET_Y, (BUTTON_WIDTH, CLEAR_ALL_HEIGHT), "grey", "Duplicate", lambda side=side: self.duplicate_unit(side), font_size=18)
+                duplicate = Button(x - layout.BUTTON_WIDTH - layout.CARD_GAP, top + layout.CLEAR_ALL_OFFSET_Y, (layout.BUTTON_WIDTH, layout.CLEAR_ALL_HEIGHT), "grey", "Duplicate", lambda side=side: self.duplicate_unit(side), font_size=18)
                 duplicate.apply_state(enabled=self.selected[side] is not None and self._roster_has_space(side), color="blue" if side == 0 else "red")
-                remove = Button(x, top + 128, (BUTTON_WIDTH, 42), "grey", "Remove",
+                remove = Button(x, top + 128, (layout.BUTTON_WIDTH, 42), "grey", "Remove",
                                 lambda side=side: self.remove_unit(side), font_size=20)
                 remove.apply_state(enabled=self.selected[side] is not None, color="red")
                 self.elements.extend((clear, add, remove, duplicate))
                 if side == 0:
                     controlling = self.controlled_index is not None and self.controlled_index == self.selected[0]
-                    control = Button(x, top + 178, (BUTTON_WIDTH, 32), "yellow",
+                    control = Button(x, top + 178, (layout.BUTTON_WIDTH, 32), "yellow",
                                      "Release Control" if controlling else "Control",
                                      self.toggle_control, font_size=18)
                     control.apply_state(enabled=self.selected[0] is not None,
                                         color="yellow" if controlling else "green")
                     self.elements.append(control)
             if self.mode == "preview":
-                start = Button(*PREVIEW_START_POSITION, PREVIEW_START_SIZE,
+                start = Button(*layout.PREVIEW_START_POSITION, layout.PREVIEW_START_SIZE,
                                "green", "Start", self.start_battle)
-                retreat = Button(start.rect.right + PREVIEW_RETREAT_GAP, start.rect.y,
-                                 PREVIEW_RETREAT_SIZE, "red", "Retreat", self.retreat,
+                retreat = Button(start.rect.right + layout.PREVIEW_RETREAT_GAP, start.rect.y,
+                                 layout.PREVIEW_RETREAT_SIZE, "red", "Retreat", self.retreat,
                                  sound_kind="back")
                 self.elements.extend((start, retreat))
                 return
             self._refresh_forecast()
-            simulate = Button(*SIMULATE_BUTTON_POSITION, SIMULATE_BUTTON_SIZE, "green", "Simulate",
+            simulate = Button(*layout.SIMULATE_BUTTON_POSITION, layout.SIMULATE_BUTTON_SIZE, "green", "Simulate",
                               self.preview_battle, font_size=18, sound_kind=None)
             simulate.apply_state(enabled=all(self.rosters), color="green")
             self.elements.append(simulate)
             self.generate_button = Button(
-                *GENERATION_BUTTON_POSITION, GENERATION_BUTTON_SIZE, "purple", "Random",
+                *layout.GENERATION_BUTTON_POSITION, layout.GENERATION_BUTTON_SIZE, "purple", "Random",
                 self.generate_armies, font_size=20)
             self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
             self.year_slider = Slider(
-                *GENERATION_SLIDER_POSITION, GENERATION_SLIDER_WIDTH,
+                *layout.GENERATION_SLIDER_POSITION, layout.GENERATION_SLIDER_WIDTH,
                 f"Year: {self.generation_year}", self.generation_year - c.START_YEAR,
                 self.update_generation_year, visual_max=c.END_YEAR - c.START_YEAR,
                 allowed_max=c.END_YEAR - c.START_YEAR)
             self.elements.extend((self.generate_button, self.year_slider))
-            self.elements.append(Button(*TERRAIN_BUTTON_POSITION, TERRAIN_BUTTON_SIZE, "grey",
+            self.elements.append(Button(*layout.TERRAIN_BUTTON_POSITION, layout.TERRAIN_BUTTON_SIZE, "grey",
                                         battle_terrain.TERRAIN_NAMES[self.terrain], self.choose_terrain,
                                         font_size=20))
         elif self.mode == "battle":
             self.touch_weapon_buttons = []
             if self.touch_mode and self.simulation.controlled is not None and self.simulation.controlled.alive and self.simulation.controlled.weapon(1) is not None:
-                width, height = TOUCH_WEAPON_SIZE
-                left = c.SCREEN_WIDTH - TOUCH_PAD_MARGIN - (width * 3 + TOUCH_WEAPON_GAP * 2)
-                top = self._touch_pad_rect("aim").top - height - TOUCH_WEAPON_GAP
-                for index, mode in enumerate(TOUCH_WEAPON_MODES):
-                    button = Button(left + index * (width + TOUCH_WEAPON_GAP), top, TOUCH_WEAPON_SIZE,
+                width, height = layout.TOUCH_WEAPON_SIZE
+                left = c.SCREEN_WIDTH - layout.TOUCH_PAD_MARGIN - (width * 3 + layout.TOUCH_WEAPON_GAP * 2)
+                top = self._touch_pad_rect("aim").top - height - layout.TOUCH_WEAPON_GAP
+                for index, mode in enumerate(layout.TOUCH_WEAPON_MODES):
+                    button = Button(left + index * (width + layout.TOUCH_WEAPON_GAP), top, layout.TOUCH_WEAPON_SIZE,
                                     "yellow" if mode == self.touch_weapon_mode else "grey", mode,
                                     lambda mode=mode: self._select_touch_weapon(mode), font_size=16)
                     button.apply_state(enabled=self._driving(),
@@ -880,7 +451,7 @@ class CustomBattleScreen(Screen):
         if not all(self.rosters):
             self.forecast_surface = None
             return
-        winner, turns = combat.normal_game_forecast(*self.rosters)
+        winner, turns = tactical_campaign.normal_game_forecast(*self.rosters)
         if turns is None:
             text, color = "Normal game: no clear winner", c.UI_TEXT_MUTED
         else:
@@ -889,7 +460,7 @@ class CustomBattleScreen(Screen):
                 text, color = f"Normal game: both armies destroyed in {span}", c.UI_TEXT_MUTED
             else:
                 army = "Friendly" if winner == 0 else "Enemy"
-                text, color = f"Normal game: {army} army wins in {span}", TEAM_COLORS[winner]
+                text, color = f"Normal game: {army} army wins in {span}", layout.TEAM_COLORS[winner]
         self.forecast_surface = fonts.get("normal").render(text, True, color)
 
     def update_generation_year(self, value):
@@ -898,7 +469,7 @@ class CustomBattleScreen(Screen):
         year = max(c.START_YEAR, min(c.END_YEAR, c.START_YEAR + round(value)))
         if year != self.generation_year:
             self.generation_year = year
-            self.random_candidates = combat.custom_unit_types_for_year(self.library, year, self.terrain)
+            self.random_candidates = tactical_campaign.custom_unit_types_for_year(self.library, year, self.terrain)
             self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
         # Keep the current slider alive while dragging instead of rebuilding controls.
         self.year_slider.text = f"Year: {self.generation_year}"
@@ -911,13 +482,13 @@ class CustomBattleScreen(Screen):
             return
         self.cancel_active_drags()
         self.rosters = [[self._new_unit(side, name, random.choice(self.nationalities)) for name in roster]
-                        for side, roster in enumerate(combat.random_armies(self.random_candidates))]
-        self.columns = [combat.paired_columns(len(roster)) for roster in self.rosters]
+                        for side, roster in enumerate(tactical_campaign.random_armies(self.random_candidates))]
+        self.columns = [tactical_campaign.paired_columns(len(roster)) for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = None
         for side in (0, 1):
-            setattr(self, f"roster_{side}_scroll", 0)
+            self._roster_scroll(side).value = 0
         self.refresh_ui()
 
     def open_picker(self, side):
@@ -944,11 +515,11 @@ class CustomBattleScreen(Screen):
         self.cancel_active_drags()
         for roster in self.rosters:
             for entry in roster:
-                prepared = combat.prepare_battle_unit(entry, self.library, terrain)
+                prepared = rules.prepare_battle_unit(entry, self.library, terrain)
                 entry.clear()
                 entry.update(prepared)
         self.terrain = terrain
-        self.random_candidates = combat.custom_unit_types_for_year(self.library, self.generation_year, terrain)
+        self.random_candidates = tactical_campaign.custom_unit_types_for_year(self.library, self.generation_year, terrain)
         self.card_surfaces.clear()
         self.forecast_key = None
         self.refresh_ui()
@@ -957,7 +528,7 @@ class CustomBattleScreen(Screen):
         return len(self.rosters[side]) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE
 
     def _column_groups(self, side):
-        return combat.column_groups(self.rosters[side], self.columns[side])
+        return tactical_campaign.column_groups(self.rosters[side], self.columns[side])
 
     def _set_columns(self, side, groups):
         """Replace one army with ``groups``: columns front to back, each listing its cards top to bottom.
@@ -965,7 +536,7 @@ class CustomBattleScreen(Screen):
         Empty columns close up, and control stays with the same friendly entry.
         """
         controlled = self.rosters[0][self.controlled_index] if self.controlled_index is not None else None
-        self.rosters[side][:], self.columns[side][:] = combat.flatten_columns(groups)
+        self.rosters[side][:], self.columns[side][:] = tactical_campaign.flatten_columns(groups)
         if controlled is not None:
             self.controlled_index = self._index_of(0, controlled)
 
@@ -973,9 +544,9 @@ class CustomBattleScreen(Screen):
         return next((index for index, entry in enumerate(self.rosters[side]) if entry is unit), None)
 
     def _place_new_unit(self, side, unit):
-        """Add a unit to the column combat.open_column chooses, select it, and scroll its column into view."""
+        """Add a unit to the column tactical_campaign.open_column chooses, select it, and scroll its column into view."""
         groups = self._column_groups(side)
-        column = combat.open_column(groups)
+        column = tactical_campaign.open_column(groups)
         if column is None:
             return
         if column == len(groups):
@@ -984,8 +555,8 @@ class CustomBattleScreen(Screen):
         self._set_columns(side, groups)
         self.selected[side] = self._index_of(side, unit)
         self.refresh_ui()
-        setattr(self, f"roster_{side}_scroll", max(getattr(self, f"roster_{side}_limit"),
-                                                   min(0, ROSTER_WIDTH - (column + 1) * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)))
+        roster = self._roster_scroll(side)
+        roster.value = max(roster.limit, min(0, layout.ROSTER_WIDTH - (column + 1) * (layout.CARD_SIZE[0] + layout.CARD_GAP) + layout.CARD_GAP))
 
     def add_unit(self, side, name):
         if self.mode != "setup" or name not in self.unit_names:
@@ -997,7 +568,7 @@ class CustomBattleScreen(Screen):
     def _new_unit(self, side, name, country=None):
         if country is None:
             country = self.nationalities[min(side, len(self.nationalities) - 1)]
-        return combat.create_battle_unit(name, country, self.library, self.terrain)
+        return rules.create_battle_unit(name, country, self.library, self.terrain)
 
     def duplicate_unit(self, side):
         if self.mode != "setup" or self.campaign is not None or side not in (0, 1):
@@ -1063,7 +634,7 @@ class CustomBattleScreen(Screen):
         self.group[side] = []
         if side == 0:
             self.controlled_index = None
-        setattr(self, f"roster_{side}_scroll", 0)
+        self._roster_scroll(side).value = 0
         self.refresh_ui()
 
     def toggle_control(self):
@@ -1104,7 +675,7 @@ class CustomBattleScreen(Screen):
 
     def zoom_volume_share(self):
         """Full volume at the default zoom and closer; zooming out lowers it in proportion to the zoom."""
-        return min(1.0, self.zoom / ZOOM_LEVELS[DEFAULT_ZOOM_INDEX])
+        return min(1.0, self.zoom / layout.ZOOM_LEVELS[layout.DEFAULT_ZOOM_INDEX])
 
     def sound_listener(self):
         """Where battle sounds are heard from: the living controlled unit, otherwise the screen's center."""
@@ -1116,24 +687,24 @@ class CustomBattleScreen(Screen):
     def distance_volume_share(self, fighter):
         """Full volume near the sound listener, fading linearly to SFX_DISTANCE_FLOOR farther away."""
         distance = math.dist(self.sound_listener(), (fighter.x, fighter.y)) / self.simulation.arena_size[0]
-        fade = max(0.0, min(1.0, (distance - SFX_FULL_VOLUME_DISTANCE) / (SFX_FLOOR_DISTANCE - SFX_FULL_VOLUME_DISTANCE)))
-        return 1.0 - fade * (1.0 - SFX_DISTANCE_FLOOR)
+        fade = max(0.0, min(1.0, (distance - layout.SFX_FULL_VOLUME_DISTANCE) / (layout.SFX_FLOOR_DISTANCE - layout.SFX_FULL_VOLUME_DISTANCE)))
+        return 1.0 - fade * (1.0 - layout.SFX_DISTANCE_FLOOR)
 
     def battle_sfx_volume_share(self, fighter):
         """Apply the editable battle SFX multiplier, the shared zoom reduction, and the sound's distance from the listener."""
-        return BATTLE_SFX_VOLUME * self.zoom_volume_share() * self.distance_volume_share(fighter)
+        return layout.BATTLE_SFX_VOLUME * self.zoom_volume_share() * self.distance_volume_share(fighter)
 
     def update_battle_music_volume(self):
         """Lower music in actual battle: BATTLE_MUSIC_VOLUME, then quieter the further the view zooms out."""
         if self.controller is not None and self.mode == "battle":
-            self.controller.set_music_volume_scale(BATTLE_MUSIC_VOLUME * self.zoom_volume_share())
+            self.controller.set_music_volume_scale(layout.BATTLE_MUSIC_VOLUME * self.zoom_volume_share())
 
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
         self.kill_feed.clear()
         self.death_explosions.clear()
-        self.kill_feed_scroll = 0
-        self.kill_feed_dragging = False
+        self.kill_feed_pane.value = 0
+        self.kill_feed_pane.bar_drag = False
         self._refresh_kill_feed()
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
                                                   friendly_columns=self.columns[0], enemy_columns=self.columns[1],
@@ -1149,54 +720,48 @@ class CustomBattleScreen(Screen):
 
     def _record_kill(self, source, target, cause):
         """Update the recent kills when a battlefield sub-unit dies."""
-        if target.shape not in combat.FOOT_SHAPES:
-            self.death_explosions.append((target, 0.0, DEATH_EXPLOSION_PALETTE, (target.x, target.y)))
+        if target.shape not in rules.FOOT_SHAPES:
+            self.death_explosions.append((target, 0.0, layout.DEATH_EXPLOSION_PALETTE, (target.x, target.y)))
             sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share(target))
-        if self.kill_feed_scroll < 0:
-            self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
+        if self.kill_feed_pane.value < 0:
+            self.kill_feed_pane.value -= layout.KILL_FEED_ROW_HEIGHT
         self.kill_feed.appendleft((source, target, cause))
         self._refresh_kill_feed()
 
-    @staticmethod
-    def _kill_feed_scroll_options():
-        return dict(attr="kill_feed_scroll", limit_attr="kill_feed_limit", track_attr="kill_feed_track",
-                    handle_attr="kill_feed_handle", drag_attr="kill_feed_dragging",
-                    content_rect_attr="kill_feed_content")
-
     def _refresh_kill_feed(self):
         """Cache the fixed-size panel, including when no kills have occurred."""
-        view_height = self.kill_feed_content.height
-        self.kill_feed_limit = min(0, view_height - len(self.kill_feed) * KILL_FEED_ROW_HEIGHT)
-        self.kill_feed_scroll = max(self.kill_feed_limit, min(0, self.kill_feed_scroll))
-        panel = pygame.Surface((KILL_FEED_WIDTH, KILL_FEED_HEIGHT), pygame.SRCALPHA)
-        ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
-        content = self.kill_feed_content.move(-self.kill_feed_rect.x, -self.kill_feed_rect.y)
+        view_height = self.kill_feed_pane.content_rect.height
+        self.kill_feed_pane.limit = min(0, view_height - len(self.kill_feed) * layout.KILL_FEED_ROW_HEIGHT)
+        self.kill_feed_pane.value = max(self.kill_feed_pane.limit, min(0, self.kill_feed_pane.value))
+        panel = pygame.Surface((layout.KILL_FEED_WIDTH, layout.KILL_FEED_HEIGHT), pygame.SRCALPHA)
+        ui_elements.draw_pixel_panel(panel, panel.get_rect(), layout.CONTROL_STATS_COLOR, layout.CONTROL_STATS_BORDER)
+        content = self.kill_feed_pane.content_rect.move(-self.kill_feed_rect.x, -self.kill_feed_rect.y)
         panel.set_clip(content)
-        actor_width = KILL_FEED_ACTOR_WIDTH
+        actor_width = layout.KILL_FEED_ACTOR_WIDTH
         font = fonts.get("tiny")
         # Scrollbar positions can be fractional; deque slicing needs an integer row index.
-        first = math.floor(-self.kill_feed_scroll / KILL_FEED_ROW_HEIGHT)
-        visible = islice(self.kill_feed, first, first + KILL_FEED_VISIBLE_ROWS + 1)
+        first = math.floor(-self.kill_feed_pane.value / layout.KILL_FEED_ROW_HEIGHT)
+        visible = islice(self.kill_feed, first, first + layout.KILL_FEED_VISIBLE_ROWS + 1)
         controlled = self.simulation.controlled if self.simulation is not None else None
         for row, (killer, victim, kind) in enumerate(visible, first):
-            top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT + self.kill_feed_scroll
+            top = layout.KILL_FEED_INSET + row * layout.KILL_FEED_ROW_HEIGHT + self.kill_feed_pane.value
             for index, fighter in enumerate((killer, victim)):
-                x = KILL_FEED_INSET + index * (actor_width + KILL_FEED_CAUSE_WIDTH)
+                x = layout.KILL_FEED_INSET + index * (actor_width + layout.KILL_FEED_CAUSE_WIDTH)
                 x = flag_icons.draw_flag_centered(panel, fighter.data["owner"], self.country_data,
-                                                  x, top, KILL_FEED_ROW_HEIGHT, KILL_FEED_FLAG_SIZE)
-                center = (x + KILL_FEED_ICON_SIZE[0] // 2, top + KILL_FEED_ROW_HEIGHT // 2)
+                                                  x, top, layout.KILL_FEED_ROW_HEIGHT, layout.KILL_FEED_FLAG_SIZE)
+                center = (x + layout.KILL_FEED_ICON_SIZE[0] // 2, top + layout.KILL_FEED_ROW_HEIGHT // 2)
                 if controlled is not None and fighter.division == controlled.division:
-                    color = PLAYER_COLOR if fighter is controlled else KILL_FEED_DIVISION_COLOR
-                    highlight = pygame.Rect(0, 0, KILL_FEED_ICON_SIZE[1], KILL_FEED_ICON_SIZE[1])
+                    color = layout.PLAYER_COLOR if fighter is controlled else layout.KILL_FEED_DIVISION_COLOR
+                    highlight = pygame.Rect(0, 0, layout.KILL_FEED_ICON_SIZE[1], layout.KILL_FEED_ICON_SIZE[1])
                     highlight.center = center
                     pygame.draw.rect(panel, color, highlight)
                 artwork = symbol_loader.get_symbol(fighter.data["type"], zoom=1,
-                                                    color=TEAM_COLORS[fighter.side], country=fighter.data["owner"],
-                                                    fit_size=KILL_FEED_ICON_SIZE)
+                                                    color=layout.TEAM_COLORS[fighter.side], country=fighter.data["owner"],
+                                                    fit_size=layout.KILL_FEED_ICON_SIZE)
                 if artwork is not None:
                     panel.blit(artwork, artwork.get_rect(center=center))
-            center = (KILL_FEED_INSET + actor_width + KILL_FEED_CAUSE_WIDTH // 2,
-                      top + KILL_FEED_ROW_HEIGHT // 2)
+            center = (layout.KILL_FEED_INSET + actor_width + layout.KILL_FEED_CAUSE_WIDTH // 2,
+                      top + layout.KILL_FEED_ROW_HEIGHT // 2)
             if kind == "ram":
                 text = font.render("RAM", True, c.UI_TEXT_BRIGHT)
                 panel.blit(text, text.get_rect(center=center))
@@ -1207,11 +772,10 @@ class CustomBattleScreen(Screen):
                                     [(center[0] + 8, center[1]), (center[0] + 2, center[1] - 4),
                                      (center[0] + 2, center[1] + 4)])
         panel.set_clip(None)
-        self.draw_list_scrollbar(panel, KILL_FEED_WIDTH - KILL_FEED_INSET - KILL_FEED_SCROLLBAR_WIDTH,
-                                 KILL_FEED_INSET, view_height, width=KILL_FEED_SCROLLBAR_WIDTH,
-                                 **self._kill_feed_scroll_options())
-        for name in ("kill_feed_track", "kill_feed_handle"):
-            rect = getattr(self, name)
+        self.draw_list_scrollbar(panel, layout.KILL_FEED_WIDTH - layout.KILL_FEED_INSET - layout.KILL_FEED_SCROLLBAR_WIDTH,
+                                 layout.KILL_FEED_INSET, view_height, width=layout.KILL_FEED_SCROLLBAR_WIDTH,
+                                 scroll=self.kill_feed_pane)
+        for rect in (self.kill_feed_pane.track, self.kill_feed_pane.handle):
             if rect is not None:
                 rect.move_ip(self.kill_feed_rect.topleft)
         self.kill_feed_surface = panel
@@ -1221,8 +785,8 @@ class CustomBattleScreen(Screen):
         if event.type not in {pygame.MOUSEWHEEL, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION}:
             return False
         position = getattr(event, "pos", pygame.mouse.get_pos())
-        engaged = (self.kill_feed_rect.collidepoint(position) or self.kill_feed_dragging
-                   or self.is_content_dragging("kill_feed_scroll"))
+        engaged = (self.kill_feed_rect.collidepoint(position) or self.kill_feed_pane.bar_drag
+                   or self.is_content_dragging(self.kill_feed_pane))
         if not engaged:
             return False
         if event.type == pygame.MOUSEBUTTONUP:
@@ -1231,9 +795,9 @@ class CustomBattleScreen(Screen):
                 self.pan_drag = None
             elif event.button == 3:
                 self.secondary_firing = False
-        before = self.kill_feed_scroll
-        self.handle_list_scroll(event, speed=KILL_FEED_ROW_HEIGHT, **self._kill_feed_scroll_options())
-        if before != self.kill_feed_scroll:
+        before = self.kill_feed_pane.value
+        self.handle_list_scroll(event, self.kill_feed_pane, speed=layout.KILL_FEED_ROW_HEIGHT, content=True)
+        if before != self.kill_feed_pane.value:
             self._refresh_kill_feed()
         return True
 
@@ -1242,24 +806,24 @@ class CustomBattleScreen(Screen):
         if fighter.weapon(fighter.fired_weapon).get("projectile") == "torpedo":
             kind = "torpedo_launch"
         elif fighter.weapon(fighter.fired_weapon)["shell"]:
-            kind = random.choice(TANK_SHOT_SOUNDS)
+            kind = random.choice(layout.TANK_SHOT_SOUNDS)
         elif fighter is self.simulation.controlled:
             kind = "heavy_gunshot"
         else:
-            kind = random.choice(RIFLE_SHOT_SOUNDS)
+            kind = random.choice(layout.RIFLE_SHOT_SOUNDS)
         sound_effects.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share(fighter))
 
     def _play_hit_sound(self, target, damage, projectile=None, point=None):
         # The simulation supplies HP actually lost, including the remaining-HP limit.
         if projectile == "torpedo":
             # A torpedo hit splashes: the explosion animation in water colors, and its own sound.
-            self.death_explosions.append((target, 0.0, TORPEDO_SPLASH_PALETTE, point))
+            self.death_explosions.append((target, 0.0, layout.TORPEDO_SPLASH_PALETTE, point))
             sound_effects.play_ui_sound("torpedo_hit", volume_scale=self.battle_sfx_volume_share(target))
             return
-        if target.shape in combat.SOFT_TARGET_SHAPES:
-            sounds = FLESH_HIT_SOUNDS
-        elif damage <= target.data["max_health"] * RICOCHET_MAX_HEALTH_SHARE:
-            sounds = RICOCHET_SOUNDS
+        if target.shape in rules.SOFT_TARGET_SHAPES:
+            sounds = layout.FLESH_HIT_SOUNDS
+        elif damage <= target.data["max_health"] * layout.RICOCHET_MAX_HEALTH_SHARE:
+            sounds = layout.RICOCHET_SOUNDS
         else:
             return
         sound_effects.play_ui_sound(random.choice(sounds), volume_scale=self.battle_sfx_volume_share(target))
@@ -1287,121 +851,13 @@ class CustomBattleScreen(Screen):
         self.firing = False
         self.secondary_firing = False
         self.touch_pointers.clear()
-        self.kill_feed_dragging = False
+        self.kill_feed_pane.bar_drag = False
         if self.simulation is not None:
             self.simulation.set_player_input()
 
     def cancel_pointer_input(self):
         super().cancel_pointer_input()
         self.clear_controls()
-
-    def set_touch_mode(self, enabled):
-        if self.touch_mode != enabled:
-            self.touch_mode = enabled
-            self.clear_controls()
-            if self.mode == "battle":
-                self.refresh_ui()
-
-    @staticmethod
-    def _touch_pad_rect(role):
-        left = (TOUCH_PAD_MARGIN if role == "drive" else c.SCREEN_WIDTH - TOUCH_PAD_MARGIN - TOUCH_PAD_SIZE)
-        return pygame.Rect(left, c.SCREEN_HEIGHT - TOUCH_PAD_BOTTOM - TOUCH_PAD_SIZE,
-                           TOUCH_PAD_SIZE, TOUCH_PAD_SIZE)
-
-    def _select_touch_weapon(self, mode):
-        if self._driving() and self.simulation.controlled.weapon(1) is not None:
-            self.touch_weapon_mode = mode
-            for button in self.touch_weapon_buttons:
-                button.apply_state(enabled=True, color="yellow" if button.text == mode else "grey")
-
-    def handle_touch_pointer(self, kind, pointer, position):
-        if pointer in self.touch_pointers:
-            role, _ = self.touch_pointers[pointer]
-            if kind == pygame.FINGERUP or not self._driving():
-                del self.touch_pointers[pointer]
-            else:
-                self.touch_pointers[pointer] = role, position
-            return True
-        if kind != pygame.FINGERDOWN or not self.touch_mode or not self._driving():
-            return False
-        for role in ("drive", "aim"):
-            if (self._touch_pad_rect(role).collidepoint(position)
-                    and all(active != role for active, _ in self.touch_pointers.values())):
-                self.touch_pointers[pointer] = role, position
-                return True
-        return False
-
-    def _touch_axes(self, role):
-        center = self._touch_pad_rect(role).center
-        position = next((pos for active, pos in self.touch_pointers.values() if active == role), center)
-        vector = pygame.Vector2(position) - center
-        vector /= TOUCH_PAD_SIZE / 2
-        if vector.length() <= TOUCH_DEAD_ZONE:
-            return pygame.Vector2()
-        if vector.length() > 1:
-            vector.scale_to_length(1)
-        return vector
-
-    @staticmethod
-    def view_rect():
-        """Actual battle fills the whole screen."""
-        return pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-
-    @property
-    def zoom(self):
-        return ZOOM_LEVELS[self.zoom_index]
-
-    def _view_span(self):
-        """How much of the battlefield the screen shows at the current zoom."""
-        return c.SCREEN_WIDTH / self.zoom, c.SCREEN_HEIGHT / self.zoom
-
-    def _center_camera(self, x, y):
-        width, height = self._view_span()
-        self._move_camera(x - width / 2, y - height / 2)
-
-    def _follow_controlled_camera(self, fighter, pointer):
-        """Show more ground toward the pointer while keeping the controlled unit visible."""
-        view = self.view_rect()
-        # Use the view center, so moving the camera cannot amplify its own offset.
-        dx = max(-view.width / 2, min(view.width / 2, pointer[0] - view.centerx))
-        dy = max(-view.height / 2, min(view.height / 2, pointer[1] - view.centery))
-        self._center_camera(fighter.x + dx * AIM_CAMERA_OFFSET / self.zoom,
-                            fighter.y + dy * AIM_CAMERA_OFFSET / self.zoom)
-
-    def _move_camera(self, left, top):
-        """Keep the view inside the battlefield, or center the battlefield when it is smaller than the view."""
-        self.camera = [(arena - span) / 2 if span >= arena else max(0.0, min(arena - span, start))
-                       for start, span, arena in zip((left, top), self._view_span(), self.simulation.arena_size)]
-
-    def zoom_by(self, steps, pos):
-        """Step through ZOOM_LEVELS, keeping the battlefield point under ``pos`` in place."""
-        controlling = (self.mode == "battle" and self.simulation is not None
-                       and self.simulation.controlled is not None and self.simulation.controlled.alive)
-        minimum = ZOOM_LEVELS.index(CONTROLLED_MIN_ZOOM) if controlling else 0
-        index = max(minimum, min(len(ZOOM_LEVELS) - 1, self.zoom_index + steps))
-        if index == self.zoom_index:
-            return
-        anchor = self.to_field(pos)
-        self.zoom_index = index
-        clear_rotated_sprites()
-        if self.simulation is not None:
-            self._cache_terrain_art()
-        self._move_camera(anchor[0] - pos[0] / self.zoom, anchor[1] - pos[1] / self.zoom)
-        self.update_battle_music_volume()
-        self._refresh_visibility()
-
-    def to_field(self, pos):
-        """A screen position in battlefield coordinates."""
-        return pos[0] / self.zoom + self.camera[0], pos[1] / self.zoom + self.camera[1]
-
-    def to_screen(self, x, y):
-        """A battlefield position on the screen."""
-        return round((x - self.camera[0]) * self.zoom), round((y - self.camera[1]) * self.zoom)
-
-    def _driving(self):
-        """The player steers and fires only while the controlled sub-unit lives; afterward the player spectates."""
-        return (self.mode == "battle" and not self.simulation.paused
-                and self.simulation.controlled is not None and self.simulation.controlled.alive)
 
     def return_to_setup(self):
         self.cancel_active_drags()
@@ -1446,256 +902,6 @@ class CustomBattleScreen(Screen):
                 element.dragging = False
         for button in self.unit_buttons.values():
             button.is_pressed = False
-        for side in (0, 1):
-            setattr(self, f"roster_{side}_dragging", False)
-
-    def card_rect(self, side, index):
-        """A card stands in its column; a column's second card stands below its first."""
-        columns = self.columns[side]
-        column = columns[index]
-        row = int(index > 0 and columns[index - 1] == column)
-        pane = self.panes[side]
-        return pygame.Rect(pane.x + column * (CARD_SIZE[0] + CARD_GAP) + getattr(self, f"roster_{side}_scroll"),
-                           pane.y + row * (CARD_SIZE[1] + CARD_GAP), *CARD_SIZE)
-
-    def _drop_target(self, side, pos):
-        """The column and card row a drop at ``pos`` lands on.
-
-        Near a card's left or right edge, or in the gap between columns, the row is None:
-        the dropped card gets a new column there.
-        """
-        pane = self.panes[side]
-        column, within = divmod(pos[0] - pane.x - getattr(self, f"roster_{side}_scroll"), CARD_SIZE[0] + CARD_GAP)
-        if within < DROP_NEW_COLUMN_EDGE:
-            return int(column), None
-        if within > CARD_SIZE[0] - DROP_NEW_COLUMN_EDGE:
-            return int(column) + 1, None
-        return int(column), min(ROSTER_ROWS - 1, max(0, int((pos[1] - pane.y) // (CARD_SIZE[1] + CARD_GAP))))
-
-    @staticmethod
-    def _position_edit_button(button, card):
-        button.rect.topright = (card.right - CARD_EDIT_INSET, card.top + CARD_EDIT_INSET)
-
-    def _unit_button_events(self, event):
-        if (self.mode != "setup" or self.drag is not None
-                or event.type not in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP}):
-            return False
-        for (side, index), button in self.unit_buttons.items():
-            self._position_edit_button(button, self.card_rect(side, index))
-            if self.panes[side].collidepoint(event.pos):
-                engaged = button.is_pressed or button.rect.collidepoint(event.pos)
-                if engaged:
-                    button.handle_event(event)
-                    return True
-            elif event.type == pygame.MOUSEBUTTONUP:
-                button.is_pressed = False
-        return False
-
-    def _on_scrollbar(self, side, pos):
-        track = getattr(self, f"roster_{side}_track", None)
-        return bool(track and track.collidepoint(pos))
-
-    def _clear_roster_selection(self):
-        self.selected = [None, None]
-        self.group = [[], []]
-
-    def _deselect_background(self, event):
-        if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
-                or self.drag is not None or self.marquee is not None or self.bar_drag is not None
-                or not (any(index is not None for index in self.selected) or any(self.group))):
-            return
-        # Controls must keep their selected unit or group available to their callbacks.
-        if any(element.visible and element.rect.collidepoint(event.pos) for element in self.elements):
-            return
-        for side, pane in enumerate(self.panes):
-            if self._on_scrollbar(side, event.pos):
-                return
-            if pane.collidepoint(event.pos) and any(self.card_rect(side, index).collidepoint(event.pos) for index in range(len(self.rosters[side]))):
-                return
-        self._clear_roster_selection()
-        self.refresh_ui()
-
-    def _marquee_events(self, event):
-        """Drag a selection square from empty panel space; roster background drags still scroll."""
-        if self.marquee is not None:
-            if event.type == pygame.MOUSEMOTION:
-                self.marquee[2] = event.pos
-                self._select_group(self.marquee[0], self.marquee[1], event.pos)
-                return True
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                side, origin, _current = self.marquee
-                self.marquee = None
-                self._select_group(side, origin, event.pos)
-                return True
-            return False
-        if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1 or self.drag is not None):
-            return False
-        if any(isinstance(element, Button) and element.rect.collidepoint(event.pos)
-               for element in self.elements):
-            return False
-        for side, top in enumerate(PANEL_TOPS):
-            if (pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT).collidepoint(event.pos)
-                    and not self.panes[side].collidepoint(event.pos)
-                    and not self._on_scrollbar(side, event.pos)):
-                self.marquee = [side, event.pos, event.pos]
-                return True
-        return False
-
-    @staticmethod
-    def _marquee_rect(origin, current):
-        return pygame.Rect(min(origin[0], current[0]), min(origin[1], current[1]),
-                           abs(origin[0] - current[0]), abs(origin[1] - current[1]))
-
-    def _select_group(self, side, origin, current):
-        """Select the visible cards the square touches; a click without dragging clears the selection."""
-        picked = []
-        if math.dist(origin, current) >= DRAG_THRESHOLD:
-            area = self._marquee_rect(origin, current).clip(self.panes[side])
-            picked = [index for index in range(len(self.rosters[side]))
-                      if self.card_rect(side, index).colliderect(area)]
-        # One card is an ordinary selection, so Remove and Control keep working.
-        selected = picked[0] if len(picked) == 1 else None
-        group = picked if len(picked) > 1 else []
-        if self.selected[side] == selected and self.group[side] == group:
-            return
-        self.selected[side] = selected
-        self.group[side] = group
-        self.refresh_ui()
-
-    def _set_bar_health(self, side, index, x):
-        """Set starting HP from the pointer's position along a card's health bar."""
-        card = self.card_rect(side, index)
-        bar, _flag_x = self._bar_geometry()
-        percent = round((x - card.x - bar.x) / bar.width * 100)
-        unit = self.rosters[side][index]
-        self.set_unit_options(side, self._units_to_edit(side, unit), health_percent=max(1, min(100, percent)))
-
-    def _health_bar_events(self, event):
-        """Press or drag along a card's health bar to set its starting HP."""
-        if self.bar_drag is not None:
-            side, index = self.bar_drag
-            if event.type == pygame.MOUSEMOTION:
-                self._set_bar_health(side, index, event.pos[0])
-                return True
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self._set_bar_health(side, index, event.pos[0])
-                self.bar_drag = None
-                return True
-            return False
-        if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1 or self.drag is not None:
-            return False
-        bar, _flag_x = self._bar_geometry()
-        for side, pane in enumerate(self.panes):
-            if not pane.collidepoint(event.pos):
-                continue
-            for index in range(len(self.rosters[side])):
-                card = self.card_rect(side, index)
-                if bar.move(card.topleft).inflate(0, 2 * CARD_BAR_GRAB_PAD).collidepoint(event.pos):
-                    self.bar_drag = (side, index)
-                    self._set_bar_health(side, index, event.pos[0])
-                    return True
-        return False
-
-    def _move_roster_entry(self, side, index, column, *, row=None, target_side=None):
-        """Move one roster entry. The leftmost column deploys in the front rank.
-
-        With ``row``, the entry is dropped on that card space of ``column``. Within one army it
-        swaps with the card there. On an empty space, or any space of the other army, it joins
-        the column when the column has room. Otherwise, and without ``row``, it gets a new column
-        before ``column``; an army already using every column refuses that.
-        """
-        if target_side is None:
-            target_side = side
-        if (side not in (0, 1) or target_side not in (0, 1) or not self._roster_reorderable(side)
-                or not 0 <= index < len(self.rosters[side])):
-            return False
-        if target_side != side:
-            if self.mode != "setup" or self.campaign is not None or not self._roster_has_space(target_side):
-                return False
-        unit = self.rosters[side][index]
-        before = list(self.rosters[0])
-        source = self._column_groups(side)
-        target = source if target_side == side else self._column_groups(target_side)
-        origin = next(group for group in source if any(entry is unit for entry in group))
-        origin_row = next(position for position, entry in enumerate(origin) if entry is unit)
-        column = max(0, column)
-        group = target[column] if row is not None and column < len(target) else None
-        if group is not None and row < len(group) and target_side == side:
-            if group[row] is unit:
-                return False
-            origin[origin_row], group[row] = group[row], unit
-        elif group is not None and len(group) - (group is origin) < c.CUSTOM_BATTLE_UNITS_PER_COLUMN:
-            origin.pop(origin_row)
-            group.append(unit)
-        else:
-            origin.pop(origin_row)
-            if sum(1 for entry_group in target if entry_group) >= c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE:
-                return False
-            target.insert(min(column, len(target)), [unit])
-        self._set_columns(side, source)
-        if target_side != side:
-            self._set_columns(target_side, target)
-        self.group[side] = []
-        if self.mode == "setup":
-            if target_side != side:
-                self._clear_roster_selection()
-            self.selected[target_side] = self._index_of(target_side, unit)
-            return True
-        # Preview: campaign units follow their roster entries (friendly ones come first),
-        # and the paused battle deploys again in the new formation.
-        if self.campaign is not None:
-            order = [next(position for position, entry in enumerate(before) if entry is moved) for moved in self.rosters[0]]
-            self.campaign.units[:len(before)] = [self.campaign.units[position] for position in order]
-        self._build_simulation()
-        return True
-
-    def _roster_reorderable(self, side):
-        """Editing reorders both armies; preview reorders only the friendly army."""
-        return self.mode == "setup" or (self.mode == "preview" and side == 0)
-
-    def _roster_events(self, event):
-        self._deselect_background(event)
-        if self.mode == "setup" and (self._marquee_events(event) or self._health_bar_events(event)):
-            return True
-        if self.drag is not None:
-            side, index, origin, active = self.drag
-            if event.type == pygame.MOUSEMOTION:
-                if math.dist(event.pos, origin) >= DRAG_THRESHOLD:
-                    self.drag[3] = True
-                return True
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if active:
-                    for target_side, pane in enumerate(self.panes):
-                        if pane.collidepoint(event.pos):
-                            column, row = self._drop_target(target_side, event.pos)
-                            self._move_roster_entry(side, index, column, row=row, target_side=target_side)
-                            break
-                self.drag = None
-                self.refresh_ui()
-                return True
-            return False
-        pointer = getattr(event, "pos", pygame.mouse.get_pos())
-        for side, pane in enumerate(self.panes):
-            options = self._scroll_options(side)
-            track = getattr(self, options["track_attr"], None)
-            engaged = (pane.collidepoint(pointer) or (track and track.collidepoint(pointer))
-                       or getattr(self, options["drag_attr"], False)
-                       or self.is_content_dragging(options["attr"]))
-            if not engaged:
-                continue
-            if (self._roster_reorderable(side) and event.type == pygame.MOUSEBUTTONDOWN
-                    and event.button == 1 and pane.collidepoint(event.pos)):
-                for index in range(len(self.rosters[side])):
-                    if self.card_rect(side, index).collidepoint(event.pos):
-                        if self.mode == "setup":
-                            self.selected[side] = index
-                            self.group[side] = []
-                        self.drag = [side, index, event.pos, False]
-                        self.refresh_ui()
-                        return True
-            if self.handle_list_scroll(event, **options):
-                return True
-        return False
 
     def handle_events(self, events):
         for event in events:
@@ -1715,7 +921,7 @@ class CustomBattleScreen(Screen):
                 continue
             if self._unit_button_events(event):
                 continue
-            if event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS and self._driving():
+            if event.type == pygame.KEYDOWN and event.key in layout.CONTROL_KEYS and self._driving():
                 self.held_keys.add(event.key)
                 continue
             if self.mode in {"battle", "result"} and self._kill_feed_events(event):
@@ -1795,15 +1001,15 @@ class CustomBattleScreen(Screen):
         if controlled.weapon(1) is not None:
             secondary = f"{key[3] / 10:.1f}s" if key[3] else "Ready"
             lines = (*lines[:2], f"Primary: {reload_status}", f"Secondary: {secondary}")
-        panel = pygame.Surface(CONTROL_STATS_SIZE)
-        ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
-        text_rect = panel.get_rect().inflate(-2 * CONTROL_STATS_INSET, -2 * CONTROL_STATS_INSET)
-        ui_elements.draw_pixel_panel(panel, text_rect, CONTROL_STATS_TEXT_BACKGROUND,
-                                     CONTROL_STATS_BORDER, gradient_strength=0.0, recessed=True)
+        panel = pygame.Surface(layout.CONTROL_STATS_SIZE)
+        ui_elements.draw_pixel_panel(panel, panel.get_rect(), layout.CONTROL_STATS_COLOR, layout.CONTROL_STATS_BORDER)
+        text_rect = panel.get_rect().inflate(-2 * layout.CONTROL_STATS_INSET, -2 * layout.CONTROL_STATS_INSET)
+        ui_elements.draw_pixel_panel(panel, text_rect, layout.CONTROL_STATS_TEXT_BACKGROUND,
+                                     layout.CONTROL_STATS_BORDER, gradient_strength=0.0, recessed=True)
         for row, text in enumerate(lines):
             image = fonts.get("normal").render(text, True, c.UI_TEXT_BRIGHT)
-            panel.blit(image, (text_rect.x + CONTROL_STATS_TEXT_PADDING,
-                               text_rect.y + CONTROL_STATS_TEXT_PADDING + row * CONTROL_STATS_ROW_HEIGHT))
+            panel.blit(image, (text_rect.x + layout.CONTROL_STATS_TEXT_PADDING,
+                               text_rect.y + layout.CONTROL_STATS_TEXT_PADDING + row * layout.CONTROL_STATS_ROW_HEIGHT))
         self.controlled_stats_surface = panel
 
     def update(self):
@@ -1813,10 +1019,10 @@ class CustomBattleScreen(Screen):
         if self.mode not in {"battle", "result"}:
             return
         now = pygame.time.get_ticks()
-        dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
+        dt = min(layout.MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
         if self.mode == "result" or not self.simulation.paused:
-            self.death_explosions = [(fighter, age + dt, palette, point) for fighter, age, palette, point in self.death_explosions if age + dt < DEATH_EXPLOSION_SECONDS]
+            self.death_explosions = [(fighter, age + dt, palette, point) for fighter, age, palette, point in self.death_explosions if age + dt < layout.DEATH_EXPLOSION_SECONDS]
         if self.mode == "result":
             return
         driving = self._driving()
@@ -1830,10 +1036,10 @@ class CustomBattleScreen(Screen):
         if self.touch_mode and controlled is not None and controlled.alive:
             drive, aim = self._touch_axes("drive"), self._touch_axes("aim")
             move_direction = drive
-            pointer = (c.SCREEN_WIDTH / 2 + aim.x * TOUCH_PAD_SIZE,
-                       c.SCREEN_HEIGHT / 2 + aim.y * TOUCH_PAD_SIZE)
+            pointer = (c.SCREEN_WIDTH / 2 + aim.x * layout.TOUCH_PAD_SIZE,
+                       c.SCREEN_HEIGHT / 2 + aim.y * layout.TOUCH_PAD_SIZE)
             if aim.length_squared():
-                aim_distance = controlled.weapon_range if controlled.naval else TOUCH_AIM_DISTANCE
+                aim_distance = controlled.weapon_range if controlled.naval else layout.TOUCH_AIM_DISTANCE
                 aim_point = (controlled.x + aim.x * aim_distance,
                              controlled.y + aim.y * aim_distance)
             weapon_mode = self.touch_weapon_mode if controlled.weapon(1) is not None else "Primary"
@@ -1906,7 +1112,7 @@ class CustomBattleScreen(Screen):
             if self.foliage_shadow_outline:
                 if self.foliage_shadow_mask is None or self.foliage_shadow_mask.get_size() != size:
                     self.foliage_shadow_mask = pygame.Surface(size, pygame.SRCALPHA)
-                self.foliage_shadow_mask.fill((0, 0, 0, FOLIAGE_SHADOW_ALPHA))
+                self.foliage_shadow_mask.fill((0, 0, 0, layout.FOLIAGE_SHADOW_ALPHA))
                 pygame.draw.polygon(self.foliage_shadow_mask, (0, 0, 0, 0), [self.to_screen(x, y) for x, y in self.foliage_shadow_outline])
                 # Keep the stronger shadow: foliage must never reveal an opaque sight blocker.
                 self.visibility_mask.blit(self.foliage_shadow_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
@@ -1915,15 +1121,15 @@ class CustomBattleScreen(Screen):
         if self.preview_intro_started is None:
             return
         elapsed = (pygame.time.get_ticks() - self.preview_intro_started) / 1000.0
-        opening_at = PREVIEW_SLIDE_IN_SECONDS + PREVIEW_HOLD_SECONDS
+        opening_at = layout.PREVIEW_SLIDE_IN_SECONDS + layout.PREVIEW_HOLD_SECONDS
         # Check both boundaries in order, even if a slow frame crosses both.
-        if self.preview_intro_stage == 0 and elapsed >= PREVIEW_SLIDE_IN_SECONDS:
+        if self.preview_intro_stage == 0 and elapsed >= layout.PREVIEW_SLIDE_IN_SECONDS:
             sound_effects.play_ui_sound("select_unit_filter")
             self.preview_intro_stage = 1
         if self.preview_intro_stage == 1 and elapsed >= opening_at:
             sound_effects.play_ui_sound("open_music")
             self.preview_intro_stage = 2
-        if elapsed >= opening_at + PREVIEW_SLIDE_OUT_SECONDS:
+        if elapsed >= opening_at + layout.PREVIEW_SLIDE_OUT_SECONDS:
             self.preview_intro_stage = None
             self.preview_intro_started = None
 
@@ -1939,11 +1145,11 @@ class CustomBattleScreen(Screen):
         if self.preview_intro_stage == 2:
             # Reveal the roster preview only as the bars move apart.
             super().draw(surface)
-            elapsed -= PREVIEW_SLIDE_IN_SECONDS + PREVIEW_HOLD_SECONDS
-            shown = 1.0 - min(1.0, max(0.0, elapsed / PREVIEW_SLIDE_OUT_SECONDS))
+            elapsed -= layout.PREVIEW_SLIDE_IN_SECONDS + layout.PREVIEW_HOLD_SECONDS
+            shown = 1.0 - min(1.0, max(0.0, elapsed / layout.PREVIEW_SLIDE_OUT_SECONDS))
         else:
             surface.fill((0, 0, 0))
-            shown = min(1.0, max(0.0, elapsed / PREVIEW_SLIDE_IN_SECONDS))
+            shown = min(1.0, max(0.0, elapsed / layout.PREVIEW_SLIDE_IN_SECONDS))
         top_height = c.SCREEN_HEIGHT // 2
         bottom_height = c.SCREEN_HEIGHT - top_height
         bars = (
@@ -1951,450 +1157,20 @@ class CustomBattleScreen(Screen):
             pygame.Rect(0, c.SCREEN_HEIGHT - round(bottom_height * shown), c.SCREEN_WIDTH, bottom_height),
         )
         for rect in bars:
-            ui_elements.draw_pixel_panel(surface, rect, PREVIEW_BAR_COLOR, PREVIEW_BAR_BORDER,
-                                         gradient_strength=PREVIEW_BAR_GRADIENT_STRENGTH)
-
-    def _card_key(self, side, unit):
-        return (self.mode, self.terrain, side, unit["type"], unit["owner"], unit["health"], unit["max_health"])
-
-    @staticmethod
-    def _bar_geometry():
-        """The health bar rect and the flag's x, in card coordinates; the flag sits right of the bar, under the icon."""
-        flag_x = CARD_INSET + CARD_LEFT_WIDTH - CARD_BAR_FLAG_SIZE[0]
-        bar = pygame.Rect(CARD_INSET, CARD_BAR_TOP, flag_x - CARD_BAR_FLAG_GAP - CARD_INSET, CARD_BAR_HEIGHT)
-        return bar, flag_x
-
-    def _draw_health_bar(self, card, unit):
-        bar, flag_x = self._bar_geometry()
-        pygame.draw.rect(card, OUTLINE_COLOR, bar)
-        ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
-        fill = pygame.Rect(bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2)
-        _draw_health_fill(card, fill, ratio)
-        flag_icons.draw_flag(card, unit["owner"], self.country_data, flag_x,
-                             bar.centery - CARD_BAR_FLAG_SIZE[1] // 2, size=CARD_BAR_FLAG_SIZE)
-
-    def _cache_card(self, side, unit):
-        """Edit Battle and preview cards share one size: the icon over the health bar and flag on the left,
-        and health, attack, and defense on the right. Edit Battle adds the unit name beside the gear button."""
-        key = self._card_key(side, unit)
-        if key not in self.card_surfaces:
-            card = pygame.Surface(CARD_SIZE, pygame.SRCALPHA)
-            if not self._roster_reorderable(side):
-                ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
-            name = unit["type"]
-            font = fonts.get("tiny")
-            icon_x = CARD_INSET + CARD_LEFT_WIDTH // 2
-            if self.mode == "preview":
-                # Preview shows no unit name, so the unit symbol takes the full height above the bar.
-                icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
-                                                country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
-                if icon is not None:
-                    card.blit(icon, icon.get_rect(center=(icon_x, PREVIEW_ICON_TOP + PREVIEW_CARD_ICON_SIZE[1] // 2)))
-                stats_top = PREVIEW_STATS_TOP
-            else:
-                shape = combat.unit_shape(name, self.library)
-                width, height = UNIT_SHAPE_SIZES[shape]
-                icon_scale = min(EDIT_ICON_MAX_SCALE, EDIT_ICON_SIZE[0] / width, EDIT_ICON_SIZE[1] / height)
-                draw_unit_shape(card, shape, (icon_x, EDIT_ICON_TOP + EDIT_ICON_SIZE[1] // 2),
-                                0 if side == 0 else math.pi, TEAM_COLORS[side], scale=icon_scale,
-                                artwork=self.battle_artwork[name])
-                # One line beside the gear button; longer names end in an ellipsis.
-                label = queries.get_unit_display_name(name, self.library)
-                name_width = CARD_SIZE[0] - 2 * CARD_INSET - CARD_EDIT_SIZE - CARD_EDIT_INSET
-                card.blit(font.render(fit_text(label, font, name_width), True, c.UI_TEXT_BRIGHT), (CARD_INSET, CARD_NAME_TOP))
-                stats_top = EDIT_STATS_TOP
-            self._draw_health_bar(card, unit)
-            attack = combat.division_attack(unit, self.library)
-            entries = [(icon, queries.format_number(value)) for icon, value in (
-                (c.ICON_HEALTH, unit["health"]), (c.ICON_ATTACK, attack), (c.ICON_DEFENSE, unit["defense"]))]
-            # A one-pixel row width puts each stat on its own line.
-            ui_elements.draw_wrapped_icon_row(
-                card, font, entries, CARD_SIZE[0] - CARD_STATS_WIDTH, stats_top, c.UI_TEXT_LIGHT,
-                1, line_height=CARD_STAT_ROW_HEIGHT, icon_size=CARD_STAT_ICON_SIZE)
-            self.card_surfaces[key] = card
-        return self.card_surfaces[key]
-
-    def _draw_roster_card(self, surface, rect, side, unit, *, hovered=False, pressed=False, selected=False):
-        if self._roster_reorderable(side):
-            color = c.UI_COLORS["blue" if side == 0 else "red"][0]
-            if side == 0 and self.controlled_index is not None and unit is self.rosters[0][self.controlled_index]:
-                color = tuple(min(255, channel + CONTROLLED_CARD_BRIGHTNESS) for channel in color)
-            ui_elements.draw_pixel_button(surface, rect, color, hovered=hovered, pressed=pressed, selected=selected)
-        surface.blit(self.card_surfaces[self._card_key(side, unit)], rect)
-
-    def _draw_rosters(self, surface):
-        pointer = pygame.mouse.get_pos()
-        for side, top in enumerate(PANEL_TOPS):
-            panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT)
-            ui_elements.draw_pixel_panel(surface, panel, (39, 44, 58), (15, 19, 27))
-            surface.blit(self.roster_labels[side], (panel.x + ROSTER_INSET, panel.y + 14))
-            old_clip = surface.get_clip()
-            surface.set_clip(old_clip.clip(self.panes[side]))
-            for index, unit in enumerate(self.rosters[side]):
-                rect = self.card_rect(side, index)
-                if not rect.colliderect(self.panes[side]):
-                    continue
-                if self.drag is not None and self.drag[0] == side and self.drag[1] == index and self.drag[3]:
-                    continue
-                pressed = self.drag is not None and self.drag[:2] == [side, index]
-                selected = self.selected[side] == index or index in self.group[side]
-                hovered = self.panes[side].collidepoint(pointer) and rect.collidepoint(pointer) and (self.drag is None or pressed)
-                self._draw_roster_card(surface, rect, side, unit, hovered=hovered or (self.mode == "setup" and selected), pressed=pressed, selected=selected)
-                if self.mode == "setup":
-                    button = self.unit_buttons[side, index]
-                    self._position_edit_button(button, rect)
-                    button.draw(surface)
-                if side == 0 and self.controlled_index == index:
-                    draw_player_arrow(surface, (rect.x + CARD_INSET + CARD_LEFT_WIDTH // 2, rect.y + CONTROLLED_ARROW_Y), 0)
-            surface.set_clip(old_clip)
-            self.draw_list_scrollbar(surface, self.panes[side].x, self.panes[side].bottom + 10,
-                                     ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, **self._scroll_options(side))
-        if self.drag is not None and self.drag[3]:
-            side, index, origin, active = self.drag
-            card = self.card_surfaces[self._card_key(side, self.rosters[side][index])]
-            rect = card.get_rect(center=pygame.mouse.get_pos())
-            self._draw_roster_card(surface, rect, side, self.rosters[side][index], hovered=True, pressed=True)
-            if self.mode == "setup":
-                button = self.unit_buttons[side, index]
-                self._position_edit_button(button, rect)
-                button.draw(surface)
-            if side == 0 and self.controlled_index == index:
-                draw_player_arrow(surface, (rect.x + CARD_INSET + CARD_LEFT_WIDTH // 2, rect.y + CONTROLLED_ARROW_Y), 0)
-        if self.marquee is not None:
-            side, origin, current = self.marquee
-            if math.dist(origin, current) >= DRAG_THRESHOLD:
-                pygame.draw.rect(surface, TEAM_COLORS[side], self._marquee_rect(origin, current), 1)
-
-    def _draw_controls(self, surface, fighter, center):
-        """Range, firing cone, gun direction, heading arrow, and reload for the controlled sub-unit only."""
-        zoom = self.zoom
-        slots = range(len(naval.mounts(fighter.shape))) if fighter.naval else (0,)
-        for slot in slots:
-            bearing, cone = naval.sector(fighter, slot) if fighter.naval else (fighter.angle, combat.firing_cone(fighter.shape))
-            origin = self.to_screen(*naval.mount_position(fighter, slot)) if fighter.naval else center
-            reach = round(fighter.weapon(slot).get("range", combat.WEAPON_RANGE) * zoom)
-            if cone is None:
-                pygame.draw.circle(surface, RANGE_COLOR, origin, reach, 1)
-            else:
-                steps = max(1, math.ceil(cone / CONE_ARC_STEP))
-                start = bearing - cone / 2
-                edge = [(origin[0] + math.cos(start + cone * step / steps) * reach, origin[1] + math.sin(start + cone * step / steps) * reach) for step in range(steps + 1)]
-                pygame.draw.lines(surface, RANGE_COLOR, True, [origin, *edge])
-            aim = fighter.weapon_aim(slot)
-            end = (origin[0] + math.cos(aim) * reach, origin[1] + math.sin(aim) * reach)
-            pygame.draw.line(surface, AIM_LINE_COLOR, origin, end, 1)
-        indicator_scale = max(MIN_PLAYER_INDICATOR_SCALE, zoom)
-        pygame.draw.circle(surface, PLAYER_COLOR, center, max(PLAYER_RING_RADIUS, fighter.radius + 4) * indicator_scale, 2)
-        draw_player_arrow(surface, center, fighter.angle,
-                          fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=indicator_scale)
-        for slot in (0, 1):
-            if fighter.weapon(slot) is None or fighter.weapon_cooldown(slot) <= 0:
-                continue
-            # The ring fills clockwise from the top as the weapon reloads.
-            loaded = max(0.0, min(1.0, 1.0 - fighter.weapon_cooldown(slot) / fighter.reload_duration(slot)))
-            radius = (max(RELOAD_RING_RADIUS, fighter.radius + 8) + slot * 5) * indicator_scale
-            steps = max(2, math.ceil(math.tau * loaded / CONE_ARC_STEP))
-            ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * radius,
-                     center[1] + math.sin(-math.pi / 2 + math.tau * loaded * step / steps) * radius)
-                    for step in range(steps + 1)]
-            pygame.draw.lines(surface, RELOAD_COLOR if not slot else PLAYER_COLOR, False, ring, 2)
-
-    def _draw_grass(self, surface):
-        """The battlefield and its faint, fixed checkerboard; anything past its edges is dark."""
-        surface.fill(OFF_FIELD_COLOR)
-        zoom = self.zoom
-        width, height = self.simulation.arena_size
-        left, top = self.to_screen(0, 0)
-        right, bottom = self.to_screen(width, height)
-        field = pygame.Rect(left, top, right - left, bottom - top)
-        color = TERRAIN_COLORS[self.simulation.battlefield.terrain]
-        check_color = tuple(min(255, channel + 4) for channel in color)
-        surface.fill(color, field)
-        span_width, span_height = self._view_span()
-        columns = range(max(0, int(self.camera[0] // GRASS_TILE)),
-                        min(math.ceil(width / GRASS_TILE), math.ceil((self.camera[0] + span_width) / GRASS_TILE)))
-        rows = range(max(0, int(self.camera[1] // GRASS_TILE)),
-                     min(math.ceil(height / GRASS_TILE), math.ceil((self.camera[1] + span_height) / GRASS_TILE)))
-        # Squares sit on the battlefield, so they pan and zoom with it but never animate.
-        edges_x = {column: (round((column * GRASS_TILE - self.camera[0]) * zoom),
-                            round((min(width, (column + 1) * GRASS_TILE) - self.camera[0]) * zoom))
-                   for column in columns}
-        for row in rows:
-            y0 = round((row * GRASS_TILE - self.camera[1]) * zoom)
-            y1 = round((min(height, (row + 1) * GRASS_TILE) - self.camera[1]) * zoom)
-            for column in columns:
-                if (row + column) % 2:
-                    x0, x1 = edges_x[column]
-                    surface.fill(check_color, (x0, y0, x1 - x0, y1 - y0))
-        pygame.draw.rect(surface, OUTLINE_COLOR, field.inflate(6, 6), 3)
-
-    def _trunk_sprite(self, size, width):
-        """A trunk image scaled to its hitbox width at the current zoom."""
-        source = _trunk_art(size)
-        pixels = max(2, round(width * self.zoom))
-        key = "trunk", size, pixels
-        if key not in self.terrain_sprites:
-            height = max(2, round(source.get_height() * pixels / source.get_width()))
-            self.terrain_sprites[key] = pygame.transform.scale(source, (pixels, height))
-        return self.terrain_sprites[key]
-
-    def _see_through_foliage(self, radius, color):
-        """A foliage circle at FOLIAGE_ALPHA, so the sub-units and trunk beneath it show faintly."""
-        key = "foliage", radius, color
-        if key not in self.terrain_sprites:
-            sprite = pygame.Surface((radius * 2 + 1, radius * 2 + 1), pygame.SRCALPHA)
-            pygame.draw.circle(sprite, color, (radius, radius), radius)
-            sprite.set_alpha(FOLIAGE_ALPHA)
-            self.terrain_sprites[key] = sprite
-        return self.terrain_sprites[key]
-
-    def _cache_terrain_art(self):
-        """Cache terrain artwork at geometry/zoom changes; drawing only places surfaces.
-
-        Ground features and tree trunks draw beneath units. Foliage draws above them as the canopy.
-        """
-        field = self.simulation.battlefield
-        self.terrain_art_key = id(field), field.revision, self.zoom
-        self.terrain_art = []
-        self.canopy_art = []
-        for feature in sorted(field.features, key=lambda feature: feature.kind == "tree"):
-            if feature.destroyed:
-                continue
-            if feature.kind == "tree":
-                self.terrain_art.append((feature, self._trunk_sprite(feature.trunk, feature.radius * 2)))
-                # Only the green channel varies, so every tree stays a shade of FOLIAGE_COLOR.
-                red, green, blue = FOLIAGE_COLOR
-                color = red, max(0, min(255, green + round(feature.shade * FOLIAGE_GREEN_VARIATION))), blue
-                radius = max(1, round(feature.foliage_radius * self.zoom))
-                self.canopy_art.append((feature, self._see_through_foliage(radius, color)))
-                continue
-            radius = max(2, round(feature.radius * self.zoom))
-            key = feature.kind, radius, feature.height if feature.kind == "hill" else 0
-            if key not in self.terrain_sprites:
-                art = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
-                if feature.kind == "hill":
-                    # Each contour represents the same height, so taller mounds
-                    # have more bands. Mountain mounds keep their brown palette.
-                    bands = [(1.0 - band * HILL_CONTOUR_HEIGHT / feature.height,
-                              tuple(max(0, min(255, channel + HILL_BASE_SHADE + band * HILL_CONTOUR_SHADE))
-                                    for channel in TERRAIN_COLORS[field.terrain]))
-                             for band in range(math.ceil(feature.height / HILL_CONTOUR_HEIGHT))]
-                else:
-                    colors = FEATURE_COLORS[feature.kind]
-                    bands = [(1.0 - band / (len(colors) + 1), color) for band, color in enumerate(colors)]
-                for fraction, color in bands:
-                    size = radius * fraction
-                    points = []
-                    step = max(1, round(FEATURE_PIXEL_STEP * self.zoom))
-                    for index in range(FEATURE_OUTLINE_POINTS):
-                        angle = math.tau * index / FEATURE_OUTLINE_POINTS
-                        points.append((radius + round(math.cos(angle) * size / step) * step,
-                                       radius + round(math.sin(angle) * size / step) * step))
-                    pygame.draw.polygon(art, color, points)
-                self.terrain_sprites[key] = art
-            self.terrain_art.append((feature, self.terrain_sprites[key]))
-    def _draw_terrain(self, surface):
-        visible = surface.get_rect()
-        for feature, art in self.terrain_art:
-            rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
-            if rect.colliderect(visible):
-                surface.blit(art, rect)
-
-    def _draw_canopy(self, surface):
-        """Draw every tree's cached, partly transparent foliage above units."""
-        visible = surface.get_rect()
-        for feature, art in self.canopy_art:
-            rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
-            if rect.colliderect(visible):
-                surface.blit(art, rect)
-
-    def _draw_death_explosions(self, surface, limited_sight):
-        if not self.death_explosions:
-            return
-        diameter = max(3, math.ceil(DEATH_EXPLOSION_RADIUS * self.zoom) * 2 + 1)
-        if self.death_explosion_circle is None or self.death_explosion_circle.get_width() != diameter:
-            self.death_explosion_circle = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        for fighter, age, (circle_color, colors), point in self.death_explosions:
-            if limited_sight and id(fighter) not in self.visible_fighters:
-                continue
-            progress = age / DEATH_EXPLOSION_SECONDS
-            center = self.to_screen(*point)
-            radius = DEATH_EXPLOSION_RADIUS * progress * self.zoom
-            circle = self.death_explosion_circle
-            circle.fill((0, 0, 0, 0))
-            pygame.draw.circle(circle, (*circle_color, round(DEATH_EXPLOSION_CIRCLE_ALPHA * (1 - progress))), (diameter // 2, diameter // 2), max(1, round(radius)))
-            surface.blit(circle, circle.get_rect(center=center))
-            size = max(1, round(DEATH_EXPLOSION_PARTICLE_SIZE * (1 - progress) * self.zoom))
-            color = colors[min(len(colors) - 1, int(progress * len(colors)))]
-            for dx, dy in DEATH_EXPLOSION_OFFSETS:
-                rect = pygame.Rect(0, 0, size, size)
-                rect.center = (round(center[0] + dx * radius), round(center[1] + dy * radius))
-                DEATH_EXPLOSION_DRAW_PARTICLE(surface, color, rect)
-
-    def _draw_battle(self, surface):
-        self._draw_grass(surface)
-        self._draw_terrain(surface)
-        zoom = self.zoom
-        # Shapes partly on screen still draw; the widest shape fits inside this margin.
-        margin = math.ceil(140 * zoom)
-        visible = self.view_rect().inflate(margin, margin)
-        bar_size = (round(28 * zoom), round(4 * zoom))
-        flag_size = tuple(max(2, round(side * zoom)) for side in BATTLE_FLAG_SIZE)
-        controlled = self.simulation.controlled
-        limited_sight = self.mode == "battle" and controlled is not None and controlled.alive and self.visibility_mask is not None
-        labeled = []  # Living sub-units whose health bars and flags draw above the foliage.
-        for fighter in self.simulation.fighters:
-            if limited_sight and id(fighter) not in self.visible_fighters:
-                continue
-            center = self.to_screen(fighter.x, fighter.y)
-            if not visible.collidepoint(center):
-                continue
-            if not fighter.alive:
-                draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
-                                scale=zoom, aim=fighter.aim, secondary_aim=fighter.secondary_aim, artwork=self.battle_artwork[fighter.data["type"]], alpha=SUBMARINE_ALPHA if fighter.shape == "submarine" else 255)
-                continue
-            scale = zoom
-            draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
-                            scale=scale, aim=fighter.aim,
-                            artwork=self.battle_artwork[fighter.data["type"]],
-                            recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS, secondary_aim=fighter.secondary_aim, mount_recoils=fighter.mount_recoils, alpha=SUBMARINE_ALPHA if fighter.shape == "submarine" else 255)
-            if fighter.naval:
-                for slot in range(len(naval.mounts(fighter.shape))):
-                    if fighter.mount_muzzles[slot] > 0:
-                        tip = self.to_screen(*naval.muzzle_position(fighter, slot))
-                        projectile = fighter.weapon(slot)["projectile"]
-                        flash = max(2, round((2 if projectile == "bullet" else 5) * scale))
-                        color = {"torpedo": TORPEDO_WAKE_COLOR, "bullet": SHOT_COLOR}.get(projectile, ARTILLERY_SHOT_COLOR)
-                        pygame.draw.rect(surface, color, (tip[0] - flash, tip[1] - flash, flash * 2, flash * 2))
-            elif fighter.muzzle > 0:
-                shell = fighter.weapon(fighter.fired_weapon)["shell"]
-                length = UNIT_SHAPE_SIZES[fighter.shape][0] / 2
-                tip = (round(center[0] + math.cos(fighter.aim) * length * scale),
-                       round(center[1] + math.sin(fighter.aim) * length * scale))
-                flash = max(2, round((5 if shell else 2) * scale))
-                pygame.draw.rect(surface, TANK_SHOT_COLOR if shell else SHOT_COLOR,
-                                 (tip[0] - flash, tip[1] - flash, flash * 2, flash * 2))
-            labeled.append((fighter, center, scale))
-        line_width = max(1, round(SHOT_WIDTH * zoom))
-        tank_line_width = max(2, round(TANK_SHOT_WIDTH * zoom))
-        for shot in self.simulation.projectiles:
-            head = self.to_screen(shot.x, shot.y)
-            if shot.kind == "artillery_shell":
-                elevated = (head[0], head[1] - round(max(0.0, shot.height) * SHELL_HEIGHT_DRAW_SCALE * zoom))
-                if visible.collidepoint(head) or visible.collidepoint(elevated):
-                    size = max(2, round(4 * zoom))
-                    pygame.draw.ellipse(surface, ARTILLERY_SHADOW_COLOR, (head[0] - size, head[1] - size // 2, size * 2, size))
-                    pygame.draw.rect(surface, ARTILLERY_SHOT_COLOR, (elevated[0] - size // 2, elevated[1] - size // 2, size, size))
-                continue
-            if shot.kind == "torpedo":
-                if visible.collidepoint(head):
-                    speed = math.hypot(shot.vx, shot.vy) or 1.0
-                    direction = shot.vx / speed, shot.vy / speed
-                    tail = (head[0] - direction[0] * 36 * zoom, head[1] - direction[1] * 36 * zoom)
-                    body = (head[0] - direction[0] * 12 * zoom, head[1] - direction[1] * 12 * zoom)
-                    pygame.draw.line(surface, TORPEDO_WAKE_COLOR, tail, head, max(1, round(3 * zoom)))
-                    pygame.draw.line(surface, TORPEDO_COLOR, body, head, max(2, round(5 * zoom)))
-                continue
-            if not visible.collidepoint(head):
-                continue
-            tail_length = SHOT_TAIL * zoom / (math.hypot(shot.vx, shot.vy) or 1.0)
-            tail = (round(head[0] - shot.vx * tail_length), round(head[1] - shot.vy * tail_length))
-            tank_shell = shot.weapon_data["shell"]
-            pygame.draw.line(surface, TANK_SHOT_COLOR if tank_shell else SHOT_COLOR, tail, head,
-                             tank_line_width if tank_shell else line_width)
-        for x, y, remaining, shell in self.simulation.impacts:
-            point = self.to_screen(x, y)
-            size = max(1, round((7 if shell else 3) * zoom * remaining / c.TACTICAL_IMPACT_SECONDS))
-            color = SPLASH_COLOR if shell in {"artillery_shell", "torpedo"} else TANK_SHOT_COLOR if shell else SHOT_COLOR
-            pygame.draw.rect(surface, color,
-                             (point[0] - size, point[1] - size, size * 2, size * 2), max(1, round(zoom)))
-        self._draw_death_explosions(surface, limited_sight)
-        self._draw_canopy(surface)
-        for fighter, center, scale in labeled:
-            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round((fighter.radius + 8 if fighter.naval else 23) * scale), *bar_size)
-            pygame.draw.rect(surface, OUTLINE_COLOR, bar)
-            ratio = max(0.0, min(1.0, fighter.data["health"] / fighter.data["max_health"]))
-            _draw_health_fill(surface, pygame.Rect(bar.x, bar.y, round(bar.width * ratio), bar.height), ratio)
-            flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
-                                 bar.right + round(BATTLE_FLAG_GAP * zoom),
-                                 bar.centery - flag_size[1] // 2, size=flag_size)
-        if controlled is not None and controlled.alive:
-            self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
-            self._draw_edge_indicators(surface, controlled)
-        if limited_sight:
-            # Cover terrain, bodies, labels, effects, and aiming guides together.
-            # Screen controls and battle readouts are drawn above this world mask.
-            surface.blit(self.visibility_mask, (0, 0))
-
-    def _draw_edge_indicators(self, surface, controlled):
-        """Group off-screen divisions by direction; show the nearest distance in each group."""
-        bounds = self.view_rect().inflate(-EDGE_INDICATOR_INSET * 2, -EDGE_INDICATOR_INSET * 2)
-        bounds.top = max(bounds.top, EDGE_INDICATOR_TOP)
-        origin = pygame.Vector2(self.to_screen(controlled.x, controlled.y))
-        origin.x = max(bounds.left, min(bounds.right - 1, origin.x))
-        origin.y = max(bounds.top, min(bounds.bottom - 1, origin.y))
-        view = self.view_rect()
-        indicators = {}
-        for division in self.simulation.divisions:
-            enemies = [unit for unit in division if unit.alive and unit.side != controlled.side and id(unit) in self.visible_fighters]
-            if not enemies or any(view.collidepoint(self.to_screen(unit.x, unit.y)) for unit in enemies):
-                continue
-            enemy = min(enemies, key=lambda unit: math.hypot(unit.x - controlled.x, unit.y - controlled.y))
-            direction = pygame.Vector2(self.to_screen(enemy.x, enemy.y)) - origin
-            if direction.length_squared() == 0:
-                continue
-            direction.normalize_ip()
-            horizontal = math.inf
-            vertical = math.inf
-            if direction.x:
-                horizontal = ((bounds.right - 1 - origin.x) if direction.x > 0 else bounds.left - origin.x) / direction.x
-            if direction.y:
-                vertical = ((bounds.bottom - 1 - origin.y) if direction.y > 0 else bounds.top - origin.y) / direction.y
-            point = origin + direction * min(horizontal, vertical)
-            edge = ("right" if direction.x > 0 else "left") if horizontal <= vertical else ("bottom" if direction.y > 0 else "top")
-            along = point.y if horizontal <= vertical else point.x
-            key = edge, round(along / EDGE_INDICATOR_SPACING)
-            distance = math.hypot(enemy.x - controlled.x, enemy.y - controlled.y)
-            count = 1
-            if key in indicators:
-                previous = indicators[key]
-                count += previous[3]
-                if previous[2] < distance:
-                    point, direction, distance = previous[:3]
-            indicators[key] = point, direction, distance, count
-        for point, direction, distance, count in indicators.values():
-            sideways = pygame.Vector2(-direction.y, direction.x)
-            size = EDGE_INDICATOR_SIZE
-            points = [point, point - direction * size * 2 + sideways * size,
-                      point - direction * size * 2 - sideways * size]
-            pygame.draw.polygon(surface, OUTLINE_COLOR, points)
-            color = TEAM_COLORS[1 - controlled.side]
-            pygame.draw.polygon(surface, color, points, 2)
-            distance_label = str(round(distance / EDGE_INDICATOR_LABEL_STEP) * EDGE_INDICATOR_LABEL_STEP)
-            caption = f"{count}x {distance_label}" if count > 1 else distance_label
-            label = fonts.get("small").render(caption, True, color)
-            label_rect = label.get_rect(center=point - direction * size * 3)
-            label_rect.clamp_ip(view)
-            surface.blit(label, label_rect)
-
-    def draw_background(self, surface):
-        """Keep the battlefield behind combat and the finished battle's result controls."""
-        if self.mode in {"battle", "result"}:
-            self._draw_battle(surface)
-        else:
-            super().draw_background(surface)
+            ui_elements.draw_pixel_panel(surface, rect, layout.PREVIEW_BAR_COLOR, layout.PREVIEW_BAR_BORDER,
+                                         gradient_strength=layout.PREVIEW_BAR_GRADIENT_STRENGTH)
 
     def additional_draw(self, surface):
         if self.mode in {"setup", "preview"}:
             self._draw_rosters(surface)
             if self.mode == "setup" and self.forecast_surface is not None:
                 surface.blit(self.forecast_surface,
-                             self.forecast_surface.get_rect(center=(c.SCREEN_WIDTH // 2, FORECAST_CENTER_Y)))
+                             self.forecast_surface.get_rect(center=(c.SCREEN_WIDTH // 2, layout.FORECAST_CENTER_Y)))
             return
         center_x = c.SCREEN_WIDTH // 2
         for image, center in zip(self.status_surfaces, (
-                (center_x - BATTLE_STATUS_SIDE_OFFSET, BATTLE_STATUS_Y),
-                (center_x + BATTLE_STATUS_SIDE_OFFSET, BATTLE_STATUS_Y), (center_x, BATTLE_STATUS_Y))):
+                (center_x - layout.BATTLE_STATUS_SIDE_OFFSET, layout.BATTLE_STATUS_Y),
+                (center_x + layout.BATTLE_STATUS_SIDE_OFFSET, layout.BATTLE_STATUS_Y), (center_x, layout.BATTLE_STATUS_Y))):
             surface.blit(image, image.get_rect(center=center))
         if self.kill_feed_surface is not None:
             surface.blit(self.kill_feed_surface, self.kill_feed_rect)
@@ -2402,84 +1178,21 @@ class CustomBattleScreen(Screen):
         if self.touch_mode and self.mode == "battle" and controlled is not None and controlled.alive:
             for role in ("drive", "aim"):
                 rect = self._touch_pad_rect(role)
-                ui_elements.draw_pixel_panel(surface, rect, CONTROL_STATS_COLOR, CONTROL_STATS_BORDER, recessed=True)
+                ui_elements.draw_pixel_panel(surface, rect, layout.CONTROL_STATS_COLOR, layout.CONTROL_STATS_BORDER, recessed=True)
                 axes = self._touch_axes(role)
                 knob = pygame.Rect(0, 0, 28, 28)
                 knob.center = (rect.centerx + axes.x * (rect.width / 2 - knob.width / 2),
                                rect.centery + axes.y * (rect.height / 2 - knob.height / 2))
-                ui_elements.draw_pixel_panel(surface, knob, TEAM_COLORS[0] if role == "drive" else PLAYER_COLOR,
-                                             CONTROL_STATS_BORDER)
+                ui_elements.draw_pixel_panel(surface, knob, layout.TEAM_COLORS[0] if role == "drive" else layout.PLAYER_COLOR,
+                                             layout.CONTROL_STATS_BORDER)
         if (self.mode == "battle" and controlled is not None and controlled.alive
                 and self.controlled_stats_surface is not None):
             panel = self.controlled_stats_surface
-            surface.blit(panel, panel.get_rect(bottomleft=(SCREEN_EDGE_MARGIN,
-                                                          surface.get_height() - SCREEN_EDGE_MARGIN)))
+            surface.blit(panel, panel.get_rect(bottomleft=(layout.SCREEN_EDGE_MARGIN,
+                                                          surface.get_height() - layout.SCREEN_EDGE_MARGIN)))
         if self.mode == "battle" and self.simulation.paused:
             rect = pygame.Rect(0, 0, 210, 70)
             rect.center = self.view_rect().center
             ui_elements.draw_pixel_panel(surface, rect, (39, 44, 58), (15, 19, 27))
             label = fonts.get("heading2").render("Paused", True, c.UI_TEXT_BRIGHT)
             surface.blit(label, label.get_rect(center=rect.center))
-
-
-class CustomBattleUnitEditor(ModalScreen):
-    """Edit one custom roster entry, or a selected group, with the country picker and an HP slider."""
-
-    PANEL_SIZE = (460, 250)
-    ROW_TOP = 70
-    ROW_HEIGHT = 42
-    ROW_GAP = 12
-    DONE_SIZE = (100, 34)
-    SLIDER_OFFSET = ROW_HEIGHT + ROW_GAP + 28
-    DONE_GAP = 40
-
-    def __init__(self, battle_screen, side, units):
-        super().__init__(battle_screen, "Unit Settings" if len(units) == 1 else "Group Settings")
-        self.battle_screen = battle_screen
-        self.side = side
-        self.units = units
-        self.refresh_ui()
-
-    def _health_percent(self, unit):
-        return unit["health"] / unit["max_health"] * 100
-
-    def refresh_ui(self):
-        x = self.panel_rect.x + self.PAD
-        y = self.panel_rect.y + self.ROW_TOP
-        width = self.panel_rect.width - self.PAD * 2
-        owners = {unit["owner"] for unit in self.units}
-        percents = {round(self._health_percent(unit)) for unit in self.units}
-        country = (queries.get_country_display_name(next(iter(owners)), self.battle_screen.country_data)
-                   if len(owners) == 1 else MIXED_LABEL)
-        health = f"{next(iter(percents))}%" if len(percents) == 1 else MIXED_LABEL
-        buttons = [
-            Button(x, y, (width, self.ROW_HEIGHT), "grey", f"Nationality: {country}",
-                   self.choose_country, font_size=18),
-            Button(self.panel_rect.centerx - self.DONE_SIZE[0] // 2,
-                   y + self.SLIDER_OFFSET + self.DONE_GAP, self.DONE_SIZE, "blue", "Done",
-                   self.exit_screen, font_size=18, sound_kind="back"),
-        ]
-        for button in buttons:
-            button.fit_text = True
-            button.fit_single_line = True
-        # The label is drawn above the track, so the slider sits below that label's room.
-        self.hp_slider = Slider(x, y + self.SLIDER_OFFSET, width, f"Starting HP: {health}",
-                                self._health_percent(self.units[0]), self.set_percent,
-                                visual_max=100, allowed_max=100)
-        self.elements = [buttons[0], self.hp_slider, buttons[1]]
-
-    def set_percent(self, value):
-        percent = max(1, round(value))
-        if self.battle_screen.set_unit_options(self.side, self.units, health_percent=percent):
-            # Keep the dragged slider alive instead of rebuilding the controls.
-            self.hp_slider.text = f"Starting HP: {percent}%"
-
-    def _set_options(self, **options):
-        if self.battle_screen.set_unit_options(self.side, self.units, **options):
-            self.refresh_ui()
-
-    def choose_country(self):
-        pickers.open_listbox_selector(
-            self, "Nationality", "",
-            queries.country_picker_items(self.battle_screen.nationalities, self.battle_screen.country_data),
-            lambda country: self._set_options(owner=country))

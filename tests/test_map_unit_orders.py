@@ -232,7 +232,7 @@ class CombatBubbleClickTests(unittest.TestCase):
         screen = bare_orders_screen()
         screen.map_screen = self.game
         screen.panel_rect = pygame.Rect(500, 0, 100, 300)
-        screen.is_dragging_scrollbar = False
+        screen.scroll.bar_drag = False
         screen.inspect_province = Mock()
         screen.open_battle_panel = Mock()
         self.enterContext(patch.object(map_input, "map_ui_bar_at_position", return_value=False))
@@ -325,9 +325,9 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         screen._row_portrait_tooltips = {0: (first,), (2, 0): (second,)}
         screen.panel_top = 100
         screen.row_height = 40
-        screen.scroll_y = -20
-        screen.scroll_content_rect = pygame.Rect(screen.PANEL_X, screen.panel_top, screen.PANEL_WIDTH, 80)
-        top = screen.panel_top + screen.scroll_y
+        screen.scroll.value = -20
+        screen.scroll.content_rect = pygame.Rect(screen.PANEL_X, screen.panel_top, screen.PANEL_WIDTH, 80)
+        top = screen.panel_top + screen.scroll.value
         first_portrait = screen._unit_row_icon_rect(top)
         second_portrait = screen._unit_row_icon_rect(top + screen.row_height)
 
@@ -454,7 +454,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         screen.map_screen = MapStub()
         screen.target_province = origin
         screen.read_only = False
-        screen.scroll_y = -80
+        screen.scroll.value = -80
         screen.selected_unit_index = 0
         screen.bombarding_unit_index = None
         screen.refresh_ui = lambda: None
@@ -464,7 +464,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         with patch("screens.game.orders.pygame.key.get_mods", return_value=0):
             screen.toggle_selected_unit(second, origin)
 
-        self.assertEqual(screen.scroll_y, -80)
+        self.assertEqual(screen.scroll.value, -80)
         self.assertIs(screen.target_province, origin)
         self.assertEqual(screen.map_screen.selected_ids, {id(second)})
         self.assertEqual([unit for _key, unit, _province, _index in screen._visible_rows()],
@@ -736,8 +736,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.panel_rect = pygame.Rect(800, 100, 200, 300)
-        screen.is_dragging_scrollbar = False
-        screen.is_content_dragging = lambda _attr: False
+        screen.scroll.bar_drag = False
+        screen.is_content_dragging = lambda _scroll=None: False
         screen.read_only = False
 
         with (patch("screens.game.orders.map_input.resolve_map_mouse_gesture_conflict"),
@@ -937,8 +937,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen = bare_orders_screen()
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
         screen.bombarding_unit_index = None
-        screen.is_dragging_scrollbar = False
-        screen.is_content_dragging = lambda _attr: False
+        screen.scroll.bar_drag = False
+        screen.is_content_dragging = lambda _scroll=None: False
         screen.exit_screen = Mock()
         screen.return_to_province_menu = False
         screen.entered_from_combat_bubble = True
@@ -984,8 +984,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
-        screen.is_dragging_scrollbar = False
-        screen.is_content_dragging = lambda _attr: False
+        screen.scroll.bar_drag = False
+        screen.is_content_dragging = lambda _scroll=None: False
         screen.selected_unit_index = None
         screen.read_only = False
         screen._replace_roster_with_selection = lambda: None
@@ -1025,8 +1025,8 @@ class MapOrderGestureTests(unittest.TestCase):
         screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
-        screen.is_dragging_scrollbar = False
-        screen.is_content_dragging = lambda _attr: False
+        screen.scroll.bar_drag = False
+        screen.is_content_dragging = lambda _scroll=None: False
         screen.bombarding_unit_index = None
         screen.refresh_ui = lambda: None
 

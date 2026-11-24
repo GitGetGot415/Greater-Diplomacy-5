@@ -11,6 +11,7 @@ from ui.bars import ui_bars
 from ui.information import feedback_text
 from ui.panels import turn_progress
 from map_logic.diplomacy import diplomacy_processor
+from ui.widgets.scroll_state import ScrollPaneOwner
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.sound_effects import play_ui_sound
 from ui.rendering.font_manager import fonts
@@ -157,10 +158,9 @@ class ScreenLayer:
     def draw(self, surface):
         getattr(self.screen, self.draw_method)(surface)
 
-class Screen:
+class Screen(ScrollPaneOwner):
     bg_color = DEFAULT_BG_COLOR
     reserved_keys = ()
-    _armed_drag_attrs = ()
 
     # Screens layered over the map set this; it drives feedback text and keybind lookup.
     map_screen = None
@@ -179,22 +179,6 @@ class Screen:
     title_y = 40
     title_preset = "heading1"
     title_shadow = False
-
-    # Scroll state for the standard vertical list. Declared here so no screen
-    # has to re-initialise the same five attributes; scroll_by/handle_list_scroll
-    # write instance values over these class defaults on first use.
-    scroll_y = 0
-    max_scroll = 0
-    is_dragging_scrollbar = False
-    scroll_track_rect = None
-    scroll_handle_rect = None
-
-    # Content click-and-drag state (see handle_content_drag) and the rect/guard
-    # a scrollable list publishes for it -- kept separate from the scrollbar's
-    # own drag state above since both gestures can be live on the same list.
-    scroll_content_rect = None
-    content_drag_state = None
-    scroll_click_guard = None
 
     # Optional method taking the surface. It draws row striping and labels inside
     # the scroll clip, under the is_scrollable elements. A screen that defines it
@@ -274,7 +258,6 @@ class Screen:
         """Release UI drag state when touch loses focus or its screen changes."""
         self.cancel_active_drags()
         self._cancel_pressed_elements()
-        self.is_dragging_scrollbar = False
         for element in self.elements:
             if hasattr(element, "dragging"):
                 element.dragging = False
@@ -292,7 +275,7 @@ class Screen:
         extra transient state can clear it before delegating here.
         """
         self.sub_state = state
-        self.scroll_y = 0
+        self.scroll.value = 0
         self.refresh_ui()
 
     def exit_screen(self):
@@ -309,128 +292,90 @@ class Screen:
         play_ui_sound("back")
         self.exit_screen()
 
-    def content_drag_attr_name(self, attr="scroll_y"):
-        """Name of the per-pane content-drag state attribute for a given scroll
-        attr. Content-drag state must be keyed per-pane (not a single shared
-        `content_drag_state`) so a screen with multiple independent scrolling
-        panes -- e.g. the music player's album/track columns, or view_assets'
-        folder/file/preview columns -- doesn't have a drag armed in one pane's
-        content area picked up by a different pane on the next MOUSEMOTION."""
-        return f"_content_drag_state_{attr}"
+    @property
+    def scroll(self):
+        """The screen's standard list pane."""
+        return self.scroll_state("list")
 
-    def is_content_dragging(self, attr="scroll_y"):
-        """Whether a content-drag (see handle_content_drag) is currently armed
-        for the given pane's scroll attr. Callers that gate MOUSEMOTION routing
-        on drag state (rather than going through handle_list_scroll every frame)
-        should use this instead of reading `content_drag_state` directly."""
-        return getattr(self, self.content_drag_attr_name(attr), None) is not None
+    def is_content_dragging(self, scroll=None):
+        """Whether a content drag (see handle_content_drag) is armed on this pane."""
+        return (scroll or self.scroll).content_drag is not None
 
     def cancel_active_drags(self):
-        """Clears any content-drag armed via handle_content_drag mid-gesture.
+        """Releases every pane's scrollbar and content drag mid-gesture.
 
         Call this on a screen right before it gets covered by a pushed modal
         (see ui/modal_stack.push) -- the covering screen steals every event
-        from then on, including the MOUSEBUTTONUP that would normally clear
-        the drag, so without this it's left stuck armed. Once the covering
-        modal closes and this screen starts receiving events again, the very
-        next MOUSEMOTION would otherwise be misread as an active drag with no
+        from then on, including the MOUSEBUTTONUP that would normally end the
+        drag, so without this it's left stuck armed. Once the covering modal
+        closes and this screen starts receiving events again, the very next
+        MOUSEMOTION would otherwise be misread as an active drag with no
         button held, making the content appear to scroll on its own.
         """
-        for drag_attr in self._armed_drag_attrs:
-            setattr(self, drag_attr, None)
+        for scroll in self.scrolls.values():
+            scroll.cancel()
 
-    def scroll_by(self, event, attr="scroll_y", limit_attr="max_scroll", speed=None, axis="y"):
-        """Applies a wheel event to a negative-range scroll offset and clamps it."""
-        delta = -event.x if axis == "x" and event.x else event.y
-        step = delta * (self.scroll_speed if speed is None else speed)
-        limit = getattr(self, limit_attr, 0)
-        setattr(self, attr, max(limit, min(0, getattr(self, attr, 0) + step)))
+    def scroll_by(self, event, scroll=None, speed=None):
+        """Applies a wheel event to a pane and clamps it."""
+        scroll = scroll or self.scroll
+        delta = -event.x if scroll.axis == "x" and event.x else event.y
+        scroll.scroll_by(delta * (self.scroll_speed if speed is None else speed))
         self.refresh_ui()
 
-    def snap_scroll(self, mouse_y, track_y, view_h, attr="scroll_y", limit_attr="max_scroll"):
-        """Jumps a scroll offset to wherever the scrollbar handle was dragged."""
-        setattr(self, attr, ui_bars.calculate_scroll_snap(mouse_y, getattr(self, limit_attr, 0), track_y, view_h))
-        self.refresh_ui()
+    def handle_list_scroll(self, event, scroll=None, speed=None, content=False):
+        """Drives a scrollable pane: wheel, scrollbar grab, drag and release.
 
-    def handle_list_scroll(self, event, speed=None, attr="scroll_y", limit_attr="max_scroll",
-                           track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
-                           drag_attr="is_dragging_scrollbar", content_rect_attr=None, axis="y"):
-        """Drives a scrollable list: wheel, scrollbar grab, drag and release.
-
-        Track geometry is read off the rect the screen published when it drew
-        its scrollbar, so there is nothing to keep in sync by hand. Returns True
+        Track geometry is read off the rects the pane kept when it drew its
+        scrollbar, so there is nothing to keep in sync by hand. Returns True
         when the event was consumed, so callers can skip their own handling.
 
-        Pass `content_rect_attr` (the same rect the list clips to) to also let
-        the user grab the list body itself and drag it -- see handle_content_drag.
-        `axis="x"` uses a horizontal scrollbar and accepts either wheel axis.
+        Pass `content=True` to also let the user grab the pane's content_rect
+        itself and drag it -- see handle_content_drag.
         """
+        scroll = scroll or self.scroll
         if event.type == pygame.MOUSEWHEEL:
-            self.scroll_by(event, attr, limit_attr,
-                           self.list_scroll_speed if speed is None else speed, axis=axis)
+            self.scroll_by(event, scroll, self.list_scroll_speed if speed is None else speed)
             return True
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             # A grab on the handle/track and a content-drag can both arm on the
             # same mouse-down when the content rect overlaps the scrollbar (the
-            # usual case). Clear the handle/track flag here, unconditionally,
+            # usual case). Clear the scrollbar drag here, unconditionally,
             # before the content-drag branch below can return early and skip it
-            # -- otherwise it's left stuck True and the handle free-follows the
+            # -- otherwise it's left stuck and the handle free-follows the
             # mouse on every later motion until another drag happens to mask it.
-            setattr(self, drag_attr, False)
+            scroll.bar_drag = False
 
-        track = getattr(self, track_attr, None)
-        handle = getattr(self, handle_attr, None)
+        track, handle = scroll.track, scroll.handle
         grabbing_scrollbar = (event.type == pygame.MOUSEBUTTONDOWN and track
                               and ((handle and handle.collidepoint(event.pos))
                                    or track.collidepoint(event.pos)))
 
-        # A click that lands on the scrollbar itself must never be allowed
-        # to arm (or keep driving) the content-drag: content-drag moves scroll_y
-        # 1:1 with mouse pixels in *content* space, while the handle is supposed
-        # to snap to the mouse's ratio *along the track*. Since the content is
-        # usually much taller than the track, letting content-drag win once it
-        # crosses its arm threshold makes the handle crawl far slower than the
-        # mouse instead of tracking it -- so it visibly falls behind the longer
-        # you drag. Clearing content_drag_state here keeps the two gestures from
-        # fighting over the same motion events.
-        #
-        # Keyed off `attr` (unique per pane) rather than a single shared
-        # "content_drag_state" -- a screen with more than one scrolling pane
-        # (e.g. the music player's album/track columns) would otherwise have
-        # every pane's content-drag arm/read the *same* attribute, so a drag
-        # started in one pane's content area gets picked up by whichever pane
-        # happens to be checked first on the next MOUSEMOTION, moving a
-        # completely different scrollbar than the one under the mouse.
-        content_drag_attr = self.content_drag_attr_name(attr)
-        if grabbing_scrollbar or getattr(self, drag_attr, False):
-            setattr(self, content_drag_attr, None)
-        elif content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr,
-                                                             drag_attr=content_drag_attr, axis=axis):
+        # A click that lands on the scrollbar itself must never be allowed to
+        # arm (or keep driving) the content-drag: content-drag moves the offset
+        # 1:1 with mouse pixels in *content* space, while the handle follows the
+        # mouse's ratio *along the track*. Since the content is usually much
+        # taller than the track, letting content-drag win once it crosses its
+        # arm threshold makes the handle crawl far slower than the mouse.
+        # Clearing the content drag keeps the two gestures from fighting over
+        # the same motion events.
+        if grabbing_scrollbar or scroll.bar_drag:
+            scroll.content_drag = None
+        elif content and self.handle_content_drag(event, scroll):
             return True
 
         if not track:
             return False
 
-        def snap_to(pos):
-            if axis == "x":
-                value = ui_bars.calculate_scroll_snap_horizontal(
-                    pos[0], 0, -getattr(self, limit_attr, 0), track.left, track.width)
-                setattr(self, attr, -value)
-                self.refresh_ui()
-            else:
-                self.snap_scroll(pos[1], track.top, track.height, attr, limit_attr)
-
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if handle and handle.collidepoint(event.pos):
-                setattr(self, drag_attr, True) # Grabbing the handle drags from where it sits
+            before = scroll.value
+            if scroll.press_scrollbar(event.pos):
+                if scroll.value != before:
+                    self.refresh_ui()
                 return True
-            if track.collidepoint(event.pos):
-                setattr(self, drag_attr, True) # Clicking the bare track jumps to that spot
-                snap_to(event.pos)
-                return True
-        elif event.type == pygame.MOUSEMOTION and getattr(self, drag_attr, False):
-            snap_to(event.pos)
+        elif event.type == pygame.MOUSEMOTION and scroll.bar_drag:
+            scroll.snap(event.pos)
+            self.refresh_ui()
             return True
 
         return False
@@ -442,44 +387,40 @@ class Screen:
             if getattr(el, "is_pressed", False):
                 el.is_pressed = False
 
-    def handle_content_drag(self, event, attr="scroll_y", limit_attr="max_scroll",
-                            rect_attr="scroll_content_rect", drag_attr="content_drag_state",
-                            lo=None, hi=None, threshold=6, invert=False, refresh=True, axis="y"):
-        """Lets the user grab a scrollable region's own content and drag it,
-        alongside whatever wheel/scrollbar-handle scrolling it already has.
+    def handle_content_drag(self, event, scroll=None, lo=None, hi=None, threshold=6, invert=False, refresh=True):
+        """Lets the user grab a pane's own content and drag it, alongside
+        whatever wheel/scrollbar-handle scrolling it already has.
 
-        A small pixel threshold has to be crossed before a press is treated as
-        a drag (and any button pressed under the cursor gets un-armed), so an
-        ordinary click on a button inside the list still registers normally.
-        Dragging down pulls content down. Dragging right pulls horizontal content right.
-        `axis="x"` selects horizontal scrolling.
+        The drag starts inside the pane's content_rect. A small pixel threshold
+        has to be crossed before a press is treated as a drag (and any button
+        pressed under the cursor gets un-armed), so an ordinary click on a
+        button inside the list still registers normally. Dragging down pulls
+        content down. Dragging right pulls horizontal content right.
 
         `lo`/`hi` bound the resulting value; by default `hi` is 0 and `lo` is
-        the list's own `max_scroll`-style limit (the mixin's usual negative-range
-        convention where the offset is added to a row's y). Pass explicit bounds
-        for screens using a 0..max convention instead -- and if that convention
-        *subtracts* the offset from content's y (as the map HUD panels do), pass
+        the pane's own limit (the usual negative-range convention where the
+        offset is added to a row's position). Pass explicit bounds for screens
+        using a 0..max convention instead -- and if that convention *subtracts*
+        the offset from content's position (as the map HUD panels do), pass
         `invert=True` so dragging down still pulls content down.
         Pass `refresh=False` for a screen whose `update()` already repositions
-        scrolled elements every frame off `attr` alone (e.g. a base_y + scroll_y
-        offset), so a full refresh_ui() rebuild isn't needed on every drag pixel.
+        scrolled elements every frame off the offset alone, so a full
+        refresh_ui() rebuild isn't needed on every drag pixel.
         Returns True when the event was consumed as a drag.
         """
-        rect = getattr(self, rect_attr, None)
+        scroll = scroll or self.scroll
+        rect = scroll.content_rect
         if not rect:
             return False
 
-        idx = 0 if axis == "x" else 1
-        state = getattr(self, drag_attr, None)  # None, or [origin, armed]
+        idx = scroll.index
+        state = scroll.content_drag  # None, or [origin, armed]
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and rect.collidepoint(event.pos):
-            setattr(self, drag_attr, [event.pos[idx], False])
-            # Remembered so cancel_active_drags() can find this attr by name --
-            # drag_attr varies per caller/pane, so there's nothing else to scan.
-            self._armed_drag_attrs = {*self._armed_drag_attrs, drag_attr}
+            scroll.content_drag = [event.pos[idx], False]
             return False
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and state is not None:
-            setattr(self, drag_attr, None)
+            scroll.content_drag = None
             return state[1]
         if event.type == pygame.MOUSEMOTION and state is not None:
             origin, armed = state
@@ -488,11 +429,10 @@ class Screen:
                     return False
                 armed = state[1] = True
                 self._cancel_pressed_elements()
-            limit = getattr(self, limit_attr, 0)
-            low = limit if lo is None else lo
+            low = scroll.limit if lo is None else lo
             high = 0 if hi is None else hi
             delta = -event.rel[idx] if invert else event.rel[idx]
-            setattr(self, attr, max(low, min(high, getattr(self, attr, 0) + delta)))
+            scroll.value = max(low, min(high, scroll.value + delta))
             if refresh:
                 self.refresh_ui()
             return True
@@ -528,9 +468,7 @@ class Screen:
     # ---------------------------------------------------------------- #
 
     def layout_list_rows(self, count, row_h, top, view_h=None, pad=0,
-                         cull_top=100, cull_bottom=None,
-                         attr="scroll_y", limit_attr="max_scroll",
-                         guard_attr="scroll_click_guard"):
+                         cull_top=100, cull_bottom=None, scroll=None):
         """Sets the scroll limit for a list and yields (index, y) for visible rows.
 
         Every folder/scenario list in the menus is built this way: derive the
@@ -541,38 +479,39 @@ class Screen:
         around wherever the row actually gets drawn -- otherwise a row that's
         only partially in view will render uncropped past the boundary.
 
-        Also publishes `guard_attr`: a callable a scrolled button/field can set
-        as its `click_guard` so a click landing in that cropped sliver (still
-        inside the row's own rect, but outside the visible boundary) doesn't
-        fire.
+        Also publishes the pane's `guard`: a callable a scrolled button/field
+        can set as its `click_guard` so a click landing in that cropped sliver
+        (still inside the row's own rect, but outside the visible boundary)
+        doesn't fire.
         """
+        scroll = scroll or self.scroll
         if cull_bottom is None:
             cull_bottom = c.SCREEN_HEIGHT - 50
         if view_h is None:
             # Derived from where rows actually get culled, not a magic constant --
-            # keeps max_scroll in lockstep with wherever the caller's clip rect
+            # keeps the limit in lockstep with wherever the caller's clip rect
             # ends, so the last row can always be scrolled fully into view instead
             # of stopping short of the boundary it's drawn against.
             view_h = cull_bottom - top
 
-        setattr(self, limit_attr, min(0, view_h - (count * row_h) - pad))
-        scroll = getattr(self, attr, 0)
-        setattr(self, guard_attr, lambda: cull_top <= pygame.mouse.get_pos()[1] < cull_bottom)
+        scroll.limit = min(0, view_h - (count * row_h) - pad)
+        offset = scroll.value
+        scroll.guard = lambda: cull_top <= pygame.mouse.get_pos()[1] < cull_bottom
 
         for i in range(count):
-            y = top + (i * row_h) + scroll
+            y = top + (i * row_h) + offset
             if y + row_h > cull_top and y < cull_bottom:
                 yield i, y
 
-    def add_list_row(self, element):
+    def add_list_row(self, element, scroll=None):
         """Registers an element built inside a layout_list_rows loop.
 
-        Call this after layout_list_rows has published scroll_click_guard.
-        The element is cropped to scroll_content_rect, and a click on its
+        Call this after layout_list_rows has published the pane's guard. The
+        element is cropped to the pane's content_rect, and a click on its
         cropped part does not fire.
         """
         element.is_scrollable = True
-        element.click_guard = self.scroll_click_guard
+        element.click_guard = (scroll or self.scroll).guard
         self.elements.append(element)
         return element
 
@@ -582,45 +521,31 @@ class Screen:
         Sets the scroll limit from the line count. `color_for` takes a line and
         returns its text color.
         """
-        self.scroll_content_rect = clip_rect
+        scroll = self.scroll
+        scroll.content_rect = clip_rect
         with ui_bars.clip_scroll_region(surface, clip_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+                                        draw_top=scroll.value != 0, draw_bottom=scroll.value > scroll.limit):
             for i, y in self.layout_list_rows(len(lines), line_h, top, view_h=view_h,
                                               cull_top=clip_rect.top, cull_bottom=clip_rect.bottom):
                 surface.blit(font.render(lines[i], True, color_for(lines[i])), (x, y))
 
-    def content_hover_guard(self):
+    def content_hover_guard(self, scroll=None):
         """A `click_guard` for rows a screen laid out by hand rather than through
         layout_list_rows: it keeps a click landing in a row's cropped sliver,
         outside the visible content rect, from firing.
 
-        layout_list_rows publishes the same thing as scroll_click_guard; this is
+        layout_list_rows publishes the same thing as the pane's guard; this is
         for the panels that place their own rows and only need the guard.
         """
-        rect = self.scroll_content_rect
+        rect = (scroll or self.scroll).content_rect
         return lambda: bool(rect) and rect.collidepoint(pygame.mouse.get_pos())
 
-    def draw_list_scrollbar(self, surface, track_x, track_y, view_h, width=15,
-                            attr="scroll_y", limit_attr="max_scroll",
-                            track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
-                            drag_attr=None, content_rect_attr=None, axis="y"):
-        """Draws the list scrollbar and publishes its rects for handle_list_scroll.
+    def draw_list_scrollbar(self, surface, track_x, track_y, view_h, width=15, scroll=None):
+        """Draws the pane's scrollbar and keeps its rects for handle_list_scroll.
 
-        Accepts (and ignores) drag_attr/content_rect_attr so a screen can keep
-        one dict of attribute names and hand it to both this and handle_list_scroll.
-        For `axis="x"`, view_h is the track length and width is its height.
+        For a horizontal pane, view_h is the track length and width is its height.
         """
-        if axis == "x":
-            track, handle = ui_bars.draw_standard_scrollbar_horizontal(
-                surface, -getattr(self, attr, 0), 0, -getattr(self, limit_attr, 0),
-                track_x, track_y, view_h, width)
-        else:
-            track, handle = ui_bars.draw_standard_scrollbar(
-                surface, getattr(self, attr, 0), getattr(self, limit_attr, 0),
-                track_x, track_y, view_h, width)
-        setattr(self, track_attr, track)
-        setattr(self, handle_attr, handle)
-        return track, handle
+        return (scroll or self.scroll).draw_scrollbar(surface, track_x, track_y, view_h, width)
 
     def get_title(self):
         """The centred header text, or None for no header."""
@@ -721,7 +646,7 @@ class Screen:
 
         # 3. Draw UI buttons on the very top. Anything a screen marked
         # is_scrollable (built inside a layout_list_rows loop) is cropped to
-        # scroll_content_rect and drawn last, so it's cleanly cut off at that
+        # the list pane's content_rect and drawn last, so it's cleanly cut off at that
         # boundary instead of popping in/out at an untracked pixel.
         self.draw_elements(surface)
 
@@ -739,9 +664,10 @@ class Screen:
         if not scrollable and self.draw_scroll_backdrop is None:
             return
 
-        if self.scroll_content_rect:
-            with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+        scroll = self.scroll
+        if scroll.content_rect:
+            with ui_bars.clip_scroll_region(surface, scroll.content_rect,
+                                            draw_top=scroll.value != 0, draw_bottom=scroll.value > scroll.limit):
                 if self.draw_scroll_backdrop is not None:
                     self.draw_scroll_backdrop(surface)
                 for el in scrollable:
@@ -825,7 +751,7 @@ class MenuListScreen(Screen):
 
     def layout_menu_list(self, count):
         """Publishes the menu list's clip area and yields (index, y) for visible rows."""
-        self.scroll_content_rect = pygame.Rect(0, self.MENU_LIST_CLIP_TOP, c.SCREEN_WIDTH,
+        self.scroll.content_rect = pygame.Rect(0, self.MENU_LIST_CLIP_TOP, c.SCREEN_WIDTH,
                                                self.MENU_LIST_BOTTOM - self.MENU_LIST_CLIP_TOP)
         return self.layout_list_rows(count, self.MENU_LIST_ROW_HEIGHT, self.MENU_LIST_TOP,
                                      pad=self.MENU_LIST_PAD, cull_top=self.MENU_LIST_CLIP_TOP,
@@ -840,7 +766,7 @@ class MenuListScreen(Screen):
 
     def additional_events(self, event):
         if self.has_menu_list():
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+            self.handle_list_scroll(event, content=True)
 
     def additional_draw(self, surface):
         if self.has_menu_list():
@@ -991,8 +917,6 @@ class MapOverlayScreen(Screen):
         self.panel_rect = panel_rect
         if panel_rect is not None and self.CENTER_PANEL:
             self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-        self.scroll_y = 0
-        self.max_scroll = 0
 
     def is_over_ui(self, pos=None):
         """True when the cursor sits on a panel or the top bar rather than the map."""
@@ -1003,17 +927,17 @@ class MapOverlayScreen(Screen):
     def additional_events(self, event):
         # Scrollbar grab/drag/release always takes priority over camera panning,
         # so click-to-scroll works the same way it does on the standalone menu screens.
-        # content_rect_attr also lets the panel's own content be grabbed and dragged.
+        # content=True also lets the panel's own content be grabbed and dragged.
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
-            if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
+            if self.handle_list_scroll(event, content=True):
                 return
 
         if event.type not in (pygame.MOUSEWHEEL, pygame.MOUSEMOTION, pygame.KEYDOWN):
             return
 
-        if event.type == pygame.MOUSEMOTION and (self.is_dragging_scrollbar
+        if event.type == pygame.MOUSEMOTION and (self.scroll.bar_drag
                                                   or self.is_content_dragging()):
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+            self.handle_list_scroll(event, content=True)
             return
 
         on_ui = self.is_over_ui()
@@ -1215,7 +1139,7 @@ class NationListOverlayScreen(EditorOverlayScreen):
         row_x = panel.centerx - (c.SIZES["list_row"][0] // 2)
         cull_top = panel.y + self.LIST_HEADER_HEIGHT - 10
         cull_bottom = panel.bottom - self.LIST_BOTTOM_MARGIN
-        self.scroll_content_rect = pygame.Rect(panel.x, cull_top, panel.width, cull_bottom - cull_top)
+        self.scroll.content_rect = pygame.Rect(panel.x, cull_top, panel.width, cull_bottom - cull_top)
 
         for index, y in self.layout_list_rows(len(self.active_countries), self.LIST_ROW_HEIGHT,
                                               row_top, view_h=view_h, cull_top=cull_top,

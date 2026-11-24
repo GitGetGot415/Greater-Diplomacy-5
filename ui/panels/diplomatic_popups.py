@@ -6,6 +6,7 @@ from ui.widgets import ui_elements
 from data import queries
 from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_messages
+from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS
 
 # ==========================================
 # LAYOUT
@@ -159,7 +160,7 @@ def spawn_popups_for_player(map_screen):
                 # Dynamically append instructions if action requires a bilateral response
                 incoming_action, incoming_turns = queries.get_diplomatic_status(
                     sender_id, map_screen.session.player_country, map_screen.world.nation_data)
-                if not is_system and incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
+                if not is_system and incoming_turns > 0 and incoming_action in BILATERAL_ACTIONS:
                     content += "\n(See Messages to accept or decline)"
 
                 popup = DiplomaticPopup(sender, content, idx, message=msg)
@@ -191,7 +192,7 @@ def is_spent(map_screen, popup):
     # Was this announcing a request, and has that request been dealt with?
     action, turns = queries.get_diplomatic_status(
         sender, map_screen.session.player_country, map_screen.world.nation_data)
-    if turns > 0 and action in c.BILATERAL_ACTIONS:
+    if turns > 0 and action in BILATERAL_ACTIONS:
         answered, _ = diplomacy_messages.get_response_status(
             map_screen.world.nation_data, map_screen.session.player_country, sender)
         return bool(answered)

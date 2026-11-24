@@ -640,10 +640,10 @@ def _layout(map_screen, show_create=False, orders_screen=None):
     tray = map_top_right_layout.army_tray_rect(map_screen, row_count)
     content_height = row_count * (map_top_right_layout.CARD_HEIGHT + 5)
     min_scroll = min(0, tray.height - map_top_right_layout.TRAY_HEADER_HEIGHT - content_height)
-    scroll_y = map_screen.army_panel_scroll_y
-    map_screen.army_panel_scroll_y = max(min_scroll, min(0, scroll_y))
+    scroll_y = map_screen.scroll_state("army_panel").value
+    map_screen.scroll_state("army_panel").value = max(min_scroll, min(0, scroll_y))
     map_screen.army_panel_rect = tray
-    map_screen.army_panel_min_scroll = min_scroll
+    map_screen.scroll_state("army_panel").limit = min_scroll
     return tray, armies
 
 
@@ -679,7 +679,7 @@ def _assignment_target_at(map_screen, position, tray, armies, orders_screen):
     return next((army for index, army in enumerate(armies)
                  if army["id"] != c.UNASSIGNED_ARMY_ID
                  and map_top_right_layout.card_rect(tray, index,
-                         map_screen.army_panel_scroll_y).collidepoint(position)), None)
+                         map_screen.scroll_state("army_panel").value).collidepoint(position)), None)
 
 
 def has_secondary_action_at(map_screen, position, orders_screen=None):
@@ -714,14 +714,15 @@ def handle_event(map_screen, event, orders_screen=None):
     if not armies and not show_create:
         return False
     if event.type == pygame.MOUSEWHEEL and tray.collidepoint(pygame.mouse.get_pos()):
-        map_screen.army_panel_scroll_y = max(
-            map_screen.army_panel_min_scroll,
-            min(0, map_screen.army_panel_scroll_y + event.y * 28))
+        map_screen.scroll_state("army_panel").value = max(
+            map_screen.scroll_state("army_panel").limit,
+            min(0, map_screen.scroll_state("army_panel").value + event.y * 28))
         return True
-    if getattr(event, "mobile_touch", False) and map_screen.handle_content_drag(
-            event, attr="army_panel_scroll_y", limit_attr="army_panel_min_scroll",
-            rect_attr="army_panel_rect", drag_attr="army_panel_drag_state", refresh=False):
-        return True
+    if getattr(event, "mobile_touch", False):
+        scroll = map_screen.scroll_state("army_panel")
+        scroll.content_rect = map_screen.army_panel_rect
+        if map_screen.handle_content_drag(event, scroll, refresh=False):
+            return True
     if getattr(event, "mobile_drag", False) and tray.collidepoint(event.pos):
         return True
     if event.type != pygame.MOUSEBUTTONDOWN:
@@ -740,14 +741,14 @@ def handle_event(map_screen, event, orders_screen=None):
     if not tray.collidepoint(event.pos):
         return False
     if show_create:
-        create_rect = _create_rect(tray, armies, map_screen.army_panel_scroll_y)
+        create_rect = _create_rect(tray, armies, map_screen.scroll_state("army_panel").value)
         if create_rect.colliderect(tray) and create_rect.collidepoint(event.pos):
             if _orders_can_use_selection(map_screen, orders_screen):
                 map_screen.create_army_from_selection()
                 orders_screen.refresh_ui()
             return True
     for index, army in enumerate(armies):
-        rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
+        rect = map_top_right_layout.card_rect(tray, index, map_screen.scroll_state("army_panel").value)
         if not rect.colliderect(tray) or not rect.collidepoint(event.pos):
             continue
         if army["id"] == c.UNASSIGNED_ARMY_ID:
@@ -801,7 +802,7 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
     if selected_ids is None:
         selected_ids = set(map_screen.selected_map_unit_ids())
     for index, army in enumerate(armies):
-        rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
+        rect = map_top_right_layout.card_rect(tray, index, map_screen.scroll_state("army_panel").value)
         if not rect.colliderect(tray):
             continue
         selected = bool(selected_ids) and selected_ids == set(army.get("unit_ids", []))
@@ -853,7 +854,7 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
         x = text_font.render("X", True, (255, 235, 235))
         surface.blit(x, x.get_rect(center=close_rect.center))
     if show_create:
-        create_rect = _create_rect(tray, armies, map_screen.army_panel_scroll_y)
+        create_rect = _create_rect(tray, armies, map_screen.scroll_state("army_panel").value)
         if create_rect.colliderect(tray):
             enabled = (_orders_can_manage_armies(map_screen, orders_screen)
                        and bool(selected_ids))
@@ -864,12 +865,12 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
                                      (235, 250, 240) if enabled else (135, 145, 155))
             surface.blit(label, label.get_rect(center=create_rect.center))
     surface.set_clip(clip)
-    if map_screen.army_panel_min_scroll < 0:
+    if map_screen.scroll_state("army_panel").limit < 0:
         track = pygame.Rect(tray.right - 7, tray.y + 4, 6, tray.height - 8)
         handle_h = max(18, int(track.height * tray.height /
-                               (tray.height - map_screen.army_panel_min_scroll)))
+                               (tray.height - map_screen.scroll_state("army_panel").limit)))
         travel = track.height - handle_h
-        ratio = map_screen.army_panel_scroll_y / map_screen.army_panel_min_scroll
+        ratio = map_screen.scroll_state("army_panel").value / map_screen.scroll_state("army_panel").limit
         handle = pygame.Rect(track.x, track.y + int(travel * ratio), track.width, handle_h)
         ui_elements.draw_slider(surface, track, handle)
     if draw_editors:

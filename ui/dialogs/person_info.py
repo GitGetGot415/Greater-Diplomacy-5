@@ -135,7 +135,7 @@ class _PersonInfoModal(_MessageModal):
 
     def handle_content_click(self, pos):
         for rect, link in zip(self.link_rects, self.links):
-            if link.get("url") and rect.move(0, -self.scroll_y).collidepoint(pos):
+            if link.get("url") and rect.move(0, self.scroll.value).collidepoint(pos):
                 webbrowser.open(link["url"])
                 return True
         return False
@@ -143,14 +143,14 @@ class _PersonInfoModal(_MessageModal):
     def draw_extra_content(self, surface):
         mx, my = pygame.mouse.get_pos()
         for row in self.image_rows:
-            surface.blit(row["image"], row["image_rect"].move(0, -self.scroll_y))
+            surface.blit(row["image"], row["image_rect"].move(0, self.scroll.value))
             text_h = len(row["labels"]) * (self.link_font.get_height() + 2)
-            y = row["rect"].centery - text_h // 2 - self.scroll_y
+            y = row["rect"].centery - text_h // 2 + self.scroll.value
             for label in row["labels"]:
                 surface.blit(label, (row["rect"].left + _IMAGE_SIZE + _IMAGE_TEXT_GAP, y))
                 y += self.link_font.get_height() + 2
         for rect, link in zip(self.link_rects, self.links):
-            rect = rect.move(0, -self.scroll_y)
+            rect = rect.move(0, self.scroll.value)
             has_url = bool(link.get("url"))
             is_hovered = has_url and rect.collidepoint(mx, my)
             color = _LINK_HOVER_COLOR if is_hovered else (_LINK_COLOR if has_url else c.UI_TEXT_LIGHT)

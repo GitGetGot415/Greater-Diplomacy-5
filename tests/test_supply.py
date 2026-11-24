@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import pygame
 import data.constants as c
 from data import queries
-from map_logic import custom_battle, politics
+from map_logic import politics, tactical_campaign
 from map_logic.system32 import combat_rules, turn_processor
 from map_logic.system32.time_handler import TimeHandler
 from tests.stub_map_screen import bare_orders_screen, map_double
@@ -487,7 +487,7 @@ class SupplyTests(SupplyFixture):
         self.assertAlmostEqual(row["attack"], full_supply["attack"] * 0.1)
         with queries.combat_supply(queries.freeze_combat_supply(world)):
             self.assertAlmostEqual(combat_rules.effective_damage_multiplier(queries.supply_combat_profile(unit)), 0.1)
-            roster = custom_battle.campaign_roster([unit], self.library, tile["terrain"])
+            roster = tactical_campaign.campaign_roster([unit], self.library, tile["terrain"])
         self.assertAlmostEqual(combat_rules.effective_damage_multiplier(roster[0]), 0.1)
         self.assertNotIn("_supply_multiplier", unit)
 

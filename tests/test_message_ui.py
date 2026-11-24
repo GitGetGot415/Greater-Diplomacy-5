@@ -284,7 +284,7 @@ class TableRowClickTests(unittest.TestCase):
         screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
         last_rect = screen.row_hitboxes[-1][0]
         below = (last_rect.centerx, last_rect.bottom + 60)
-        self.assertTrue(screen.scroll_content_rect.collidepoint(below))
+        self.assertTrue(screen.scroll.content_rect.collidepoint(below))
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, button=1, pos=below))
         self.assertEqual(opened, [])
@@ -302,15 +302,15 @@ class TableRowClickTests(unittest.TestCase):
         long_text = " ".join(f"word{i}" for i in range(2000))
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", long_text)
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
-        # max_scroll is zero or negative throughout this codebase: scroll_y
-        # counts down from 0 towards it.
-        self.assertLess(detail.max_scroll, 0, "a long message must be scrollable")
+        # A standard pane's limit is zero or negative: its value counts down
+        # from 0 towards it.
+        self.assertLess(detail.scroll.limit, 0, "a long message must be scrollable")
 
     def test_a_short_message_needs_no_scrolling(self):
         from ui.widgets.text_detail_screen import TextDetailScreen
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", "Short.")
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
-        self.assertEqual(detail.max_scroll, 0)
+        self.assertEqual(detail.scroll.limit, 0)
 
 
 class ConversationInteractionTests(unittest.TestCase):
@@ -358,7 +358,7 @@ class ConversationInteractionTests(unittest.TestCase):
 
         screen = self.make_screen()
         row = next(element for element in screen.elements if isinstance(element, ConversationRow))
-        row.rect.y = screen.scroll_content_rect.top - row.rect.height + 4
+        row.rect.y = screen.scroll.content_rect.top - row.rect.height + 4
         point = (row.rect.centerx, row.rect.top + 10)
         with mock.patch.object(pygame.mouse, "get_pos", return_value=point):
             row.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point))
@@ -374,7 +374,7 @@ class ConversationInteractionTests(unittest.TestCase):
             screen.map_screen.world.nation_data[country] = nation(name=f"Country {index:02}", is_playable=True)
             screen.map_screen.world.map_data[100 + index] = {"owner": country}
         screen.toggle_add_contact()
-        screen.contact_scroll_y = screen.max_contact_scroll
+        screen.scroll.value = screen.scroll.limit
         screen.refresh_ui()
         row = next(element for element in screen.elements if isinstance(element, ConversationRow) and element.text == "Country 19")
         screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
@@ -391,7 +391,7 @@ class ConversationInteractionTests(unittest.TestCase):
         screen = self.make_screen()
         screen.select_recipient("A")
         screen.drafts = ["Keep this draft"]
-        screen.msg_scroll_y = 100
+        screen.thread_scroll.value = 100
         screen.max_msg_scroll = 500
         with mock.patch.object(screen, "open_forward_picker") as forward:
             for point in ((700, 20), (700, screen.thread_rect.bottom + 15), (700, screen.input_rect.centery)):
@@ -405,7 +405,7 @@ class ConversationInteractionTests(unittest.TestCase):
                         pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point),
                         pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1, pos=point)):
                         screen.additional_events(event)
-                    self.assertEqual(screen.msg_scroll_y, 100)
+                    self.assertEqual(screen.thread_scroll.value, 100)
                     self.assertEqual(screen.drafts, ["Keep this draft"])
             forward.assert_not_called()
 

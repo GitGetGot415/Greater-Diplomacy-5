@@ -137,7 +137,7 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
     # If the province is hidden by fog, draw the hidden text under both columns and stop
     if not is_visible:
         if map_screen is not None:
-            map_screen.queue_scroll_rect = None
+            map_screen.scroll_state("queue").content_rect = None
         hidden_txt = font.render("(Hidden by Fog of War)", True, MUTED_TEXT_COLOR)
         for _queue, start_x in columns:
             surface.blit(hidden_txt, (start_x, panel_rect.y + 40))
@@ -152,9 +152,9 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
 
     scroll_offset = 0
     if map_screen is not None:
-        map_screen.queue_scroll_rect = body_rect
+        map_screen.scroll_state("queue").content_rect = body_rect
         scroll_max = getattr(map_screen, 'queue_scroll_max', 0)
-        scroll_offset = max(0, min(getattr(map_screen, 'queue_scroll_y', 0), scroll_max))
+        scroll_offset = max(0, min(map_screen.scroll_state("queue").value, scroll_max))
 
     content_bottom = body_top
     scroll_max = getattr(map_screen, 'queue_scroll_max', 0) if map_screen is not None else 0
@@ -174,4 +174,4 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
     if map_screen is not None:
         content_height = content_bottom - body_top
         map_screen.queue_scroll_max = max(0, content_height - body_rect.height)
-        map_screen.queue_scroll_y = min(scroll_offset, map_screen.queue_scroll_max)
+        map_screen.scroll_state("queue").value = min(scroll_offset, map_screen.queue_scroll_max)

@@ -12,7 +12,6 @@ import hashlib
 import base64
 import binascii
 import secrets
-import copy
 import gzip
 import zlib
 import pygame
@@ -22,7 +21,6 @@ from data.map import history_io, load_map
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
-from map_logic import politics
 from map_logic.actions.player_actions import collect_map_commands, PlayerActions
 
 
@@ -123,104 +121,35 @@ def decrypt_dict(encrypted_str, password):
         # Bad ciphertext and non-JSON plaintext are malformed player data.
         return None
 
-def strip_sensitive_data_for_player(context, country_id):
-    """Hide in place what a tournament player may not see.
+def strip_sensitive_data_for_viewer(context, viewer):
+    """Hide in place what one tournament viewer may not see.
 
-    The loaded map keeps the state a real-time client would receive for this
-    country: queries.player_snapshot_projection filters it, and the shared
-    snapshot applier replaces the map's state with the result.
+    A player sees their own country's view. The tournament spectator
+    (c.TOURNAMENT_SPECTATOR) sees what a viewer without a country sees. The
+    loaded map keeps the state a real-time client would receive:
+    queries.player_snapshot_projection filters it, and the shared snapshot
+    applier replaces the map's state with the result.
     """
     session_state = session_for(context)
     session_state.mode = TOURNAMENT
-    session_state.player_country = country_id
-    session_state.active_players = [country_id]
+    session_state.player_country = viewer
+    session_state.active_players = [viewer]
     session_state.current_player_index = 0
-    snapshot = queries.player_snapshot_projection(context, queries.build_save_dict(context), country_id,
+    snapshot = queries.player_snapshot_projection(context, queries.build_save_dict(context), viewer,
                                                   player_supply=getattr(context, "player_supply_projection", None))
     load_map.apply_authoritative_snapshot(context, snapshot)
 
 
-def _strip_spectator_countries(nation_data, *, for_archive=False):
-    if not isinstance(nation_data, dict):
-        return
-    for country in nation_data.values():
-        # Shared metadata, such as faction war maps, has its own schema.
-        if not isinstance(country, dict) or "is_playable" not in country:
-            continue
-        country.update(production_queue=[], manpower_pool=0, materials_pool=0, fuel_pool=0,
-                       orders=[], current_research=None, research_queue=[], inbox=[],
-                       pending_diplomacy={}, diplo_responses={})
-        if for_archive:
-            country.update(manpower=0, materials=0, fuel=0, research={})
-        for key in ("peace_choices", "ai_notebook", *politics.DRIFT_KEYS, "research_funding_slider"):
-            country.pop(key, None)
-
-
-def _strip_spectator_provinces(provinces, *, for_archive=False, show_cargo=False):
-    if not isinstance(provinces, dict):
-        return
-    for province in provinces.values():
-        if not isinstance(province, dict):
-            continue
-        if for_archive:
-            province.update(building_queue=[], unit_queue=[], orders=[])
-        for unit in province.get("units", []):
-            if isinstance(unit, dict):
-                if not show_cargo:
-                    unit.pop("air_cargo", None)
-                for record in queries.units_with_air_cargo([unit]):
-                    if isinstance(record, dict):
-                        queries.strip_private_unit_orders(record)
-
-
-def strip_sensitive_data_for_tournament_spectator(context):
-    """Project a tournament archive into the fog-limited spectator view.
-
-    A tournament archive necessarily contains the canonical world so it can be
-    resolved by the host.  This local projection removes every nation's private
-    planning/economy data and gives the viewer no country, so all remaining map
-    presentation flows through the existing no-territory fog rules.
-    """
-    world_state = world_for(context)
-    session_state = session_for(context)
-    context.country_economy_summaries = {}
-    session_state.mode = TOURNAMENT
-    session_state.player_country = c.TOURNAMENT_SPECTATOR
-    session_state.active_players = [c.TOURNAMENT_SPECTATOR]
-    session_state.current_player_index = 0
-
-    _strip_spectator_countries(world_state.nation_data)
-    _strip_spectator_provinces(world_state.map_data, show_cargo=not queries.get_scenario_flag(
-        "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings))
-
-
-def build_tournament_spectator_save(save_dict, *, player_supply=None):
+def build_tournament_spectator_save(context, save_dict):
     """Return the public, fog-limited projection stored for spectators.
 
     The spectator key must never disclose the session key that decrypts the
-    host's complete snapshot. This companion save therefore preserves only the
-    map data necessary to draw the board, with private plans and economy data
-    removed before it is encrypted with the public spectator key.
+    host's complete snapshot. This companion save is the same projection a
+    viewer without a country receives, encrypted with the public spectator key.
     """
-    spectator_save = copy.deepcopy(save_dict)
-    spectator_save["player_country"] = c.TOURNAMENT_SPECTATOR
+    spectator_save = queries.player_snapshot_projection(context, save_dict, c.TOURNAMENT_SPECTATOR)
     spectator_save["active_players"] = [c.TOURNAMENT_SPECTATOR]
     spectator_save["current_player_index"] = 0
-    spectator_save["unit_event_log"] = {
-        "turn": spectator_save.get("date", {}).get("total_turns", 0), "events": []}
-    spectator_save["unit_event_read_turns"] = {}
-    show_units = not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, save_dict.get("scenario_settings", {}))
-    spectator_save.pop("player_supply", None)
-    if show_units and player_supply is not None:
-        spectator_save["player_supply"] = player_supply
-
-    _strip_spectator_countries(spectator_save.get("nation_data"), for_archive=True)
-    _strip_spectator_provinces(spectator_save.get("provinces"), for_archive=True, show_cargo=show_units)
-    # A self-contained tournament also includes raw geometry. Older maps may
-    # have mutable province fields mixed into that geometry, so scrub the same
-    # fields defensively before writing the public projection.
-    _strip_spectator_provinces(spectator_save.get("_raw_map_data"), for_archive=True, show_cargo=show_units)
-
     return spectator_save
 
 def write_host_keys(context, keys_dict, output_dir=None):
@@ -396,7 +325,7 @@ def export_tournament(context, file_path, master_key, keys_dict):
         if cid in peace_choices:
             entry["enc_peace_choices"] = encrypt_dict(peace_choices[cid], keys_dict[cid])
         if entry.get("role") == "PLAYER":
-            visible = queries.player_snapshot_visible_provinces(context, cid)
+            visible = queries.viewer_visible_provinces(world_state, cid)
             summary = supply.player_summary(cid, visible)
             if summary:
                 entry["enc_player_supply"] = encrypt_dict(summary, keys_dict[cid], compress=True)
@@ -404,10 +333,8 @@ def export_tournament(context, file_path, master_key, keys_dict):
     context.session.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key, compress=True)
-    spectator_visible = queries.player_snapshot_visible_provinces(context, c.TOURNAMENT_SPECTATOR)
-    spectator_supply = supply.player_summary(c.TOURNAMENT_SPECTATOR, spectator_visible) if spectator_visible is None else None
     spectator_game_data_enc = encrypt_dict(
-        build_tournament_spectator_save(save_dict, player_supply=spectator_supply), c.TOURNAMENT_SPECTATOR_KEY, compress=True)
+        build_tournament_spectator_save(context, save_dict), c.TOURNAMENT_SPECTATOR_KEY, compress=True)
     history_enc = None # History omitted for tournament saves to reduce file size
     
     payload = {

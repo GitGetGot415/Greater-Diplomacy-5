@@ -65,7 +65,7 @@ class Research_Edit_Screen(EditorOverlayScreen):
         row_top = p.y + 70
         view_h = p.height - 140
         cull_top, cull_bottom = p.y + 60, p.bottom - 70
-        self.scroll_content_rect = pygame.Rect(p.x + 5, cull_top, p.width - 10, cull_bottom - cull_top)
+        self.scroll.content_rect = pygame.Rect(p.x + 5, cull_top, p.width - 10, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
             tech = self.techs[i]
@@ -108,10 +108,10 @@ class Research_Edit_Screen(EditorOverlayScreen):
         small_font = fonts.get("small")
         row_top = p.y + 70
         view_h = p.height - 140
-        clip_rect = self.scroll_content_rect or pygame.Rect(p.x + 5, p.y + 60, p.width - 10, p.height - 140)
+        clip_rect = self.scroll.content_rect or pygame.Rect(p.x + 5, p.y + 60, p.width - 10, p.height - 140)
 
         with ui_bars.clip_scroll_region(surface, clip_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+                                        draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
             for i, y in self.layout_list_rows(len(self.techs), self.ROW_HEIGHT, row_top, view_h=view_h,
                                               cull_top=p.y + 60, cull_bottom=p.bottom - 70):
                 tech = self.techs[i]

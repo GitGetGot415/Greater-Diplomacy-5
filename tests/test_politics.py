@@ -215,34 +215,34 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen = self.screen(False)
         screen.policies_rect.width = 620
         screen.refresh_ui()
-        self.assertLess(screen.policy_scroll_min_x, 0)
-        screen.policy_scroll_track_rect = pygame.Rect(100, 100, 500, 14)
+        self.assertLess(screen.policy_scroll.limit, 0)
+        screen.policy_scroll.track = pygame.Rect(100, 100, 500, 14)
 
-        screen._snap_policy_scroll(screen.policy_scroll_track_rect.left)
-        self.assertEqual(screen.policy_scroll_x, 0,
+        screen.policy_scroll.snap(screen.policy_scroll.track.midleft)
+        self.assertEqual(screen.policy_scroll.value, 0,
                          "dragging the scrollbar left moves the policy cards right")
 
-        screen._snap_policy_scroll(screen.policy_scroll_track_rect.right)
-        self.assertEqual(screen.policy_scroll_x, screen.policy_scroll_min_x,
+        screen.policy_scroll.snap(screen.policy_scroll.track.midright)
+        self.assertEqual(screen.policy_scroll.value, screen.policy_scroll.limit,
                          "dragging the scrollbar right moves the policy cards left")
 
         # Directly dragging the cards retains the conventional, grab-and-pan
         # direction. Only the dedicated scrollbar is reversed.
-        screen.policy_scroll_x = -100
+        screen.policy_scroll.value = -100
         viewport = screen._policy_viewport_rect()
         start = viewport.center
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=start, button=1))
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEMOTION, pos=(start[0] - 20, start[1]), rel=(-20, 0)))
-        self.assertEqual(screen.policy_scroll_x, -120)
+        self.assertEqual(screen.policy_scroll.value, -120)
 
-        previous_limit = screen.policy_scroll_min_x
+        previous_limit = screen.policy_scroll.limit
         self.tab(screen, politics.MILITARY).callback()
-        self.assertEqual(screen.policy_scroll_x, 0)
-        self.assertEqual(screen.policy_scroll_min_x, previous_limit)
-        self.assertIsNone(screen.content_drag_state)
-        self.assertIsNone(screen.policy_scroll_track_rect)
+        self.assertEqual(screen.policy_scroll.value, 0)
+        self.assertEqual(screen.policy_scroll.limit, previous_limit)
+        self.assertIsNone(screen.scroll.content_drag)
+        self.assertIsNone(screen.policy_scroll.track)
 
     def test_starting_economic_slider_saves_both_coordinates_and_clears_drift(self):
         from screens.editors.politics_editor import Politics_Edit_Screen
@@ -336,8 +336,8 @@ class PoliticalAffinityTests(unittest.TestCase):
 class EconomicDriftTests(unittest.TestCase):
     def test_reaching_the_economic_edge_stops_only_horizontal_movement(self):
         screen = screen_with(A=(0, -1))
-        politics.set_economic_value(screen.world.nation_data, "A", c.POLITICS_MAX - c.POLITICS_STEP)
-        politics.set_economic_drift(screen.world.nation_data, "A", 1)
+        politics.set_axis_value(screen.world.nation_data, "A", politics.ECONOMIC, c.POLITICS_MAX - c.POLITICS_STEP)
+        politics.set_axis_drift(screen.world.nation_data, "A", politics.ECONOMIC, 1)
         politics.tick(screen)
 
         self.assertEqual(politics.economic_value(screen.world.nation_data, "A"), c.POLITICS_MAX)
@@ -565,14 +565,14 @@ class PolicyTests(unittest.TestCase):
                 with self.subTest(policy=policy_id, economic=economic):
                     screen = self.screen_at(political_value=bound, economic_value=economic)
                     self.assertFalse(politics.requirements_met(screen.world.nation_data, "A", policy_id))
-                    politics.set_value(screen.world.nation_data, "A", eligible)
+                    politics.set_axis_value(screen.world.nation_data, "A", politics.POLITICAL, eligible)
                     self.assertTrue(politics.requirements_met(screen.world.nation_data, "A", policy_id))
 
     def test_losing_a_requirement_cancels_before_the_turn_uses_the_effect(self):
         policy_id = "subsidy_fixture"
         screen = self.screen_at(political_value=-3, economic_value=c.POLITICS_MAX)
         self.activate_and_finish(screen, policy_id)
-        politics.set_drift(screen.world.nation_data, "A", 1)
+        politics.set_axis_drift(screen.world.nation_data, "A", politics.POLITICAL, 1)
 
         politics.tick(screen)
 
@@ -886,36 +886,39 @@ class CombatDamageTests(unittest.TestCase):
 class TerritoryDamageTests(unittest.TestCase):
     """Strategy's damage modifier depends on whose core the tile is."""
 
-    def dealt(self, tile_owner, cores, strategy=c.POLITICS_START):
+    def observed_multiplier(self, tile_owner, cores, strategy=c.POLITICS_START, *, disable_cores=False):
         screen = StubBattleMap()
+        screen.world.scenario_settings["disable_cores"] = disable_cores
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         politics.set_axis_value(screen.world.nation_data, "A", politics.STRATEGY, strategy)
-        prov = screen.add_province("p1", tile_owner, units=[unit("A"), unit("B")], cores=cores)
-        b_units = [u for u in prov["units"] if u["owner"] == "B"]
+        a_unit, b_unit = unit("A"), unit("B")
+        screen.add_province("p1", tile_owner, units=[a_unit, b_unit], cores=cores)
+        base_attack = combat_rules.volley([a_unit], nation_data=screen.world.nation_data)
         combat_processor.process_combat(screen)
-        return damage_taken(b_units)
+        return damage_taken([b_unit]) / base_attack
 
     def test_core_and_non_core_modifiers_follow_strategy(self):
-        attack = unit("A")["attack"]
         for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
             with self.subTest(strategy=strategy):
-                self.assertAlmostEqual(self.dealt("A", ["A"], strategy),
-                                       attack * politics.effect_at("core_territory_damage", strategy))
-                self.assertAlmostEqual(self.dealt("B", ["B"], strategy),
-                                       attack * politics.effect_at("non_core_territory_damage", strategy))
+                self.assertAlmostEqual(self.observed_multiplier("A", ["A"], strategy),
+                                       politics.effect_at("core_territory_damage", strategy))
+                self.assertAlmostEqual(self.observed_multiplier("B", ["B"], strategy),
+                                       politics.effect_at("non_core_territory_damage", strategy))
 
     def test_retaking_an_occupied_core_keeps_the_core_modifier(self):
-        self.assertAlmostEqual(self.dealt("B", ["A", "B"]),
-                               unit("A")["attack"] * politics.effect_at("core_territory_damage", c.POLITICS_START))
+        self.assertAlmostEqual(self.observed_multiplier("B", ["A", "B"]),
+                               politics.effect_at("core_territory_damage", c.POLITICS_START))
 
     def test_disable_cores_counts_every_owned_tile_as_core(self):
-        attack = unit("A")["attack"]
-        with patch.object(c, "DISABLE_CORES", True):
-            self.assertAlmostEqual(self.dealt("A", []),
-                                   attack * politics.effect_at("core_territory_damage", c.POLITICS_START))
-            self.assertAlmostEqual(self.dealt("B", ["A"]),
-                                   attack * politics.effect_at("non_core_territory_damage", c.POLITICS_START))
+        core = politics.effect_at("core_territory_damage", c.POLITICS_START)
+        non_core = politics.effect_at("non_core_territory_damage", c.POLITICS_START)
+        for setting, owned_multiplier, occupied_multiplier in (
+                (True, core, non_core), ("True", core, non_core),
+                (False, non_core, core), ("False", non_core, core)):
+            with self.subTest(setting=setting):
+                self.assertAlmostEqual(self.observed_multiplier("A", [], disable_cores=setting), owned_multiplier)
+                self.assertAlmostEqual(self.observed_multiplier("B", ["A"], disable_cores=setting), occupied_multiplier)
 
 
     def test_each_side_of_a_border_clash_fights_on_its_own_tile(self):
@@ -926,8 +929,8 @@ class TerritoryDamageTests(unittest.TestCase):
         battle = combat_rules.build_battle([[a_unit], [b_unit]], nation_data, tiles=(a_home, b_home))
         shots = {id(targets[0]): attack for targets, attack in combat_rules.exchange(battle, nation_data)}
         core = politics.effect_at("core_territory_damage", c.POLITICS_START)
-        self.assertAlmostEqual(shots[id(b_unit)], a_unit["attack"] * core)
-        self.assertAlmostEqual(shots[id(a_unit)], b_unit["attack"] * core)
+        self.assertAlmostEqual(shots[id(b_unit)], combat_rules.volley([a_unit], nation_data=nation_data) * core)
+        self.assertAlmostEqual(shots[id(a_unit)], combat_rules.volley([b_unit], nation_data=nation_data) * core)
 
 
 class DefenseAndHealthTests(unittest.TestCase):
@@ -1008,18 +1011,6 @@ class DisplayedDamageTests(unittest.TestCase):
 
             self.assertAlmostEqual(damage_taken(defenders), printed,
                                    msg=f"panel and resolver disagree at {value:+d}")
-
-    def test_the_map_combat_bubble_reads_the_same_number(self):
-        from ui.rendering import overlay_renderer
-
-        for value in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
-            screen, _prov = two_nation_tile(a_value=value)
-            friendly, enemy, involved = overlay_renderer.combat_strengths(
-                [[unit("A"), unit("B")]], screen.world.nation_data, {"A"})
-            self.assertTrue(involved)
-            self.assertAlmostEqual(friendly, unit("A")["attack"] * axis_damage_multiplier(value))
-            self.assertAlmostEqual(enemy, unit("B")["attack"],
-                                   msg="the enemy's own politics is unaffected")
 
 
 class BombardmentDamageTests(unittest.TestCase):

@@ -94,7 +94,7 @@ class TournamentArchiveTests(unittest.TestCase):
         _, restored = self.load_snapshot(path, "host-key")
         self.assertEqual(restored, canonical)
         _, restored = self.load_snapshot(path, c.TOURNAMENT_SPECTATOR_KEY)
-        self.assertEqual(restored, io.build_tournament_spectator_save(canonical))
+        self.assertEqual(restored, io.build_tournament_spectator_save(self.host, canonical))
         for cid, key in self.keys.items():
             with self.subTest(country=cid):
                 loaded, restored = self.load_snapshot(path, key)
@@ -107,37 +107,34 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(self.host.world.raw_json_data, original_raw)
         self.assertFalse(io.load_tournament(str(path), "invalid-key")[0])
 
-    def test_spectator_filter_preserves_the_distinct_archive_and_loaded_views(self):
+    def test_spectator_and_player_views_strip_the_same_private_fields(self):
         country_id = self.host.session.player_country
         country = self.host.world.nation_data[country_id]
-        country.update(materials=7, research={"fixture": 1}, inbox=["private"], peace_choices={"private": True})
-        province = next(iter(self.host.world.map_data.values()))
-        province["units"] = [{"type": "Fixture", "order": {"type": "MOVE"}, "air_cargo": [{"type": "Cargo"}]}]
-        saved = {
-            "nation_data": {country_id: country, "shared": {"orders": ["shared"]}},
-            "provinces": {"fixture": province},
-            "_raw_map_data": {"legacy": copy.deepcopy(province)},
-        }
+        country.update(materials=7, research={"fixture": 1}, inbox=["private"], peace_choices={"private": True},
+                       draft_lists={"Country1": ["private"]}, armies=[{"name": "private"}],
+                       automation={"private": True}, queued_ai_actions=["private"])
+        saved = queries.build_save_dict(self.host)
         before = copy.deepcopy(saved)
 
-        projected = io.build_tournament_spectator_save(saved)
+        projected = io.build_tournament_spectator_save(self.host, saved)
+        player_view = queries.player_snapshot_projection(self.host, saved, "Country1")
 
         self.assertEqual(saved, before)
-        self.assertEqual(projected["nation_data"]["shared"], {"orders": ["shared"]})
-        for record in (projected["provinces"]["fixture"], projected["_raw_map_data"]["legacy"]):
-            self.assertEqual(record["building_queue"], [])
-            self.assertEqual(record["units"], [{"type": "Fixture"}])
+        self.assertEqual(projected["player_country"], c.TOURNAMENT_SPECTATOR)
+        for view in (projected, player_view):
+            private = {field for field in queries.PRIVATE_COUNTRY_FIELDS
+                       if field in view["nation_data"][country_id]}
+            self.assertEqual(private, set())
+        # Fog hides every province from a viewer without a country.
+        for record in projected["provinces"].values():
+            self.assertEqual((record["units"], record["building_queue"], record["resources"]), ([], [], {}))
 
-        io.strip_sensitive_data_for_tournament_spectator(self.host)
+        self.host.presentation_enabled = False  # The double has no map layers to refresh.
+        io.strip_sensitive_data_for_viewer(self.host, c.TOURNAMENT_SPECTATOR)
 
-        for record in (country, projected["nation_data"][country_id]):
-            self.assertEqual(record["inbox"], [])
-            self.assertNotIn("peace_choices", record)
-        self.assertEqual(projected["nation_data"][country_id]["materials"], 0)
-        self.assertEqual(projected["nation_data"][country_id]["research"], {})
-        self.assertEqual((country["materials"], country["research"]), (7, {"fixture": 1}))
-        self.assertEqual(province["building_queue"], before["provinces"]["fixture"]["building_queue"])
-        self.assertEqual(province["units"], [{"type": "Fixture"}])
+        self.assertEqual(self.host.session.player_country, c.TOURNAMENT_SPECTATOR)
+        for loaded_country in self.host.world.nation_data.values():
+            self.assertEqual({field for field in queries.PRIVATE_COUNTRY_FIELDS if field in loaded_country}, set())
 
     @fast_tournament_crypto()
     def test_host_supply_is_delivered_for_units_visible_to_each_player(self):

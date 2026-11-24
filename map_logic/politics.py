@@ -12,12 +12,14 @@ defending, plus bombardment. A lane fight is a simultaneous exchange with no
 designated attacker, so "your armies deal more damage" can only sensibly be a
 property of the army rather than of who moved first.
 
-Stdlib and `data.constants` only, so it imports under Pyodide and can be
-imported at module level from combat_rules without joining the queries cycle.
+Uses the runtime rules accessor to keep the queries import deferred when
+combat_rules imports this module.
 """
 
-from data.state_access import world_for, session_for
 import data.constants as c
+from data import runtime_rules
+from data.state_access import world_for, session_for
+from data.world_nations import WorldNations
 
 POLITICAL = "political"
 ECONOMIC = "economic"
@@ -215,26 +217,6 @@ def set_axis_value(nation_data, nation, axis, new_value):
 def set_axis_drift(nation_data, nation, axis, direction):
     """Points one axis toward an end, or stops it."""
     nation_data.setdefault(nation, {})[AXES_BY_ID[axis]["drift_key"]] = max(-1, min(1, int(direction)))
-
-
-def set_value(nation_data, nation, new_value):
-    """Pins a nation's political position outright. The map editor's starting value."""
-    set_axis_value(nation_data, nation, POLITICAL, new_value)
-
-
-def set_drift(nation_data, nation, direction):
-    """Points a nation at one end of the political axis, or stops it."""
-    set_axis_drift(nation_data, nation, POLITICAL, direction)
-
-
-def set_economic_value(nation_data, nation, new_value):
-    """Set a scenario's starting economic position."""
-    set_axis_value(nation_data, nation, ECONOMIC, new_value)
-
-
-def set_economic_drift(nation_data, nation, direction):
-    """Point a nation toward a planned or market economy, or hold."""
-    set_axis_drift(nation_data, nation, ECONOMIC, direction)
 
 
 def advance(position, direction):
@@ -505,12 +487,13 @@ def axis_policy_multiplier(nation_data, nation, effect):
 def territory_damage_multiplier(nation_data, nation, province):
     """Strategy's damage modifier for this nation's units fighting on one tile.
 
-    Core territory is a tile the nation has cored, whoever holds it now, so a
-    country retaking its own land keeps its core modifier. Sea, unowned and
-    enemy tiles are non-core. Under the Disable Cores rule, every tile the
-    nation owns counts as core.
+    A country retaking an occupied core keeps its core modifier. When the
+    scenario disables cores, only tiles the nation owns count as core.
     """
-    if c.DISABLE_CORES:
+    disable_cores = c.DISABLE_CORES
+    if isinstance(nation_data, WorldNations):
+        disable_cores = runtime_rules.flag(nation_data, "disable_cores", c.DEFAULT_DISABLE_CORES)
+    if disable_cores:
         is_core = province.get("owner") == nation
     else:
         is_core = nation in province.get("cores", ())
