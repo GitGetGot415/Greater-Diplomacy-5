@@ -47,7 +47,7 @@ from ui.rendering import map_renderer, overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
 from ui.rendering.country_names import update_country_centers as calc_country_centers
 from screens.setup import player_setup
-from map_logic import custom_battle as tactical_battle
+from map_logic import tactical_campaign
 
 from data.io import country_io
 from ui import dialogs
@@ -484,11 +484,11 @@ class Map(StateAccess, Screen):
         if province is None:
             return
         library = queries.get_unit_library(self)
-        forces = tactical_battle.campaign_forces(self.session.player_unit, province, self.world.nation_data, library)
+        forces = tactical_campaign.campaign_forces(self.session.player_unit, province, self.world.nation_data, library)
         if forces is None:
             return
         if not forces[1]:
-            tactical_battle.win_against_artillery(self.session.player_unit, province, self.world.nation_data, library)
+            tactical_campaign.win_against_artillery(self.session.player_unit, province, self.world.nation_data, library)
             player_setup.settle_tactical_tile(self, province)
             return
         self.tactical_battle_request = (province, *forces)

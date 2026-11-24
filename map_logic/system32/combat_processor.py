@@ -2,7 +2,7 @@ from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from map_logic.system32 import combat_rules, unit_events
-from map_logic import custom_battle
+from map_logic import tactical_campaign
 from map_logic.territory import ownership
 import random # Imported for the random tiebreaker
 from collections import namedtuple
@@ -165,7 +165,7 @@ def process_pinning(context):
         # Recognize the encounter before preparing aircraft, building a battle,
         # or projecting damage. Tactical combat, including a seemingly doomed
         # attack in either direction, must be fought on the battlefield.
-        if custom_battle.tactical_encounter(context, {
+        if tactical_campaign.tactical_encounter(context, {
                 "units": [*defenders, *(unit for unit, _ in attackers_info)]}) is not None:
             continue
 
@@ -276,7 +276,7 @@ def process_pinning(context):
 
 def defer_tactical_meeting(context, prov1, prov2, units1, units2, *, mid_movement=False, pinned_units=None):
     """Hold tactical opponents at the destination; return other movers for ordinary crossing combat."""
-    winner = custom_battle.tactical_meeting_side(
+    winner = tactical_campaign.tactical_meeting_side(
         context, prov1, prov2, units1, units2, pinned_units=pinned_units)
     if winner is None:
         return None
@@ -442,7 +442,7 @@ def process_combat(context):
 
         # No automatic battle calculation precedes an eligible tactical fight.
         # Cancel only the routes of actual belligerents, preserving bystanders.
-        if custom_battle.tactical_encounter(context, province) is not None:
+        if tactical_campaign.tactical_encounter(context, province) is not None:
             # Aircraft cannot join the tactical battlefield, and warships join only
             # naval battles. Keep their existing ground-exposure rules without
             # simulating the armies.
@@ -525,7 +525,7 @@ def check_for_post_combat_captures(context):
         if queries.is_water_province(province):
             continue
         # Ownership and capture bounces wait for the tactical result too.
-        if custom_battle.tactical_encounter(context, province) is not None:
+        if tactical_campaign.tactical_encounter(context, province) is not None:
             continue
 
         units = [unit for unit in province.get("units", []) if not queries.is_air_unit(unit, context=context)]

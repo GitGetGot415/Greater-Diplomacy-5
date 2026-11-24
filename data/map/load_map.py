@@ -22,7 +22,7 @@ from map_logic.system32 import unit_events, movement_processor, economy_processo
 from map_logic.diplomacy import (diplomacy_events, diplomacy_lifecycle, faction_records,
                                  faction_leadership, treaty_effects)
 from map_logic.territory import ownership
-from map_logic import custom_battle
+from map_logic import tactical_rules
 
 # Each yield in _load_map_asset_steps starts one stage. Keep these totals with that pipeline.
 MAP_ASSET_LOADING_STAGES = 10
@@ -443,8 +443,8 @@ def _restore_tactical_player(context, save_meta):
             # Land divisions aboard convoys, ships packed into trucks, and warships retain control.
             if (unit.get("unit_id") == unit_id and unit.get("health", 0) > 0
                     and unit.get("owner") == session.player_country
-                    and (custom_battle.packed_ship_type(unit.get("type"), library)
-                         or custom_battle.tactical_unit_eligible(unit.get("original_type", unit.get("type")), library))):
+                    and (tactical_rules.packed_ship_type(unit.get("type"), library)
+                         or tactical_rules.tactical_unit_eligible(unit.get("original_type", unit.get("type")), library))):
                 session.player_unit = unit
                 session.tactical_mode = True
                 return

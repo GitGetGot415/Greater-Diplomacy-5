@@ -10,7 +10,9 @@ import pygame
 from data import constants as c, queries
 from data.generators import recipes
 from map_logic import battle_terrain, custom_battle as combat
+from map_logic import tactical_rules as rules, tactical_units
 from screens.game import custom_battle as battle_screen
+from screens.game import custom_battle_layout as battle_layout
 from tests import test_custom_battle as battle_fixtures
 from ui.navigation.touch_input import TouchInput
 
@@ -24,7 +26,7 @@ def weapon(*, shell=False, soft=False, interval=0.2, rounds=3, reload=0.8,
 
 class TacticalWeaponTests(unittest.TestCase):
     def setUp(self):
-        self.enterContext(patch.dict(combat.SUBUNIT_COUNTS, infantry=1))
+        self.enterContext(patch.dict(rules.SUBUNIT_COUNTS, infantry=1))
         self.enterContext(patch.dict(c.TACTICAL_WEAPONS, {
             "fixture_rifle": weapon(),
             "fixture_cannon": weapon(shell=True, interval=1.4, rounds=1, reload=1.4,
@@ -41,7 +43,7 @@ class TacticalWeaponTests(unittest.TestCase):
             stats["metadata"]["tactical_primary"] = "fixture_rifle"
 
     def encounter(self, *, targets=1, controlled=0):
-        field = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.UNIT_RADIUS)
+        field = battle_terrain.Battlefield("plains", rules.ARENA_SIZE, rules.UNIT_RADIUS)
         simulation = combat.BattleSimulation(self.library, ["Shooter I"], ["Target I"] * targets,
                                              controlled_index=controlled, seed=8, battlefield=field)
         for index, fighter in enumerate(simulation.fighters):
@@ -57,7 +59,7 @@ class TacticalWeaponTests(unittest.TestCase):
         fired = []
         simulation.on_shot = lambda fighter: fired.append(fighter.fired_weapon)
         simulation.set_player_input(fire=True, secondary_fire=True)
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertEqual(fired, [0, 1])
         cannon_wait = source.cooldown
         simulation.advance(0.2)
@@ -98,7 +100,7 @@ class TacticalWeaponTests(unittest.TestCase):
         self.assertEqual(source.cooldown, 0.4)
         self.assertEqual(source.primary_rounds, 0)
         simulation.paused = False
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertEqual(simulation.projectiles, [])
 
     def test_projectile_snapshots_weapon_and_uses_its_speed_and_reach(self):
@@ -108,7 +110,7 @@ class TacticalWeaponTests(unittest.TestCase):
         simulation._fire_shot(source)
         shot = simulation.projectiles[0]
         self.assertEqual(math.hypot(shot.vx, shot.vy), source.weapon()["speed"])
-        self.assertEqual(shot.remaining * source.weapon()["speed"], combat.WEAPON_RANGE)
+        self.assertEqual(shot.remaining * source.weapon()["speed"], rules.WEAPON_RANGE)
         snapshot = copy.deepcopy(shot.weapon_data)
         source.shape = "infantry"
         self.assertEqual(shot.weapon_data, snapshot)
@@ -127,7 +129,7 @@ class TacticalWeaponTests(unittest.TestCase):
         stationary = combat.BattleSimulation._shot_spread(source, source.weapon())
         source.speed = source.max_speed
         moving = combat.BattleSimulation._shot_spread(source, source.weapon())
-        source.turn_rate = math.radians(combat.MOBILITY[source.shape][1])
+        source.turn_rate = math.radians(rules.MOBILITY[source.shape][1])
         turning = combat.BattleSimulation._shot_spread(source, source.weapon())
         self.assertGreater(moving, stationary)
         self.assertGreater(turning, moving)
@@ -136,9 +138,9 @@ class TacticalWeaponTests(unittest.TestCase):
         simulation = self.encounter(targets=4)
         source, *targets = simulation.fighters
         source.shape = "tank"
-        shot = combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
+        shot = tactical_units.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
         simulation.projectiles = [shot]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         losses = [fighter.data["max_health"] - fighter.data["health"] for fighter in targets]
         expected = simulation.weapon_damage(source.data, targets[0].data, source.attack_share,
                                             shot.weapon_data, targets[0].shape)
@@ -152,7 +154,7 @@ class TacticalWeaponTests(unittest.TestCase):
         source = self.encounter().controlled
         source.data["speed"] = 2
         source.speed = source.max_speed
-        source.turn_rate = math.radians(combat.MOBILITY[source.shape][1])
+        source.turn_rate = math.radians(rules.MOBILITY[source.shape][1])
         bullet = dict(source.weapon(), spread=4.0)
         shell = dict(bullet, shell=True)
         with patch.object(c, "TACTICAL_MOVING_SPREAD", 2.0), patch.object(
@@ -169,12 +171,12 @@ class TacticalWeaponTests(unittest.TestCase):
         target.data["health"] = 1
         kills = []
         simulation.on_kill = lambda killer, victim, cause: kills.append((killer, victim, cause))
-        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
                                   for _ in range(2)]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertEqual(kills, [(source, target, "shot")])
         self.assertTrue(bystander.alive)
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertEqual(len(kills), 1)
 
     def test_penetrating_kills_credit_the_shooter_even_after_its_death(self):
@@ -182,12 +184,12 @@ class TacticalWeaponTests(unittest.TestCase):
         source, first, second = simulation.fighters
         source.shape = "tank"
         first.data["health"] = second.data["health"] = 1
-        shot = combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
+        shot = tactical_units.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
         source.data["health"] = 0
         kills = []
         simulation.on_kill = lambda killer, victim, cause: kills.append((killer, victim, cause))
         simulation.projectiles = [shot]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertEqual(kills, [(source, first, "shot"), (source, second, "shot")])
 
     def test_shell_cannot_damage_the_same_body_again_on_later_ticks(self):
@@ -197,12 +199,12 @@ class TacticalWeaponTests(unittest.TestCase):
         second.x = 1800
         hits = []
         simulation.on_hit = lambda target, damage, projectile, point: hits.append((target, damage))
-        simulation.projectiles = [combat.Projectile(source, dict(source.data), first.x - first.radius - 1,
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data), first.x - first.radius - 1,
                                                    first.y, 300, 0, 2)]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         health = first.data["health"]
         self.assertLess(health, first.data["max_health"])
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertEqual(first.data["health"], health)
         self.assertEqual(len(hits), 1)
         self.assertIs(hits[0][0], first)
@@ -214,8 +216,8 @@ class TacticalWeaponTests(unittest.TestCase):
         source.shape = armor.shape = "tank"
         self.assertEqual(simulation.weapon_damage(source.data, armor.data, source.attack_share,
                                                  source.weapon(1), armor.shape), 0)
-        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)]
+        simulation.advance(rules.FIXED_STEP)
         self.assertLess(armor.data["health"], armor.data["max_health"])
         self.assertEqual(behind.data["health"], behind.data["max_health"])
 
@@ -239,8 +241,8 @@ class TacticalWeaponTests(unittest.TestCase):
         simulation._sides = [[source, ally], [target]]
         self.assertIs(simulation._ally_in_line(source, target), ally)
         self.assertIsNone(simulation._ally_in_line(source, target, slot=1))
-        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)]
+        simulation.advance(rules.FIXED_STEP)
         self.assertLess(target.data["health"], target.data["max_health"])
         self.assertLess(ally.data["health"], ally.data["max_health"])
 
@@ -251,10 +253,10 @@ class TacticalWeaponTests(unittest.TestCase):
                 source, first, second = simulation.fighters
                 source.shape = "tank"
                 tree = battle_terrain.Feature("tree", 1150, 500, 10, 100)
-                simulation.battlefield = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, 8, [tree])
-                simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y,
+                simulation.battlefield = battle_terrain.Battlefield("plains", rules.ARENA_SIZE, 8, [tree])
+                simulation.projectiles = [tactical_units.Projectile(source, dict(source.data), source.x, source.y,
                                                            18000, 0, 1, weapon_data=dict(source.weapon(slot)))]
-                simulation.advance(combat.FIXED_STEP)
+                simulation.advance(rules.FIXED_STEP)
                 self.assertFalse(tree.destroyed)
                 self.assertEqual(second.data["health"], second.data["max_health"])
 
@@ -274,7 +276,7 @@ class TacticalWeaponTests(unittest.TestCase):
                 simulation._sides = [[fighter for fighter in simulation.fighters if fighter.side == side]
                                      for side in (0, 1)]
                 shots = []
-                simulation._drive_ai(source, combat._Grid([target], combat.TARGET_CELL), combat.FIXED_STEP,
+                simulation._drive_ai(source, tactical_units.SpatialGrid([target], rules.TARGET_CELL), rules.FIXED_STEP,
                                      shots, (source.x, source.y), target)
                 self.assertEqual(shots, [(source, 0), (source, 1)])
 
@@ -282,7 +284,7 @@ class TacticalWeaponTests(unittest.TestCase):
         self.library["Shooter I"]["metadata"]["tactical_support"] = "fixture_mg"
         record = queries.create_unit_dict("Shooter I", "Fixture", self.library)
         before = copy.deepcopy(record)
-        with patch.dict(combat.SUBUNIT_COUNTS, infantry=4):
+        with patch.dict(rules.SUBUNIT_COUNTS, infantry=4):
             simulation = combat.BattleSimulation(self.library, [record], ["Target I"], controlled_index=0)
         weapons = [fighter.primary_weapon for fighter in simulation.divisions[0]]
         self.assertEqual(weapons.count("fixture_mg"), 1)
@@ -355,33 +357,33 @@ class TacticalHitSoundTests(unittest.TestCase):
         simulation = self.start_battle()
         self.screen.zoom_index = 0
         for target in simulation.fighters:
-            for shape in combat.SOFT_TARGET_SHAPES:
+            for shape in rules.SOFT_TARGET_SHAPES:
                 target.shape = shape
                 with self.subTest(side=target.side, shape=shape), patch.object(
-                        battle_screen.random, "choice", side_effect=battle_screen.FLESH_HIT_SOUNDS) as choice, patch(
+                        battle_screen.random, "choice", side_effect=battle_layout.FLESH_HIT_SOUNDS) as choice, patch(
                         "ui.sound_effects.play_ui_sound") as sound:
-                    for _ in battle_screen.FLESH_HIT_SOUNDS:
+                    for _ in battle_layout.FLESH_HIT_SOUNDS:
                         self.screen._play_hit_sound(target, 5)
                     self.assertEqual([entry.args[0] for entry in sound.call_args_list],
-                                     list(battle_screen.FLESH_HIT_SOUNDS))
+                                     list(battle_layout.FLESH_HIT_SOUNDS))
                     self.assertTrue(all(entry.kwargs["volume_scale"] == self.screen.battle_sfx_volume_share(target)
                                         for entry in sound.call_args_list))
-                    self.assertTrue(all(entry.args == (battle_screen.FLESH_HIT_SOUNDS,)
+                    self.assertTrue(all(entry.args == (battle_layout.FLESH_HIT_SOUNDS,)
                                         for entry in choice.call_args_list))
 
     def test_armored_ricochets_include_zero_and_exactly_one_percent_but_not_larger_hits(self):
         simulation = self.start_battle()
         for target in simulation.fighters:
-            for shape in combat.MOBILITY.keys() - combat.SOFT_TARGET_SHAPES:
+            for shape in rules.MOBILITY.keys() - rules.SOFT_TARGET_SHAPES:
                 target.shape = shape
                 for damage, ricochet in ((0, True), (5, True), (10, True), (10.001, False), (20, False)):
                     with self.subTest(side=target.side, shape=shape, damage=damage), patch.object(
-                            battle_screen.random, "choice", return_value=battle_screen.RICOCHET_SOUNDS[0]) as choice, patch(
+                            battle_screen.random, "choice", return_value=battle_layout.RICOCHET_SOUNDS[0]) as choice, patch(
                             "ui.sound_effects.play_ui_sound") as sound:
                         self.screen._play_hit_sound(target, damage)
                         if ricochet:
-                            choice.assert_called_once_with(battle_screen.RICOCHET_SOUNDS)
-                            sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0],
+                            choice.assert_called_once_with(battle_layout.RICOCHET_SOUNDS)
+                            sound.assert_called_once_with(battle_layout.RICOCHET_SOUNDS[0],
                                                           volume_scale=self.screen.battle_sfx_volume_share(target))
                         else:
                             choice.assert_not_called()
@@ -392,18 +394,18 @@ class TacticalHitSoundTests(unittest.TestCase):
         source, target = simulation.fighters
         target.shape = "tank"
         target.data["health"] = 1
-        simulation.projectiles = [combat.Projectile(source, dict(source.data),
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data),
                                                    target.x - target.radius - 1, target.y, 300, 0, 1)]
         with patch.object(simulation, "weapon_damage", return_value=11), patch.object(
                 self.screen, "_play_hit_sound", wraps=self.screen._play_hit_sound) as hit, patch(
-                "screens.game.custom_battle.random.choice", return_value=battle_screen.RICOCHET_SOUNDS[0]), patch(
+                "screens.game.custom_battle.random.choice", return_value=battle_layout.RICOCHET_SOUNDS[0]), patch(
                 "ui.sound_effects.play_ui_sound") as sound:
             simulation.on_hit = hit
-            simulation.advance(combat.FIXED_STEP)
+            simulation.advance(rules.FIXED_STEP)
         hit.assert_called_once_with(target, 1, "direct", simulation.impacts[-1][:2])
         # The hit empties the tank's health, so its destruction explosion follows the ricochet.
         volume = self.screen.battle_sfx_volume_share(target)
-        self.assertEqual(sound.call_args_list, [call(battle_screen.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])
+        self.assertEqual(sound.call_args_list, [call(battle_layout.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])
         self.assertEqual(target.data["health"], 0)
 
     def test_each_simultaneous_hit_uses_its_actual_hp_loss(self):
@@ -411,33 +413,33 @@ class TacticalHitSoundTests(unittest.TestCase):
         source, target = simulation.fighters
         target.shape = "tank"
         target.data["health"] = 15
-        simulation.projectiles = [combat.Projectile(source, dict(source.data),
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data),
                                                    target.x - target.radius - 1, target.y, 300, 0, 1)
                                   for _ in range(2)]
         with patch.object(simulation, "weapon_damage", return_value=11), patch.object(
                 self.screen, "_play_hit_sound", wraps=self.screen._play_hit_sound) as hit, patch(
-                "screens.game.custom_battle.random.choice", return_value=battle_screen.RICOCHET_SOUNDS[0]), patch(
+                "screens.game.custom_battle.random.choice", return_value=battle_layout.RICOCHET_SOUNDS[0]), patch(
                 "ui.sound_effects.play_ui_sound") as sound:
             simulation.on_hit = hit
-            simulation.advance(combat.FIXED_STEP)
+            simulation.advance(rules.FIXED_STEP)
         self.assertEqual([entry.args[1] for entry in hit.call_args_list], [11, 4])
         # The hit empties the tank's health, so its destruction explosion follows the ricochet.
         volume = self.screen.battle_sfx_volume_share(target)
-        self.assertEqual(sound.call_args_list, [call(battle_screen.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])
+        self.assertEqual(sound.call_args_list, [call(battle_layout.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])
 
     def check_projectile_sound(self, hit_kind):
         simulation = self.start_battle()
         source, target = simulation.fighters
         if hit_kind == "terrain":
-            simulation.battlefield = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, 8,
+            simulation.battlefield = battle_terrain.Battlefield("plains", rules.ARENA_SIZE, 8,
                 [battle_terrain.Feature("rock", 1050, 500, 10, 100)])
-        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x,
+        simulation.projectiles = [tactical_units.Projectile(source, dict(source.data), source.x,
             source.y + (100 if hit_kind == "miss" else 0), 6000, 0, 1)]
-        with patch.object(battle_screen.random, "choice", return_value=battle_screen.FLESH_HIT_SOUNDS[0]), patch(
+        with patch.object(battle_screen.random, "choice", return_value=battle_layout.FLESH_HIT_SOUNDS[0]), patch(
                 "ui.sound_effects.play_ui_sound") as sound:
-            simulation.advance(combat.FIXED_STEP)
+            simulation.advance(rules.FIXED_STEP)
         if hit_kind == "body":
-            sound.assert_called_once_with(battle_screen.FLESH_HIT_SOUNDS[0],
+            sound.assert_called_once_with(battle_layout.FLESH_HIT_SOUNDS[0],
                                           volume_scale=self.screen.battle_sfx_volume_share(target))
         else:
             sound.assert_not_called()
@@ -456,7 +458,7 @@ class TacticalHitSoundTests(unittest.TestCase):
         target = simulation.fighters[1]
         with patch.object(simulation, "_resolve_contacts", return_value=[(target, 5, simulation.fighters[0])]), patch(
                 "ui.sound_effects.play_ui_sound") as sound:
-            simulation.advance(combat.FIXED_STEP)
+            simulation.advance(rules.FIXED_STEP)
         self.assertEqual(target.data["health"], 995)
         sound.assert_not_called()
 

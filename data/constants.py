@@ -760,7 +760,7 @@ DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 
 # Each army deploys in at most this many columns (ranks), each holding one or two divisions.
-# The battlefield size (ARENA_SIZE in map_logic/custom_battle.py and map_logic/naval_battle.py)
+# The battlefield size (ARENA_SIZE in map_logic/tactical_rules.py and map_logic/naval_battle.py)
 # is derived from the column count so two full armies fit.
 CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE = 16
 CUSTOM_BATTLE_UNITS_PER_COLUMN = 2

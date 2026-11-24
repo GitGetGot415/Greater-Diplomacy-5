@@ -11,6 +11,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic import custom_battle as combat, naval_battle as naval
+from map_logic import tactical_campaign as campaign, tactical_rules as rules, tactical_units
 from screens.game import custom_battle as ui
 from tests.test_custom_battle import unit_stats
 from ui.rendering.font_manager import fonts
@@ -30,7 +31,7 @@ class NavalBattleTests(unittest.TestCase):
             "artillery_shell": dict(label="Fixture shell", interval=1.0, rounds=1, reload=1.0, speed=200.0, spread=0.0, damage=1.0, penetration=0.0, shell=True, soft_only=False, projectile="artillery_shell", range=2000.0, gravity=100.0),
             "torpedo": dict(label="Fixture torpedo", interval=1.0, rounds=1, reload=1.0, speed=100.0, spread=0.0, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="torpedo", range=2000.0),
         }))
-        self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
+        self.enterContext(patch.object(rules, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
 
     def simulation(self, friendly="destroyer", enemy="destroyer", *, controlled=0, terrain="ocean"):
         simulation = combat.BattleSimulation(self.library, [f"Fixture {friendly} I"], [f"Fixture {enemy} I"], terrain=terrain, controlled_index=controlled, seed=7)
@@ -40,13 +41,13 @@ class NavalBattleTests(unittest.TestCase):
 
     def test_terrain_round_trip_keeps_identity_owner_and_health_fraction(self):
         for name in self.library:
-            original = combat.create_battle_unit(name, "Fixture A", self.library, "plains")
+            original = rules.create_battle_unit(name, "Fixture A", self.library, "plains")
             original["health"] *= 0.37
-            ocean = combat.prepare_battle_unit(original, self.library, "ocean")
-            land = combat.prepare_battle_unit(ocean, self.library, "plains")
+            ocean = rules.prepare_battle_unit(original, self.library, "ocean")
+            land = rules.prepare_battle_unit(ocean, self.library, "plains")
             self.assertEqual((land["type"], land["unit_id"], land["owner"]), (original["type"], original["unit_id"], original["owner"]))
             self.assertAlmostEqual(land["health"] / land["max_health"], 0.37)
-            self.assertIn(combat.unit_shape(ocean["type"], self.library), naval.SHAPES)
+            self.assertIn(rules.unit_shape(ocean["type"], self.library), naval.SHAPES)
             self.assertFalse("Convoy (Truck (" in ocean["type"])
             if self.library[name]["naval_unit"]:
                 self.assertEqual(ocean["type"], name)
@@ -119,11 +120,11 @@ class NavalBattleTests(unittest.TestCase):
     def test_ai_turrets_can_engage_different_targets_in_their_sectors(self):
         simulation = self.simulation(controlled=None)
         source, front = simulation.fighters
-        rear = combat.Fighter(dict(front.data), 1, source.x - 600, source.y, front.shape, index=2)
+        rear = tactical_units.Fighter(dict(front.data), 1, source.x - 600, source.y, front.shape, index=2)
         simulation._sides = [[source], [front, rear]]
         simulation.elapsed = 10
         shots = []
-        simulation._drive_ai(source, combat._Grid([front, rear], combat.TARGET_CELL), 1.0, shots, (source.x, source.y), front)
+        simulation._drive_ai(source, tactical_units.SpatialGrid([front, rear], rules.TARGET_CELL), 1.0, shots, (source.x, source.y), front)
         self.assertEqual({slot for _, slot in shots}, {0, 1})
         self.assertIs(source.secondary_target, rear)
         self.assertGreater(source.gun_points[0][0], source.x)
@@ -185,7 +186,7 @@ class NavalBattleTests(unittest.TestCase):
         mount = naval.mount_position(source, 0)
         muzzle = naval.muzzle_position(source, 0)
         ally_half = c.TACTICAL_BODIES["aircraft_carrier"][1] / 2
-        ally = combat.Fighter(dict(source.data), source.side, muzzle[0], muzzle[1] + ally_half - 1, "aircraft_carrier", index=2)
+        ally = tactical_units.Fighter(dict(source.data), source.side, muzzle[0], muzzle[1] + ally_half - 1, "aircraft_carrier", index=2)
         self.assertIsNotNone(naval.hull_interval(muzzle, muzzle, ally))
         simulation._sides = [[source, ally], [target]]
         weapon = c.TACTICAL_WEAPONS["artillery_shell"]
@@ -252,7 +253,7 @@ class NavalBattleTests(unittest.TestCase):
     def test_convoy_bullet_stops_at_its_range_and_the_gun_holds_fire_beyond_it(self):
         weapon = c.TACTICAL_WEAPONS["convoy_gun"]
         simulation, source, target = self.fire_convoy_at(weapon["range"] + 200)
-        self.assertFalse(naval.can_fire(source, 0, (target.x, target.y), combat.AIM_TOLERANCE))
+        self.assertFalse(naval.can_fire(source, 0, (target.x, target.y), rules.AIM_TOLERANCE))
         simulation.projectiles.clear()
         source.gun_points[0] = None
         simulation._fire_shot(source)
@@ -298,7 +299,7 @@ class NavalBattleTests(unittest.TestCase):
         simulation = self.simulation("submarine")
         source, target = simulation.fighters
         target.x, target.y, target.angle = 1600, 1700, math.pi / 2
-        shot = combat.Projectile(source, dict(source.data), 1550, 1500, 100, 0, 1, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+        shot = tactical_units.Projectile(source, dict(source.data), 1550, 1500, 100, 0, 1, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
         self.assertIsNotNone(naval.projectile_contact(shot, target, 1, (1600, 1300)))
 
     def test_torpedo_muzzle_clears_hull_and_expired_miss_is_removed(self):
@@ -328,7 +329,7 @@ class NavalBattleTests(unittest.TestCase):
                 if controlled is not None:
                     simulation.set_player_input(fire=True, aim_point=(target.x, target.y))
                 for number in range(1, weapon["rounds"] + 1):
-                    simulation.advance(combat.FIXED_STEP)
+                    simulation.advance(rules.FIXED_STEP)
                     self.assertEqual(len(simulation.projectiles), number)
                     self.assertEqual(source.primary_rounds, number % weapon["rounds"])
                     wait = weapon["interval"] if number < weapon["rounds"] else weapon["reload"]
@@ -341,13 +342,13 @@ class NavalBattleTests(unittest.TestCase):
                 simulation.paused = False
                 simulation.advance(weapon["reload"] / 2)
                 self.assertEqual(len(fired), weapon["rounds"])
-                for _ in range(math.ceil(weapon["reload"] / combat.FIXED_STEP) + 2):
-                    simulation.advance(combat.FIXED_STEP)
+                for _ in range(math.ceil(weapon["reload"] / rules.FIXED_STEP) + 2):
+                    simulation.advance(rules.FIXED_STEP)
                     if len(fired) > weapon["rounds"]:
                         break
                 self.assertEqual(len(fired), weapon["rounds"] + 1)
                 self.assertGreaterEqual(fired[-1][1] - fired[-2][1], weapon["reload"] - 1e-9)
-                self.assertLessEqual(fired[-1][1] - fired[-2][1], weapon["reload"] + combat.FIXED_STEP + 1e-9)
+                self.assertLessEqual(fired[-1][1] - fired[-2][1], weapon["reload"] + rules.FIXED_STEP + 1e-9)
                 self.assertEqual(source.cooldown, weapon["interval"])
 
     def test_releasing_fire_does_not_queue_remaining_torpedoes(self):
@@ -360,13 +361,13 @@ class NavalBattleTests(unittest.TestCase):
         fired = []
         simulation.on_shot = fired.append
         simulation.set_player_input(fire=True, aim_point=(target.x, target.y))
-        simulation.advance(2 * combat.FIXED_STEP)
+        simulation.advance(2 * rules.FIXED_STEP)
         self.assertEqual(len(fired), 2)
         simulation.set_player_input()
         simulation.advance(weapon["reload"])
         self.assertEqual(len(fired), 2)
         simulation.set_player_input(fire=True, aim_point=(target.x, target.y))
-        simulation.advance(2 * combat.FIXED_STEP)
+        simulation.advance(2 * rules.FIXED_STEP)
         self.assertEqual(len(fired), 4)
         self.assertEqual(source.cooldown, weapon["reload"])
 
@@ -389,7 +390,7 @@ class NavalBattleTests(unittest.TestCase):
         source, target = simulation.fighters
         distance = 700
         angle = math.radians(6)
-        ally = combat.Fighter(dict(target.data), source.side, source.x + distance * math.cos(angle), source.y + distance * math.sin(angle), "convoy", index=2)
+        ally = tactical_units.Fighter(dict(target.data), source.side, source.x + distance * math.cos(angle), source.y + distance * math.sin(angle), "convoy", index=2)
         simulation._sides = [[source, ally], [target]]
         self.assertIsNone(simulation._naval_ally_in_line(source, target, 0))
         ally.y = source.y
@@ -400,7 +401,7 @@ class NavalBattleTests(unittest.TestCase):
         source, target = simulation.fighters
         source.aim = math.radians(3.5)
         source.gun_points[0] = (target.x, target.y)
-        ally = combat.Fighter(dict(target.data), source.side, source.x + 250, source.y + 20, "convoy", index=2)
+        ally = tactical_units.Fighter(dict(target.data), source.side, source.x + 250, source.y + 20, "convoy", index=2)
         simulation._sides = [[source, ally], [target]]
         ideal_start = naval.mount_position(source, 0)
         self.assertIsNone(naval.hull_interval(ideal_start, (target.x, target.y), ally))
@@ -421,7 +422,7 @@ class NavalBattleTests(unittest.TestCase):
         simulation = self.simulation("submarine", controlled=None)
         source, target = simulation.fighters
         c.TACTICAL_WEAPONS["torpedo"]["spread"] = 2.0
-        ally = combat.Fighter(dict(target.data), source.side, source.x + 400, source.y + 20, "convoy", index=2)
+        ally = tactical_units.Fighter(dict(target.data), source.side, source.x + 400, source.y + 20, "convoy", index=2)
         simulation._sides = [[source, ally], [target]]
         self.assertIsNone(naval.hull_interval(naval.mount_position(source, 0), (target.x, target.y), ally))
         self.assertIs(simulation._torpedo_ally_in_path(source, 0), ally)
@@ -433,7 +434,7 @@ class NavalBattleTests(unittest.TestCase):
         source.shape = "submarine"
         source.angle = source.aim = math.pi
         source.gun_points[0] = (target.x, target.y)
-        ally = combat.Fighter(dict(target.data), source.side, source.x - 250, source.y - 70, "destroyer", index=2, turn_rate=math.radians(60), naval_controls=(0.0, 1.0))
+        ally = tactical_units.Fighter(dict(target.data), source.side, source.x - 250, source.y - 70, "destroyer", index=2, turn_rate=math.radians(60), naval_controls=(0.0, 1.0))
         simulation._sides[source.side].append(ally)
         simulation.fighters.append(ally)
         self.assertIsNone(simulation._torpedo_ally_in_path(source, 0, predict_motion=False))
@@ -449,7 +450,7 @@ class NavalBattleTests(unittest.TestCase):
         simulation = self.simulation("submarine", controlled=None)
         source, target = simulation.fighters
         muzzle = naval.muzzle_position(source, 0)
-        ally = combat.Fighter(dict(target.data), source.side, muzzle[0] + 200, muzzle[1] - 100, "convoy", index=2, vy=50)
+        ally = tactical_units.Fighter(dict(target.data), source.side, muzzle[0] + 200, muzzle[1] - 100, "convoy", index=2, vy=50)
         simulation._sides[source.side].append(ally)
         self.assertIsNone(naval.hull_interval(muzzle, (muzzle[0] + 2000, muzzle[1]), ally))
         self.assertIs(simulation._torpedo_ally_in_path(source, 0), ally)
@@ -463,11 +464,11 @@ class NavalBattleTests(unittest.TestCase):
         source, target = simulation.fighters
         source.data["speed"] = target.data["speed"] = 0
         target.cooldown = target.secondary_cooldown = 1000
-        ally = combat.Fighter(dict(target.data, speed=0), source.side, source.x + 300, source.y + 500, "convoy", index=2, cooldown=1000)
+        ally = tactical_units.Fighter(dict(target.data, speed=0), source.side, source.x + 300, source.y + 500, "convoy", index=2, cooldown=1000)
         simulation.fighters.append(ally)
         fired = []
         simulation.on_shot = fired.append
-        simulation.advance(2 * combat.FIXED_STEP)
+        simulation.advance(2 * rules.FIXED_STEP)
         self.assertEqual(len(fired), 2)
         ally.y = source.y
         simulation.advance(0.3)
@@ -475,7 +476,7 @@ class NavalBattleTests(unittest.TestCase):
         self.assertEqual(source.primary_rounds, 2)
         self.assertEqual(source.cooldown, 0)
         ally.y = source.y + 500
-        simulation.advance(2 * combat.FIXED_STEP)
+        simulation.advance(2 * rules.FIXED_STEP)
         self.assertEqual(len(fired), 4)
         self.assertEqual(source.primary_rounds, 0)
         self.assertEqual(source.cooldown, weapon["reload"])
@@ -485,7 +486,7 @@ class NavalBattleTests(unittest.TestCase):
             simulation = self.simulation("submarine", controlled=None)
             source, target = simulation.fighters
             source.side, target.side = side, 1 - side
-            ally = combat.Fighter(dict(target.data), side, source.x + 200, source.y, "convoy", index=2)
+            ally = tactical_units.Fighter(dict(target.data), side, source.x + 200, source.y, "convoy", index=2)
             simulation._sides = [[], []]
             simulation._sides[side] = [source, ally]
             simulation._sides[1 - side] = [target]
@@ -500,7 +501,7 @@ class NavalBattleTests(unittest.TestCase):
     def test_blocked_submarine_holds_if_both_repositioning_maneuvers_and_backing_away_are_unsafe(self):
         simulation = self.simulation("submarine", controlled=None)
         source, target = simulation.fighters
-        ally = combat.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
+        ally = tactical_units.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
         with patch.object(simulation, "_naval_maneuver_score", return_value=None) as evaluate:
             self.assertEqual(simulation._naval_firing_course(source, ally, target), (0.0, source.angle))
         self.assertEqual(evaluate.call_count, 3)
@@ -509,7 +510,7 @@ class NavalBattleTests(unittest.TestCase):
     def test_blocked_submarine_backs_away_when_turning_either_way_is_unsafe(self):
         simulation = self.simulation("submarine", controlled=None)
         source, target = simulation.fighters
-        ally = combat.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
+        ally = tactical_units.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
         safe = (math.inf, 0.0, 0.0, 0.0)
         with patch.object(simulation, "_naval_maneuver_score", side_effect=[None, None, safe]) as evaluate:
             self.assertEqual(simulation._naval_firing_course(source, ally, target), (-source.pace, source.angle))
@@ -520,8 +521,8 @@ class NavalBattleTests(unittest.TestCase):
     def test_dead_on_sidestep_steps_away_from_the_nearest_other_ally(self):
         simulation = self.simulation("submarine", controlled=None)
         source, target = simulation.fighters
-        blocker = combat.Fighter(dict(source.data), source.side, source.x + 300, source.y, "submarine", index=2)
-        partner = combat.Fighter(dict(source.data), source.side, source.x, source.y, "submarine", index=3)
+        blocker = tactical_units.Fighter(dict(source.data), source.side, source.x + 300, source.y, "submarine", index=2)
+        partner = tactical_units.Fighter(dict(source.data), source.side, source.x, source.y, "submarine", index=3)
         simulation._sides = [[], []]
         simulation._sides[source.side] = [source, blocker, partner]
         simulation._sides[target.side] = [target]
@@ -533,11 +534,11 @@ class NavalBattleTests(unittest.TestCase):
                 self.assertLess(math.sin(source.dodge_heading) * offset, 0)
 
     def test_time_to_shift_accelerates_then_holds_its_speed_change(self):
-        self.assertEqual(combat.time_to_shift(0, 10, 5), 0)
-        self.assertAlmostEqual(combat.time_to_shift(4, 10, 2), 2)  # Still accelerating: 2 * 2 * 2 / 2 = 4.
-        self.assertAlmostEqual(combat.time_to_shift(35, 10, 2), 5 + 1)  # 25 while accelerating, then 10 more at 10/s.
-        self.assertEqual(combat.time_to_shift(5, 0, 2), math.inf)
-        self.assertEqual(combat.time_to_shift(5, 10, 0), math.inf)
+        self.assertEqual(rules.time_to_shift(0, 10, 5), 0)
+        self.assertAlmostEqual(rules.time_to_shift(4, 10, 2), 2)  # Still accelerating: 2 * 2 * 2 / 2 = 4.
+        self.assertAlmostEqual(rules.time_to_shift(35, 10, 2), 5 + 1)  # 25 while accelerating, then 10 more at 10/s.
+        self.assertEqual(rules.time_to_shift(5, 0, 2), math.inf)
+        self.assertEqual(rules.time_to_shift(5, 10, 0), math.inf)
 
     def test_ai_torpedoes_wait_until_the_target_is_inside_the_stretched_launch_window(self):
         for side in (0, 1):
@@ -549,7 +550,7 @@ class NavalBattleTests(unittest.TestCase):
                     source.angle = source.aim = 0.0
                     window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target) * naval.TORPEDO_LAUNCH_WINDOW_STRETCH
                     target.x = naval.mount_position(source, 0)[0] + window * share
-                    simulation.advance(combat.FIXED_STEP)
+                    simulation.advance(rules.FIXED_STEP)
                     launched = [shot for shot in simulation.projectiles if shot.kind == "torpedo" and shot.source is source]
                     self.assertEqual(bool(launched), fires)
 
@@ -572,7 +573,7 @@ class NavalBattleTests(unittest.TestCase):
         self.assertEqual(simulation.torpedo_escape_seconds(target), math.inf)
         source.angle = source.aim = 0.0
         target.x = naval.mount_position(source, 0)[0] + c.TACTICAL_WEAPONS["torpedo"]["range"] * 0.9
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance(rules.FIXED_STEP)
         self.assertTrue(any(shot.kind == "torpedo" for shot in simulation.projectiles))
 
     def test_torpedo_only_ships_close_inside_their_launch_window_before_stopping(self):
@@ -590,7 +591,7 @@ class NavalBattleTests(unittest.TestCase):
         weapon = dict(c.TACTICAL_WEAPONS["artillery_shell"])
         angle = math.atan2(point[1] - start[1], point[0] - start[0])
         flight, height, vertical = simulation._shell_arc(start, point, weapon)
-        return combat.Projectile(source, dict(source.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"],
+        return tactical_units.Projectile(source, dict(source.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"],
                                  flight, height=height, vertical_speed=vertical, gravity=weapon["gravity"], weapon_data=weapon)
 
     def test_ships_steer_clear_of_a_falling_shell_aimed_at_them(self):
@@ -643,16 +644,16 @@ class NavalBattleTests(unittest.TestCase):
     def test_ships_steer_around_a_slower_ally_on_their_course(self):
         simulation = self.simulation("destroyer", "destroyer", controlled=None)
         source, enemy = simulation.fighters
-        ally = combat.Fighter(dict(source.data), source.side, source.x + source.radius * 2 + 20, source.y + 10, "destroyer", index=2)
+        ally = tactical_units.Fighter(dict(source.data), source.side, source.x + source.radius * 2 + 20, source.y + 10, "destroyer", index=2)
         simulation._sides = [[], []]
         simulation._sides[source.side], simulation._sides[enemy.side] = [source, ally], [enemy]
         # The ally sits just below the course, so the ship bends upward, away from it.
-        self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, -combat.PASS_ALLY_ANGLE))
+        self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, -rules.PASS_ALLY_ANGLE))
         # An ally pulling away faster, or one too far ahead to matter yet, is not passed.
         ally.vx = source.pace * source.max_speed + 1
         self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, 0.0))
         ally.vx = 0.0
-        ally.x = source.x + source.radius + ally.radius + source.max_speed * combat.PASS_ALLY_SECONDS + 50
+        ally.x = source.x + source.radius + ally.radius + source.max_speed * rules.PASS_ALLY_SECONDS + 50
         self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, 0.0))
         # Reversing or stopping never bends the course.
         ally.x = source.x + source.radius * 2 + 20
@@ -682,7 +683,7 @@ class NavalBattleTests(unittest.TestCase):
                 for fighter, start in zip((top, bottom), starts):
                     if immobile:
                         # Already close enough to stop: each turns to bring its torpedo tube onto the enemy and fires.
-                        self.assertLess(abs(combat._wrap(math.atan2(enemy.y - fighter.y, enemy.x - fighter.x) - fighter.angle)), naval.FORWARD_TORPEDO[0].arc / 2)
+                        self.assertLess(abs(rules.wrap_angle(math.atan2(enemy.y - fighter.y, enemy.x - fighter.x) - fighter.angle)), naval.FORWARD_TORPEDO[0].arc / 2)
                         self.assertIn(fighter.index, launched)
                     else:
                         self.assertGreater(math.dist(start, (fighter.x, fighter.y)), 100)
@@ -690,7 +691,7 @@ class NavalBattleTests(unittest.TestCase):
     def test_rear_submarines_close_in_instead_of_clearing_a_line_they_cannot_fire_down_yet(self):
         simulation = self.simulation("submarine", "destroyer", controlled=None)
         source, target = simulation.fighters
-        ally = combat.Fighter(dict(source.data), source.side, source.x + 300, source.y, "submarine", index=2)
+        ally = tactical_units.Fighter(dict(source.data), source.side, source.x + 300, source.y, "submarine", index=2)
         simulation.fighters.append(ally)
         source.angle = source.aim = ally.angle = 0.0
         window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target)
@@ -700,19 +701,19 @@ class NavalBattleTests(unittest.TestCase):
         self.assertIsNotNone(simulation._naval_ally_in_line(source, target, 0))
         self.assertFalse(simulation._naval_launch_ready(source, 0, target))
         with patch.object(simulation, "_naval_firing_course", wraps=simulation._naval_firing_course) as clearing:
-            simulation._drive_naval(source, combat.FIXED_STEP, [], combat._Grid([target], combat.TARGET_CELL))
+            simulation._drive_naval(source, rules.FIXED_STEP, [], tactical_units.SpatialGrid([target], rules.TARGET_CELL))
         clearing.assert_not_called()
         self.assertEqual(source.dodge, 0)
 
     def test_a_blocked_submarine_clears_its_line_while_still_closing_in(self):
         simulation = self.simulation("submarine", "destroyer", controlled=None)
         source, target = simulation.fighters
-        ally = combat.Fighter(dict(source.data), source.side, source.x + 300, source.y + 5, "submarine", index=2)
+        ally = tactical_units.Fighter(dict(source.data), source.side, source.x + 300, source.y + 5, "submarine", index=2)
         simulation._sides = [[source, ally], [target]]
         throttle, heading = simulation._naval_firing_course(source, ally, target)
         toward = math.atan2(target.y - source.y, target.x - source.x)
         self.assertEqual(throttle, source.pace)
-        self.assertAlmostEqual(abs(combat._wrap(heading - toward)), naval.TORPEDO_CLEARING_ANGLE)
+        self.assertAlmostEqual(abs(rules.wrap_angle(heading - toward)), naval.TORPEDO_CLEARING_ANGLE)
         # Away from the ally, which sits just below the line to the target.
         self.assertLess(math.sin(heading), 0)
         # Decided again every tick, so it ends as soon as the path is clear.
@@ -727,7 +728,7 @@ class NavalBattleTests(unittest.TestCase):
                     unit.data["speed"] = 1
                     source.side = unit.side if friendly else 1 - unit.side
                     unit.ram_committed = True
-                    shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+                    shot = tactical_units.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
                     simulation.projectiles = [shot]
                     simulation._sides = [[fighter for fighter in simulation.fighters if fighter.side == team] for team in (0, 1)]
                     with patch.object(simulation, "_ready_to_fire", return_value=True):
@@ -742,11 +743,11 @@ class NavalBattleTests(unittest.TestCase):
         unit.data["speed"] = 1
         cases = ((unit.x + 600, unit.y, 100, 0, 10), (unit.x + 600, unit.y + 300, -100, 0, 10), (unit.x + 600, unit.y, -100, 0, 0.1))
         for x, y, vx, vy, remaining in cases:
-            shot = combat.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+            shot = tactical_units.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
             simulation.projectiles = [shot]
             self.assertEqual(simulation._naval_evasion(unit, (0.0, unit.angle)), (0.0, unit.angle))
             self.assertIsNone(unit.evasion_course)
-        shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+        shot = tactical_units.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
         for controlled, speed in ((unit, 1), (None, 0)):
             simulation.controlled = controlled
             unit.data["speed"] = speed
@@ -765,7 +766,7 @@ class NavalBattleTests(unittest.TestCase):
             unit.data["speed"] = 1
             unit.hold = 1
             unit.cooldown = unit.secondary_cooldown = 1000
-            shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+            shot = tactical_units.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
             simulation.projectiles = [shot]
             if evades:
                 simulation.advance(7)
@@ -778,7 +779,7 @@ class NavalBattleTests(unittest.TestCase):
 
     def long_hull_encounter(self):
         self.enterContext(patch.dict(c.TACTICAL_BODIES, {"destroyer": (200, 20, math.hypot(100, 10), 4.0)}))
-        self.enterContext(patch.dict(combat.MOBILITY, {"destroyer": (1.0, 60.0, 0.1)}))
+        self.enterContext(patch.dict(rules.MOBILITY, {"destroyer": (1.0, 60.0, 0.1)}))
         simulation = self.simulation(controlled=None)
         source, unit = simulation.fighters
         unit.x = unit.y = 2000
@@ -789,7 +790,7 @@ class NavalBattleTests(unittest.TestCase):
         return simulation, source, unit
 
     def torpedo_at(self, source, x, y, vx, vy, remaining=6):
-        return combat.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+        return tactical_units.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
 
     def test_rotating_bow_and_stern_hit_between_clear_endpoint_orientations(self):
         simulation, source, unit = self.long_hull_encounter()
@@ -880,7 +881,7 @@ class NavalBattleTests(unittest.TestCase):
     def test_maneuvers_cannot_leave_the_field_or_swing_into_a_friendly_hull(self):
         simulation, source, unit = self.long_hull_encounter()
         shot = self.torpedo_at(source, unit.x + 180, unit.y + 50, -80, 0)
-        ally = combat.Fighter(dict(unit.data), unit.side, unit.x + 70, unit.y + 70, "convoy", index=2)
+        ally = tactical_units.Fighter(dict(unit.data), unit.side, unit.x + 70, unit.y + 70, "convoy", index=2)
         simulation.fighters.append(ally)
         simulation._sides[unit.side].append(ally)
         self.assertIsNone(simulation._naval_maneuver_score(unit, (1.0, math.pi / 2), [shot]))
@@ -915,7 +916,7 @@ class NavalBattleTests(unittest.TestCase):
         self.assertEqual(simulation._naval_course(source, target)[0], 1.0)
 
     def test_land_simulation_unloads_convoy_with_its_health_fraction(self):
-        entry = combat.create_battle_unit("Fixture Land I", "Fixture A", self.library, "ocean")
+        entry = rules.create_battle_unit("Fixture Land I", "Fixture A", self.library, "ocean")
         entry["health"] *= 0.37
         simulation = combat.BattleSimulation(self.library, [entry], ["Fixture Land I"], terrain="plains")
         self.assertAlmostEqual(simulation.division_health_fraction(0), 0.37)
@@ -939,7 +940,7 @@ class NavalBattleTests(unittest.TestCase):
             if friendly:
                 second.side = first.side
             movements = [(first, 10, 0), (second, -10, 0)]
-            crowds = [combat._Grid([first], combat.GRID_CELL), combat._Grid([second], combat.GRID_CELL)]
+            crowds = [tactical_units.SpatialGrid([first], rules.GRID_CELL), tactical_units.SpatialGrid([second], rules.GRID_CELL)]
             hits = simulation._resolve_contacts(simulation.fighters, crowds, movements, 1 / 15)
             self.assertEqual(bool(hits), not friendly)
 
@@ -966,17 +967,17 @@ class NavalBattleTests(unittest.TestCase):
         with patch.object(queries, "get_tech_tree", return_value=tree):
             for terrain in c.WATER_TERRAINS:
                 with self.subTest(terrain=terrain):
-                    self.assertEqual(set(combat.custom_unit_types_for_year(library, 2060, terrain)), {"Recent Ship I", "Modern Ship I"})
-                    self.assertEqual(combat.custom_unit_types_for_year(library, 2061, terrain), ["Modern Ship II"])
-                    self.assertEqual(combat.custom_unit_types_for_year(library, 2066, terrain), [])
+                    self.assertEqual(set(campaign.custom_unit_types_for_year(library, 2060, terrain)), {"Recent Ship I", "Modern Ship I"})
+                    self.assertEqual(campaign.custom_unit_types_for_year(library, 2061, terrain), ["Modern Ship II"])
+                    self.assertEqual(campaign.custom_unit_types_for_year(library, 2066, terrain), [])
 
     def test_water_random_candidates_resolve_numbered_research_and_skip_missing_dates(self):
         names = list(self.library)
         tree = {"fixture": {"years": [2060]}}
         self.library[names[0]]["metadata"]["research"] = {"tech": "missing_fixture", "level": 1}
         with patch.object(queries, "get_latest_units_for_year", return_value=names), patch.object(queries, "get_tech_tree", return_value=tree):
-            self.assertEqual(set(combat.custom_unit_types_for_year(self.library, 2060, "ocean")), {name for name in names[1:] if self.library[name]["naval_unit"]})
-            self.assertEqual(combat.custom_unit_types_for_year(self.library, 2065, "ocean"), [])
+            self.assertEqual(set(campaign.custom_unit_types_for_year(self.library, 2060, "ocean")), {name for name in names[1:] if self.library[name]["naval_unit"]})
+            self.assertEqual(campaign.custom_unit_types_for_year(self.library, 2065, "ocean"), [])
 
 
 class NavalSetupTests(unittest.TestCase):
@@ -991,7 +992,7 @@ class NavalSetupTests(unittest.TestCase):
         countries = {name: dict(name=name, is_playable=True, flag_data="DEFAULT") for name in ("Fixture A", "Fixture B")}
         self.enterContext(patch.object(queries, "get_unit_library", return_value=self.library))
         self.enterContext(patch.object(queries, "get_country_data", return_value=countries))
-        self.enterContext(patch.object(combat, "normal_game_forecast", return_value=(None, None)))
+        self.enterContext(patch.object(campaign, "normal_game_forecast", return_value=(None, None)))
         self.enterContext(patch.object(queries, "get_latest_units_for_year", return_value=list(self.library)))
         self.screen = ui.CustomBattleScreen()
         self.enterContext(patch.object(queries, "get_tech_tree", return_value={"fixture": {"years": [self.screen.generation_year]}}))
@@ -1069,7 +1070,7 @@ class NavalSetupTests(unittest.TestCase):
     def test_year_change_refreshes_naval_random_without_restricting_manual_selection(self):
         year = 2060
         for name, stats in self.library.items():
-            researched = year if name == "Fixture destroyer I" else year - combat.RANDOM_UNIT_AGE_LIMIT
+            researched = year if name == "Fixture destroyer I" else year - rules.RANDOM_UNIT_AGE_LIMIT
             stats["metadata"]["research"] = {"tech": "fixture", "year": researched}
         self.screen.set_terrain("ocean")
         self.screen.update_generation_year(year - c.START_YEAR)
@@ -1081,7 +1082,7 @@ class NavalSetupTests(unittest.TestCase):
         self.screen.add_unit(0, "Fixture ironclad I")
         self.assertEqual(self.screen.rosters[0][0]["type"], "Fixture ironclad I")
         before = copy.deepcopy(self.screen.rosters)
-        self.screen.update_generation_year(year + combat.RANDOM_UNIT_AGE_LIMIT - c.START_YEAR)
+        self.screen.update_generation_year(year + rules.RANDOM_UNIT_AGE_LIMIT - c.START_YEAR)
         self.assertTrue(self.screen.generate_button.disabled)
         self.screen.generate_armies()
         self.assertEqual(self.screen.rosters, before)
@@ -1102,7 +1103,7 @@ class NavalSetupTests(unittest.TestCase):
         self.screen.start_battle()
         self.assertEqual(self.screen.mode, "battle")
         self.assertEqual(self.screen.simulation.arena_size, naval.ARENA_SIZE)
-        self.assertGreater(self.screen.simulation.sight_range, combat.WEAPON_RANGE)
+        self.assertGreater(self.screen.simulation.sight_range, rules.WEAPON_RANGE)
         self.screen.simulation.winner = 0
         self.screen.mode = "result"
         self.screen.preview_battle()

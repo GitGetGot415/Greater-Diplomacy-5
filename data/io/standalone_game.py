@@ -24,9 +24,13 @@ GAME_FILE = "game.json"
 # Packages keep only Python source, except data/, which also keeps its JSON libraries.
 DATA_PACKAGE = "data"
 SKIPPED_DIRS = ("__pycache__",)
-# Tactical mode is not exported. Turn processing still imports map_logic/custom_battle.py and map_logic/battle_terrain.py.
-EXCLUDED_SOURCE_FILES = ("screens/game/custom_battle.py", "screens/game/tactical_orders.py",
-                         "screens/game/tactical_retreat.py")
+# Tactical mode is not exported. Turn processing still imports map_logic/tactical_campaign.py, which loads the
+# tactical rules and map_logic/battle_terrain.py.
+EXCLUDED_SOURCE_FILES = ("screens/game/custom_battle.py", "screens/game/custom_battle_camera.py",
+                         "screens/game/custom_battle_editor.py", "screens/game/custom_battle_layout.py",
+                         "screens/game/custom_battle_render.py", "screens/game/custom_battle_roster.py",
+                         "screens/game/custom_battle_sprites.py", "screens/game/custom_battle_touch.py",
+                         "screens/game/tactical_orders.py", "screens/game/tactical_retreat.py")
 # Music and its synthesizers are selected separately. Other excluded assets are
 # the GD5 menu's title, scenery, and portraits, every unit art style except classic, tactical battle art,
 # and the Assets screen's art and copyright notes.

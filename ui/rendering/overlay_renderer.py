@@ -3,7 +3,7 @@ import math
 import numpy as np
 import data.constants as c
 from data import queries
-from map_logic import custom_battle
+from map_logic import tactical_campaign
 from ui.rendering import map_utils, symbol_loader
 from ui.rendering.font_manager import fonts
 from map_logic.system32 import combat_forecast, combat_rules
@@ -695,7 +695,7 @@ def midpoint_bounce_outcomes(map_screen):
     """
     outcomes = []
     for pair, prov_a, prov_b, side_a, side_b, pinned in _midpoint_meetings(map_screen):
-        tactical_side = custom_battle.tactical_meeting_side(
+        tactical_side = tactical_campaign.tactical_meeting_side(
             map_screen, prov_a, prov_b, side_a, side_b, pinned_units=pinned)
         if tactical_side is not None:
             origin, target = ((prov_a, prov_b) if tactical_side == 0 else (prov_b, prov_a))

@@ -29,7 +29,7 @@ from data import queries
 from tests.combat_fixtures import StubBattleMap
 
 from map_logic.system32 import combat_processor, movement_processor
-from map_logic import custom_battle
+from map_logic import tactical_campaign
 
 from tests.combat_fixtures import install_neutral_territory
 from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
@@ -144,7 +144,7 @@ class TacticalSwapTests(unittest.TestCase):
                 self.assertTrue(any(unit is opponent for unit in destination["units"]))
                 self.assertEqual(origin["units"], [])
                 self.assertEqual(destination["owner"], opponent["owner"])
-                self.assertIsNotNone(custom_battle.tactical_encounter(screen, destination))
+                self.assertIsNotNone(tactical_campaign.tactical_encounter(screen, destination))
                 self.assertNotIn("_combat_locked", opponent)
 
     def test_tactical_mid_turn_crossing_stops_fast_unit_on_the_encounter_tile(self):
@@ -170,7 +170,7 @@ class TacticalSwapTests(unittest.TestCase):
         self.assertEqual(destination["owner"], "B")
         self.assertEqual(player["order"]["path"], [])
         self.assertEqual(opponent["order"]["path"], [])
-        self.assertIsNotNone(custom_battle.tactical_encounter(screen, destination))
+        self.assertIsNotNone(tactical_campaign.tactical_encounter(screen, destination))
         self.assertTrue(all("_skip_remaining_steps" not in unit for unit in (player, opponent)))
 
     def test_priority_does_not_apply_outside_tactical_play_or_in_either_multiplayer_mode(self):
@@ -234,7 +234,7 @@ class TacticalSwapTests(unittest.TestCase):
                 else:
                     self.library["Fixture Ship I"] = {"naval_unit": True, "bombard_range": 0}
                     opponent["type"] = "Fixture Ship I"
-                self.assertIsNone(custom_battle.tactical_meeting_side(
+                self.assertIsNone(tactical_campaign.tactical_meeting_side(
                     screen, origin, destination, [player], [opponent]))
 
     def test_warships_cross_into_a_tactical_battle_only_at_sea(self):
@@ -249,10 +249,10 @@ class TacticalSwapTests(unittest.TestCase):
                 destination = screen.add_province("p2", "Unclaimed" if terrain == "ocean" else "A", units=[opponent], terrain=terrain)
                 destination["is_coastal"] = coastal
                 screen.session.player_unit = player
-                side = custom_battle.tactical_meeting_side(screen, origin, destination, [player], [opponent])
+                side = tactical_campaign.tactical_meeting_side(screen, origin, destination, [player], [opponent])
                 # A ship can dock in its own port, but a battle there is a land battle a warship cannot fight.
                 self.assertEqual(side, 0 if terrain == "ocean" else None)
-                self.assertEqual(custom_battle.tactical_encounter(screen, {"terrain": terrain, "units": [player, opponent]}) is not None, terrain == "ocean")
+                self.assertEqual(tactical_campaign.tactical_encounter(screen, {"terrain": terrain, "units": [player, opponent]}) is not None, terrain == "ocean")
 
     def test_unrelated_war_on_the_same_crossing_still_resolves_normally(self):
         for mid_turn in (False, True):
@@ -308,7 +308,7 @@ class TacticalSwapTests(unittest.TestCase):
                 destination = p2 if player_attacks else p1
                 self.assertEqual((player["health"], opponent["health"]), before)
                 self.assertEqual({id(unit) for unit in destination["units"]}, {id(player), id(opponent)})
-                self.assertIsNotNone(custom_battle.tactical_encounter(screen, destination))
+                self.assertIsNotNone(tactical_campaign.tactical_encounter(screen, destination))
 
     def test_another_incoming_attack_overrides_tactical_crossing_priority(self):
         for reverse_order in (False, True):
@@ -324,7 +324,7 @@ class TacticalSwapTests(unittest.TestCase):
                 if reverse_order:
                     screen.world.map_data = dict(reversed(list(screen.world.map_data.items())))
 
-                self.assertIsNone(custom_battle.tactical_meeting_side(
+                self.assertIsNone(tactical_campaign.tactical_meeting_side(
                     screen, origin, destination, [player], [head_on]))
                 self.resolve_without_automatic_combat(screen)
 
@@ -423,7 +423,7 @@ class TacticalSwapTests(unittest.TestCase):
                 self.assertEqual(player["order"]["path"], [])
                 if mode == "tactical":
                     self.assertEqual(attacker["health"], 1)
-                    self.assertIsNotNone(custom_battle.tactical_encounter(screen, origin))
+                    self.assertIsNotNone(tactical_campaign.tactical_encounter(screen, origin))
                 else:
                     self.assertEqual(attacker["health"], 0)
 
