@@ -75,7 +75,6 @@
 
 ## Economy and Production
 
-- make fuel shortages affect normal movement or combat
 - decide whether resources need storage limits
 - let players change how much units cost to produce
 - let players save and load unit-cost presets
