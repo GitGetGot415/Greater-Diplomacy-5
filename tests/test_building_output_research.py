@@ -19,6 +19,7 @@ from map_logic.system32 import economy_processor, research_processor, turn_proce
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from tests.research_fixtures import research_lock_cases
 from data.session_state import LOCAL_PLAY
+from ui.information import tooltip
 
 
 def building(materials, manpower, fuel, group):
@@ -49,7 +50,6 @@ class OutputBonusTests(unittest.TestCase):
         self.enterContext(patch.object(queries, "get_building_library", return_value=self.library))
 
     def test_economy_hover_uses_owner_research_and_refreshes_after_state_changes(self):
-        from ui.information import tooltip
         import pygame
 
         province = {"id": 1, "owner": "A", "cores": ["A"],
@@ -84,6 +84,37 @@ class OutputBonusTests(unittest.TestCase):
             tooltip.prepare_building_yields(screen)
         self.assertEqual(screen._tooltip_building_yields, [])
         self.enterContext(patch.object(queries, "get_unit_library", return_value={}))
+
+    def test_economy_hover_shows_current_conversion_for_own_visible_provinces_only(self):
+        own = {"id": 1, "owner": "A", "cores": ["A"], "materials": 30}
+        other_own = {"id": 2, "owner": "A", "cores": ["A"], "materials": 10}
+        foreign = {"id": 3, "owner": "B", "cores": ["B"], "materials": 50}
+        screen = map_double(hovered_province=own, secondary_mode="ECONOMY", base_layer="POLITICAL",
+                            _presentation_cache_revision=0, _tooltip_building_stamp=None, player_country="A",
+                            nation_data={owner: {"mat_to_fuel_slider": 0.5, "conscription_slider": 1} for owner in ("A", "B")},
+                            map_data={str(tile["id"]): tile for tile in (own, other_own, foreign)})
+        outputs = lambda tile: {"core": {"manpower": 0, "materials": tile["materials"], "fuel": 0}}
+
+        def hover(tile):
+            screen.hovered_province = tile
+            tooltip.prepare_building_yields(screen)
+            return [line for line in tooltip._province_tooltip_lines(screen, tile) if line.startswith("Fuel conversion")]
+
+        with (patch.object(c, "COUNTRY_BASE_YIELDS", dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)),
+              patch.object(c, "FUEL_CONVERSION_RATIO", 0.2),
+              patch.object(queries, "get_max_fuel_conversion", return_value=0.5),
+              patch.object(queries.ProvinceProduction, "breakdown", side_effect=outputs)):
+            self.assertIn("-15 Materials, +3 Fuel", hover(own)[0])
+            with patch.object(queries.ProvinceProduction, "fuel_conversion_by_province", side_effect=AssertionError("recomputed")):
+                self.assertIn("-5 Materials, +1 Fuel", hover(other_own)[0])
+                self.assertEqual(hover(foreign), [])
+                screen.visible_provinces = set()
+                self.assertEqual(hover(own), [])
+
+            screen.visible_provinces = None
+            screen.world.nation_data["A"]["mat_to_fuel_slider"] = 0
+            screen._presentation_cache_revision += 1
+            self.assertEqual(hover(own), [])
 
     def output(self, name, research):
         return queries.get_building_output(name, research, self.library)

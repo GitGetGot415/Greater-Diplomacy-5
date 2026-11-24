@@ -7,12 +7,20 @@ from ui.rendering import overlay_renderer
 UNIT_PREVIEW_LIMIT = 5
 
 
+def _fuel_conversion_key(map_screen):
+    session = map_screen.session
+    player = session.player_country
+    if not session.is_editor and not session.tactical_mode and queries.get_viewing_country(map_screen) == player:
+        return player, map_screen._presentation_cache_revision
+
+
 def prepare_building_yields(map_screen):
-    """Cache visible building yields when the hover or map state changes."""
+    """Cache visible building yields and fuel conversion at hover or state changes."""
     province = map_screen.hovered_province
     visible = bool(province and map_screen.secondary_mode == "ECONOMY"
                    and queries.is_province_visible(map_screen, province["id"]))
-    stamp = (id(province), map_screen._presentation_cache_revision, map_screen.secondary_mode, visible)
+    conversion_key = _fuel_conversion_key(map_screen) if visible else None
+    stamp = (id(province), map_screen._presentation_cache_revision, map_screen.secondary_mode, visible, conversion_key)
     if map_screen._tooltip_building_stamp == stamp:
         return
     map_screen._tooltip_building_stamp = stamp
@@ -20,7 +28,18 @@ def prepare_building_yields(map_screen):
     if not visible:
         return
     owner = province.get("owner", "Unclaimed")
-    research = map_screen.world.nation_data.get(owner, {}).get("research", {})
+    world = map_screen.world
+    country = world.nation_data.get(owner, {})
+    # Conversion output is private and cached once per player and map revision.
+    cached_key, _ = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
+    if conversion_key and owner == conversion_key[0] and conversion_key != cached_key:
+        conversions = {}
+        if queries.get_fuel_conversion_rate(country) > 0:
+            production = queries.ProvinceProduction(world.nation_data, map_screen)
+            provinces = (tile for tile in world.map_data.values() if tile.get("owner") == owner)
+            conversions = production.fuel_conversion_by_province(owner, provinces)
+        map_screen._tooltip_fuel_conversions = conversion_key, conversions
+    research = country.get("research", {})
     library = queries.get_building_library(map_screen)
     modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
     factory_multiplier = politics.factory_output_multiplier(map_screen.world.nation_data, owner)
@@ -160,6 +179,20 @@ def _province_tooltip_lines(map_screen, prov):
         lines.append(f"Tile Yield: +{queries.format_number(actual_man)}Man, +{queries.format_number(actual_mat)}Mat, +{queries.format_number(actual_fuel)}Fuel")
         if not is_core and owner_id not in c.UNPLAYABLE_NATIONS:
             lines.append("  *(Non-Core Penalties Applied)*")
+
+        if is_visible:
+            cached_key, conversions = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
+            if cached_key and cached_key[0] == owner_id and cached_key == _fuel_conversion_key(map_screen):
+                conversion = conversions.get(prov["id"])
+                if conversion and any(conversion.values()):
+                    amounts = []
+                    for resource, label in (("materials", "Materials"), ("fuel", "Fuel")):
+                        if amount := conversion[resource]:
+                            formatted = f"{amount:+,.2f}".rstrip("0").rstrip(".")
+                            if round(amount, 2) == 0:
+                                formatted = f"{amount:+.2g}"
+                            amounts.append(f"{formatted} {label}")
+                    lines.append(f"Fuel conversion: {', '.join(amounts)}")
 
         lines.append("--- Buildings ---")
         if not is_visible:
