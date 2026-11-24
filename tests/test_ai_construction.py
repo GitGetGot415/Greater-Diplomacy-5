@@ -120,6 +120,23 @@ class ConstructionTests(unittest.TestCase):
                             economy(PLENTY, NOTHING), library=library)
         self.assertEqual(queued, [[]])
 
+    def test_a_country_prepares_research_modifiers_once_for_its_building_candidates(self):
+        provinces = [province(pid, factory=False) for pid in (1, 2)]
+        research = {"fixture_bonus": 1}
+        data = {"research": research, "at_war_with": []}
+        tree = {"fixture_bonus": {"max_lvl": 1, "building_output_bonuses": [
+            {"building_groups": ["industry"], "outputs": {"materials": 0.5}}]}}
+        screen = map_double(map_data={prov["id"]: prov for prov in provinces}, nation_data={"Avaria": data})
+        with patch.object(queries, "get_tech_tree", return_value=tree), \
+                patch.object(queries, "get_building_required_tech", return_value=(None, 0)), \
+                patch.object(queries, "get_building_output_modifiers", wraps=queries.get_building_output_modifiers) as prepare, \
+                patch.object(queries, "group_yields", wraps=queries.group_yields) as yields:
+            ai_construction._construction_options(
+                screen, "Avaria", data, provinces, LIBRARY, {}, {"materials": 1, "manpower": 1, "fuel": 1})
+        prepare.assert_called_once_with(research, LIBRARY, context=screen)
+        self.assertEqual(yields.call_count, 2)
+        self.assertIs(yields.call_args_list[0].kwargs["modifiers"], yields.call_args_list[1].kwargs["modifiers"])
+
 
 if __name__ == "__main__":
     unittest.main()

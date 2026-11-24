@@ -205,6 +205,34 @@ class OutputBonusTests(unittest.TestCase):
                 self.assertEqual(output["materials"], int(self.library["Basic Factory"]["prod_materials"]
                                  * 1.5 ** 2 * multiplier * fraction * NON_CORE_BUILDING_CENTRE))
 
+    def test_group_yields_share_prepared_modifiers_for_both_outputs(self):
+        self.tree["flat"] = {"max_lvl": 1, "building_output_bonuses": [
+            {"building_groups": ["industry"], "flat_outputs": {"materials": 9}}]}
+        research = {"first": 2, "flat": 1}
+        target = "Factory Lvl 1"
+        factory_project = {"item_name": "Basic Factory", "turns_remaining": 2}
+        province = self.province(False)
+        province["buildings"] = ["Workshop", "Recruitment Building Lvl 1"]
+        province["building_queue"] = [factory_project, {"item_name": "Recruitment Building Lvl 1"}]
+        multipliers = {"factory_multiplier": 1.15, "non_core_multiplier": 0.65}
+        modifiers = queries.get_building_output_modifiers(research, self.library)
+        with patch.object(c, "BASIC_FACTORY_TURNS", 6), \
+                patch.object(c, "BASIC_FACTORY_CONSTRUCTION_OUTPUT_FRACTIONS", (0.25, 0.5, 0.75)):
+            expected = (
+                queries.get_province_building_output(
+                    dict(province, buildings=[target], building_queue=[]), research, self.library, **multipliers),
+                queries.get_province_building_output(
+                    dict(province, buildings=["Workshop"], building_queue=[factory_project]),
+                    research, self.library, **multipliers),
+            )
+            with patch("data.queries.economy.get_building_output_modifiers",
+                       wraps=queries.get_building_output_modifiers) as prepare:
+                self.assertEqual(queries.group_yields(province, target, research, self.library, **multipliers), expected)
+                prepare.assert_called_once()
+                self.assertEqual(queries.group_yields(
+                    province, target, research, self.library, modifiers=modifiers, **multipliers), expected)
+                prepare.assert_called_once()
+
     def test_compass_changes_each_income_source_at_the_shared_source(self):
         """Quality scales tile manpower; the economy scales factories, deposits and non-core land."""
         def relative_effect(effect, position):

@@ -762,20 +762,24 @@ def next_building_in_group(group_id, current_buildings, building_library):
 
 
 def group_yields(province, target, research, building_library, *, context=None, factory_multiplier=1.0,
-                 non_core_multiplier=None):
+                 non_core_multiplier=None, modifiers=None):
     """(output with `target` built, output of the group today) for one province.
 
     "Today" counts what the province already has in `target`'s group, plus any
     of that group under construction. The Production screen shows the two side
     by side, and the AI values a building by their difference, so a building is
     worth to the AI exactly what the screen tells a player it adds.
+    A caller evaluating several candidates can pass the same prepared research
+    modifiers for all candidates with that research and building library.
     """
+    if modifiers is None:
+        modifiers = get_building_output_modifiers(research, building_library, context=context)
     group_id = building_library.get(target, {}).get("group")
     owner, cores = province.get("owner"), province.get("cores", [])
     new = get_province_building_output(
         {"owner": owner, "cores": cores, "buildings": [target]},
         research, building_library, context=context, factory_multiplier=factory_multiplier,
-        non_core_multiplier=non_core_multiplier)
+        non_core_multiplier=non_core_multiplier, modifiers=modifiers)
     previous = get_province_building_output(
         {"owner": owner, "cores": cores,
          "buildings": [name for name in province.get("buildings", [])
@@ -783,7 +787,7 @@ def group_yields(province, target, research, building_library, *, context=None, 
          "building_queue": [project for project in province.get("building_queue", [])
                             if building_library.get(project.get("item_name"), {}).get("group") == group_id]},
         research, building_library, context=context, factory_multiplier=factory_multiplier,
-        non_core_multiplier=non_core_multiplier)
+        non_core_multiplier=non_core_multiplier, modifiers=modifiers)
     return new, previous
 
 

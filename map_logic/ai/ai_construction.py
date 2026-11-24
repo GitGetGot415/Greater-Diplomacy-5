@@ -799,6 +799,7 @@ def _construction_options(context, ai_name, data, my_provs, building_library, ec
     """
     world_state = world_for(context)
     research = data.get("research", {})
+    modifiers = None
     options = []
     for prov in my_provs:
         if (not queries.has_core(ai_name, prov) or not _building_slot_free(prov)
@@ -814,10 +815,12 @@ def _construction_options(context, ai_name, data, my_provs, building_library, ec
             req_tech, req_lvl = queries.get_building_required_tech(target)
             if req_tech and research.get(req_tech, 0) < req_lvl:
                 continue
+            if modifiers is None:
+                modifiers = queries.get_building_output_modifiers(research, building_library, context=context)
             new, previous = queries.group_yields(
                 prov, target, research, building_library, context=context,
                 factory_multiplier=econ.get("factory_multiplier", 1.0),
-                non_core_multiplier=econ.get("non_core_building_multiplier"))
+                non_core_multiplier=econ.get("non_core_building_multiplier"), modifiers=modifiers)
             gain = sum(prices[res] * (new.get(res, 0) - previous.get(res, 0)) for res in ai_unit_eval.RESOURCES)
             cost = queries.get_building_cost(target, ai_name, world_state.map_data, building_library,
                                              world_state.nation_data)

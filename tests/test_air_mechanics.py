@@ -250,6 +250,51 @@ class MissionSweepTests(unittest.TestCase):
             self.assertEqual(queries.get_air_targets(
                 self.game, land_unit, self.base, "AIR_ATTACK"), set())
 
+    def test_range_cache_reuses_equivalent_sweeps_and_keeps_results_independent(self):
+        self.spread_a_world()
+        cache = {}
+        second_plane = wing(self.base)
+        one_use_aircraft = wing(self.base, "V1 Flying Bomb I")
+        expected = queries.get_air_targets(self.game, self.plane, self.base, "AIR_ATTACK")
+        strike = queries.get_air_targets(self.game, self.plane, self.base, "AIR_ATTACK", cache=cache)
+        self.assertEqual(list(strike), list(expected))
+        strike.clear()
+        with patch.object(queries, "air_distance_squared", side_effect=AssertionError("repeated geometry sweep")):
+            patrol = queries.get_air_targets(self.game, second_plane, self.base, "AIR_PATROL", cache=cache)
+            self.assertEqual(queries.get_air_targets(
+                self.game, one_use_aircraft, self.base, "AIR_PATROL", cache=cache), set())
+        self.assertEqual(list(patrol), list(expected))
+
+    def test_range_cache_separates_land_restrictions_and_effective_radii(self):
+        self.spread_a_world()
+        cache = {}
+        with patch.object(queries, "air_order_radius", return_value=self.radius) as radius:
+            strike = queries.get_air_targets(self.game, self.plane, self.base, "AIR_ATTACK", cache=cache)
+            reposition = queries.get_air_targets(self.game, self.plane, self.base, "AIR_REPOSITION", cache=cache)
+            self.assertIn(4, strike)
+            self.assertNotIn(4, reposition)
+            radius.return_value = 1
+            short_strike = queries.get_air_targets(self.game, self.plane, self.base, "AIR_ATTACK", cache=cache)
+            self.assertNotIn(2, short_strike)
+            warm_strike = queries.get_air_targets(self.game, self.plane, self.base, "AIR_ATTACK", cache=cache)
+            admitted = {pid for pid in self.game.world.id_to_province if queries.air_target_in_range(
+                self.game, self.plane, self.base, "AIR_ATTACK", pid)}
+            self.assertEqual(warm_strike, admitted)
+            other_base = self.game.world.id_to_province[2]
+            self.assertIn(2, queries.get_air_targets(
+                self.game, wing(other_base), other_base, "AIR_ATTACK", cache=cache))
+
+    def test_air_candidates_check_live_target_legality_with_a_warm_range_cache(self):
+        self.spread_a_world()
+        cache = {}
+        orders = ai_movement.legal_air_candidates(self.game, self.plane, self.base, range_cache=cache)
+        self.assertTrue(cache)
+        self.assertIn({"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}, orders)
+        self.game.world.id_to_province[2]["owner"] = "A"
+        orders = ai_movement.legal_air_candidates(self.game, self.plane, self.base, range_cache=cache)
+        self.assertNotIn({"type": "AIR_ATTACK", "base_id": 1, "target_id": 2}, orders)
+        self.assertIn({"type": "AIR_REPOSITION", "base_id": 1, "target_id": 2}, orders)
+
 
 class AirResolutionTests(unittest.TestCase):
     def setUp(self):

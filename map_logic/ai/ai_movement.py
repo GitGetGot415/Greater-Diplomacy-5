@@ -76,7 +76,7 @@ def _factory_objectives(context, country, visible, provinces_by_owner):
     return scores
 
 
-def legal_air_candidates(context, unit, base):
+def legal_air_candidates(context, unit, base, *, range_cache=None):
     """Only canonical orders are ever offered to heuristic/model consumers."""
     world_state = world_for(context)
     candidates = []
@@ -86,7 +86,7 @@ def legal_air_candidates(context, unit, base):
         candidates.append(queries.canonical_air_order(context, unit, base,
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
     for kind in queries.AIR_TARGET_MISSION_TYPES.values():
-        for target_id in sorted(queries.get_air_targets(context, unit, base, kind)):
+        for target_id in sorted(queries.get_air_targets(context, unit, base, kind, cache=range_cache)):
             target = world_state.id_to_province[target_id]
             if kind == "AIR_ATTACK" and not queries.air_target_is_hostile(
                     unit, target, world_state.nation_data, visible_only=True):
@@ -171,7 +171,7 @@ def _air_exchange_value(context, wings, opponents, *, air_combat=False, target=N
     return value
 
 
-def _air_patrol_threats(context, country, visible):
+def _air_patrol_threats(context, country, visible, *, range_cache=None):
     """Possible strikes on our land or troops, without reading enemy orders."""
     world_state = world_for(context)
     protected = {province["id"] for province in world_state.map_data.values()
@@ -188,7 +188,7 @@ def _air_patrol_threats(context, country, visible):
                     or not queries.are_at_war(country, queries.get_unit_combat_owner(unit), world_state.nation_data)
                     or not queries.air_unit_can_launch(context, unit, base)):
                 continue
-            for target_id in protected.intersection(queries.get_air_targets(context, unit, base, "AIR_ATTACK")):
+            for target_id in protected.intersection(queries.get_air_targets(context, unit, base, "AIR_ATTACK", cache=range_cache)):
                 threats.setdefault(target_id, []).append(unit)
     return threats
 
@@ -299,7 +299,8 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
     cargo_changed = False
     unit_library = queries.get_unit_library(context)
     tech_tree = queries.get_tech_tree(context)
-    patrol_threats = _air_patrol_threats(context, country, visible)
+    range_cache = {}
+    patrol_threats = _air_patrol_threats(context, country, visible, range_cache=range_cache)
     patrol_cover = {}
     strike_cover = {}
     protection_scores = {}
@@ -309,7 +310,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
             continue
         order = unit.get("order") or {}
         if order.get("type") == "AIR_PATROL":
-            for target_id in queries.get_air_targets(context, unit, base, "AIR_PATROL"):
+            for target_id in queries.get_air_targets(context, unit, base, "AIR_PATROL", cache=range_cache):
                 patrol_cover.setdefault(target_id, []).append(unit)
         elif order.get("type") == "AIR_ATTACK":
             strike_cover.setdefault(order["target_id"], []).append(unit)
@@ -383,7 +384,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
         if (not queries.is_air_unit(unit, context=context) or queries.is_water_province(base)
                 or queries.is_nation_in_combat_here(country, base, world_state.nation_data)):
             continue
-        candidates = legal_air_candidates(context, unit, base)
+        candidates = legal_air_candidates(context, unit, base, range_cache=range_cache)
         safe_repositions = [order for order in candidates if order["type"] == "AIR_REPOSITION"
                             and order["target_id"] != base["id"] and order["target_id"] not in threatened]
         if base["id"] in threatened and safe_repositions:
@@ -433,7 +434,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
             patrol = next((order for order in candidates if order["type"] == "AIR_PATROL"), None)
             if not patrol:
                 continue
-            coverage = queries.get_air_targets(context, unit, base, "AIR_PATROL")
+            coverage = queries.get_air_targets(context, unit, base, "AIR_PATROL", cache=range_cache)
             defense_value = max((protection(patrol_cover.get(target_id, []) + [unit], target_id)
                                  - protection(patrol_cover.get(target_id, []), target_id)
                                  for target_id in coverage.intersection(patrol_threats)), default=0.0)
@@ -530,7 +531,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
         patrol = next((order for order in candidates if order["type"] == "AIR_PATROL"), None)
         if patrol:
             unit_actions.apply_action(context, country, base, unit, patrol, authority="ai")
-            for target_id in queries.get_air_targets(context, unit, base, "AIR_PATROL"):
+            for target_id in queries.get_air_targets(context, unit, base, "AIR_PATROL", cache=range_cache):
                 patrol_cover.setdefault(target_id, []).append(unit)
     return cargo_changed
 
