@@ -5,7 +5,7 @@ import data.constants as c
 from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
-from map_logic.ai import ai_unit_eval, ai_world
+from map_logic.ai import ai_movement, ai_unit_eval, ai_world
 from map_logic.diplomacy import restrictions
 
 
@@ -415,27 +415,30 @@ def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
+    own_units = None
 
     for prov in my_provs:
         in_combat = queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data)
         has_factory = queries.has_industry(prov)
 
-        # 1. Clear queues on tiles in active combat if we are losing
+        # 1. Clear queues on a tile we are about to lose. A captured province
+        # keeps its queues (only coring is dropped), and the captor finishes
+        # them -- so this refunds what the enemy would otherwise be handed. A
+        # tile that will hold keeps its queue: production only pauses in combat.
+        # Asked of the same forecast movement retreats by, with the same
+        # reinforcements, so the two passes agree about which tiles are lost.
         if in_combat:
             friendly_nations = queries.get_all_friendly_nations(ai_name, world_state.nation_data)
-            my_units = [u for u in prov.get("units", []) if u.get("owner") in friendly_nations]
-            enemy_units = [u for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), world_state.nation_data)]
-
-            my_str = sum(queries.calculate_unit_strength(u) for u in my_units)
-            enemy_str = sum(queries.calculate_unit_strength(u) for u in enemy_units)
-
-            if enemy_str > my_str:
-                while prov.get("unit_queue"):
-                    item = prov["unit_queue"].pop(0)
-                    if "refund" in item: queries.refund_resources(data, item["refund"])
-                while prov.get("building_queue"):
-                    item = prov["building_queue"].pop(0)
-                    if "refund" in item: queries.refund_resources(data, item["refund"])
+            if own_units is None:
+                # Looked up once: outside a turn for_screen builds a snapshot.
+                own_units = ai_world.for_screen(context).units_by_owner.get(ai_name, ())
+            reinforcements = ai_movement.available_reinforcements(context, ai_name, prov, own_units)
+            if ai_movement.tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements):
+                for queue in ("unit_queue", "building_queue"):
+                    while prov.get(queue):
+                        production_actions.cancel_production(
+                            context, ai_name, prov, queue, 0,
+                            authority="ai", recorded_refund_only=True)
 
             continue # Skip the panic build since it's already in combat and can't build anyway
 

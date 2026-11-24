@@ -1376,7 +1376,7 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
     }
 
 
-def _tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements=()):
+def tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements=()):
     """Whether staying on this tile means losing the fight on it.
 
     Asked of the shared battle forecast (combat_forecast), the same simulation
@@ -1415,7 +1415,7 @@ def _tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements=()):
     return not reinforcements or loses(ours + list(reinforcements))
 
 
-def _available_reinforcements(context, ai_name, prov, units_info):
+def available_reinforcements(context, ai_name, prov, units_info):
     """Healthy battle reinforcements that can reach `prov` this turn."""
     world_state = world_for(context)
     nation_data = world_state.nation_data
@@ -1562,10 +1562,10 @@ def _track_battles_and_convoys(context, ai_name, units_info, friendly_nations, u
         p_id = prov["id"]
         if queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data):
             if p_id not in active_battles and p_id not in lost_battles:
-                reinforcements = _available_reinforcements(context, ai_name, prov, units_info)
+                reinforcements = available_reinforcements(context, ai_name, prov, units_info)
                 # A lost tile is only abandoned when somebody on it can get out;
                 # with nowhere to run, the units fight it out as a battle.
-                if _tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements) and any(
+                if tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements) and any(
                         _retreat_tile(context, ai_name, mine, prov, friendly_nations,
                                       unsafe_waters, havens, supply) is not None
                         for mine, here in units_info if here is prov):

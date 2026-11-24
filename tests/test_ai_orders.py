@@ -364,7 +364,7 @@ class NavalReinforcementTests(unittest.TestCase):
         screen.place(2, self.ship(), self.ship("Bruland"))
         reinforcement += screen.place(3, convoy)
 
-        self.assertEqual(ai_movement._available_reinforcements(screen, "Avaria", screen.world.id_to_province[2], reinforcement), [reserve])
+        self.assertEqual(ai_movement.available_reinforcements(screen, "Avaria", screen.world.id_to_province[2], reinforcement), [reserve])
 
         self.plan(screen)
 
@@ -508,7 +508,7 @@ class ForecastRetreatTests(unittest.TestCase):
     def test_a_hopeless_fight_is_lost(self):
         screen, prov = self.tile([fixture_unit(attack=1)],
                                  [fixture_unit("Bruland", attack=1000, health=1000)])
-        self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+        self.assertTrue(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
 
     def test_a_slow_defeat_counts_before_the_last_turn(self):
         """The old check read one exchange: a stack that would die over a few
@@ -517,18 +517,18 @@ class ForecastRetreatTests(unittest.TestCase):
         health = enemy_attack * (ai_tuning.AI_RETREAT_FORECAST_TURNS - 0.5)
         screen, prov = self.tile([fixture_unit(attack=1, health=health)],
                                  [fixture_unit("Bruland", attack=enemy_attack, health=100000)])
-        self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+        self.assertTrue(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
 
     def test_a_winning_fight_is_not(self):
         screen, prov = self.tile([fixture_unit(attack=1000, health=1000)],
                                  [fixture_unit("Bruland", attack=1)])
-        self.assertFalse(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+        self.assertFalse(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
 
     def test_reinforcements_that_turn_it_keep_the_tile(self):
         help_ = [fixture_unit(attack=5000, health=5000)]
         screen, prov = self.tile([fixture_unit(attack=1)],
                                  [fixture_unit("Bruland", attack=1000, health=1000)], help_)
-        self.assertFalse(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}, help_))
+        self.assertFalse(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}, help_))
 
 
 class RetreatTileTests(unittest.TestCase):
