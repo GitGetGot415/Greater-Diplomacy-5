@@ -26,7 +26,8 @@ def replace_mapping(owner, name, value):
 
 # World and session fields have one owner. A map attribute with the same name would be a stale copy.
 _OWNERS = {**{item.name: "world" for item in fields(WorldState)},
-           **{item.name: "session" for item in fields(SessionState)}}
+           **{item.name: "session" for item in fields(SessionState)},
+           **{name: "session" for name, value in vars(SessionState).items() if isinstance(value, property)}}
 
 
 class StateAccess:

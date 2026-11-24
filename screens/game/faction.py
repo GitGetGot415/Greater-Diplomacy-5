@@ -160,7 +160,7 @@ class Faction_Screen(Screen):
     def confirm_rename(self, new_name):
         """Applies the popup's answer. Cancel gives None, which changes nothing."""
         if new_name is None or not self.map_screen: return
-        if self.map_screen.session.realtime_multiplayer:
+        if self.map_screen.session.is_realtime:
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
         player_country = self.map_screen.session.player_country

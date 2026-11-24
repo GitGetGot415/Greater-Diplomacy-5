@@ -32,6 +32,7 @@ from map_logic.system32 import combat_processor, movement_processor
 from map_logic import custom_battle
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -184,9 +185,9 @@ class TacticalSwapTests(unittest.TestCase):
                 if mode == "ordinary":
                     screen.session.tactical_mode = False
                 elif mode == "tournament":
-                    screen.session.multiplayer_mode = True
+                    screen.session.mode = TOURNAMENT
                 elif mode == "realtime":
-                    screen.session.realtime_multiplayer = True
+                    screen.session.mode = REALTIME
                 else:
                     screen.session.player_unit = self.mover("A", [])
                     screen.add_province("p3", "A", units=[screen.session.player_unit])
@@ -339,8 +340,7 @@ class TacticalSwapTests(unittest.TestCase):
                     with self.subTest(mode=mode, later_step=later_step, reverse_order=reverse_order):
                         screen = self.screen()
                         screen.session.tactical_mode = mode == "tactical"
-                        screen.session.multiplayer_mode = mode == "tournament"
-                        screen.session.realtime_multiplayer = mode == "realtime"
+                        screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                         screen.add_nation("C", at_war_with=["B"])
                         screen.world.nation_data["B"]["at_war_with"].append("C")
                         player = self.mover("A", ["p1", "p2", "p4"] if later_step else ["p2", "p4"], speed=3 if later_step else 2, attack=0, defense=0)
@@ -377,8 +377,7 @@ class TacticalSwapTests(unittest.TestCase):
                 with self.subTest(mode=mode, reverse_order=reverse_order):
                     screen = self.screen()
                     screen.session.tactical_mode = mode == "tactical"
-                    screen.session.multiplayer_mode = mode == "tournament"
-                    screen.session.realtime_multiplayer = mode == "realtime"
+                    screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                     screen.add_nation("C", at_war_with=["B"])
                     screen.world.nation_data["B"]["at_war_with"].append("C")
                     player = self.mover("A", ["p2", "p4"], speed=2, attack=0, defense=0)
@@ -406,8 +405,7 @@ class TacticalSwapTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 screen = self.screen()
                 screen.session.tactical_mode = mode == "tactical"
-                screen.session.multiplayer_mode = mode == "tournament"
-                screen.session.realtime_multiplayer = mode == "realtime"
+                screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                 player = self.mover("A", ["p2"], attack=100000, defense=0)
                 attacker = self.mover("B", ["p1"], health=1, attack=0, defense=0)
                 screen.session.player_unit = player
@@ -435,8 +433,7 @@ class TacticalSwapTests(unittest.TestCase):
                 with self.subTest(mode=mode, reverse_order=reverse_order):
                     screen = self.screen()
                     screen.session.tactical_mode = mode == "tactical"
-                    screen.session.multiplayer_mode = mode == "tournament"
-                    screen.session.realtime_multiplayer = mode == "realtime"
+                    screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                     player = self.mover("A", ["p2", "p4"], speed=2, attack=0, defense=0)
                     attacker = self.mover("B", ["p1"], attack=0, defense=0)
                     screen.session.player_unit = player
@@ -500,8 +497,7 @@ class TacticalSwapTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 screen = self.screen()
                 screen.session.tactical_mode = mode == "tactical"
-                screen.session.multiplayer_mode = mode == "tournament"
-                screen.session.realtime_multiplayer = mode == "realtime"
+                screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                 player = self.mover("A", ["p2", "p3"], speed=2)
                 opponent = self.mover("B", ["p1"])
                 screen.session.player_unit = player
@@ -521,8 +517,7 @@ class TacticalSwapTests(unittest.TestCase):
                 with self.subTest(mode=mode, destination_fighting=destination_fighting):
                     screen = self.screen()
                     screen.session.tactical_mode = mode == "tactical"
-                    screen.session.multiplayer_mode = mode == "tournament"
-                    screen.session.realtime_multiplayer = mode == "realtime"
+                    screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                     player = self.mover("A", ["p2"])
                     attacker = self.mover("B", ["p1"])
                     screen.session.player_unit = player
@@ -613,8 +608,7 @@ class TacticalSwapTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 screen = self.screen()
                 screen.session.tactical_mode = mode == "tactical"
-                screen.session.multiplayer_mode = mode == "tournament"
-                screen.session.realtime_multiplayer = mode == "realtime"
+                screen.session.mode = TOURNAMENT if mode == "tournament" else REALTIME if mode == "realtime" else LOCAL_PLAY
                 player = self.mover("A", ["p2", "p3"], speed=2)
                 opponent = self.mover("B", ["p5", "p2"], speed=2)
                 screen.session.player_unit = player

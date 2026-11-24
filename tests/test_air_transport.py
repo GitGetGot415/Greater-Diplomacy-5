@@ -20,6 +20,7 @@ from tests import test_air_mechanics as air_tests
 from tests.air_fixtures import install_air_fixture, tile, wing, world
 from tests.stub_map_screen import synchronous_progress
 from tests.tournament_fixtures import fast_tournament_crypto
+from data.session_state import LOCAL_PLAY
 
 
 def move_intents(data, kind):
@@ -145,7 +146,7 @@ class TransportTests(unittest.TestCase):
     def test_drop_keeps_carrier_at_base_and_cargo_joins_ground_capture(self):
         target = self.plan_drop()
         tile(self.game, 5, 180, owner="B")
-        self.game.session.is_editor = False
+        self.game.session.mode = LOCAL_PLAY
         self.game.session.viewing_ai_moves = True
         self.assertEqual(queries.air_unit_mission_icon(self.plane), "AIR_DROP")
         self.assertEqual(queries.unit_map_stack_key(self.plane), ("AIR", "AIR_DROP"))

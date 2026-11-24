@@ -32,6 +32,7 @@ from tests.stub_map_screen import bare_orders_screen
 from tests.tournament_fixtures import fast_tournament_crypto
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import LOCAL_PLAY, REALTIME
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -144,7 +145,7 @@ class RangeTests(unittest.TestCase):
 
     def test_obsolete_air_move_cannot_pin_or_create_meeting_predictions(self):
         target = tile(self.game, 2, 30, owner="B")
-        self.game.session.is_editor = False
+        self.game.session.mode = LOCAL_PLAY
         self.plane["order"] = {"type": "MOVE", "path": [2]}
         defender = wing(target, "Infantry Type 1910", "B", {"type": "MOVE", "path": [1]})
         self.assertEqual(combat_rules.movers_into(self.base, 2), [])
@@ -2395,7 +2396,7 @@ class AirAppSmokeTests(unittest.TestCase):
         row_key = screen._roster_rows[0][0]
         self.assertEqual(screen._row_order_summaries[row_key], screen._order_summary(row_key, second))
         player = SimpleNamespace(submitted=False, eliminated=False)
-        loaded.session.realtime_multiplayer = True
+        loaded.session.mode = REALTIME
         loaded.realtime_player_id = "fixture-player"
         loaded.realtime_session = SimpleNamespace(phase="TURN", players={"fixture-player": player})
         screen.update()

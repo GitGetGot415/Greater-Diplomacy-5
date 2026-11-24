@@ -20,7 +20,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 from data import queries
 import data.constants as c
 from data.game_state import WorldState
-from data.session_state import SessionState
+from data.session_state import LOCAL_PLAY, SessionState
 from data.state_access import StateAccess
 
 
@@ -189,14 +189,14 @@ class StubMapScreen(MapDouble):
         # LLM plumbing -- skipped entirely, answers come from the fallback table
         self.session.force_skip_llm = True
         self.session.loading_status_text = ""
-        self.session.responsive_tasks_total = 0
-        self.session.responsive_tasks_completed = 0
+        self.session.progress["responsive_tasks"].total = 0
+        self.session.progress["responsive_tasks"].completed = 0
         self.session.proactive_llm_tasks = []
         # Each AI nation's menu of legal moves, held between the proactive
         # pass that builds it and the director pass that picks from it.
         self.session.proactive_choices = []
-        self.session.proactive_tasks_total = 0
-        self.session.proactive_tasks_completed = 0
+        self.session.progress["proactive_tasks"].total = 0
+        self.session.progress["proactive_tasks"].completed = 0
         # The turn loading screen's model threads panel, closed.
         self.llm_threads_open = False
         self.llm_threads_selected = None
@@ -213,7 +213,7 @@ class StubMapScreen(MapDouble):
         # these says a repaint would be pointless. There is no surface here at
         # all, so it always is -- which is what lets a deal that moves territory
         # be tested without pygame.
-        self.session.is_editor = False
+        self.session.mode = LOCAL_PLAY
         self.session.viewing_ai_moves = False
         self.session.ai_is_thinking = True
         self.centers_need_update = False

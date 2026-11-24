@@ -22,6 +22,7 @@ from screens.game import puppets_screen
 from tests import app_harness
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from ui.navigation import modal_stack
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 def release_map(player="Master"):
@@ -47,8 +48,7 @@ def release_map(player="Master"):
                                    unit_queue=[], map_color=[pid, 0, 0], buildings=[], resources={})
     return map_double(nation_data=nations, map_data=provinces,
                            id_to_province={p["id"]: p for p in provinces.values()},
-                           player_country=player, is_editor=False, tactical_mode=False,
-                           multiplayer_mode=False, realtime_multiplayer=False,
+                           player_country=player, mode=LOCAL_PLAY, tactical_mode=False,
                            viewing_ai_moves=False, ai_is_thinking=True, centers_need_update=False,
                            nation_colors={}, map_mode="POLITICAL", show_feedback=mock.Mock(),
                            camera=mock.Mock())
@@ -435,7 +435,7 @@ class PuppetManagementControlTests(unittest.TestCase):
         self.map.change_state.assert_not_called()
 
     def test_submitted_realtime_player_cannot_change_an_open_screen(self):
-        self.map.session.realtime_multiplayer = True
+        self.map.session.mode = REALTIME
         self.map.realtime_player_id = "fixture_player"
         self.map.realtime_session = SimpleNamespace(phase="TURN", players={
             "fixture_player": SimpleNamespace(submitted=True, eliminated=False)})
@@ -572,15 +572,16 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.map.session.player_country = "Spectator"
         screen = puppets_screen.Create_Puppet_Screen(self.map, "Master")
         screen.queue_creation("Core")
-        for attr in ("tactical_mode", "is_editor", "multiplayer_mode", "realtime_multiplayer"):
-            setattr(state_owner(self.map, attr), attr, True)
+        for attr, value, reset in (("tactical_mode", True, False), ("mode", MAP_EDITOR, LOCAL_PLAY),
+                                   ("mode", TOURNAMENT, LOCAL_PLAY), ("mode", REALTIME, LOCAL_PLAY)):
+            setattr(state_owner(self.map, attr), attr, value)
             screen.cancel_queue("Core")
             screen.queue_creation("Second")
             self.assertEqual(len(self.map.world.nation_data["Master"]["release_puppet_queue"]), 1)
-            setattr(state_owner(self.map, attr), attr, False)
+            setattr(state_owner(self.map, attr), attr, reset)
 
     def test_submitted_realtime_player_cannot_change_release_queue(self):
-        self.map.session.realtime_multiplayer = True
+        self.map.session.mode = REALTIME
         self.map.realtime_player_id = "player"
         self.map.realtime_session = SimpleNamespace(phase="TURN", players={
             "player": SimpleNamespace(submitted=True, eliminated=False)})

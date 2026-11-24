@@ -18,6 +18,7 @@ from screens.game.orders import _OrdersRowHitbox
 from screens.game import map_input
 from screens.setup import player_setup
 from map_logic.system32.time_handler import TimeHandler
+from data.session_state import LOCAL_PLAY, REALTIME
 
 
 def province(province_id, neighbors):
@@ -59,7 +60,8 @@ class MapOrderTests(unittest.TestCase):
         game.world.id_to_province = {1: p1, 2: p2, 3: p3}
         game.world.nation_data = {"A": {"at_war_with": []}}
         game.session.player_country = "A"
-        game.session.selection_mode = game.session.is_editor = game.session.viewing_ai_moves = game.session.ai_is_thinking = False
+        game.session.mode = LOCAL_PLAY
+        game.session.selection_mode = game.session.viewing_ai_moves = game.session.ai_is_thinking = False
         game.session.tactical_mode = False
         game.world.time_manager = TimeHandler()
         game.world.unit_event_log = {"turn": game.world.time_manager.total_turns, "events": []}
@@ -213,7 +215,8 @@ class CombatBubbleClickTests(unittest.TestCase):
             self.enterContext(patch.object(map_input, name, return_value=False))
         self.enterContext(patch.object(map_input.diplomatic_popups, "handle_events", return_value=False))
         self.enterContext(patch.object(map_input, "_update_map_hover"))
-        self.game.session.is_editor = self.game.session.selection_mode = False
+        self.game.session.mode = LOCAL_PLAY
+        self.game.session.selection_mode = False
         for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             map_input.handle_map_events(self.game, pygame.event.Event(
                 kind, pos=self.position, button=1))
@@ -291,7 +294,7 @@ class CombatBubbleClickTests(unittest.TestCase):
                                             ("A", True, False), ("A", True, True)):
             with self.subTest(player=player, realtime=realtime, submitted=submitted):
                 self.game.session.player_country = player
-                self.game.session.realtime_multiplayer = realtime
+                self.game.session.mode = REALTIME if realtime else LOCAL_PLAY
                 self.game.realtime_player_id = "player"
                 self.game.realtime_session = SimpleNamespace(
                     phase="TURN" if submitted else "PROCESSING",
@@ -878,7 +881,8 @@ class MapOrderGestureTests(unittest.TestCase):
         map_stub.world.map_data = {"one": origin, "two": other_origin}
         map_stub.world.nation_data = {"A": {"at_war_with": []}}
         map_stub.session.player_country = "A"
-        map_stub.session.selection_mode = map_stub.session.is_editor = False
+        map_stub.session.mode = LOCAL_PLAY
+        map_stub.session.selection_mode = False
         map_stub.session.viewing_ai_moves = map_stub.session.ai_is_thinking = False
         map_stub.session.tactical_mode = False
         map_stub.selected_unit_ids = {id(unit), id(other)}

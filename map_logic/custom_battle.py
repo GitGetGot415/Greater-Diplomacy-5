@@ -323,7 +323,7 @@ def tactical_encounter(context, province):
     that can fight there (land fighters on land, ships and convoys at sea) share it. The encounter deals that tile's damage, so campaign combat must skip the tile.
     """
     session = session_for(context)
-    if session.multiplayer_mode or session.realtime_multiplayer:
+    if session.is_networked:
         return None
     unit = session.tactical_mode and session.player_unit
     if not unit or not any(other is unit for other in province.get("units", [])):
@@ -335,7 +335,7 @@ def tactical_meeting_side(context, prov1, prov2, units1, units2, *, pinned_units
     """The tactical player's movement side, when a hostile crossing can become a tile encounter."""
     session = session_for(context)
     # Multiplayer has no tactical encounters.
-    if not session.tactical_mode or session.multiplayer_mode or session.realtime_multiplayer:
+    if not session.tactical_mode or session.is_networked:
         return None
     unit = session.player_unit
     if unit is None:

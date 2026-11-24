@@ -13,6 +13,7 @@ from unittest import mock
 import pygame
 
 from tests import app_harness
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 
 # The state-machine keys that screens and flip_state() use. Hardcoded here
 # rather than read back from Controller so that deleting one fails the test.
@@ -253,8 +254,7 @@ class ControllerConstructionTests(unittest.TestCase):
         with app_harness.patch_map(game, {
                 "player_country": players[-1], "active_players": players,
                 "current_player_index": len(players) - 1, "selection_mode": False,
-                "selected_province": None, "is_editor": False,
-                "multiplayer_mode": False, "realtime_multiplayer": False,
+                "selected_province": None, "mode": LOCAL_PLAY,
                 "viewing_ai_moves": False, "ai_is_thinking": False,
                 "is_refreshing": False, "is_saving": False,
                 "show_player_ready_screen": False}):
@@ -293,13 +293,12 @@ class ControllerConstructionTests(unittest.TestCase):
         with app_harness.patch_map(game, {
                 "player_country": "n/a", "active_players": ["A", "B"],
                 "selection_mode": False, "selected_province": None,
-                "is_editor": False, "viewing_ai_moves": True,
-                "ai_is_thinking": False, "is_refreshing": False, "is_saving": False,
-                "multiplayer_mode": False, "realtime_multiplayer": False}):
+                "mode": LOCAL_PLAY, "viewing_ai_moves": True,
+                "ai_is_thinking": False, "is_refreshing": False, "is_saving": False}):
             for override in ({"ai_is_thinking": True}, {"is_refreshing": True},
                              {"is_saving": True}, {"viewing_ai_moves": False},
                              {"active_players": ["A"]}, {"player_country": "None"},
-                             {"multiplayer_mode": True}, {"realtime_multiplayer": True},
+                             {"mode": TOURNAMENT}, {"mode": REALTIME},
                              {"selected_province": next(iter(game.world.map_data.values()))}):
                 with self.subTest(override=override), app_harness.patch_map(game, override):
                     update_button_states(game)

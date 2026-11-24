@@ -37,23 +37,20 @@ from map_logic.ai import ai_activity, ai_settings, ai_handler
 BatchOutcome = namedtuple("BatchOutcome", "total served abandoned reason")
 
 
-def make_progress_counter(context, label, done_attr, total):
-    """An `on_progress` callback that ticks a counter and retitles the bar.
+def make_progress_counter(context, label, phase):
+    """An `on_progress` callback that ticks one loading bar and retitles it.
 
-    All three phases wrote the same closure: bump `context.<done_attr>`, then
-    format "Label (done/total)...". `total` is either an attribute name on
-    context or a plain number, for a phase that counts a local list rather
-    than publishing a total.
+    All three phases wrote the same closure: bump the phase's completed count,
+    then format "Label (done/total)...".
 
     The returned callable takes (and ignores) the job, which is the shape
     run_llm_batch hands its on_progress.
     """
     session_state = session_for(context)
     def count(_job=None):
-        done = getattr(session_state, done_attr, 0) + 1
-        setattr(session_state, done_attr, done)
-        limit = getattr(session_state, total, 0) if isinstance(total, str) else total
-        session_state.loading_status_text = f"{label} ({done}/{limit})..."
+        progress = session_state.progress[phase]
+        progress.completed += 1
+        session_state.loading_status_text = f"{label} ({progress.completed}/{progress.total})..."
 
     return count
 

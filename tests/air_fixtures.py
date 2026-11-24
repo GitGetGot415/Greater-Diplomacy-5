@@ -15,6 +15,7 @@ import data.constants as c
 from data import runtime_rules
 from map_logic.system32.time_handler import TimeHandler
 from tests.stub_map_screen import map_double
+from data.session_state import LOCAL_PLAY
 
 
 def controlled_air_library():
@@ -105,7 +106,7 @@ def patrol_world(*, patrol_type="Biplane Fighter I", priority="STRONGEST", legac
     game.terrain_map = game.id_map.copy()
     game.political_map = game.id_map.copy()
     game.cores_map = game.id_map.copy()
-    game.session.is_editor = False
+    game.session.mode = LOCAL_PLAY
     game.world.history = {}
     return game, fighter, rocket
 

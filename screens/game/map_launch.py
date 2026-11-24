@@ -8,6 +8,7 @@ import copy
 import os
 import shutil
 from data.platform import LoadingSteps
+from data.session_state import REALTIME
 
 
 def _map_loading_total(**settings):
@@ -142,7 +143,7 @@ def enter_realtime_map(app, realtime_map, session, player_id, country_id, after_
     realtime_map.session.selection_mode = False
     realtime_map.pending_selection = None
     realtime_map.show_player_ready_screen = False
-    realtime_map.session.realtime_multiplayer = True
+    realtime_map.session.mode = REALTIME
     realtime_map.realtime_session = session
     realtime_map.realtime_player_id = player_id
     realtime_map.session.player_country = country_id

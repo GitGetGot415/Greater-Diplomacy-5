@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from map_logic.diplomacy import player_diplomacy_actions as actions
 from tests.stub_map_screen import StubMapScreen
+from data.session_state import REALTIME
 
 
 class DiplomacySelectionTests(unittest.TestCase):
@@ -70,7 +71,7 @@ class DiplomacySelectionTests(unittest.TestCase):
         from types import SimpleNamespace
 
         self.game.selected_province = self.game.home_of("B")
-        self.game.session.realtime_multiplayer = True
+        self.game.session.mode = REALTIME
         self.game.realtime_player_id = "local"
         self.game.realtime_session = SimpleNamespace(
             phase="TURN", players={"local": SimpleNamespace(submitted=True, eliminated=False)})

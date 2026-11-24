@@ -18,6 +18,7 @@ from tests.stub_map_screen import state_owner, sample_map_screen
 from screens.game import spectator_controls
 from ui import dialogs
 from ui.navigation import modal_stack
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 def country(name):
@@ -43,8 +44,8 @@ def game():
     screen.world.id_to_province = {p["id"]: p for p in screen.world.map_data.values()}
     screen.session.player_country = "Spectator"
     screen.session.active_players = ["Spectator"]
-    screen.session.is_editor = screen.session.tactical_mode = screen.session.selection_mode = False
-    screen.session.multiplayer_mode = screen.session.realtime_multiplayer = False
+    screen.session.mode = LOCAL_PLAY
+    screen.session.tactical_mode = screen.session.selection_mode = False
     screen.session.ai_is_thinking = screen.session.viewing_ai_moves = False
     screen.session.is_saving = screen.session.is_refreshing = False
     screen.selected_province = screen.world.map_data["1"]
@@ -180,10 +181,11 @@ class SpectatorCountryRemovalTests(unittest.TestCase):
             self.assertIn("Target", old_snapshot)
 
     def test_wrong_modes_busy_state_and_invalid_annexers_cannot_mutate(self):
-        for field in ("is_editor", "tactical_mode", "selection_mode", "multiplayer_mode", "realtime_multiplayer",
-                      "ai_is_thinking", "viewing_ai_moves", "is_saving", "is_refreshing"):
+        for field, value in (("mode", MAP_EDITOR), ("tactical_mode", True), ("selection_mode", True),
+                             ("mode", TOURNAMENT), ("mode", REALTIME), ("ai_is_thinking", True),
+                             ("viewing_ai_moves", True), ("is_saving", True), ("is_refreshing", True)):
             self.game = game()
-            setattr(state_owner(self.game, field), field, True)
+            setattr(state_owner(self.game, field), field, value)
             before = copy.deepcopy((self.game.world.nation_data, self.game.world.map_data))
             self.assertFalse(self.remove())
             self.assertFalse(self.remove("Source"))
@@ -236,7 +238,7 @@ class SpectatorRemovalControlTests(unittest.TestCase):
                 if change == "selection":
                     self.game.selected_province = None
                 else:
-                    self.game.session.realtime_multiplayer = True
+                    self.game.session.mode = REALTIME
                 before = copy.deepcopy((self.game.world.nation_data, self.game.world.map_data))
                 if target == "ask_yes_no":
                     launch.call_args.kwargs["on_result"](True)
@@ -278,9 +280,8 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
         selected = next(p for p in self.game.world.map_data.values()
                         if queries.is_playable(p.get("owner"), self.game.world.nation_data))
         fields = dict(player_country="Spectator", selected_province=selected,
-                      selection_mode=False, is_editor=False, tactical_mode=False,
+                      selection_mode=False, mode=LOCAL_PLAY, tactical_mode=False,
                       ai_is_thinking=False, viewing_ai_moves=False,
-                      multiplayer_mode=False, realtime_multiplayer=False,
                       is_saving=False, is_refreshing=False,
                       realtime_session=SimpleNamespace(phase="TURN", players={}), realtime_player_id="spectator",
                       _realtime_submit=mock.Mock(), _realtime_unsubmit=mock.Mock())
@@ -298,8 +299,8 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
             action.assert_called_once_with(self.game)
 
     def test_buttons_are_hidden_outside_local_spectator_planning(self):
-        for flag in ("multiplayer_mode", "realtime_multiplayer", "tactical_mode", "ai_is_thinking"):
-            with mock.patch.object(state_owner(self.game, flag), flag, True):
+        for flag, value in (("mode", TOURNAMENT), ("mode", REALTIME), ("tactical_mode", True), ("ai_is_thinking", True)):
+            with mock.patch.object(state_owner(self.game, flag), flag, value):
                 self.map_buttons.update_button_states(self.game)
                 self.assertFalse(self.game.btn_spec_annex.visible)
                 self.assertFalse(self.game.btn_spec_delete.visible)

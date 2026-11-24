@@ -115,7 +115,7 @@ def can_bulk_edit_map(context):
     """Allow bulk setup changes only in an idle local map editor."""
     session = session_for(context)
     return bool(session.is_editor and not session.tactical_mode
-                and not session.multiplayer_mode and not session.realtime_multiplayer
+                and not session.is_tournament and not session.is_realtime
                 and not session.ai_is_thinking and not session.viewing_ai_moves
                 and not session.is_refreshing and not session.is_saving)
 

@@ -497,8 +497,7 @@ Create_Integrated_Puppet_Screen = Create_Puppet_Screen
 
 def open_puppets_menu(map_screen):
     if map_screen.session.player_country == "Spectator":
-        if (map_screen.session.multiplayer_mode
-                or map_screen.session.realtime_multiplayer
+        if (map_screen.session.is_networked
                 or map_screen.session.is_editor or map_screen.session.tactical_mode):
             map_screen.show_feedback("Spectators can create nations only in a local strategic game.")
             return

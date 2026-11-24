@@ -436,7 +436,7 @@ class Edit_Country_Screen(Screen):
     def save_and_exit(self):
         if not self.can_edit:
             return
-        if (self.map_screen.session.realtime_multiplayer
+        if (self.map_screen.session.is_realtime
                 and self.editing_country != self.map_screen.session.player_country):
             controller = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
             subject = self.map_screen.world.nation_data.get(self.editing_country, {})
@@ -470,7 +470,7 @@ class Edit_Country_Screen(Screen):
             self.map_screen.refresh_map_layers("political", "cores")
 
         # Both multiplayer hosts validate this narrow appearance draft.
-        if ((self.map_screen.session.multiplayer_mode or self.map_screen.session.realtime_multiplayer)
+        if (self.map_screen.session.is_networked
                 and self.editing_country != self.map_screen.session.player_country):
             self.map_screen.session.pending_subject_appearances[self.editing_country] = queries.country_appearance_draft(p_data)
         

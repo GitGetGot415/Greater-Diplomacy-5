@@ -23,6 +23,7 @@ from screens.game.map import Map
 from tests import test_air_transport as transport_tests
 from tests.air_fixtures import tile, wing
 from tests.tournament_fixtures import fast_tournament_crypto
+from data.session_state import LOCAL_PLAY
 
 
 @fast_tournament_crypto()
@@ -72,7 +73,7 @@ class AirDropRecoveryTests(unittest.TestCase):
 
     def test_recovering_cargo_destroys_grounded_aircraft_and_captures_the_tile(self):
         target = self.land()
-        self.game.session.is_editor = False
+        self.game.session.mode = LOCAL_PLAY
         self.game.session.viewing_ai_moves = True
         # Keep the defender's country and wars active across repeated captures.
         tile(self.game, 5, 180, owner="B")

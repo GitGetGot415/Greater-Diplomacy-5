@@ -14,6 +14,7 @@ from ui.rendering import country_names
 from ui.rendering import symbol_loader
 from ui.panels import army_panel, map_top_right_layout, minimap
 from tests.stub_map_screen import state_owner, bare_orders_screen, map_double
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 class CountryMapCenterTests(unittest.TestCase):
@@ -1035,8 +1036,7 @@ class ArmyControlTests(unittest.TestCase):
         map_stub = map_double(
             player_country="A", nation_data=nations, map_data=world,
             selected_province=world["one"], army_panel_visible_in_orders=True,
-            selection_mode=False, is_editor=False, tactical_mode=False,
-            realtime_multiplayer=False, map_w=1000, map_h=500,
+            selection_mode=False, mode=LOCAL_PLAY, tactical_mode=False, map_w=1000, map_h=500,
             selected_map_unit_ids=lambda: selected_ids,
             can_select_map_units=lambda: True,
             assign_selection_to_army=lambda army_id: queries.assign_units_to_army(
@@ -1087,8 +1087,8 @@ class ArmyControlTests(unittest.TestCase):
                             for row in custom_symbol))
 
     def test_province_view_hides_the_army_tray_until_orders_open(self):
-        map_ref = map_double(realtime_multiplayer=False, selected_province=None,
-                                  selection_mode=False, is_editor=False,
+        map_ref = map_double(mode=LOCAL_PLAY, selected_province=None,
+                                  selection_mode=False,
                                   player_country="A", tactical_mode=False,
                                   map_w=1000, map_h=500)
         self.assertTrue(army_panel._visible(map_ref))
@@ -1100,8 +1100,8 @@ class ArmyControlTests(unittest.TestCase):
     def test_the_turn_loading_screen_hides_the_army_tray(self):
         """The loading screen covers the map, so the tray must neither draw
         nor take clicks while the turn is processed."""
-        map_ref = map_double(realtime_multiplayer=False, selected_province=None,
-                             selection_mode=False, is_editor=False,
+        map_ref = map_double(mode=LOCAL_PLAY, selected_province=None,
+                             selection_mode=False,
                              player_country="A", tactical_mode=False,
                              map_w=1000, map_h=500)
         self.assertTrue(army_panel._visible(map_ref))
@@ -1123,8 +1123,8 @@ class UnassignedArmyPanelTests(unittest.TestCase):
         self.nations = {"A": {"armies": []}}
         self.map = map_double(
             player_country="A", nation_data=self.nations, map_data=self.world,
-            selected_province=None, selection_mode=False, is_editor=False,
-            tactical_mode=False, realtime_multiplayer=False, map_w=1000, map_h=500,
+            selected_province=None, selection_mode=False, mode=LOCAL_PLAY,
+            tactical_mode=False, map_w=1000, map_h=500,
             selected_map_unit_ids=lambda: [], can_select_map_units=lambda: True,
             select_army=Mock(), show_feedback=Mock(), army_editor_state=None,
             assign_selection_to_army=Mock())
@@ -1259,7 +1259,7 @@ class UnassignedArmyPanelTests(unittest.TestCase):
         army_panel.prepare(self.map)
         self.assertEqual(army_panel._armies(self.map)[0]["unit_ids"],
                          [self.world["home"]["units"][-1]["unit_id"]])
-        for field, value in (("player_country", "Spectator"), ("is_editor", True),
+        for field, value in (("player_country", "Spectator"), ("mode", MAP_EDITOR),
                              ("tactical_mode", True), ("selection_mode", True)):
             original = getattr(state_owner(self.map, field), field)
             setattr(state_owner(self.map, field), field, value)

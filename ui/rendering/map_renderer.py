@@ -120,7 +120,7 @@ def draw_map_screen(map_screen, surface):
         return # Skip drawing the map and UI completely!
 
     # --- MULTI-TURN RENDER SKIP OPTIMIZATION ---
-    if map_screen.session.multi_turns_total > 0 and map_screen.session.multi_turns_completed < map_screen.session.multi_turns_total:
+    if map_screen.session.progress["multi_turns"].total > 0 and map_screen.session.progress["multi_turns"].completed < map_screen.session.progress["multi_turns"].total:
         surface.fill((10, 10, 15))
         turn_progress.draw_turn_loading_screen(map_screen, surface)
         return
@@ -223,7 +223,7 @@ def draw_map_screen(map_screen, surface):
     # By short-circuiting the render loop here, we save massive amounts of CPU time.
     if map_screen.session.ai_is_thinking or map_screen.session.is_refreshing or map_screen.session.is_saving:
         if map_screen.session.is_saving:
-            turn_progress.draw_simple_refresh_bar(surface, map_screen.session.loading_status_text, map_screen.session.save_progress_completed, map_screen.session.save_progress_total)
+            turn_progress.draw_simple_refresh_bar(surface, map_screen.session.loading_status_text, map_screen.session.progress["save"].completed, map_screen.session.progress["save"].total)
         else:
             turn_progress.draw_turn_loading_screen(map_screen, surface)
         ui_bars.draw_ui_bars(map_screen, surface)

@@ -68,6 +68,7 @@ from screens.game.map import Map
 from ui.widgets.ui_elements import Button
 from tests.stub_map_screen import map_double
 from ui.dialogs import pickers
+from data.session_state import LOCAL_PLAY, REALTIME
 
 
 class Clock:
@@ -190,7 +191,7 @@ class HostSnapshotTests(unittest.TestCase):
 
     def test_update_waits_for_the_current_turn_snapshot_before_syncing_a_draft(self):
         board = object.__new__(Map)
-        board.session.realtime_multiplayer = True
+        board.session.mode = REALTIME
         board.realtime_player_id = "player"
         board.session.player_country = "A"
         board._unit_selection_turn = board.world.time_manager.total_turns
@@ -198,7 +199,6 @@ class HostSnapshotTests(unittest.TestCase):
         board.show_player_ready_screen = True
         board.show_navigation_intro_when_ready = False
         board.centers_need_update = False
-        board.session.is_editor = False
         board.elements, board.camera = [], mock.Mock()
         board.realtime_session = SimpleNamespace(
             phase="TURN", turn_number=2, sync_draft=mock.Mock(),
@@ -550,7 +550,7 @@ class RealtimeExitTests(unittest.TestCase):
         client = SimpleNamespace(close=mock.Mock())
         session = SimpleNamespace(phase="TURN", host_id="host", end_match=mock.Mock())
         map_ref = map_double(
-            realtime_multiplayer=True,
+            mode=REALTIME,
             realtime_session=session,
             realtime_player_id="guest",
             realtime_client=client,
@@ -578,7 +578,7 @@ class RealtimeExitTests(unittest.TestCase):
 
         session.end_match = end_match
         map_ref = map_double(
-            realtime_multiplayer=True,
+            mode=REALTIME,
             realtime_session=session,
             realtime_player_id="host",
             realtime_server=server,

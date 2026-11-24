@@ -15,6 +15,7 @@ from ui import dialogs
 from ui.panels import multiplayer_host_panel
 from ui.dialogs import file_exchange
 from tests.stub_map_screen import map_double
+from data.session_state import TOURNAMENT
 
 
 class ExportOverwriteTests(unittest.TestCase):
@@ -253,8 +254,8 @@ class ExportOverwriteTests(unittest.TestCase):
         destination = self.downloads / f"Turn_{turn}_{player}.gd5move"
         destination.write_bytes(b"original move")
         with app_harness.patch_map(game, {
-                "player_country": player, "multiplayer_mode": True,
-                "realtime_multiplayer": False, "multiplayer_player_key": "player-key"}), \
+                "player_country": player, "mode": TOURNAMENT,
+                "multiplayer_player_key": "player-key"}), \
                 mock.patch.object(c, "TOURNAMENT_SAVES_DIR", str(self.downloads)), \
                 mock.patch.object(tournament_files, "export_move_file") as exporter, \
                 mock.patch.object(game, "show_feedback") as feedback:

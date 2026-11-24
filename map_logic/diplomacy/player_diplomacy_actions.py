@@ -412,7 +412,7 @@ def handle_send_volunteers(context):
         if not can_edit_diplomacy(context):
             return
         selected = [refs[key] for key in keys if key in refs]
-        if session_for(context).realtime_multiplayer:
+        if session_for(context).is_realtime:
             # The client may preview its selection, but reservations belong to
             # the authoritative server.  Removing the local units here made a
             # valid offer disappear before the server could identify it.
@@ -438,7 +438,7 @@ def handle_send_volunteers(context):
         msg = diplomacy_processor.toggle_diplomacy_action(
             context, donor, host, volunteers.ACTION, message,
             parameters=details)
-        if session_for(context).realtime_multiplayer:
+        if session_for(context).is_realtime:
             drafts = context.session.realtime_volunteer_drafts
             if drafts is None:
                 drafts = {}
@@ -497,7 +497,7 @@ def handle_withdraw_volunteer_offer(context):
     host = _selected_diplomacy_target(context)
     if host is None:
         return
-    if session_for(context).realtime_multiplayer:
+    if session_for(context).is_realtime:
         # An unsubmitted offer has no server reservation yet.  Undo only the
         # local draft; the next sync removes it from the authoritative intent.
         pending = context.world.nation_data.get(donor, {}).get("pending_diplomacy", {})

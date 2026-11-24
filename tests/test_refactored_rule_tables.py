@@ -99,7 +99,7 @@ class RealtimeMapEntryTests(unittest.TestCase):
         self.assertFalse(self.board.session.selection_mode)
         self.assertIsNone(self.board.pending_selection)
         self.assertFalse(self.board.show_player_ready_screen)
-        self.assertTrue(self.board.session.realtime_multiplayer)
+        self.assertTrue(self.board.session.is_realtime)
         self.assertIs(self.board.realtime_session, self.session)
         self.assertEqual((self.board.realtime_player_id, self.board.session.player_country), ("p1", "A"))
         self.assertEqual(self.board.session.active_players, ["A", "B"])

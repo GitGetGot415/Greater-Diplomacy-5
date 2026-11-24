@@ -25,6 +25,7 @@ from data import queries
 from ui.dialogs import pickers
 from ui.dialogs import file_exchange
 from data.state_access import StateAccess
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 from data.map import load_map, save_map
 from data.platform import LoadingSteps, run_background
 
@@ -307,8 +308,8 @@ class Map(StateAccess, Screen):
         self.session.ai_processing_complete = False
         self.session.is_refreshing = False
         self.session.is_saving = False
-        self.session.save_progress_completed = 0
-        self.session.save_progress_total = 5
+        self.session.progress["save"].completed = 0
+        self.session.progress["save"].total = 5
         self.session.thread_error = None
         self.session.force_skip_llm = False
 
@@ -322,26 +323,26 @@ class Map(StateAccess, Screen):
 
         # --- MULTI-TURN FLAGS ---
         self.session.multi_turn_processing_complete = False
-        self.session.multi_turns_total = 0
-        self.session.multi_turns_completed = 0
+        self.session.progress["multi_turns"].total = 0
+        self.session.progress["multi_turns"].completed = 0
         self.session.multi_turn_abort_requested = False
 
         # --- NEW PROGRESS BAR TRACKERS ---
         self.session.loading_status_text = "Waiting..."
-        self.session.proactive_tasks_total = 0
-        self.session.proactive_tasks_completed = 0
-        self.session.movement_tasks_total = 0
-        self.session.movement_tasks_completed = 0
-        self.session.proactive_llm_tasks_total = 0
-        self.session.proactive_llm_tasks_completed = 0
+        self.session.progress["proactive_tasks"].total = 0
+        self.session.progress["proactive_tasks"].completed = 0
+        self.session.progress["movement_tasks"].total = 0
+        self.session.progress["movement_tasks"].completed = 0
+        self.session.progress["proactive_llm_tasks"].total = 0
+        self.session.progress["proactive_llm_tasks"].completed = 0
         self.session.proactive_llm_tasks = []
         # Each AI nation's menu of legal moves, held between the proactive
         # pass that builds it and the director pass that picks from it.
         self.session.proactive_choices = []
-        self.session.responsive_tasks_total = 0
-        self.session.responsive_tasks_completed = 0
-        self.session.letters_total = 0
-        self.session.letters_completed = 0
+        self.session.progress["responsive_tasks"].total = 0
+        self.session.progress["responsive_tasks"].completed = 0
+        self.session.progress["letters"].total = 0
+        self.session.progress["letters"].completed = 0
         self.diplomatic_popups = []
 
         # Per-turn AI map snapshot (map_logic/ai/ai_world.py). Only ever set
@@ -363,8 +364,8 @@ class Map(StateAccess, Screen):
         self.mail_input_active = False
 
         # --- NEW REFRESH TRACKERS ---
-        self.session.refresh_tasks_total = 0
-        self.session.refresh_tasks_completed = 0
+        self.session.progress["refresh_tasks"].total = 0
+        self.session.progress["refresh_tasks"].completed = 0
         self.loading_spinner_angle = 0
 
         self.brush_building = "None"
@@ -389,7 +390,7 @@ class Map(StateAccess, Screen):
         self.base_layer = "POLITICAL"
         self.load_path = load_path
 
-        self.session.is_editor = force_editor or (self.load_path is None and not is_scenario)
+        self.session.mode = MAP_EDITOR if force_editor or (self.load_path is None and not is_scenario) else LOCAL_PLAY
         if self.session.is_editor:
             self.session.player_country = "Editor"
             self.session.selection_mode = False
@@ -477,8 +478,7 @@ class Map(StateAccess, Screen):
 
         Hostile artillery alone cannot fight back: the player wins at once without a battle.
         """
-        if (not self.session.tactical_mode or self.session.player_unit is None or self.session.multiplayer_mode
-                or self.session.realtime_multiplayer
+        if (not self.session.tactical_mode or self.session.player_unit is None or self.session.is_networked
                 or self._tactical_battle_turn == self.world.time_manager.total_turns):
             return
         self._tactical_battle_turn = self.world.time_manager.total_turns
@@ -704,8 +704,8 @@ class Map(StateAccess, Screen):
 
         def on_turns(turns):
             if turns:
-                self.session.multi_turns_total = turns
-                self.session.multi_turns_completed = 0
+                self.session.progress["multi_turns"].total = turns
+                self.session.progress["multi_turns"].completed = 0
                 self.session.multi_turn_abort_requested = False
                 self.session.ai_is_thinking = True
                 self.session.loading_status_text = f"Skipping {turns} Turns..."
@@ -722,21 +722,21 @@ class Map(StateAccess, Screen):
             self.session.viewing_ai_moves = True # Prevents PyGame surface edits from background thread
 
             for i in range(turns):
-                self.session.multi_turns_completed = i + 1
+                self.session.progress["multi_turns"].completed = i + 1
                 self.session.loading_status_text = f"Processing Turn {i+1}/{turns}..."
 
                 # Mock the UI prep variables to prevent crashes
-                self.session.proactive_tasks_total = 1
-                self.session.proactive_tasks_completed = 1
-                self.session.movement_tasks_total = 0
-                self.session.movement_tasks_completed = 0
-                self.session.proactive_llm_tasks_total = 0
-                self.session.proactive_llm_tasks_completed = 0
+                self.session.progress["proactive_tasks"].total = 1
+                self.session.progress["proactive_tasks"].completed = 1
+                self.session.progress["movement_tasks"].total = 0
+                self.session.progress["movement_tasks"].completed = 0
+                self.session.progress["proactive_llm_tasks"].total = 0
+                self.session.progress["proactive_llm_tasks"].completed = 0
                 self.session.proactive_llm_tasks = []
-                self.session.responsive_tasks_total = 0
-                self.session.responsive_tasks_completed = 0
-                self.session.letters_total = 0
-                self.session.letters_completed = 0
+                self.session.progress["responsive_tasks"].total = 0
+                self.session.progress["responsive_tasks"].completed = 0
+                self.session.progress["letters"].total = 0
+                self.session.progress["letters"].completed = 0
 
                 await turn_processor.prepare_turn(self)
                 await turn_processor.resolve_turn_logic(self)
@@ -750,7 +750,7 @@ class Map(StateAccess, Screen):
                 # running when the user clicked Abort finishes normally, and
                 # simply becomes the last one processed.
                 if self.session.multi_turn_abort_requested:
-                    self.session.multi_turns_total = self.session.multi_turns_completed
+                    self.session.progress["multi_turns"].total = self.session.progress["multi_turns"].completed
                     break
 
         except Exception as e:
@@ -790,7 +790,7 @@ class Map(StateAccess, Screen):
 
     # --- Screen Transitions ---
     def change_state(self, next_state):
-        if (self.session.realtime_multiplayer
+        if (self.session.is_realtime
                 and next_state in {"PRODUCTION", "ORDERS", "TACTICAL_ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
                                   "MESSAGES", "FACTION", "FACTION_TERRITORIES", "POLITICS",
                                   "AUTOMATION", "PUPPETS", "CLAIMS", "DECLARE_INDEPENDENCE"}):
@@ -838,7 +838,7 @@ class Map(StateAccess, Screen):
     def save_map_data(self, save_name=None, *, overwrite=False, save_path=None):
         if self.session.is_saving:
             return # Already saving, ignore duplicate clicks
-        if self.session.realtime_multiplayer:
+        if self.session.is_realtime:
             session = self.realtime_session
             if session.phase != "GAME_OVER":
                 self.show_feedback("Real-time matches can be saved after they end.")
@@ -878,8 +878,8 @@ class Map(StateAccess, Screen):
             return
         self.session.is_saving = True
         self.session.loading_status_text = "Saving Game..."
-        self.session.save_progress_completed = 0
-        self.session.save_progress_total = 5
+        self.session.progress["save"].completed = 0
+        self.session.progress["save"].total = 5
 
         # Force the loading screen to actually appear before run_background either
         # spawns a thread (desktop) or, on web, blocks the frame running synchronously.
@@ -1014,7 +1014,7 @@ class Map(StateAccess, Screen):
         )
 
     def exit_to_menu(self):
-        if self.session.realtime_multiplayer:
+        if self.session.is_realtime:
             session = self.realtime_session
             is_host = (self.realtime_player_id == getattr(session, "host_id", None))
             if not is_host:
@@ -1174,7 +1174,7 @@ class Map(StateAccess, Screen):
                 or self.session.ai_is_thinking or self.session.player_country in (
                     "None", "Spectator", c.TOURNAMENT_SPECTATOR)):
             return False
-        if self.session.realtime_multiplayer:
+        if self.session.is_realtime:
             player = self.realtime_session.players.get(self.realtime_player_id)
             if (self.realtime_session.phase != "TURN" or not player
                     or player.submitted or player.eliminated):
@@ -1668,7 +1668,7 @@ class Map(StateAccess, Screen):
             self.clear_map_unit_selection()
             self._unit_selection_turn = self.world.time_manager.total_turns
             self._unit_selection_player = self.session.player_country
-        if self.session.realtime_multiplayer:
+        if self.session.is_realtime:
             self._apply_host_realtime_snapshot()
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
@@ -1691,7 +1691,7 @@ class Map(StateAccess, Screen):
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
                 self._realtime_draft_dirty = False
-        if self.session.realtime_multiplayer and self.realtime_client:
+        if self.session.is_realtime and self.realtime_client:
             from data.multiplayer.realtime.session import apply_realtime_turn_snapshot
             events = self.realtime_client.poll()
             # A socket close can be queued next to the host's explicit
@@ -1766,7 +1766,7 @@ class Map(StateAccess, Screen):
 
         if self.session.multi_turn_processing_complete:
             self.session.multi_turn_processing_complete = False
-            self.session.multi_turns_total = 0
+            self.session.progress["multi_turns"].total = 0
             self.session.ai_is_thinking = False
 
             if self.session.thread_error: return

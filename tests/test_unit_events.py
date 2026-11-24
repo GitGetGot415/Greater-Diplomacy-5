@@ -22,6 +22,7 @@ from tests.stub_map_screen import map_double
 from tests.tournament_fixtures import fast_tournament_crypto
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -36,7 +37,7 @@ def fixture():
         "at_war_with": [enemy]} for owner, enemy in (("A", "B"), ("B", "A"))}
     return map_double(map_data={str(pid): province for pid, province in provinces.items()},
         id_to_province=provinces, nation_data=nations, scenario_settings={"fog_of_war": False},
-        player_country="A", tactical_mode=False, player_unit=None, is_editor=False,
+        player_country="A", tactical_mode=False, player_unit=None, mode=LOCAL_PLAY,
         time_manager=SimpleNamespace(total_turns=1, day=1, month_index=0, year=1939),
         unit_event_log={"turn": 1, "events": []}, unit_event_read_turns={},
         loop_map=False, active_players=["A", "B"], current_player_index=0,
@@ -251,7 +252,7 @@ class UnitEventRulesTests(unittest.TestCase):
         from tests.air_fixtures import tile, wing, world
         from map_logic.system32 import air_processor
         game = world()
-        game.session.is_editor = False
+        game.session.mode = LOCAL_PLAY
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
         missile = wing(base, "V2 Rocket I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
@@ -267,7 +268,7 @@ class UnitEventRulesTests(unittest.TestCase):
     def air_report_fixture(self):
         from tests.air_fixtures import tile, wing, world
         game = world()
-        game.session.is_editor = False
+        game.session.mode = LOCAL_PLAY
         game.world.scenario_settings["fog_of_war"] = False
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
@@ -350,7 +351,7 @@ class UnitEventRulesTests(unittest.TestCase):
         game = fixture()
         game.world.time_manager = TimeHandler(start_year=1939)
         game.world.history = {}
-        game.session.multi_turns_total = 0
+        game.session.progress["multi_turns"].total = 0
         victim = unit(game, "A", health=2)
         unit(game, "B", attack=100)
         with ExitStack() as stack:
@@ -369,7 +370,7 @@ class UnitEventRulesTests(unittest.TestCase):
         from tests.air_fixtures import tile, wing, world
         from map_logic.system32 import air_processor
         game = world()
-        game.session.is_editor = False
+        game.session.mode = LOCAL_PLAY
         game.session.player_country = "B"
         game.world.scenario_settings["fog_of_war"] = True
         base = tile(game, 1, 8)
@@ -521,7 +522,7 @@ class UnitEventViewTests(unittest.TestCase):
         self.assertEqual(len(unit_events.entries_for(game)), 3)
         game.session.player_country = c.TOURNAMENT_SPECTATOR
         self.assertEqual(unit_events.entries_for(game), [])
-        game.session.is_editor = True
+        game.session.mode = MAP_EDITOR
         self.assertEqual(unit_events.entries_for(game), [])
 
 
@@ -782,7 +783,7 @@ class UnitEventScreenTests(unittest.TestCase):
                 (c.TOURNAMENT_SPECTATOR, False, False, 0), (game.session.player_country, False, True, 0)):
             with self.subTest(viewer=viewer, tactical=tactical, editor=editor), \
                     patch.object(game.session, "player_country", viewer), patch.object(game.session, "tactical_mode", tactical), \
-                    patch.object(game.session, "is_editor", editor), patch.object(game.session, "player_unit", {"unit_id": "gone"}):
+                    patch.object(game.session, "mode", MAP_EDITOR if editor else LOCAL_PLAY), patch.object(game.session, "player_unit", {"unit_id": "gone"}):
                 screen = UnitEventsScreen(game)
                 screen.set_event_filter("DESTROYED")
                 self.assertEqual(len(screen.rows), expected)

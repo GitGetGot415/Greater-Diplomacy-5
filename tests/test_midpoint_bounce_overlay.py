@@ -9,6 +9,7 @@ from ui.rendering import overlay_renderer
 import pygame
 from tests.stub_map_screen import map_double
 from pygame.math import Vector2
+from data.session_state import LOCAL_PLAY
 
 
 def province(province_id, units):
@@ -43,7 +44,7 @@ class BouncePreviewTests(unittest.TestCase):
         self.screen = map_double()
         self.screen.session.player_country = "A"
         self.screen.session.viewing_ai_moves = False
-        self.screen.session.is_editor = False
+        self.screen.session.mode = LOCAL_PLAY
         self.screen.world.map_data = {
             1: province(1, [moving_unit("A", 2)]),
             2: province(2, [moving_unit("B", 1)]),

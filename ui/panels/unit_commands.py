@@ -1608,7 +1608,7 @@ class UnitCommandControls:
         state = (map_ref._presentation_cache_revision,
                  map_ref.session.player_country, map_ref.world.time_manager.total_turns,
                  map_ref.session.tactical_mode, frozenset(map_ref.selected_unit_ids))
-        if map_ref.session.realtime_multiplayer:
+        if map_ref.session.is_realtime:
             player = map_ref.realtime_session.players.get(map_ref.realtime_player_id)
             state += (map_ref.realtime_session.phase,
                       (player.submitted, player.eliminated) if player else None)

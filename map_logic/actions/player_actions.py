@@ -212,7 +212,7 @@ class PlayerActions:
         return self.context
 
     def _is_local_tournament_player(self, country_id):
-        return (self.session.multiplayer_mode and not self.session.realtime_multiplayer
+        return (self.session.is_tournament and not self.session.is_realtime
                 and self.session.player_country == country_id)
 
     def _collect_country_preferences(self, country_id):
@@ -1021,7 +1021,7 @@ def rename_player_faction(context, new_name):
     country = session.player_country
     current = queries.get_country_faction(country, world.nation_data)
     renamed = faction_actions.rename_faction(world.nation_data, country, current, new_name)
-    if renamed and (session.multiplayer_mode or session.realtime_multiplayer):
+    if renamed and session.is_networked:
         session.pending_faction_rename = queries.get_country_faction(country, world.nation_data)
     return renamed
 

@@ -492,8 +492,8 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     ai_results = {}
 
     if not ai_tasks:
-        session_state.responsive_tasks_total = 0
-        session_state.responsive_tasks_completed = 0
+        session_state.progress["responsive_tasks"].total = 0
+        session_state.progress["responsive_tasks"].completed = 0
         return ai_results
 
     # Import this to safely check the mode
@@ -503,7 +503,7 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     mode = ai_handler.get_ai_mode()
     immersion = ai_handler.get_ai_immersion_level()
 
-    session_state.responsive_tasks_completed = 0
+    session_state.progress["responsive_tasks"].completed = 0
     my_turn_id = ai_handler.CURRENT_TURN_ID
 
     # Diplomacy resolves after the AI phases have torn down their snapshot, so
@@ -545,8 +545,7 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     # level the game recommends. The queue below is now the same list the bar is
     # sized from, so there is nothing left to keep in step.
     count = ai_llm_runner.make_progress_counter(
-        context, "Processing Global Responses",
-        "responsive_tasks_completed", "responsive_tasks_total")
+        context, "Processing Global Responses", "responsive_tasks")
 
     # Filtered once, up front. The three paths used to disagree about an
     # action that is neither a known proposal nor a custom message: two
@@ -591,7 +590,7 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
 
     # Sized from the queue itself, so the bar counts the work the player is
     # actually waiting on rather than a separately-maintained guess at it.
-    session_state.responsive_tasks_total = len(asking)
+    session_state.progress["responsive_tasks"].total = len(asking)
     session_state.loading_status_text = f"Processing Global Responses (0/{len(asking)})..."
 
     for task in [t for t in answerable if not _needs_model(t)]:

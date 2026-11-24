@@ -106,7 +106,7 @@ def show_details(map_screen):
 
 
 def draw(map_screen, surface):
-    if not map_screen.session.realtime_multiplayer:
+    if not map_screen.session.is_realtime:
         return
     session = map_screen.realtime_session
     player = getattr(session, "players", {}).get(map_screen.realtime_player_id)

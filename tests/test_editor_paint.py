@@ -15,6 +15,7 @@ from tests import app_harness
 from ui.panels import diplomatic_popups
 from screens.game import map_input
 from tests.stub_map_screen import map_double
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 def sample_editor_values():
     provinces = [
         {"id": 1, "owner": "A", "cores": ["A", "B"], "neighbors": [2, 4, 99]},
@@ -28,7 +29,7 @@ def sample_editor_values():
     for province in provinces:
         province.update(map_color=[province["id"], 0, 0], buildings=[], units=[], resources={})
     return dict(
-        is_editor=True, editor_mode="NATION", editor_selection_tool="PAINT", brush_nation="C",
+        mode=MAP_EDITOR, editor_mode="NATION", editor_selection_tool="PAINT", brush_nation="C",
         id_to_province={p["id"]: p for p in provinces},
         map_data={str(tuple(p["map_color"])): p for p in provinces},
         nation_data={"A": {}, "B": {}, "C": {}},
@@ -118,7 +119,7 @@ class EditorPaintTests(unittest.TestCase):
             self.editor.editor_mode = mode
             self.assertEqual(ownership.apply_editor_territory_brush(self.editor, self.start), set())
         self.editor.editor_mode = "NATION"
-        self.editor.session.is_editor = False
+        self.editor.session.mode = LOCAL_PLAY
         self.assertEqual(ownership.apply_editor_territory_brush(self.editor, self.start), set())
         self.assertEqual(self.start["owner"], "A")
 
@@ -239,7 +240,7 @@ class EditorPaintInputTests(unittest.TestCase):
             self.assertTrue(self.game.btn_ed_paint.disabled)
             self.game.btn_ed_brush.callback()
             self.assertEqual(self.game.editor_selection_tool, "PAINT")
-        self.game.session.is_editor = False
+        self.game.session.mode = LOCAL_PLAY
         self.game.editor_mode = "NATION"
         self.game.btn_ed_brush.callback()
         self.assertEqual(self.game.editor_selection_tool, "PAINT")

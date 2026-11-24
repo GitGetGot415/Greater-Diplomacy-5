@@ -72,8 +72,7 @@ def can_view_country_economy(context, country_id):
         return False
     if shares_country_economy(viewer, country_id, world_state.nation_data):
         return True
-    if (session_state.realtime_multiplayer
-            or session_state.multiplayer_mode):
+    if session_state.is_networked:
         return False
     if session_state.is_editor or viewer in ("Spectator", "Editor"):
         return True
@@ -97,8 +96,7 @@ def get_country_summary(context, country_id):
         raise ValueError("Choose a country to view its summary.")
     country = nation_data[country_id]
     viewer = get_viewing_country(context)
-    networked = (session_state.realtime_multiplayer
-                 or session_state.multiplayer_mode)
+    networked = session_state.is_networked
     unrestricted = (not networked and viewer != c.TOURNAMENT_SPECTATOR
                     and (session_state.is_editor or viewer in ("Spectator", "Editor")))
     complete_army = unrestricted or (country_id == viewer and not session_state.tactical_mode)
@@ -121,7 +119,7 @@ def get_country_summary(context, country_id):
         shared_economies = getattr(context, "country_economy_summaries", {})
         if networked and country_id != viewer and country_id in shared_economies:
             economy = copy.deepcopy(shared_economies[country_id])
-        elif not (session_state.realtime_multiplayer and country_id != viewer
+        elif not (session_state.is_realtime and country_id != viewer
                   and not context.realtime_server_map):
             # Remote clients without server totals keep the economy private.
             # Economy queries can initialize missing siphon rates. Inspection must

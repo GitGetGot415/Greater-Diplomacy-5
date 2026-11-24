@@ -36,6 +36,7 @@ from data.state_access import BackendState
 from tests.stub_map_screen import MapDouble, map_double
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 from tests.politics_fixtures import policy_fixtures
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME
 
 
 class StubTurnScreen(MapDouble):
@@ -246,7 +247,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
     def test_starting_economic_slider_saves_both_coordinates_and_clears_drift(self):
         from screens.editors.politics_editor import Politics_Edit_Screen
 
-        map_screen = map_double(is_editor=True, map_data={1: {"owner": "A"}},
+        map_screen = map_double(mode=MAP_EDITOR, map_data={1: {"owner": "A"}},
                                 nation_data={"A": {"political_value": 4, "political_drift": -1,
                                                    "economic_drift": 1}},
                                 refresh_map_layers=Mock(), show_feedback=Mock())
@@ -278,9 +279,9 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen = Politics_Edit_Screen(map_screen, "A")
         screen.elements[1].callback()
         self.assertEqual((screen.value, screen.economic_value), (c.POLITICS_START, c.POLITICS_START))
-        map_screen.session.is_editor = False
+        map_screen.session.mode = LOCAL_PLAY
         map_screen.session.player_country = "Spectator"
-        map_screen.session.realtime_multiplayer = True
+        map_screen.session.mode = REALTIME
         screen.save()
         self.assertEqual(politics.economic_value(map_screen.world.nation_data, "A"), c.POLITICS_MIN)
 

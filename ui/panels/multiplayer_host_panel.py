@@ -24,7 +24,7 @@ def load_multiplayer_moves(map_ref, on_result):
 
     def can_import():
         return (map_ref.multiplayer_host_mode
-                and not map_ref.session.realtime_multiplayer)
+                and not map_ref.session.is_realtime)
 
     if not can_import():
         map_ref.show_feedback("Only the tournament host can import move files.")

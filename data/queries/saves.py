@@ -268,8 +268,7 @@ def saved_tactical_player_unit_id(context):
     session = session_for(context)
     if not session.tactical_mode:
         return None
-    if (session.is_editor or session.selection_mode or session.multiplayer_mode
-            or session.realtime_multiplayer or session.player_unit is None):
+    if (session.is_editor or session.selection_mode or session.is_networked or session.player_unit is None):
         return None
     unit = session.player_unit
     if unit.get("health", 0) <= 0 or unit.get("owner") != session.player_country:

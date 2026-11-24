@@ -23,6 +23,7 @@ from screens.game import battle_screen, battle_editor
 from tests import app_harness
 from ui.panels import army_panel
 from tests.stub_map_screen import state_owner
+from data.session_state import LOCAL_PLAY, REALTIME
 
 
 class BattleScreenTestCase(unittest.TestCase):
@@ -43,8 +44,9 @@ class BattleScreenTestCase(unittest.TestCase):
         game_map = self.map
         # Battle commands require an ordinary player planning phase, rather
         # than the scenario-selection state in which the harness boots.
-        for attribute in ("selection_mode", "is_editor", "ai_is_thinking", "viewing_ai_moves"):
-            self.enterContext(mock.patch.object(state_owner(game_map, attribute), attribute, False))
+        for attribute, value in (("selection_mode", False), ("mode", LOCAL_PLAY), ("ai_is_thinking", False),
+                                 ("viewing_ai_moves", False)):
+            self.enterContext(mock.patch.object(state_owner(game_map, attribute), attribute, value))
         stats = {"attack": 20, "defense": 0, "health": 100, "speed": 1,
                  "cost_materials": 50, "cost_manpower": 10, "cost_fuel": 0,
                  "production_time": 1, "naval_unit": False}
@@ -1134,7 +1136,7 @@ class BattleEditorTests(BattleScreenTestCase):
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         player = SimpleNamespace(submitted=True, eliminated=False)
         session = SimpleNamespace(phase="TURN", players={"fixture": player})
-        with mock.patch.object(self.map.session, "realtime_multiplayer", True), \
+        with mock.patch.object(self.map.session, "mode", REALTIME), \
                 mock.patch.object(self.map, "realtime_session", session), \
                 mock.patch.object(self.map, "realtime_player_id", "fixture"):
             before = copy.deepcopy(self.province["units"])

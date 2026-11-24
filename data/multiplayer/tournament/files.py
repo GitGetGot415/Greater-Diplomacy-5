@@ -5,6 +5,7 @@ import concurrent.futures
 import shutil
 
 from data.state_access import world_for, session_for
+from data.session_state import TOURNAMENT
 import os
 import json
 import hashlib
@@ -130,7 +131,7 @@ def strip_sensitive_data_for_player(context, country_id):
     snapshot applier replaces the map's state with the result.
     """
     session_state = session_for(context)
-    session_state.multiplayer_mode = True
+    session_state.mode = TOURNAMENT
     session_state.player_country = country_id
     session_state.active_players = [country_id]
     session_state.current_player_index = 0
@@ -150,7 +151,7 @@ def strip_sensitive_data_for_tournament_spectator(context):
     world_state = world_for(context)
     session_state = session_for(context)
     context.country_economy_summaries = {}
-    session_state.multiplayer_mode = True
+    session_state.mode = TOURNAMENT
     session_state.player_country = c.TOURNAMENT_SPECTATOR
     session_state.active_players = [c.TOURNAMENT_SPECTATOR]
     session_state.current_player_index = 0

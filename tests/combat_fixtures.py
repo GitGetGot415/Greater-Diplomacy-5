@@ -4,6 +4,7 @@ from unittest import mock
 
 import data.constants as c
 from tests.stub_map_screen import MapDouble, fill_state_defaults
+from data.session_state import LOCAL_PLAY
 
 
 def neutral_territory():
@@ -37,7 +38,7 @@ class StubBattleMap(MapDouble):
         self.world.scenario_settings = {}
         # conquer_province repaints a pygame surface unless one of these says a
         # repaint would be pointless. There is no surface here, so it always is.
-        self.session.is_editor = False
+        self.session.mode = LOCAL_PLAY
         self.session.viewing_ai_moves = True
         self.session.ai_is_thinking = False
         self.centers_need_update = False

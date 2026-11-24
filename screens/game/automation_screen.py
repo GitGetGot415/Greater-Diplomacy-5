@@ -76,7 +76,7 @@ class Automation_Screen(Screen):
         if self.can_edit_realtime():
             val = self.map_screen.world.nation_data[self.player]["automation"].get(key, False)
             self.map_screen.world.nation_data[self.player]["automation"][key] = not val
-            if self.map_screen.session.realtime_multiplayer:
+            if self.map_screen.session.is_realtime:
                 # The map's regular draft sync runs every frame, but clearing
                 # its fingerprint here makes this visible preference update
                 # send on the very next frame even if the screen was opened

@@ -8,6 +8,7 @@ import pygame
 from screens.game import map_buttons
 from tests import app_harness
 from tests.stub_map_screen import state_owner
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 class MapMenuControlTests(unittest.TestCase):
@@ -22,9 +23,9 @@ class MapMenuControlTests(unittest.TestCase):
         # A freshly booted map is still on the country-picking screen, where
         # update_button_states returns after two buttons. The bar under test
         # only exists once a country has been chosen.
-        saved = {a: getattr(state_owner(game, a), a) for a in ("is_editor", "selected_province", "selection_mode")}
+        saved = {a: getattr(state_owner(game, a), a) for a in ("mode", "selected_province", "selection_mode")}
         try:
-            game.session.is_editor = is_editor
+            game.session.mode = MAP_EDITOR if is_editor else LOCAL_PLAY
             game.session.selection_mode = False
             game.selected_province = saved["selected_province"] if selected else None
             map_buttons.update_button_states(game)

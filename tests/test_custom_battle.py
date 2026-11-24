@@ -18,6 +18,7 @@ from screens.game import custom_battle as battle_screen
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import Slider
 from tests.stub_map_screen import map_double
+from data.session_state import LOCAL_PLAY
 
 
 def unit_stats(family="Fixture Infantry", *, tier=1, health=100, attack=40,
@@ -2934,7 +2935,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
         province = {"id": 1, "units": [player, foe]}
         fake = map_double(
-            tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
+            tactical_mode=True, player_unit=player, mode=LOCAL_PLAY,
             _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
             map_data={"key": province}, nation_data=nations, tactical_battle_request=None, go_to=Mock())
         with patch("data.queries.get_unit_library", return_value=self.library):
@@ -2961,7 +2962,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         nations["Neutral"] = {"at_war_with": []}
         province = {"id": 1, "units": [player, gun, plane, ship, neutral]}
         fake = map_double(
-            tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
+            tactical_mode=True, player_unit=player, mode=LOCAL_PLAY,
             _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
             map_data={"key": province}, nation_data=nations, tactical_battle_request=None, go_to=Mock())
         with patch("data.queries.get_unit_library", return_value=self.library), \

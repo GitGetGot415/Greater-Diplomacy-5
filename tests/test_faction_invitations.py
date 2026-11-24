@@ -10,6 +10,7 @@ from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.diplomacy import diplomacy_processor, faction_leadership, player_diplomacy_actions
 from tests.stub_map_screen import state_owner, StubMapScreen
 from screens.game import spectator_controls
+from data.session_state import LOCAL_PLAY
 class FactionInvitationTests(unittest.TestCase):
     def setUp(self):
         self.game = StubMapScreen(["Leader", "Member", "Outsider"],
@@ -178,7 +179,7 @@ class FactionInvitationButtonTests(unittest.TestCase):
         fields = dict(player_country=self.member, active_players=countries,
                       selected_province=next(p for p in game.world.map_data.values()
                                              if p.get("owner") == self.outsider),
-                      selection_mode=False, is_editor=False, tactical_mode=False,
+                      selection_mode=False, mode=LOCAL_PLAY, tactical_mode=False,
                       viewing_ai_moves=False, ai_is_thinking=False)
         for name, value in fields.items():
             patcher = mock.patch.object(state_owner(game, name), name, value)

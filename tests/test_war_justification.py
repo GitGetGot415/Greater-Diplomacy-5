@@ -15,6 +15,7 @@ import pygame
 import data.constants as c
 from data import queries
 from tests import app_harness
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 class WarScreenTestCase(unittest.TestCase):
@@ -134,7 +135,7 @@ class ClaimPickerTests(WarScreenTestCase):
     def test_the_editor_overview_still_browses_every_claim(self):
         from screens.game.claims_screen import Claims_Screen
 
-        self.map.session.is_editor = True
+        self.map.session.mode = MAP_EDITOR
         try:
             overview = Claims_Screen(self.map)
             self.assertFalse(overview.is_picker)
@@ -142,7 +143,7 @@ class ClaimPickerTests(WarScreenTestCase):
             self.assertEqual(overview.view_mode, "GLOBAL")
             overview.draw(self.surface)
         finally:
-            self.map.session.is_editor = False
+            self.map.session.mode = LOCAL_PLAY
 
 
 if __name__ == "__main__":

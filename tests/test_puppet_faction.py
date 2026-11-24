@@ -22,6 +22,7 @@ from map_logic.diplomacy import faction_actions, faction_records, puppet_actions
 from map_logic.territory import ownership as own
 from map_logic.system32 import movement_processor
 from tests.stub_map_screen import MapDouble, fill_state_defaults
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 def nation(**over):
@@ -37,7 +38,7 @@ class Screen(MapDouble):
     """Enough of a map screen for ownership changes. ai_is_thinking short-circuits
     every repaint, so nothing here needs a display surface."""
 
-    is_editor = False
+    mode = LOCAL_PLAY
     viewing_ai_moves = False
     ai_is_thinking = True
     map_mode = "POLITICAL"
@@ -165,7 +166,7 @@ class RetireLandlessTests(unittest.TestCase):
 
     def test_map_editor_can_paint_integrated_puppet_territory(self):
         screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        screen.session.is_editor = True
+        screen.session.mode = MAP_EDITOR
         province_to_paint = self.map_data["1"]
         province_to_paint["owner"] = "Unclaimed"
 
@@ -303,7 +304,7 @@ class RetireLandlessTests(unittest.TestCase):
         """Zero provinces is what half of a repaint looks like. Losing the
         scenario's treaties for it would be destructive, not tidy."""
         screen = self.build()
-        screen.session.is_editor = True
+        screen.session.mode = MAP_EDITOR
         own.retire_landless_nation(screen, "Doomed")
         self.assertEqual(self.nation_data["Doomed"]["faction"], "Pact")
         self.assertEqual(self.nation_data["Empire"]["at_war_with"], ["Doomed"])
@@ -311,7 +312,7 @@ class RetireLandlessTests(unittest.TestCase):
     def test_the_editor_still_erases_a_created_puppet(self):
         """That half always ran there and is how re-annexation cleans up."""
         screen = self.build(is_created_integrated_puppet=True)
-        screen.session.is_editor = True
+        screen.session.mode = MAP_EDITOR
         own.retire_landless_nation(screen, "Doomed")
         self.assertNotIn("Doomed", self.nation_data)
 

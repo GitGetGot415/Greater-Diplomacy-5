@@ -57,20 +57,20 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
         # separate meta.json province block only in multiplayer snapshots.
         save_dict = queries.build_save_dict(
             self, include_provinces=False, compact_nations=True, include_local_preferences=True)
-        self.session.save_progress_completed = 1
+        self.session.progress["save"].completed = 1
         await asyncio.sleep(0)
 
         # Indented JSON makes saves and scenario exports easy to inspect and
         # diff. Short lists and objects stay on one line to keep files smaller.
         with open(os.path.join(save_path, "meta.json"), "w") as f:
             f.write(history_io.dump_save_text(save_dict))
-        self.session.save_progress_completed = 2
+        self.session.progress["save"].completed = 2
         await asyncio.sleep(0)
 
         # Structural map and current province state, so the save is self-contained.
         with open(os.path.join(save_path, "map_data.json"), "w") as f:
             f.write(history_io.dump_save_text(queries.build_map_data_save(self)))
-        self.session.save_progress_completed = 3
+        self.session.progress["save"].completed = 3
         await asyncio.sleep(0)
 
         # History
@@ -84,7 +84,7 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
                 queries.scrub_default_images(nd)
                 turn_snap[c.HISTORY_SCRUBBED_KEY] = True
         history_io.write(save_path, self.world.history)
-        self.session.save_progress_completed = 4
+        self.session.progress["save"].completed = 4
         await asyncio.sleep(0)
 
         # Political and cores surfaces are derived from map/province data and
@@ -93,7 +93,7 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
         remove_optional_layer_files(save_path)
         pygame.image.save(self.terrain_map, os.path.join(save_path, "terrain.png"))
         pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
-        self.session.save_progress_completed = 5
+        self.session.progress["save"].completed = 5
 
         # Web builds restore both saved games and custom scenarios at startup.
         sync_persisted_dir(c.SCENARIOS_CUSTOM_DIR if self.session.is_editor else c.SAVES_DIR)

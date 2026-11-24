@@ -10,6 +10,7 @@ from map_logic.diplomacy import faction_records, volunteers
 from screens.editors import menus
 from screens.editors.brush_screens import Bulk_Edit_Screen, Clear_Map_Screen, Unit_Transfer_Screen
 from tests.stub_map_screen import state_owner, map_double
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 def equipment(family, tier, requirement, health, extra=()):
@@ -31,7 +32,7 @@ def editor():
         "empty": {"id": 3, "json_key": "empty", "owner": "A", "cores": [], "units": []},
     }
     return map_double(
-        is_editor=True, map_data=provinces, id_to_province={p["id"]: p for p in provinces.values()},
+        mode=MAP_EDITOR, map_data=provinces, id_to_province={p["id"]: p for p in provinces.values()},
         nation_data={"A": {"research": {"fixture": 1}, "materials": 17}, "B": {}},
         queue_editor_visual_refresh=mock.Mock(), refresh_all_maps=mock.Mock(),
         refresh_diplomacy_maps=mock.Mock(), show_feedback=mock.Mock(), refresh_nation_data=mock.Mock())
@@ -174,8 +175,8 @@ class BulkEditTests(unittest.TestCase):
         self.assertEqual(self.game.session.editor_history, [])
 
     def test_all_mutations_recheck_modes_and_processing_state(self):
-        for field, value in (("is_editor", False), ("tactical_mode", True),
-                             ("multiplayer_mode", True), ("realtime_multiplayer", True),
+        for field, value in (("mode", LOCAL_PLAY), ("tactical_mode", True),
+                             ("mode", TOURNAMENT), ("mode", REALTIME),
                              ("ai_is_thinking", True), ("viewing_ai_moves", True),
                              ("is_saving", True), ("is_refreshing", True)):
             with self.subTest(field=field), mock.patch.object(state_owner(self.game, field), field, value):
@@ -320,10 +321,10 @@ class BulkEditorCallbackTests(unittest.TestCase):
         confirmed = ask.call_args.args[2]
         confirmed(False)
         game.refresh_nation_data.assert_not_called()
-        game.session.multiplayer_mode = True
+        game.session.mode = TOURNAMENT
         confirmed(True)
         game.refresh_nation_data.assert_not_called()
-        game.session.multiplayer_mode = False
+        game.session.mode = MAP_EDITOR
         confirmed(True)
         game.refresh_nation_data.assert_called_once_with()
 

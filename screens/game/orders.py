@@ -110,7 +110,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         # already has. The panel shows every unit there and edits none of them.
         self.read_only = (not any(u.get("owner") == self.map_screen.session.player_country
                                   for u in units)
-                          or (self.map_screen.session.realtime_multiplayer
+                          or (self.map_screen.session.is_realtime
                               and (self.map_screen.realtime_session.phase != "TURN"
                                    or self.map_screen.realtime_session.players[
                                        self.map_screen.realtime_player_id].submitted)))
@@ -598,7 +598,7 @@ class Orders_Screen(UnitCommandControls, Screen):
             for unit, base in selected_records if queries.is_air_unit(unit, context=self.map_screen)]
         self._air_range_input_key = None
         self._refresh_air_range_previews(self._air_range_hover_target)
-        if self.map_screen.session.realtime_multiplayer:
+        if self.map_screen.session.is_realtime:
             player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
             self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
                               or player.submitted or player.eliminated)

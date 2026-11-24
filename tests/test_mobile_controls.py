@@ -18,6 +18,7 @@ from ui.navigation.screen import Screen
 from ui.navigation.touch_input import TouchInput, HOLD_MILLISECONDS
 from ui.widgets.ui_elements import Button, Slider
 from ui.panels import army_panel, map_top_right_layout
+from data.session_state import MAP_EDITOR
 
 
 def finger(kind, position, number=1):
@@ -458,7 +459,7 @@ class SecondaryActionAvailabilityTests(unittest.TestCase):
             self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
 
     def test_editor_paint_holds_require_an_owner_to_pick_or_a_core_to_remove(self):
-        self.game.session.is_editor = True
+        self.game.session.mode = MAP_EDITOR
         self.game.editor_selection_tool = "PAINT"
         self.game.editor_mode = "NATION"
         self.game.brush_nation = "B"

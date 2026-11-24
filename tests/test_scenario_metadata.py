@@ -18,11 +18,12 @@ from screens.editors import standalone_export
 from screens.editors.date_economy_screens import Editor_Metadata_Screen
 from screens.editors.standalone_export import Standalone_Export_Screen
 from tests.stub_map_screen import state_owner, mock_map, map_double
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 def editor():
     return map_double(
-        is_editor=True, player_country="Editor", editor_scenario_name="",
+        mode=MAP_EDITOR, player_country="Editor", editor_scenario_name="",
         map_data={"p": {"id": 1, "json_key": "p", "owner": "A", "cores": ["A"], "units": []}},
         raw_json_data={"p": {"id": 1, "owner": "A"}}, nation_data={"A": {"materials": 4}},
         scenario_metadata={}, terrain_map=object(), id_map=object(), show_feedback=mock.Mock())
@@ -56,7 +57,7 @@ class ScenarioMetadataTests(unittest.TestCase):
             self.assertEqual(self.game.session.editor_scenario_name, "My Scenario")
 
     def test_permissions_rechecked_when_metadata_is_applied(self):
-        for key, value in (("is_editor", False), ("multiplayer_mode", True), ("realtime_multiplayer", True),
+        for key, value in (("mode", LOCAL_PLAY), ("mode", TOURNAMENT), ("mode", REALTIME),
                            ("tactical_mode", True), ("is_saving", True), ("is_refreshing", True),
                            ("ai_is_thinking", True), ("viewing_ai_moves", True)):
             with self.subTest(key=key), mock.patch.object(state_owner(self.game, key), key, value), self.assertRaises(ValueError):
@@ -86,7 +87,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertEqual(self.game.session.editor_scenario_name, "Renamed Folder")
         load_map.restore_scenario_metadata(self.game, None)
         self.assertEqual(self.game.session.editor_scenario_name, "")
-        self.game.session.is_editor = False
+        self.game.session.mode = LOCAL_PLAY
         load_map.restore_scenario_metadata(self.game, {}, os.path.join(self.directory, "Saved Game"))
         self.assertEqual(self.game.session.editor_scenario_name, "")
 
@@ -116,7 +117,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.picker.side_effect = None
         ready = mock.Mock()
         editor_menus.prepare_editor_save(self.game, ready)
-        self.game.session.multiplayer_mode = True
+        self.game.session.mode = TOURNAMENT
         self.picker.call_args.kwargs["on_result"](os.path.join(self.directory, "Chosen"))
         ready.assert_not_called()
 
@@ -137,7 +138,7 @@ class ScenarioMetadataTests(unittest.TestCase):
             callback(True)
             ready.assert_called_once_with(os.path.join(self.directory, "Existing"), True)
             ready.reset_mock()
-            self.game.session.realtime_multiplayer = True
+            self.game.session.mode = REALTIME
             callback(True)
             ready.assert_not_called()
 
@@ -163,7 +164,7 @@ class ScenarioMetadataTests(unittest.TestCase):
 
     def test_save_preparation_requires_an_idle_local_editor(self):
         ready = mock.Mock()
-        for key, value in (("is_editor", False), ("multiplayer_mode", True), ("realtime_multiplayer", True),
+        for key, value in (("mode", LOCAL_PLAY), ("mode", TOURNAMENT), ("mode", REALTIME),
                            ("tactical_mode", True), ("is_saving", True), ("is_refreshing", True),
                            ("ai_is_thinking", True), ("viewing_ai_moves", True)):
             with self.subTest(key=key), mock.patch.object(state_owner(self.game, key), key, value), \
@@ -214,7 +215,7 @@ class ScenarioMetadataTests(unittest.TestCase):
     def test_chosen_paths_outside_the_default_roots_round_trip_for_games_and_maps(self):
         for is_editor in (True, False):
             with self.subTest(is_editor=is_editor), tempfile.TemporaryDirectory() as outside:
-                self.game.session.is_editor = is_editor
+                self.game.session.mode = MAP_EDITOR if is_editor else LOCAL_PLAY
                 self.game.world.scenario_metadata = {"author": "Creator", "description": "Chosen destination"}
                 destination = os.path.join(outside, "Chosen Name")
                 path, _sync = self.write_scenario(save_path=destination)
@@ -231,7 +232,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         previous = os.path.join(destination, "meta.json")
         with open(previous, "w") as handle:
             handle.write("Keep existing save")
-        self.game.session.is_editor = False
+        self.game.session.mode = LOCAL_PLAY
         with mock.patch("builtins.print"):
             path, _sync = self.write_scenario(save_path=destination)
         self.assertIsNone(path)
@@ -285,7 +286,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertTrue(screen.done)
         self.assertEqual(self.game.session.editor_scenario_name, "Name")
         self.assertEqual(self.game.world.scenario_metadata, {"author": "Author", "description": "Description"})
-        self.game.session.multiplayer_mode = True
+        self.game.session.mode = TOURNAMENT
         screen.done = False
         with mock.patch("ui.dialogs.show_error") as error:
             screen.apply()
@@ -391,12 +392,12 @@ class ScenarioMetadataTests(unittest.TestCase):
         settings["interesting_countries"] = []
         with self.assertRaises(ValueError):
             queries.set_standalone_background_image(self.game, b"GIF89a not a png")
-        self.game.session.multiplayer_mode = True
+        self.game.session.mode = TOURNAMENT
         with self.assertRaises(ValueError):
             queries.set_standalone_export_setting(self.game, "background_image", "")
         self.assertEqual(settings, before)
         # Clear Image stores empty text in an idle editor.
-        self.game.session.multiplayer_mode = False
+        self.game.session.mode = MAP_EDITOR
         queries.set_standalone_export_setting(self.game, "background_image", "")
         self.assertEqual(settings["background_image"], "")
 
@@ -440,7 +441,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map_buttons
         from screens.editors import menus
 
-        game = mock_map(is_editor=True, player_country="Editor")
+        game = mock_map(mode=MAP_EDITOR, player_country="Editor")
         def button(_x, _y, _size, _color, text, callback, **_appearance):
             return SimpleNamespace(text=text, callback=callback)
         with mock.patch.object(map_buttons, "Button", side_effect=button), \
@@ -450,7 +451,7 @@ class ScenarioMetadataTests(unittest.TestCase):
                 mock.patch.object(menus, "open_spectator_messages") as messages:
             game.btn_gp_msgs.callback()
             metadata.assert_called_once_with(game)
-            game.session.is_editor = False
+            game.session.mode = LOCAL_PLAY
             game.session.player_country = "Spectator"
             game.btn_gp_msgs.callback()
             messages.assert_called_once_with(game)
@@ -484,7 +485,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map as map_module
 
         game = self.game
-        game.session.is_editor = False
+        game.session.mode = LOCAL_PLAY
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)
         game.draw = mock.Mock()
         self.picker.side_effect = None
@@ -508,8 +509,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map as map_module
 
         game = self.game
-        game.session.is_editor = False
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.realtime_session = SimpleNamespace(phase="GAME_OVER", completed_metadata=mock.Mock(return_value={}))
         game.realtime_server_map = mock.Mock()
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)
@@ -527,8 +527,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map as map_module
 
         game = self.game
-        game.session.is_editor = False
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.realtime_session = SimpleNamespace(phase="GAME_OVER", completed_metadata=lambda: {"offline_view": "spectator"})
         game.realtime_server_map = None
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)

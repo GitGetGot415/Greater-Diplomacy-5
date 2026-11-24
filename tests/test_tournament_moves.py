@@ -21,6 +21,7 @@ from data.multiplayer.tournament import files as tournament_files
 from map_logic import politics
 from map_logic.actions import production_actions
 from map_logic.diplomacy import faction_records
+from data.session_state import REALTIME, TOURNAMENT
 
 
 class Time:
@@ -648,7 +649,7 @@ class TournamentMoveTests(unittest.TestCase):
     def test_nonhosts_cannot_open_move_import(self):
         from ui.panels import multiplayer_host_panel
 
-        for flags in ({}, {"multiplayer_host_mode": True, "realtime_multiplayer": True}):
+        for flags in ({}, {"multiplayer_host_mode": True, "mode": REALTIME}):
             host = Host()
             for name, value in flags.items():
                 setattr(state_owner(host, name), name, value)
@@ -816,7 +817,7 @@ class TournamentMoveTests(unittest.TestCase):
         host = Host()
         leader, member = Host(), Host()
         leader.session.player_country, member.session.player_country = "Leader", "Member"
-        leader.session.multiplayer_mode = member.session.multiplayer_mode = True
+        leader.session.mode = member.session.mode = TOURNAMENT
         self.assertTrue(rename_player_faction(leader, "New Pact"))
 
         with tempfile.TemporaryDirectory() as directory:
@@ -909,7 +910,7 @@ class TournamentMoveTests(unittest.TestCase):
         host = Host()
         host.session.conversation_colors = {"Leader": [12, 34, 56]}
         host.session.player_country = "Leader"
-        host.session.multiplayer_mode = True
+        host.session.mode = TOURNAMENT
         host.session.active_players = ["Leader"]
         host.session.current_player_index = 0
         host.world.loop_map = False
@@ -927,7 +928,7 @@ class TournamentMoveTests(unittest.TestCase):
             with open(path, "r") as file:
                 payload = json.load(file)
             reopened = Host()
-            reopened.session.multiplayer_mode = True
+            reopened.session.mode = TOURNAMENT
             reopened.session.player_country = "Leader"
             restored = self.import_moves(reopened, [path])
             self.assertEqual(restored["loaded"], 1, restored["rejections"])

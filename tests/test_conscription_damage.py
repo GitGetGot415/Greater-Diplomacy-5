@@ -23,6 +23,7 @@ from ui.panels.sidebar_info import unit_roster_row
 from ui.widgets.ui_elements import Slider
 
 from tests.combat_fixtures import install_neutral_territory
+from data.session_state import REALTIME
 
 # Territory damage is a politics rule; these tests measure combat mechanics.
 install_neutral_territory(globals())
@@ -221,7 +222,7 @@ class ConscriptionSliderTests(unittest.TestCase):
 
     def test_submitted_realtime_players_cannot_start_a_drag_or_change_setting(self):
         screen, game = self.screen()
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.realtime_player_id = "player"
         game.realtime_session = SimpleNamespace(
             phase="TURN", players={"player": SimpleNamespace(submitted=True, eliminated=False)})

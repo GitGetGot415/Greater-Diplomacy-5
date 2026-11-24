@@ -22,6 +22,7 @@ from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.system32 import air_processor, combat_processor
 from tests import app_harness
 from tests.air_fixtures import tile, wing, world
+from data.session_state import LOCAL_PLAY
 
 
 def range_library():
@@ -307,7 +308,7 @@ class UnitRangePersistenceTests(unittest.TestCase):
         game.terrain_map = game.id_map.copy()
         game.political_map = game.id_map.copy()
         game.cores_map = game.id_map.copy()
-        game.session.is_editor = False
+        game.session.mode = LOCAL_PLAY
         game.world.history = {}
         game.show_feedback = mock.Mock()
         with mock.patch.object(c, "SAVES_DIR", self.directory):

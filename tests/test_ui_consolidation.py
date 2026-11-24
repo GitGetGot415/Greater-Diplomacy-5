@@ -11,6 +11,7 @@ import pygame
 
 from tests import app_harness
 from tests.stub_map_screen import map_double, mock_map
+from data.session_state import LOCAL_PLAY, MAP_EDITOR
 
 
 def key(code, text=""):
@@ -257,7 +258,7 @@ class DeclareIndependenceFieldTests(SharedUiTestCase):
 
         screen = self.screen()
         game = screen.map_screen
-        game.session.realtime_multiplayer = game.session.multiplayer_mode = False
+        game.session.mode = LOCAL_PLAY
         game.world.nation_data["Alpha"] = {"manpower": 7, "materials": 7, "fuel": 7, "research": {}}
         game.session.player_unit = {"type": "Fixture", "owner": "Alpha", "order": {"type": "MOVE", "path": [2]}}
         game.session.active_players = ["Alpha"]
@@ -616,7 +617,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         navigate.assert_called_once_with("VIEW_ASSETS")
 
         game = app_harness.boot_map()
-        with app_harness.patch_map(game, is_editor=False), \
+        with app_harness.patch_map(game, mode=LOCAL_PLAY), \
                 mock.patch.object(game, "editing_country", "", create=True), \
                 mock.patch.object(game.btn_gp_edit, "visible", True), \
                 mock.patch.object(game.btn_gp_edit, "disabled", False), \
@@ -646,7 +647,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
     def test_puppets_plays_its_sound_once_and_opens_the_menu(self):
         from screens.game import map_buttons
 
-        game = map_double(is_editor=False, player_country="A", save_map_data=mock.Mock(),
+        game = map_double(mode=LOCAL_PLAY, player_country="A", save_map_data=mock.Mock(),
                                change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
         with mock.patch.object(map_buttons.player_diplomacy_actions, "open_puppets_menu") as open_puppets:
             map_buttons._build_left_bar_buttons(game)
@@ -827,7 +828,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         from screens.game import map_buttons
 
         for is_editor in (False, True):
-            game = map_double(is_editor=is_editor, player_country="A", save_map_data=mock.Mock(),
+            game = map_double(mode=MAP_EDITOR if is_editor else LOCAL_PLAY, player_country="A", save_map_data=mock.Mock(),
                                    change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
             with self.subTest(is_editor=is_editor), \
                     mock.patch.object(map_buttons.player_diplomacy_actions, "open_claims_menu") as open_claims, \

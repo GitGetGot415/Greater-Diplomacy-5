@@ -18,6 +18,7 @@ from map_logic.ai import ai_tech_eval
 from map_logic.system32 import economy_processor, research_processor, turn_processor
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from tests.research_fixtures import research_lock_cases
+from data.session_state import LOCAL_PLAY
 
 
 def building(materials, manpower, fuel, group):
@@ -626,8 +627,8 @@ class OutputResearchScreenTests(unittest.TestCase):
         self.enterContext(patch.object(self.game.world, "nation_data", copy.deepcopy(self.game.world.nation_data)))
         self.country = next(iter(queries.get_living_nations(self.game.world.map_data)))
         self.enterContext(patch.object(self.game.session, "player_country", self.country))
-        for flag in ("is_editor", "tactical_mode", "realtime_multiplayer", "multiplayer_mode"):
-            self.enterContext(patch.object(state_owner(self.game, flag), flag, False))
+        self.enterContext(patch.object(self.game.session, "mode", LOCAL_PLAY))
+        self.enterContext(patch.object(self.game.session, "tactical_mode", False))
         self.enterContext(patch.object(self.game, "viewing_research_country", "", create=True))
         self.game.world.nation_data[self.country].update(research={"basic_factory": 1}, research_queue=[], research_progress={})
 

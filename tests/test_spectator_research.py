@@ -20,6 +20,7 @@ import data.constants as c
 from data import queries
 from tests import app_harness
 from tests.stub_map_screen import state_owner
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 class SubjectTests(unittest.TestCase):
@@ -39,9 +40,7 @@ class SubjectTests(unittest.TestCase):
         for country in nation_data.values():
             country.update(research={}, research_queue=[], research_progress={})
         self.enterContext(patch.object(self.map.world, "nation_data", nation_data))
-        self.enterContext(patch.object(self.map.session, "is_editor", False))
-        self.enterContext(patch.object(self.map.session, "multiplayer_mode", False))
-        self.enterContext(patch.object(self.map.session, "realtime_multiplayer", False))
+        self.enterContext(patch.object(self.map.session, "mode", LOCAL_PLAY))
         self.enterContext(patch.object(self.map, "viewing_research_mode", "VIEW", create=True))
         self.enterContext(patch.object(self.map, "show_feedback", Mock()))
         self.saved = {a: getattr(state_owner(self.map, a), a, None)
@@ -179,8 +178,8 @@ class SubjectTests(unittest.TestCase):
         target = self.others()[0]
         self.spectate(target, "EDIT")
         button = next(button for button in self.screen.elements if getattr(button, "is_tech_node", False))
-        for flags in ({"tactical_mode": True}, {"multiplayer_mode": True},
-                      {"realtime_multiplayer": True}, {"player_country": target}):
+        for flags in ({"tactical_mode": True}, {"mode": TOURNAMENT},
+                      {"mode": REALTIME}, {"player_country": target}):
             with self.subTest(flags=flags), ExitStack() as stack:
                 for key, value in flags.items():
                     stack.enter_context(patch.object(state_owner(self.map, key), key, value))
@@ -418,8 +417,8 @@ class SubjectTests(unittest.TestCase):
         target = self.others()[0]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
-        for flags in ({"tactical_mode": True}, {"multiplayer_mode": True}, {"realtime_multiplayer": True},
-                      {"player_country": target}, {"viewing_research_country": "missing"}, {"is_editor": True}):
+        for flags in ({"tactical_mode": True}, {"mode": TOURNAMENT}, {"mode": REALTIME},
+                      {"player_country": target}, {"viewing_research_country": "missing"}, {"mode": MAP_EDITOR}):
             with self.subTest(flags=flags), ExitStack() as stack:
                 for key, value in flags.items():
                     stack.enter_context(patch.object(state_owner(self.map, key), key, value))
@@ -464,9 +463,8 @@ class PickerTests(unittest.TestCase):
         cls.map = app_harness.boot_map()
 
     def setUp(self):
-        for name, value in (("player_country", "Spectator"), ("is_editor", False),
-                            ("tactical_mode", False), ("multiplayer_mode", False),
-                            ("realtime_multiplayer", False), ("viewing_research_country", ""),
+        for name, value in (("player_country", "Spectator"), ("mode", LOCAL_PLAY),
+                            ("tactical_mode", False), ("viewing_research_country", ""),
                             ("viewing_research_mode", "VIEW"), ("next_state", "MAP"), ("done", False)):
             self.enterContext(patch.object(app_harness.state_owner(self.map, name), name, value, create=True))
 
@@ -520,8 +518,8 @@ class PickerTests(unittest.TestCase):
             self.assertEqual(self.map.viewing_research_mode, "VIEW")
 
     def test_network_and_tactical_spectators_can_only_select_view(self):
-        for flag in ("multiplayer_mode", "realtime_multiplayer", "tactical_mode"):
-            with self.subTest(flag=flag), patch.object(state_owner(self.map, flag), flag, True):
+        for flag, value in (("mode", TOURNAMENT), ("mode", REALTIME), ("tactical_mode", True)):
+            with self.subTest(flag=flag, value=value), patch.object(state_owner(self.map, flag), flag, value):
                 picker = self.picker()
                 picker.set_mode("EDIT")
                 self.assertEqual(picker.mode, "VIEW")

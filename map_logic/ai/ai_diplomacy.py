@@ -77,8 +77,8 @@ def start_proactive_llm_tasks(context):
     session_state.proactive_llm_tasks = []
 
     if not pending_choices:
-        session_state.proactive_llm_tasks_total = 0
-        session_state.proactive_llm_tasks_completed = 0
+        session_state.progress["proactive_llm_tasks"].total = 0
+        session_state.progress["proactive_llm_tasks"].completed = 0
         return None
 
     world = ai_world.for_screen(context)
@@ -98,8 +98,8 @@ def start_proactive_llm_tasks(context):
     jobs = [choice for choice in pending_choices if consulted(choice)]
     jobs = _longest_waiting_first(context, jobs)
 
-    session_state.proactive_llm_tasks_total = len(jobs)
-    session_state.proactive_llm_tasks_completed = 0
+    session_state.progress["proactive_llm_tasks"].total = len(jobs)
+    session_state.progress["proactive_llm_tasks"].completed = 0
     session_state.loading_status_text = f"Directing AI Nations (0/{len(jobs)})..."
 
     my_turn_id = ai_handler.CURRENT_TURN_ID
@@ -149,8 +149,7 @@ def start_proactive_llm_tasks(context):
         pass    # already holds the heuristic's own pick
 
     count = ai_llm_runner.make_progress_counter(
-        context, "Directing AI Nations",
-        "proactive_llm_tasks_completed", "proactive_llm_tasks_total")
+        context, "Directing AI Nations", "proactive_llm_tasks")
 
     if not jobs:
         return None
@@ -176,8 +175,8 @@ def finish_proactive_llm_tasks(context, batch):
 
     if batch is not None:
         session_state.loading_status_text = (
-            f"Directing AI Nations ({session_state.proactive_llm_tasks_completed}/"
-            f"{session_state.proactive_llm_tasks_total})...")
+            f"Directing AI Nations ({session_state.progress["proactive_llm_tasks"].completed}/"
+            f"{session_state.progress["proactive_llm_tasks"].total})...")
         outcome = batch.collect()
         ai_llm_runner.report_unserved(context, outcome, "Directing AI nations")
 
@@ -1231,8 +1230,8 @@ def _run_basic_proactive_ai(context):
     ai_nations = queries.get_active_ai_nations(context)
 
     # --- Trigger the UI Progress Bar ---
-    session_state.proactive_tasks_total = len(ai_nations)
-    session_state.proactive_tasks_completed = 0
+    session_state.progress["proactive_tasks"].total = len(ai_nations)
+    session_state.progress["proactive_tasks"].completed = 0
     session_state.loading_status_text = "Evaluating AI Grand Strategy..."
 
     # Nothing below redraws the map, so every border, strength and relation
@@ -1244,7 +1243,7 @@ def _run_basic_proactive_ai(context):
 
     for ai_name in ai_nations:
         if ai_name not in active_nations:
-            session_state.proactive_tasks_completed += 1
+            session_state.progress["proactive_tasks"].completed += 1
             continue
 
         data = world_state.nation_data[ai_name]
@@ -1268,7 +1267,7 @@ def _run_basic_proactive_ai(context):
         # from inside the loop, which skipped that upkeep for every nation
         # after the first and left the loading bar stuck below its total.
         if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, context.world.scenario_settings):
-            session_state.proactive_tasks_completed += 1
+            session_state.progress["proactive_tasks"].completed += 1
             continue
 
         is_already_at_war = len(my_enemies) > 0
@@ -1334,5 +1333,5 @@ def _run_basic_proactive_ai(context):
             _fabricate_claims_on_weaker_neighbors(context, ai_name, data, my_master, my_enemies, active_nations, world)
 
         # --- Update Progress Bar ---
-        session_state.proactive_tasks_completed += 1
-        session_state.loading_status_text = f"Evaluating AI Grand Strategy ({session_state.proactive_tasks_completed}/{session_state.proactive_tasks_total})..."
+        session_state.progress["proactive_tasks"].completed += 1
+        session_state.loading_status_text = f"Evaluating AI Grand Strategy ({session_state.progress["proactive_tasks"].completed}/{session_state.progress["proactive_tasks"].total})..."

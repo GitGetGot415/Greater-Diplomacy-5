@@ -19,6 +19,7 @@ from ui.bars import ui_bars
 from ui.dialogs.message_box import _NavigationIntroPopup
 from ui.information import tooltip
 from tests.stub_map_screen import map_double
+from data.session_state import MAP_EDITOR, TOURNAMENT
 
 
 class UnitViewFilterTests(unittest.TestCase):
@@ -724,8 +725,8 @@ class UnitViewControlTests(unittest.TestCase):
             for changes, visible in (
                     ({"tactical_mode": True}, True),
                     ({"player_country": "Spectator"}, True),
-                    ({"multiplayer_mode": True}, True),
-                    ({"is_editor": True}, True),
+                    ({"mode": TOURNAMENT}, True),
+                    ({"mode": MAP_EDITOR}, True),
                     ({"selection_mode": True}, False),
                     ({"hide_raised_rect": True}, False),
                     ({"ai_is_thinking": True}, False),
@@ -752,7 +753,7 @@ class UnitViewControlTests(unittest.TestCase):
 
     def test_editor_filter_callbacks_keep_editor_tools_and_hide_gameplay_controls(self):
         game = self.game
-        with app_harness.patch_map(game, is_editor=True, player_country="Editor"):
+        with app_harness.patch_map(game, mode=MAP_EDITOR, player_country="Editor"):
             update_button_states(game)
             for view_filter, button in game.unit_view_buttons.items():
                 button.callback()

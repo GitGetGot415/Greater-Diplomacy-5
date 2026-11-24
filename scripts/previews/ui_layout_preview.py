@@ -24,6 +24,7 @@ if str(ROOT) not in sys.path:
 import pygame
 
 import data.constants as c
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 from data import queries
 
 
@@ -134,7 +135,7 @@ def main():
     game_map.session.player_country = playable_country
     game_map.session.active_players = [playable_country]
     game_map.session.selection_mode = False
-    game_map.session.is_editor = False
+    game_map.session.mode = LOCAL_PLAY
     game_map.navigation_intro_popup = None
     # The preview never connects to a real-time server, but the live toolbar
     # still binds these callbacks while drawing its real-time state.
@@ -173,13 +174,12 @@ def main():
             standalone_menu.update()
             standalone_menu.draw(surface)
         else:
-            game_map.session.realtime_multiplayer = mode in (2, 3)
-            game_map.session.multiplayer_mode = mode in (5, 6)
+            game_map.session.mode = REALTIME if mode in (2, 3) else TOURNAMENT if mode in (5, 6) else LOCAL_PLAY
             game_map.multiplayer_host_mode = mode == 6
             game_map.session.player_country = "Spectator" if mode in (4, 6) else playable_country
             game_map.session.active_players = ([playable_country] if mode != 6
                                        else [playable_country, "Germany"])
-            if game_map.session.realtime_multiplayer:
+            if game_map.session.is_realtime:
                 game_map.realtime_session = _preview_session()
                 game_map.realtime_session.players["preview"].country_id = game_map.session.player_country
                 game_map.realtime_player_id = "preview"

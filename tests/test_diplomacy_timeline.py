@@ -28,6 +28,7 @@ from map_logic.diplomacy import deal, diplomacy_lifecycle, diplomacy_messages, d
 from map_logic.diplomacy.war_actions import finalize_neutral
 from map_logic.diplomacy import player_diplomacy_actions
 import data.constants as c
+from data.session_state import REALTIME
 
 ACCEPT = diplomacy_messages.RESPONSE_ACCEPT
 REJECT = diplomacy_messages.RESPONSE_REJECT
@@ -39,7 +40,7 @@ class SubmittedTurnDiplomacyTests(unittest.TestCase):
         game.set_faction("Pact", "A", "B")
         game.world.nation_data["A"]["at_war_with"] = ["C"]
         game.selected_province = game.home_of("B")
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.realtime_player_id = "local"
         game.realtime_session = SimpleNamespace(
             phase="TURN", players={"local": SimpleNamespace(submitted=True, eliminated=False)})

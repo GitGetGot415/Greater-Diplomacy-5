@@ -431,8 +431,7 @@ def _restore_tactical_player(context, save_meta):
     session = session_for(context)
     session.tactical_mode = False
     session.player_unit = None
-    if (session.is_editor or session.selection_mode or session.multiplayer_mode
-            or session.realtime_multiplayer):
+    if (session.is_editor or session.selection_mode or session.is_networked):
         return
     unit_id = (save_meta or {}).get("tactical_player_unit_id")
     # Older saves did not record tactical control. Never guess a division.
@@ -757,7 +756,7 @@ def apply_authoritative_snapshot(context, snapshot):
     unit_events.restore(context, snapshot | {"unit_event_read_turns": local_event_reads})
     # These are local intent buffers.  The processed server snapshot has now
     # either applied or rejected them. Start the next turn with fresh drafts.
-    if context.session.realtime_multiplayer:
+    if context.session.is_realtime:
         context.session.pending_faction_rename = None
         context.session.pending_subject_appearances = {}
         context.session.realtime_volunteer_drafts = {}

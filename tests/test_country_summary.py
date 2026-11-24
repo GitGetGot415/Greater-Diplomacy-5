@@ -19,6 +19,7 @@ from tests.stub_map_screen import state_owner, StubMapScreen
 from screens.game import map_input
 from ui.navigation import modal_stack
 from ui.bars import flag_renderer
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 
 
 def unit(owner, attack=80, kind="Summary fixture"):
@@ -146,12 +147,12 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertFalse(queries.can_view_country_economy(game, "B"))
         game.world.scenario_settings["fog_of_war"] = False
         self.assertTrue(queries.can_view_country_economy(game, "B"))
-        for mode in ("multiplayer_mode", "realtime_multiplayer"):
+        for mode in (TOURNAMENT, REALTIME):
             with self.subTest(mode=mode):
-                setattr(state_owner(game, mode), mode, True)
+                game.session.mode = mode
                 self.assertFalse(queries.can_view_country_economy(game, "B"))
                 self.assertTrue(queries.can_view_country_economy(game, "A"))
-                setattr(state_owner(game, mode), mode, False)
+                game.session.mode = LOCAL_PLAY
         game.session.player_country = "Spectator"
         game.world.scenario_settings["fog_of_war"] = True
         self.assertTrue(queries.can_view_country_economy(game, "B"))
@@ -166,7 +167,7 @@ class CountrySummaryTests(unittest.TestCase):
                     "provinces": {province["json_key"]: province for province in game.world.map_data.values()}}
         filtered = queries.player_snapshot_projection(game, snapshot, "A")
         game.world.nation_data = filtered["nation_data"]
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         self.assertNotIn("materials", game.world.nation_data["B"])
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Private economy queried")):
             summary = queries.get_country_summary(game, "B")
@@ -176,12 +177,11 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertNotIn("conversion", summary["economy"])
 
     def test_faction_members_and_direct_subjects_share_economies_in_each_mode(self):
-        for mode in ("local", "multiplayer_mode", "realtime_multiplayer"):
+        for mode in (LOCAL_PLAY, TOURNAMENT, REALTIME):
             for relationship in ("faction", "puppet", "overlord"):
                 with self.subTest(mode=mode, relationship=relationship):
                     game = world()
-                    if mode != "local":
-                        setattr(state_owner(game, mode), mode, True)
+                    game.session.mode = mode
                     if relationship == "faction":
                         game.world.nation_data["A"]["faction"] = game.world.nation_data["B"]["faction"] = "Fixture Pact"
                     else:
@@ -192,7 +192,7 @@ class CountrySummaryTests(unittest.TestCase):
                         game.session.player_country = viewer
                         self.assertTrue(queries.can_view_country_economy(game, target))
                         self.assertFalse(queries.can_view_country_economy(game, "C"))
-                        if mode == "realtime_multiplayer":
+                        if mode == REALTIME:
                             game.country_economy_summaries = queries.get_shared_country_economy_summaries(
                                 viewer, game.world.map_data, game.world.nation_data)
                         economy = queries.get_country_summary(game, target)["economy"]
@@ -216,7 +216,7 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(set(filtered["country_economy_summaries"]), {"B"})
         for field in ("research", "research_queue", "inbox", "materials", "manpower", "fuel"):
             self.assertNotIn(field, filtered["nation_data"]["B"])
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.world.nation_data = filtered["nation_data"]
         game.world.map_data = filtered["provinces"]
         game.country_economy_summaries = filtered["country_economy_summaries"]
@@ -227,7 +227,7 @@ class CountrySummaryTests(unittest.TestCase):
 
     def test_shared_network_economy_stays_private_without_authoritative_totals(self):
         game = world()
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         game.world.nation_data["A"]["faction"] = game.world.nation_data["B"]["faction"] = "Fixture Pact"
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Filtered economy queried")):
             summary = queries.get_country_summary(game, "B")

@@ -87,8 +87,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         # locally would create an unsendable tournament move (or a client-only
         # real-time mutation).  Keep the action visibly unavailable rather
         # than letting either mode appear to accept an ignored command.
-        if (self.map_screen.session.realtime_multiplayer
-                or self.map_screen.session.multiplayer_mode):
+        if self.map_screen.session.is_networked:
             self.map_screen.show_feedback("Tactical independence is unavailable in multiplayer.")
             return
         if not self.name_field.text.strip():

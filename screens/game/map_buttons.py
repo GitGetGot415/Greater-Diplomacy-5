@@ -357,13 +357,13 @@ def _build_turn_buttons(map_screen):
     icons = ui_elements.UI_ICONS
     # Real-time mode is deliberately checked before the legacy tournament
     # flag: tournaments remain file-based and untouched.
-    if map_screen.session.realtime_multiplayer:
+    if map_screen.session.is_realtime:
         map_screen._realtime_submit = lambda: _submit_realtime_turn(map_screen)
         map_screen._realtime_unsubmit = lambda: _unsubmit_realtime_turn(map_screen)
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y,
                                           "small", "purple", "Submit Turn", map_screen._realtime_submit)
         map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
-    elif map_screen.session.multiplayer_mode:
+    elif map_screen.session.is_tournament:
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", lambda: _export_tournament_move(map_screen))
         map_screen.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", lambda: _import_tournament_move(map_screen))
     else:
@@ -865,15 +865,15 @@ def _update_unassigned_viewer_buttons(map_screen, is_sel, is_thinking):
     local_turn_preview = (
         map_screen.session.player_country == "n/a" and map_screen.session.viewing_ai_moves
         and len(map_screen.session.active_players) > 1
-        and not map_screen.session.multiplayer_mode
-        and not map_screen.session.realtime_multiplayer)
+        and not map_screen.session.is_tournament
+        and not map_screen.session.is_realtime)
     set_btn(map_screen.btn_next_turn,
             local_turn_preview and not is_sel and not is_thinking,
             not is_thinking, "Resolve Turn", "red")
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
     map_screen.btn_realtime_details.visible = bool(
-        map_screen.session.realtime_multiplayer) and not is_sel
+        map_screen.session.is_realtime) and not is_sel
 
 
 def _update_editor_buttons(map_screen, is_sel):
@@ -941,7 +941,7 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
 
     # Hide/disable the button if we are thinking
     map_screen.btn_next_turn.visible = not is_sel and not is_thinking
-    if map_screen.session.realtime_multiplayer:
+    if map_screen.session.is_realtime:
         session = map_screen.realtime_session
         player = session.players.get(map_screen.realtime_player_id)
         submission_pending = bool(map_screen.realtime_submission_pending)
@@ -955,7 +955,7 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
                                              "orange" if player and player.submitted else "purple")
         map_screen.btn_next_turn.apply_state(enabled=not (connection_lost or session.phase == "PROCESSING"
                                                            or submission_pending or player and player.eliminated))
-    elif map_screen.session.multiplayer_mode:
+    elif map_screen.session.is_tournament:
         map_screen.btn_next_turn.text = "Export Turn"
     else:
         map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
@@ -963,10 +963,10 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
     map_screen.btn_next_turn.set_palette("red" if viewing_ai else "purple")
 
     # Visibility and active color swapping for the skip toggle
-    if map_screen.session.realtime_multiplayer:
+    if map_screen.session.is_realtime:
         map_screen.btn_skip_ai.visible = False
         map_screen.btn_import_turn.visible = False
-    elif map_screen.session.multiplayer_mode:
+    elif map_screen.session.is_tournament:
         map_screen.btn_skip_ai.visible = False
         map_screen.btn_import_turn.visible = not is_sel and not is_thinking
     else:
@@ -1408,7 +1408,7 @@ def update_button_states(map_screen):
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
-    map_screen.btn_realtime_details.visible = bool(map_screen.session.realtime_multiplayer) and not is_sel
+    map_screen.btn_realtime_details.visible = bool(map_screen.session.is_realtime) and not is_sel
     selected_owner = (map_screen.selected_province or {}).get("owner")
     map_screen.btn_view_foreign_politics.visible = bool(
         is_sel and not map_screen.session.is_editor

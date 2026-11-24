@@ -10,6 +10,7 @@ from data import migrations, queries
 from data.runtime_rules import RuntimeRules, rebuild
 from tests import app_harness
 from tests.air_fixtures import tile, world
+from data.session_state import MAP_EDITOR
 
 
 def fixture_libraries():
@@ -127,7 +128,7 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
     def map_screen(self):
         family, names = real_family_units()
         game = world()
-        game.session.is_editor = True
+        game.session.mode = MAP_EDITOR
         province = tile(game, 7, 8, center=(10.4, 20.6))
         other = tile(game, 8, 20)
         library = queries.get_unit_library()

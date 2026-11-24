@@ -32,6 +32,7 @@ from data import queries
 from ui.rendering import overlay_renderer, symbol_loader
 from tests import app_harness
 from tests.stub_map_screen import map_double
+from data.session_state import LOCAL_PLAY
 
 
 class CombatBubbleRecordCacheTests(unittest.TestCase):
@@ -44,7 +45,7 @@ class CombatBubbleRecordCacheTests(unittest.TestCase):
             nation_data={"A": {}},
             map_data={},
             id_to_province={},
-            is_editor=False,
+            mode=LOCAL_PLAY,
         )
 
         with mock.patch.object(queries, "get_combat_predictions", return_value=[]) as predictions:
@@ -249,7 +250,7 @@ class CombatDisplayTests(unittest.TestCase):
             player_country="A",
             visible_provinces=None,
             partial_visible_provinces=set(),
-            is_editor=False,
+            mode=LOCAL_PLAY,
             id_to_province={"battle": self.province},
             nation_data={},
         )

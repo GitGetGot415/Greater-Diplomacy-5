@@ -11,6 +11,7 @@ from data import queries
 from map_logic.diplomacy import faction_leadership
 from screens.game.faction import Faction_Screen
 from tests.stub_map_screen import StubMapScreen
+from data.session_state import REALTIME, TOURNAMENT
 
 
 class FactionScreenTests(unittest.TestCase):
@@ -79,7 +80,7 @@ class FactionScreenTests(unittest.TestCase):
         from map_logic.actions.player_actions import collect_map_commands
 
         game, _nations = self.make_game()
-        game.session.multiplayer_mode = True
+        game.session.mode = TOURNAMENT
         screen = Faction_Screen()
         screen.start_faction(game)
         self.open_rename(screen).call_args.args[2]("New Pact")
@@ -88,7 +89,7 @@ class FactionScreenTests(unittest.TestCase):
 
     def test_realtime_rename_is_refused_when_diplomacy_cannot_be_edited(self):
         game, nations = self.make_game()
-        game.session.realtime_multiplayer = True
+        game.session.mode = REALTIME
         screen = Faction_Screen()
         screen.start_faction(game)
         with patch("screens.game.faction.player_diplomacy_actions.can_edit_diplomacy", return_value=False):

@@ -555,7 +555,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                  map_ref._presentation_cache_revision, map_ref.session.player_country,
                  map_ref.world.time_manager.total_turns, map_ref.session.tactical_mode,
                  id(map_ref.session.player_unit))
-        if map_ref.session.realtime_multiplayer:
+        if map_ref.session.is_realtime:
             session = map_ref.realtime_session
             player = session.players.get(map_ref.realtime_player_id) if session else None
             stamp += (session.phase if session else None,

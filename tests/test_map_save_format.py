@@ -16,6 +16,7 @@ import data.constants as c
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from map_logic import politics
 from map_logic.system32.turn_processor import snapshot_history
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 class MapSaveFormatTests(unittest.TestCase):
@@ -143,11 +144,11 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertEqual(context.session.player_country, "Avaria")
 
     def test_tactical_metadata_cannot_enable_control_in_editors_scenarios_or_multiplayer(self):
-        for mode in ("is_editor", "selection_mode", "multiplayer_mode", "realtime_multiplayer"):
-            with self.subTest(mode=mode):
+        for field, value in (("mode", MAP_EDITOR), ("selection_mode", True), ("mode", TOURNAMENT), ("mode", REALTIME)):
+            with self.subTest(field=field, value=value):
                 context, _province, player = self.tactical_context()
                 metadata = queries.build_save_dict(context)
-                setattr(state_owner(context, mode), mode, True)
+                setattr(state_owner(context, field), field, value)
                 self.assertIsNone(queries.build_save_dict(context)["tactical_player_unit_id"])
                 load_map._restore_tactical_player(context, metadata)
                 self.assertFalse(context.session.tactical_mode)
@@ -269,7 +270,7 @@ class MapSaveFormatTests(unittest.TestCase):
             with self.subTest(saved=saved is not None, selection=selection, editor=editor):
                 context.session.conversation_colors = {"Previous game": [4, 5, 6]}
                 context.session.selection_mode = selection
-                context.session.is_editor = editor
+                context.session.mode = MAP_EDITOR if editor else LOCAL_PLAY
                 load_map._restore_session_properties(context, saved)
                 self.assertEqual(context.session.conversation_colors, {})
         context.session.conversation_colors = {"Previous game": [4, 5, 6]}
@@ -419,7 +420,7 @@ class MapSaveFormatTests(unittest.TestCase):
     def test_disk_save_writes_current_state_readably_without_meta_overlay(self):
         map_screen = sample_map_screen()
         map_screen.session.conversation_colors = {"Avaria": [12, 34, 56]}
-        map_screen.session.is_editor = False
+        map_screen.session.mode = LOCAL_PLAY
         map_screen.world.history = {"1": {"nation_data": {}, "provinces": {}}}
         map_screen.political_map = object()
         map_screen.terrain_map = object()

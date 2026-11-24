@@ -390,7 +390,7 @@ class PhaseTests(LetterTestCase):
         self.stub({"A": {"letters": [{"to": "B", "text": "Hello."}]}})
         self.run_letters()
         self.assertEqual(self.prompts, [])
-        self.assertEqual(self.game.session.letters_total, 0)
+        self.assertEqual(self.game.session.progress["letters"].total, 0)
 
     def test_nothing_is_written_below_the_major_tier(self):
         self.set_mode("CLAUDE", "FULL")
@@ -418,7 +418,7 @@ class PhaseTests(LetterTestCase):
         self.stub({})
         self.run_letters()
         sat = len({writer for writer, _ in self.prompts})
-        self.assertEqual((self.game.session.letters_completed, self.game.session.letters_total), (sat, sat))
+        self.assertEqual((self.game.session.progress["letters"].completed, self.game.session.progress["letters"].total), (sat, sat))
 
     def test_unread_letters_come_first_then_whoever_waited_longest(self):
         nd = self.game.world.nation_data

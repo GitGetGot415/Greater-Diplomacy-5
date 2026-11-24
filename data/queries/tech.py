@@ -360,8 +360,8 @@ def can_edit_country_research(context, country_id):
                  or (session_state.player_country == "Spectator"
                      and c.SPECTATOR_CAN_EDIT_RESEARCH))
                 and not session_state.tactical_mode
-                and not session_state.multiplayer_mode
-                and not session_state.realtime_multiplayer
+                and not session_state.is_tournament
+                and not session_state.is_realtime
                 and isinstance(country_id, str)
                 and country_id in world_state.nation_data
                 and country_id in queries.get_living_nations(world_state.map_data))

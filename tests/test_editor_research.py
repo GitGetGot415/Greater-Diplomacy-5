@@ -14,6 +14,7 @@ from screens.editors import research_screens
 from screens.game.research import Research_Screen
 from tests import app_harness
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
+from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
 
 def tech_tree():
@@ -192,8 +193,7 @@ class LevelRequirementTests(unittest.TestCase):
 class EditorResearchStateTests(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=tech_tree()))
-        self.game = map_double(is_editor=True, tactical_mode=False, multiplayer_mode=False,
-                                    realtime_multiplayer=False,
+        self.game = map_double(mode=MAP_EDITOR, tactical_mode=False,
                                     map_data={1: {"owner": "A"}, 2: {"owner": "B"}},
                                     nation_data={"A": {"research": {}}, "B": {"research": {"root": 1}}},
                                     default_research={"root": 1})
@@ -224,8 +224,8 @@ class EditorResearchStateTests(unittest.TestCase):
         self.assertIsNone(country["current_research"])
 
     def test_invalid_editor_permissions_and_removed_countries_cannot_change_research(self):
-        for flags in ({"is_editor": False}, {"tactical_mode": True}, {"multiplayer_mode": True},
-                      {"realtime_multiplayer": True}):
+        for flags in ({"mode": LOCAL_PLAY}, {"tactical_mode": True}, {"mode": TOURNAMENT},
+                      {"mode": REALTIME}):
             before = copy.deepcopy(self.game.world.nation_data)
             with self.subTest(flags=flags), ExitStack() as stack:
                 for key, value in flags.items():
@@ -246,7 +246,7 @@ class EditorResearchStateTests(unittest.TestCase):
 
     def test_edited_research_uses_existing_save_schema_and_country_loader(self):
         saved_map = sample_map_screen()
-        saved_map.session.is_editor = True
+        saved_map.session.mode = MAP_EDITOR
         queries.toggle_starting_research(saved_map, "Avaria", "tip", 2)
         saved = json.loads(json.dumps(queries.build_save_dict(saved_map)))
         loaded = queries.merge_country_templates(saved["nation_data"])
@@ -263,10 +263,8 @@ class EditorResearchTreeTests(unittest.TestCase):
     def setUp(self):
         self.tree = tech_tree()
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=self.tree))
-        self.enterContext(patch.object(self.map.session, "is_editor", True))
+        self.enterContext(patch.object(self.map.session, "mode", MAP_EDITOR))
         self.enterContext(patch.object(self.map.session, "tactical_mode", False))
-        self.enterContext(patch.object(self.map.session, "realtime_multiplayer", False))
-        self.enterContext(patch.object(self.map.session, "multiplayer_mode", False))
         self.enterContext(patch.object(self.map.world, "nation_data", copy.deepcopy(self.map.world.nation_data)))
         self.enterContext(patch.object(self.map.world, "default_research", copy.deepcopy(self.map.world.default_research)))
         self.country = next(iter(queries.get_living_nations(self.map.world.map_data)))
@@ -322,7 +320,7 @@ class EditorResearchTreeTests(unittest.TestCase):
 
     def test_stale_editor_callback_rechecks_permissions(self):
         button = self.node("root", 1)
-        self.map.session.is_editor = False
+        self.map.session.mode = LOCAL_PLAY
         button.callback()
         self.assertEqual(self.map.world.nation_data[self.country]["research"], {})
         self.screen.start_or_resume_research("root")
@@ -356,7 +354,7 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.assertIsNone(self.map.world.default_research)
 
     def test_spectator_edit_uses_shared_prerequisites_and_dependent_removal(self):
-        with patch.object(self.map.session, "is_editor", False), patch.object(self.map.session, "player_country", "Spectator"), \
+        with patch.object(self.map.session, "mode", LOCAL_PLAY), patch.object(self.map.session, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
@@ -374,7 +372,7 @@ class EditorResearchTreeTests(unittest.TestCase):
         country.update(research={"root": 2, "branch": 2, "tip": 1},
                        research_queue=[{"tech_name": "tip", "points_remaining": 40}])
         before = copy.deepcopy(country)
-        with patch.object(self.map.session, "is_editor", False), patch.object(self.map.session, "player_country", "Spectator"), \
+        with patch.object(self.map.session, "mode", LOCAL_PLAY), patch.object(self.map.session, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
@@ -394,7 +392,7 @@ class EditorResearchTreeTests(unittest.TestCase):
         country = self.map.world.nation_data[self.country]
         country.update(research={"root": 1, "left": 2, "right": 1},
                        research_queue=[{"tech_name": "choice", "points_remaining": 40}])
-        with patch.object(self.map.session, "is_editor", False), patch.object(self.map.session, "player_country", "Spectator"), \
+        with patch.object(self.map.session, "mode", LOCAL_PLAY), patch.object(self.map.session, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
@@ -407,7 +405,7 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(country["research"], {"root": 1, "left": 1, "right": 1})
 
     def test_reopening_for_an_ordinary_player_clears_editor_mode(self):
-        self.map.session.is_editor = False
+        self.map.session.mode = LOCAL_PLAY
         self.enterContext(patch.object(self.map, "viewing_research_country", "", create=True))
         self.screen.start_research(self.map)
         self.assertFalse(self.screen.editing_starting_research)
