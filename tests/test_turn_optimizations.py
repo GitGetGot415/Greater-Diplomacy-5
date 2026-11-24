@@ -47,28 +47,28 @@ class SparseDiplomacyTests(unittest.TestCase):
             for action in dp.WAR_CANCELLED_ACTIONS:
                 with self.subTest(sender=sender, action=action):
                     game = StubMapScreen(["A", "B"])
-                    entry = messages.set_pending(game.nation_data, sender, target,
+                    entry = messages.set_pending(game.world.nation_data, sender, target,
                                                  "WAR_DECLARATION", turns=1)
-                    messages.set_response(game.nation_data, target, sender,
+                    messages.set_response(game.world.nation_data, target, sender,
                                           messages.RESPONSE_ACCEPT, action)
                     dp._resolve_simultaneous_clashes(game)
-                    self.assertTrue(messages.get_response(game.nation_data, target, sender))
+                    self.assertTrue(messages.get_response(game.world.nation_data, target, sender))
                     entry["turns"] = 0
                     dp._resolve_simultaneous_clashes(game)
-                    self.assertFalse(messages.get_response(game.nation_data, target, sender))
+                    self.assertFalse(messages.get_response(game.world.nation_data, target, sender))
 
     def test_pair_reads_live_actions_after_an_earlier_effect_removes_them(self):
         game = StubMapScreen(["A", "B", "C"])
         for target in ("B", "C"):
-            messages.set_pending(game.nation_data, "A", target, "CEASEFIRE")
-            messages.set_pending(game.nation_data, target, "A", "CEASEFIRE")
+            messages.set_pending(game.world.nation_data, "A", target, "CEASEFIRE")
+            messages.set_pending(game.world.nation_data, target, "A", "CEASEFIRE")
 
         def settle(data, left, right):
             messages.clear_pending(data, "A", "C")
 
         with mock.patch.object(dp, "finalize_neutral", side_effect=settle) as effect:
             dp._resolve_simultaneous_clashes(game)
-        effect.assert_called_once_with(game.nation_data, "A", "B")
+        effect.assert_called_once_with(game.world.nation_data, "A", "B")
 
 
 class PathSearchCacheTests(unittest.TestCase):
@@ -151,10 +151,10 @@ class AttackPreviewCacheTests(unittest.TestCase):
 
     def test_replanning_does_not_reuse_changed_defender_stats(self):
         unit = self.fixture.attacker(attack=1, health=1)
-        home = self.screen.map_data["home"]
+        home = self.screen.world.map_data["home"]
         home["units"] = [unit]
         for defender_attack in (500, 0):
-            self.screen.map_data["near"]["units"][0]["attack"] = defender_attack
+            self.screen.world.map_data["near"]["units"][0]["attack"] = defender_attack
             ai_movement._assign_unit_orders(
                 self.screen, "Avaria", [(unit, home)], self.fixture.context(),
                 {1, 2}, set(), {1: [2], 2: [1]})
@@ -162,7 +162,7 @@ class AttackPreviewCacheTests(unittest.TestCase):
 
     def test_a_unit_already_on_the_target_does_not_share_identity_sensitive_previews(self):
         unit = self.fixture.attacker(attack=1, health=1)
-        self.screen.map_data["near"]["units"].append(unit)
+        self.screen.world.map_data["near"]["units"].append(unit)
         cache = {}
         for attacker in (dict(unit), unit):
             self.assertEqual(self.check(attacker, cache), self.check(attacker, None))
@@ -256,10 +256,10 @@ class MapSurfaceCacheTests(unittest.TestCase):
             viewing_ai_moves=False, active_players=["A"], scenario_settings={},
         )
         colors = ((1, 0, 0), (2, 0, 0))
-        self.screen.map_data = {color: {"id": i, "owner": owner, "terrain": "plains",
+        self.screen.world.map_data = {color: {"id": i, "owner": owner, "terrain": "plains",
                                                 "cores": [owner], "map_color": color, "neighbors": []}
                                 for i, (color, owner) in enumerate(zip(colors, ("A", "B")), 1)}
-        self.screen.id_to_province = {p["id"]: p for p in self.screen.map_data.values()}
+        self.screen.world.id_to_province = {p["id"]: p for p in self.screen.world.map_data.values()}
         for i, color in enumerate(colors):
             self.screen.id_map.fill(color, (i * 6, 0, 6, 6))
 
@@ -287,7 +287,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
     def test_ownership_colors_terrain_and_geometry_invalidate_political_pixels(self):
         self.refresh(refresh_map.refresh_political_map)
-        province = self.screen.id_to_province[1]
+        province = self.screen.world.id_to_province[1]
         for mutate in (lambda: province.update(owner="B"),
                        lambda: self.screen.nation_colors.update(B=(10, 20, 200)),
                        lambda: province.update(terrain=next(iter(refresh_map.VISUAL_WATER_MAPPING))),
@@ -300,7 +300,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
     def test_core_faction_leader_and_prewar_border_changes_invalidate(self):
         self.refresh(refresh_map.refresh_cores_map)
         old = self.screen.cores_map
-        self.screen.id_to_province[1]["cores"].append("B")
+        self.screen.world.id_to_province[1]["cores"].append("B")
         self.refresh(refresh_map.refresh_cores_map)
         self.assertIsNot(old, self.screen.cores_map)
         nation_data = self.screen.world.nation_data
@@ -320,11 +320,11 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.assertIsNot(old, self.screen.faction_territories_map)
 
     def test_faction_leader_is_resolved_once_for_all_member_provinces(self):
-        self.screen.nation_data["A"].update(faction="Pact", is_faction_leader=True)
-        self.screen.nation_data["B"].update(faction="Pact", is_faction_leader=False)
+        self.screen.world.nation_data["A"].update(faction="Pact", is_faction_leader=True)
+        self.screen.world.nation_data["B"].update(faction="Pact", is_faction_leader=False)
         with mock.patch.object(queries, "get_faction_leader", wraps=queries.get_faction_leader) as leader:
             self.refresh(refresh_map.refresh_factions_map)
-        leader.assert_called_once_with("Pact", self.screen.nation_data)
+        leader.assert_called_once_with("Pact", self.screen.world.nation_data)
 
     def test_relations_recompute_for_new_perspective_and_changed_scores(self):
         score = {"value": -100}
@@ -335,7 +335,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
         with mock.patch.object(queries, "get_relation_scores_from", side_effect=scores):
             self.refresh(refresh_map.refresh_relations_map)
             old = self.screen.relations_map
-            self.screen.player_country = "B"
+            self.screen.session.player_country = "B"
             self.refresh(refresh_map.refresh_relations_map)
             self.assertIsNot(old, self.screen.relations_map)
             old = self.screen.relations_map
@@ -369,10 +369,10 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.screen.selected_province = self.screen._relations_hovered_province = self.province_of("B")
         self.screen._presentation_cache_revision = 0
         self.screen._relation_indicator_cache = None
-        self.screen.nation_data["A"].update({politics.VALUE_KEY: c.POLITICS_MAX, politics.ECONOMIC_VALUE_KEY: c.POLITICS_MIN})
-        queries.add_temporary_modifier("B", "A", "general", -30, self.screen.nation_data)
-        politics.set_drift(self.screen.nation_data, "B", 1)
-        politics.set_economic_drift(self.screen.nation_data, "B", -1)
+        self.screen.world.nation_data["A"].update({politics.VALUE_KEY: c.POLITICS_MAX, politics.ECONOMIC_VALUE_KEY: c.POLITICS_MIN})
+        queries.add_temporary_modifier("B", "A", "general", -30, self.screen.world.nation_data)
+        politics.set_drift(self.screen.world.nation_data, "B", 1)
+        politics.set_economic_drift(self.screen.world.nation_data, "B", -1)
 
         self.refresh(refresh_map.refresh_relations_map)
         # Everyone sees an authoritarian A with its reputation.
@@ -387,9 +387,9 @@ class MapSurfaceCacheTests(unittest.TestCase):
         ui_info_popup.prepare_relation_indicators(self.screen)
 
         # B drifted toward A on both axes, so the shared rule now adds goodwill both ways.
-        affinity = relations._political_affinity("A", "B", self.screen.nation_data)
+        affinity = relations._political_affinity("A", "B", self.screen.world.nation_data)
         self.assertGreater(affinity, 0)
-        b_reputation = round(politics.effect_at("reputation", politics.value(self.screen.nation_data, "B")))
+        b_reputation = round(politics.effect_at("reputation", politics.value(self.screen.world.nation_data, "B")))
         self.assertEqual(self.screen._relations_scores["A"], -30 + affinity + a_reputation)
         _, (their_opinion, our_opinion) = self.screen._relation_indicator_cache
         self.assertEqual(their_opinion[1], -30 + affinity + a_reputation)
@@ -402,16 +402,16 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
     def show_relations(self):
         self.screen.map_mode = self.screen.base_layer = "RELATIONS"
-        self.screen.nation_data["A"]["temp_modifiers"] = {"B": {"general": -30}}
-        self.screen.nation_data["B"]["temp_modifiers"] = {"A": {"general": 15}}
+        self.screen.world.nation_data["A"]["temp_modifiers"] = {"B": {"general": -30}}
+        self.screen.world.nation_data["B"]["temp_modifiers"] = {"A": {"general": 15}}
         self.screen.camera = SimpleNamespace(pos=pygame.Vector2(), zoom=1, tilt_factor=1)
-        self.screen.map_w, self.screen.map_h = self.screen.id_map.get_size()
+        self.screen.world.map_w, self.screen.world.map_h = self.screen.id_map.get_size()
         self.screen.top_ui_height = 0
         self.screen.touch_map_at = mock.Mock(return_value=self.screen)
         self.refresh(refresh_map.refresh_relations_map)
 
     def province_of(self, owner):
-        return next(p for p in self.screen.map_data.values() if p["owner"] == owner)
+        return next(p for p in self.screen.world.map_data.values() if p["owner"] == owner)
 
     def hover(self, position, *, focused=True, workspace=None):
         with (mock.patch.object(pygame.mouse, "get_focused", return_value=focused),
@@ -421,7 +421,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
     def add_internal_seam(self):
         color = (3, 0, 0)
         province = dict(self.province_of("B"), id=3, map_color=color)
-        self.screen.map_data[color] = self.screen.id_to_province[3] = province
+        self.screen.world.map_data[color] = self.screen.world.id_to_province[3] = province
         self.screen.id_map.fill((0, 0, 0), (8, 0, 1, 6))
         self.screen.id_map.fill(color, (9, 0, 3, 6))
         return province
@@ -474,7 +474,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
     def test_relations_seam_does_not_reveal_a_fogged_tile_to_tournament_spectators(self):
         self.add_internal_seam()
-        self.screen.player_country = c.TOURNAMENT_SPECTATOR
+        self.screen.session.player_country = c.TOURNAMENT_SPECTATOR
         self.show_relations()
         self.screen.visible_provinces = {2}
 
@@ -488,7 +488,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
         self.add_internal_seam()
         self.show_relations()
-        self.screen.nation_data["B"]["name"] = "Fixture Country"
+        self.screen.world.nation_data["B"]["name"] = "Fixture Country"
         self.screen.hovered_province = self.screen.hovered_unit_stack = self.screen.hovered_combat_bubble = None
         self.screen.small_font = mock.Mock()
         self.screen.small_font.render.return_value = pygame.Surface((1, 1))
@@ -507,17 +507,17 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
         self.hover((0, 2))
         self.assertEqual(self.screen._relations_viewpoint, "A")
-        self.screen.loop_map = True
+        self.screen.world.loop_map = True
         self.hover((0, 2))
         self.assertEqual(self.screen._relations_viewpoint, "B")
 
     def test_country_picker_accepts_the_seam_and_tactical_picker_requires_a_hit(self):
         self.add_internal_seam()
         self.show_relations()
-        self.screen.selection_mode = True
+        self.screen.session.selection_mode = True
         self.screen.pending_selection = None
         self.screen.secondary_mode = "BLANK"
-        self.screen.nation_data["B"]["is_playable"] = True
+        self.screen.world.nation_data["B"]["is_playable"] = True
         self.screen.show_feedback = mock.Mock()
         self.screen.unit_hover_hitboxes = []
         self.screen._tooltip_building_stamp = None
@@ -525,13 +525,13 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
         with (mock.patch.object(map_input.player_setup, "select_tactical_unit") as tactical,
               mock.patch.object(map_input.sound_effects, "play_ui_sound")):
-            self.screen.tactical_mode = True
+            self.screen.session.tactical_mode = True
             map_input._update_map_hover(self.screen, False, *event.pos)
             map_input._handle_country_selection(self.screen, event, *event.pos, False)
             tactical.assert_not_called()
             self.assertIsNone(self.screen.pending_selection)
 
-            self.screen.tactical_mode = False
+            self.screen.session.tactical_mode = False
             map_input._handle_country_selection(self.screen, event, *event.pos, False)
         self.assertEqual(self.screen.pending_selection, "B")
         self.assertEqual(self.screen.selected_province["owner"], "B")
@@ -649,7 +649,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.show_relations()
         province = self.province_of("B")
         self.hover((8, 1))
-        self.screen.nation_data["B"]["temp_modifiers"]["A"]["general"] = 25
+        self.screen.world.nation_data["B"]["temp_modifiers"]["A"]["general"] = 25
         self.refresh(refresh_map.refresh_relations_map)
         self.assertEqual(self.screen._relations_scores["A"], 25)
         province["owner"] = "A"
@@ -657,11 +657,11 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.assertEqual(self.screen._relations_viewpoint, "A")
 
     def test_incremental_core_paint_cannot_poison_a_later_cache_hit(self):
-        self.screen.ai_is_thinking = False
+        self.screen.session.ai_is_thinking = False
         self.refresh(refresh_map.refresh_cores_map)
         before = pygame.surfarray.array3d(self.screen.cores_map)
         with mock.patch.object(ownership, "get_mixed_core_color", return_value=(5, 6, 7)):
-            ownership.refresh_core_tint(self.screen, self.screen.id_to_province[1], ["A"])
+            ownership.refresh_core_tint(self.screen, self.screen.world.id_to_province[1], ["A"])
         self.refresh(refresh_map.refresh_cores_map)
         self.assertTrue(np.array_equal(before, pygame.surfarray.array3d(self.screen.cores_map)))
 
@@ -678,8 +678,8 @@ class MapSurfaceCacheTests(unittest.TestCase):
             vision.return_value = ({2}, {1})
             self.refresh(refresh_map.refresh_fog_map)
             self.assertIsNot(old, self.screen.fog_map)
-            self.screen.viewing_ai_moves = True
-            self.screen.active_players = ["A", "B"]
+            self.screen.session.viewing_ai_moves = True
+            self.screen.session.active_players = ["A", "B"]
             self.refresh(refresh_map.refresh_fog_map)
             self.assertEqual(self.screen.visible_provinces, set())
             self.assertEqual(self.screen.partial_visible_provinces, set())
@@ -690,14 +690,14 @@ class MapSurfaceCacheTests(unittest.TestCase):
                 mock.patch.object(queries, "get_visible_provinces", return_value=(set(), set())) as vision:
             self.refresh(refresh_map.refresh_fog_map)
             old = self.screen.fog_map
-            self.screen.scenario_settings["fog_of_war_strength"] = "extreme"
+            self.screen.world.scenario_settings["fog_of_war_strength"] = "extreme"
             self.refresh(refresh_map.refresh_fog_map)
             self.assertIsNot(old, self.screen.fog_map)
             self.assertEqual(self.screen.extreme_hidden_provinces, {1, 2})
-            self.screen.selection_mode = True
+            self.screen.session.selection_mode = True
             self.refresh(refresh_map.refresh_fog_map)
             self.assertIsNone(self.screen.fog_map)
-            self.screen.selection_mode = False
+            self.screen.session.selection_mode = False
             vision.return_value = (None, None)
             self.refresh(refresh_map.refresh_fog_map)
             self.assertIsNone(self.screen.fog_map)
@@ -749,17 +749,17 @@ class MapLayerShadingTests(unittest.TestCase):
             nation_colors={"A": (200, 30, 20), "B": (30, 200, 20), "C": (20, 30, 200), "D": (250, 250, 0)},
             nation_data={name: {} for name in self.owners},
         )
-        self.screen.map_data = {}
+        self.screen.world.map_data = {}
         for index in range(self.COLUMNS * self.ROWS):
             column, row = divmod(index, self.ROWS)
             color = (index + 1, 7, 9)
             self.screen.id_map.fill(color, (column * self.CELL, row * self.CELL,
                                             self.CELL - 1, self.CELL - 1))
             terrain = "ocean" if index % 11 == 0 else "plains"
-            self.screen.map_data[color] = {
+            self.screen.world.map_data[color] = {
                 "id": index + 1, "terrain": terrain, "map_color": color, "cores": [],
                 "owner": "Ocean" if terrain == "ocean" else self.rng.choice(self.owners + ["Unclaimed"])}
-        self.screen.id_to_province = {p["id"]: p for p in self.screen.map_data.values()}
+        self.screen.world.id_to_province = {p["id"]: p for p in self.screen.world.map_data.values()}
 
     def political(self):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -772,7 +772,7 @@ class MapLayerShadingTests(unittest.TestCase):
         owner_2d = np.zeros(id_3d.shape[:2], dtype=np.int64)
         color_3d = np.zeros(id_3d.shape, dtype=np.uint8)
         owner_ids = {}
-        for key, data in self.screen.map_data.items():
+        for key, data in self.screen.world.map_data.items():
             if data["terrain"] in refresh_map.VISUAL_WATER_MAPPING:
                 owner, color = "Ocean", c.COLOR_CHROMA_PINK
             else:
@@ -787,7 +787,7 @@ class MapLayerShadingTests(unittest.TestCase):
 
     def change_owners(self, provinces):
         for province_id in provinces:
-            province = self.screen.id_to_province[province_id]
+            province = self.screen.world.id_to_province[province_id]
             if province["terrain"] == "plains":
                 province["owner"] = self.rng.choice([o for o in self.owners if o != province["owner"]])
 
@@ -817,7 +817,7 @@ class MapLayerShadingTests(unittest.TestCase):
         from ui.rendering import map_utils
 
         before = self.political()
-        province = self.screen.id_to_province[5]
+        province = self.screen.world.id_to_province[5]
         map_utils.update_single_province_surface(
             self.screen.political_map, self.screen.id_map, province["map_color"], [1, 2, 3])
         after = pygame.surfarray.array3d(self.screen.political_map)

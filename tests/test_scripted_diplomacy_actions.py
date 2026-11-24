@@ -32,7 +32,7 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         self.game = StubMapScreen(["A", "B", "C", "D"], human_players=("A", "B"))
 
     def test_guarantee_and_access_requests_are_queued_through_normal_diplomacy(self):
-        self.game.nation_data["A"]["scripted_events"] = [
+        self.game.world.nation_data["A"]["scripted_events"] = [
             event("Guarantee Independence", "B"),
             event("Request Military Access", "C"),
         ]
@@ -42,17 +42,17 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         self.assertEqual(self.game.pending_action("A", "B"), guarantees.ACTION)
         self.assertEqual(self.game.pending_action("A", "C"), "REQ_MILITARY_ACCESS")
         self.game.run_turn()
-        self.assertIn("B", guarantees.guaranteed_targets("A", self.game.nation_data))
+        self.assertIn("B", guarantees.guaranteed_targets("A", self.game.world.nation_data))
 
     def test_specific_accept_action_only_answers_its_matching_request(self):
         self.game.set_war("B", "C")
         self.game.propose("A", "B", military_attaches.ACTION)
         self.game.run_turn()  # The request arrives at B.
-        self.game.nation_data["B"]["scripted_events"] = [event("Accept Military Attaché", "A")]
+        self.game.world.nation_data["B"]["scripted_events"] = [event("Accept Military Attaché", "A")]
 
         process_scripted_events(self.game)
 
-        verdict, action = diplomacy_messages.get_response_status(self.game.nation_data, "B", "A")
+        verdict, action = diplomacy_messages.get_response_status(self.game.world.nation_data, "B", "A")
         self.assertEqual((verdict, action), (diplomacy_messages.RESPONSE_ACCEPT,
                                              military_attaches.ACTION))
 
@@ -61,14 +61,14 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         home = self.game.home_of("A")
         home["units"] = [division("A") for _ in range(10)]
         self.game.border(home["id"], self.game.home_of("B")["id"])
-        self.game.nation_data["A"]["scripted_events"] = [
+        self.game.world.nation_data["A"]["scripted_events"] = [
             event("Offer Volunteer Divisions", "B", "1")]
 
         process_scripted_events(self.game)
 
         self.assertEqual(self.game.pending_action("A", "B"), volunteers.ACTION)
         self.assertEqual(len(home["units"]), 9)
-        self.assertEqual(volunteers.mission_state(self.game.nation_data, "A", "B"),
+        self.assertEqual(volunteers.mission_state(self.game.world.nation_data, "A", "B"),
                          volunteers.AWAITING)
 
     def test_volunteer_offer_can_use_the_remaining_capacity_when_enabled(self):
@@ -76,7 +76,7 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         home = self.game.home_of("A")
         home["units"] = [division("A") for _ in range(10)]  # Cap is one.
         self.game.border(home["id"], self.game.home_of("B")["id"])
-        self.game.nation_data["A"]["scripted_events"] = [
+        self.game.world.nation_data["A"]["scripted_events"] = [
             event("Offer Volunteer Divisions", "B", "5", send_up_to=True)]
 
         process_scripted_events(self.game)
@@ -88,13 +88,13 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         self.game.set_war("B", "C")
         home = self.game.home_of("A")
         home["units"] = [division("A") for _ in range(10)]
-        self.game.nation_data["A"]["volunteer_missions"] = {
+        self.game.world.nation_data["A"]["volunteer_missions"] = {
             "D": {"state": volunteers.AWAITING,
                   "held_units": [{"unit": division("A"), "origin_id": home["id"]}]}}
-        self.assertTrue(guarantees.grant("A", "D", self.game.nation_data)[0])
-        self.assertTrue(military_attaches.send("A", "B", self.game.nation_data)[0])
-        self.game.nation_data["C"]["military_access"] = ["A"]
-        self.game.nation_data["A"]["military_access"] = ["B"]
+        self.assertTrue(guarantees.grant("A", "D", self.game.world.nation_data)[0])
+        self.assertTrue(military_attaches.send("A", "B", self.game.world.nation_data)[0])
+        self.game.world.nation_data["C"]["military_access"] = ["A"]
+        self.game.world.nation_data["A"]["military_access"] = ["B"]
         conditions = [
             {"type": "Guaranteeing", "operator": "==", "value": "D", "chain": "AND"},
             {"type": "Not Guaranteeing", "operator": "==", "value": "C", "chain": "AND"},
@@ -107,7 +107,7 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
             {"type": "Volunteer Divisions Sent", "operator": "==", "value": "1", "chain": "AND"},
             {"type": "Volunteer Capacity Remaining", "operator": "==", "value": "1", "chain": "AND"},
         ]
-        self.game.nation_data["A"]["scripted_events"] = [
+        self.game.world.nation_data["A"]["scripted_events"] = [
             event("Send Custom Message", "D", "All checks passed.", conditions)]
 
         process_scripted_events(self.game)
@@ -119,38 +119,38 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
         home = self.game.home_of("A")
         home["units"] = [division("A") for _ in range(10)]
         self.game.border(home["id"], self.game.home_of("B")["id"])
-        self.game.nation_data["A"]["scripted_events"] = [
+        self.game.world.nation_data["A"]["scripted_events"] = [
             event("Offer Volunteer Divisions", "B", "1")]
         process_scripted_events(self.game)
         self.game.run_turn()
-        self.game.nation_data["B"]["scripted_events"] = [
+        self.game.world.nation_data["B"]["scripted_events"] = [
             event("Accept Volunteer Divisions", "A")]
 
         process_scripted_events(self.game)
 
-        verdict, action = diplomacy_messages.get_response_status(self.game.nation_data, "B", "A")
+        verdict, action = diplomacy_messages.get_response_status(self.game.world.nation_data, "B", "A")
         self.assertEqual((verdict, action), (diplomacy_messages.RESPONSE_ACCEPT,
                                              volunteers.ACTION))
 
     def test_scripted_master_war_makes_the_puppet_leave_the_faction_first(self):
         """The historical Albania event must not leave Axis members at war."""
         self.game.set_faction("Axis", "A", "B")
-        self.game.nation_data["A"]["puppets"] = ["B"]
-        self.game.nation_data["B"].update(master="A", puppet_type="Autonomous")
-        self.game.nation_data["A"]["scripted_events"] = [event("Declare War", "B")]
+        self.game.world.nation_data["A"]["puppets"] = ["B"]
+        self.game.world.nation_data["B"].update(master="A", puppet_type="Autonomous")
+        self.game.world.nation_data["A"]["scripted_events"] = [event("Declare War", "B")]
 
         process_scripted_events(self.game)
         self.game.run_turn()
 
-        self.assertEqual(self.game.nation_data["A"]["faction"], "Axis")
-        self.assertEqual(self.game.nation_data["B"]["faction"], "")
-        self.assertIn("B", self.game.nation_data["A"]["at_war_with"])
-        self.assertIn("A", self.game.nation_data["B"]["at_war_with"])
+        self.assertEqual(self.game.world.nation_data["A"]["faction"], "Axis")
+        self.assertEqual(self.game.world.nation_data["B"]["faction"], "")
+        self.assertIn("B", self.game.world.nation_data["A"]["at_war_with"])
+        self.assertIn("A", self.game.world.nation_data["B"]["at_war_with"])
 
     def test_illegal_scripted_diplomacy_actions_are_not_queued(self):
         """Scripted events use the same structural rules as the player UI."""
         self.game.set_faction("Axis", "A", "B")
-        self.game.nation_data["A"]["scripted_events"] = [
+        self.game.world.nation_data["A"]["scripted_events"] = [
             event("Declare War", "B"),
             event("Send Ceasefire", "C"),
             event("Guarantee Independence", "B"),
@@ -160,11 +160,11 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
 
         process_scripted_events(self.game)
 
-        self.assertEqual(self.game.nation_data["A"]["pending_diplomacy"], {})
+        self.assertEqual(self.game.world.nation_data["A"]["pending_diplomacy"], {})
 
     def test_scripted_direct_effects_ignore_missing_targets_and_provinces(self):
         home = self.game.home_of("A")
-        self.game.nation_data["A"]["scripted_events"] = [{
+        self.game.world.nation_data["A"]["scripted_events"] = [{
             "conditions": [{"type": "True", "operator": "==", "value": "", "chain": "AND"}],
             "actions": [
                 {"type": "Give Territory", "target": "Missing", "message": str(home["id"])},
@@ -180,8 +180,8 @@ class ScriptedDiplomacyActionTests(unittest.TestCase):
 
         self.assertEqual(home["owner"], "A")
         self.assertEqual(home["units"], [])
-        self.assertEqual(self.game.nation_data["A"].get("claim_queue", []), [])
-        self.assertEqual(self.game.nation_data["A"]["pending_diplomacy"], {})
+        self.assertEqual(self.game.world.nation_data["A"].get("claim_queue", []), [])
+        self.assertEqual(self.game.world.nation_data["A"]["pending_diplomacy"], {})
 
 
 class ScriptedConditionRuleTests(unittest.TestCase):

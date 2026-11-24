@@ -36,15 +36,15 @@ class TournamentArchiveTests(unittest.TestCase):
         queries.datetime.now.return_value.isoformat.return_value = "fixture-export-time"
         self.host = Host()
         self.keys = {f"Country{index}": f"player-key-{index}" for index in range(8)}
-        self.host.nation_data = {cid: nation(name=cid) for cid in self.keys}
-        self.host.player_country = next(iter(self.keys))
-        self.host.active_players = list(self.keys)
-        self.host.current_player_index = 0
-        self.host.loop_map = False
-        self.host.scenario_settings = {"fog_of_war": True}
-        self.host.script_variables = []
-        self.host.default_research = None
-        self.host.map_data = {
+        self.host.world.nation_data = {cid: nation(name=cid) for cid in self.keys}
+        self.host.session.player_country = next(iter(self.keys))
+        self.host.session.active_players = list(self.keys)
+        self.host.session.current_player_index = 0
+        self.host.world.loop_map = False
+        self.host.world.scenario_settings = {"fog_of_war": True}
+        self.host.world.script_variables = []
+        self.host.world.default_research = None
+        self.host.world.map_data = {
             (index, 0, 0): {
                 "id": index, "json_key": str(index), "owner": cid,
                 "neighbors": [], "center": [index, 0], "units": [],
@@ -53,8 +53,8 @@ class TournamentArchiveTests(unittest.TestCase):
             }
             for index, cid in enumerate(self.keys, start=1)
         }
-        self.host.raw_json_data = {
-            row["json_key"]: copy.deepcopy(row) for row in self.host.map_data.values()}
+        self.host.world.raw_json_data = {
+            row["json_key"]: copy.deepcopy(row) for row in self.host.world.map_data.values()}
         # Random pixels resist compression and expose repeated image payloads.
         rng = random.Random(1923)
         pixels = rng.randbytes(128 * 128 * 3)
@@ -62,8 +62,8 @@ class TournamentArchiveTests(unittest.TestCase):
         self.host.id_map = self.host.terrain_map.copy()
         self.host.political_map = self.host.terrain_map.copy()
         self.host.cores_map = self.host.terrain_map.copy()
-        self.host.history = {"0": {"nation_data": {"private_old_turn": True}}}
-        for index, data in enumerate(self.host.nation_data.values()):
+        self.host.world.history = {"0": {"nation_data": {"private_old_turn": True}}}
+        for index, data in enumerate(self.host.world.nation_data.values()):
             data["inbox"] = [{"private": index}]
             data["research"] = {"fixture": index}
             data["custom_field"] = {"nested": [None, True, "retained"]}
@@ -86,11 +86,11 @@ class TournamentArchiveTests(unittest.TestCase):
 
     @fast_tournament_crypto()
     def test_hosts_and_country_players_load_one_shared_snapshot(self):
-        original_raw = copy.deepcopy(self.host.raw_json_data)
+        original_raw = copy.deepcopy(self.host.world.raw_json_data)
         path, payload = self.export()
         self.assertEqual(set(payload), {
             "verification_table", "game_data", "spectator_game_data", "history"})
-        canonical = io.decrypt_dict(payload["game_data"], self.host.multiplayer_session_key)
+        canonical = io.decrypt_dict(payload["game_data"], self.host.session.multiplayer_session_key)
         _, restored = self.load_snapshot(path, "host-key")
         self.assertEqual(restored, canonical)
         _, restored = self.load_snapshot(path, c.TOURNAMENT_SPECTATOR_KEY)
@@ -100,17 +100,17 @@ class TournamentArchiveTests(unittest.TestCase):
                 loaded, restored = self.load_snapshot(path, key)
                 self.assertEqual(restored, canonical)
                 self.assertEqual(loaded[1:3], ("PLAYER", cid))
-                self.assertEqual(loaded[6], self.host.multiplayer_session_key)
+                self.assertEqual(loaded[6], self.host.session.multiplayer_session_key)
                 self.assertEqual(loaded[4], {})
                 session = io.decrypt_dict(payload["verification_table"][io.hash_key(key)]["enc_session"], key)
-                self.assertEqual(session, {"sk": self.host.multiplayer_session_key})
-        self.assertEqual(self.host.raw_json_data, original_raw)
+                self.assertEqual(session, {"sk": self.host.session.multiplayer_session_key})
+        self.assertEqual(self.host.world.raw_json_data, original_raw)
         self.assertFalse(io.load_tournament(str(path), "invalid-key")[0])
 
     @fast_tournament_crypto()
     def test_host_supply_is_delivered_only_to_the_unit_owner(self):
         owner, other = list(self.keys)[:2]
-        province = next(row for row in self.host.map_data.values() if row["owner"] == owner)
+        province = next(row for row in self.host.world.map_data.values() if row["owner"] == owner)
         unit = {"type": "Supply fixture", "owner": owner, "unit_id": "supply-fixture", "health": 100, "max_health": 100}
         province["units"].append(unit)
         with mock.patch.object(queries, "get_live_unit_upkeep", return_value=dict.fromkeys(c.ECON_RESOURCE_KEYS, 100)):
@@ -129,12 +129,12 @@ class TournamentArchiveTests(unittest.TestCase):
     @fast_tournament_crypto()
     def test_snapshot_stores_current_provinces_once_and_regenerates_overlays(self):
         path, payload = self.export()
-        snapshot = io.decrypt_dict(payload["game_data"], self.host.multiplayer_session_key)
+        snapshot = io.decrypt_dict(payload["game_data"], self.host.session.multiplayer_session_key)
         self.assertIsNone(payload["history"])
         self.assertEqual(set(snapshot["_images"]), {"terrain.png", "id_map.png"})
         for key, province in snapshot["provinces"].items():
             self.assertFalse(set(province) & set(snapshot["_raw_map_data"][key]))
-        expected = queries.map_data_with_saved_provinces(self.host.raw_json_data, snapshot["provinces"])
+        expected = queries.map_data_with_saved_provinces(self.host.world.raw_json_data, snapshot["provinces"])
         self.assertEqual(queries.map_data_with_saved_provinces(
             snapshot["_raw_map_data"], snapshot["provinces"]), expected)
         self.load_snapshot(path, "host-key")
@@ -144,7 +144,7 @@ class TournamentArchiveTests(unittest.TestCase):
     @fast_tournament_crypto()
     def test_load_ignores_legacy_history_and_removes_stale_history_and_overlays(self):
         path, payload = self.export()
-        payload["history"] = io.encrypt_dict(self.host.history, self.host.multiplayer_session_key)
+        payload["history"] = io.encrypt_dict(self.host.world.history, self.host.session.multiplayer_session_key)
         path.write_text(json.dumps(payload))
         directory = self.root / "temp_load"
         directory.mkdir(exist_ok=True)
@@ -199,14 +199,14 @@ class TournamentArchiveTests(unittest.TestCase):
     @fast_tournament_crypto()
     def test_legacy_uncompressed_snapshot_loads_for_all_recipients(self):
         path, payload = self.export()
-        for field, key in (("game_data", self.host.multiplayer_session_key),
+        for field, key in (("game_data", self.host.session.multiplayer_session_key),
                            ("spectator_game_data", c.TOURNAMENT_SPECTATOR_KEY)):
             payload[field] = io.encrypt_dict(io.decrypt_dict(payload[field], key), key)
         path.write_text(json.dumps(payload))
         for key in ("host-key", next(iter(self.keys.values())), c.TOURNAMENT_SPECTATOR_KEY):
             loaded, snapshot = self.load_snapshot(path, key)
             self.assertTrue(loaded[0])
-            self.assertEqual(snapshot["date"]["total_turns"], self.host.time_manager.total_turns)
+            self.assertEqual(snapshot["date"]["total_turns"], self.host.world.time_manager.total_turns)
 
     @fast_tournament_crypto()
     def test_more_players_and_repeated_exports_add_only_key_records(self):
@@ -228,26 +228,26 @@ class TournamentArchiveTests(unittest.TestCase):
             self.assertEqual(full["verification_table"][io.hash_key(key)],
                              repeated["verification_table"][io.hash_key(key)])
             loaded, restored = self.load_snapshot(next_path, key)
-            self.assertEqual(loaded[6], self.host.multiplayer_session_key)
-            self.assertEqual(restored["nation_data"][cid]["inbox"], self.host.nation_data[cid]["inbox"])
+            self.assertEqual(loaded[6], self.host.session.multiplayer_session_key)
+            self.assertEqual(restored["nation_data"][cid]["inbox"], self.host.world.nation_data[cid]["inbox"])
 
     @fast_tournament_crypto()
     def test_regenerated_key_still_opens_the_shared_snapshot(self):
         self.export()
         cid = next(iter(self.keys))
         previous_key = self.keys[cid]
-        self.host.multiplayer_pending_key_regen = {cid}
+        self.host.session.multiplayer_pending_key_regen = {cid}
         path, payload = self.export("regenerated.gd5tour")
         self.assertNotIn(io.hash_key(previous_key), payload["verification_table"])
         self.assertFalse(io.load_tournament(str(path), previous_key)[0])
         loaded, restored = self.load_snapshot(path, self.keys[cid])
-        self.assertEqual(loaded[6], self.host.multiplayer_session_key)
+        self.assertEqual(loaded[6], self.host.session.multiplayer_session_key)
         self.assertEqual(restored, io.decrypt_dict(payload["game_data"], loaded[6]))
 
     @fast_tournament_crypto()
     def test_move_session_uses_the_shared_key(self):
-        context = {"tournament_session": self.host.multiplayer_session_key,
-                   "tournament_turn": self.host.time_manager.total_turns}
+        context = {"tournament_session": self.host.session.multiplayer_session_key,
+                   "tournament_turn": self.host.world.time_manager.total_turns}
         self.assertIsNone(io._move_context_error(self.host, context))
         self.assertIsNone(io._move_context_error(self.host, {}))
         self.assertIsNotNone(io._move_context_error(self.host, dict(context, tournament_session="wrong-session")))

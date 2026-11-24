@@ -41,30 +41,30 @@ class BouncePreviewTests(unittest.TestCase):
 
     def setUp(self):
         self.screen = map_double()
-        self.screen.player_country = "A"
-        self.screen.viewing_ai_moves = False
-        self.screen.is_editor = False
-        self.screen.map_data = {
+        self.screen.session.player_country = "A"
+        self.screen.session.viewing_ai_moves = False
+        self.screen.session.is_editor = False
+        self.screen.world.map_data = {
             1: province(1, [moving_unit("A", 2)]),
             2: province(2, [moving_unit("B", 1)]),
         }
-        self.screen.nation_data = {
+        self.screen.world.nation_data = {
             "A": {"at_war_with": ["B"]},
             "B": {"at_war_with": ["A"]},
         }
 
-        self.screen.id_to_province = self.screen.map_data
+        self.screen.world.id_to_province = self.screen.world.map_data
         self.screen.camera = SimpleNamespace(
             zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM + 0.1,
             tilt_factor=1.0, pos=Vector2(0, 0))
         self.screen.visible_provinces = None
         self.screen.partial_visible_provinces = set()
-        self.screen.map_w = 400
-        self.screen.loop_map = False
+        self.screen.world.map_w = 400
+        self.screen.world.loop_map = False
         self.screen.top_ui_height = 0
 
     def test_ai_move_view_shows_the_full_hostile_swap(self):
-        self.screen.viewing_ai_moves = True
+        self.screen.session.viewing_ai_moves = True
 
         self.assertEqual(
             overlay_renderer.midpoint_bounce_pairs(self.screen), [(1, 2)])
@@ -74,15 +74,15 @@ class BouncePreviewTests(unittest.TestCase):
             overlay_renderer.midpoint_bounce_pairs(self.screen), [])
 
     def test_spectator_can_preview_the_full_board(self):
-        self.screen.player_country = "Spectator"
+        self.screen.session.player_country = "Spectator"
 
         self.assertEqual(
             overlay_renderer.midpoint_bounce_pairs(self.screen), [(1, 2)])
 
     def test_a_one_volley_wipe_is_predicted_as_an_overrun(self):
-        self.screen.viewing_ai_moves = True
-        self.screen.map_data[1]["units"] = [moving_unit("A", 2, attack=1000)]
-        self.screen.map_data[2]["units"] = [moving_unit("B", 1, attack=0)]
+        self.screen.session.viewing_ai_moves = True
+        self.screen.world.map_data[1]["units"] = [moving_unit("A", 2, attack=1000)]
+        self.screen.world.map_data[2]["units"] = [moving_unit("B", 1, attack=0)]
 
         outcome = overlay_renderer.midpoint_bounce_outcomes(self.screen)
 
@@ -91,9 +91,9 @@ class BouncePreviewTests(unittest.TestCase):
         self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]), (1, 2))
 
     def test_overrun_direction_follows_the_other_winner(self):
-        self.screen.viewing_ai_moves = True
-        self.screen.map_data[1]["units"] = [moving_unit("A", 2, attack=0)]
-        self.screen.map_data[2]["units"] = [moving_unit("B", 1, attack=1000)]
+        self.screen.session.viewing_ai_moves = True
+        self.screen.world.map_data[1]["units"] = [moving_unit("A", 2, attack=0)]
+        self.screen.world.map_data[2]["units"] = [moving_unit("B", 1, attack=1000)]
 
         outcome = overlay_renderer.midpoint_bounce_outcomes(self.screen)
 
@@ -106,21 +106,21 @@ class BouncePreviewTests(unittest.TestCase):
             with self.subTest(player_side=player_side), \
                     patch("data.queries.get_unit_library", return_value=library), \
                     patch.object(overlay_renderer, "estimated_combat_outcome") as forecast:
-                self.screen.viewing_ai_moves = True
-                self.screen.tactical_mode = True
-                for province in self.screen.map_data.values():
+                self.screen.session.viewing_ai_moves = True
+                self.screen.session.tactical_mode = True
+                for province in self.screen.world.map_data.values():
                     province["units"][0]["type"] = "Fixture Infantry I"
-                self.screen.player_unit = self.screen.map_data[player_side]["units"][0]
+                self.screen.session.player_unit = self.screen.world.map_data[player_side]["units"][0]
                 outcome = overlay_renderer.midpoint_bounce_outcomes(self.screen)
                 self.assertTrue(outcome[0]["overrun"])
                 self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]),
                                  (player_side, 3 - player_side))
                 forecast.assert_not_called()
-                self.screen.viewing_ai_moves = False
+                self.screen.session.viewing_ai_moves = False
                 self.assertEqual(overlay_renderer.midpoint_bounce_outcomes(self.screen), [])
 
     def test_army_group_zoom_hides_bounce_and_overrun_previews(self):
-        self.screen.viewing_ai_moves = True
+        self.screen.session.viewing_ai_moves = True
         self.screen.camera.zoom = overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM
         surface = pygame.Surface((400, 300), pygame.SRCALPHA)
 
@@ -135,12 +135,12 @@ class BouncePreviewTests(unittest.TestCase):
 
     def test_another_attacker_removes_the_tactical_crossing_preview_without_a_forecast(self):
         library = {"Fixture Infantry I": {"naval_unit": False, "bombard_range": 0}}
-        self.screen.viewing_ai_moves = True
-        self.screen.tactical_mode = True
-        self.screen.map_data[3] = province(3, [moving_unit("B", 1)])
-        for tile in self.screen.map_data.values():
+        self.screen.session.viewing_ai_moves = True
+        self.screen.session.tactical_mode = True
+        self.screen.world.map_data[3] = province(3, [moving_unit("B", 1)])
+        for tile in self.screen.world.map_data.values():
             tile["units"][0]["type"] = "Fixture Infantry I"
-        self.screen.player_unit = self.screen.map_data[1]["units"][0]
+        self.screen.session.player_unit = self.screen.world.map_data[1]["units"][0]
         with patch("data.queries.get_unit_library", return_value=library), \
                 patch.object(overlay_renderer, "estimated_combat_outcome") as forecast:
             self.assertEqual(overlay_renderer.midpoint_bounce_pairs(self.screen), [])

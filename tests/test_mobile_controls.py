@@ -280,7 +280,7 @@ class TouchGestureTests(unittest.TestCase):
         with (mock.patch.object(map_input.turn_progress, "threads_panel_available", return_value=False),
               mock.patch.object(map_input.ai_handler, "abort_ai_generation") as abort):
             self.assertTrue(map_input._handle_blocking_state(game, event, 500, 300))
-            self.assertFalse(game.force_skip_llm)
+            self.assertFalse(game.session.force_skip_llm)
             abort.assert_not_called()
 
     def test_focus_loss_cancels_click_and_next_touch_works(self):
@@ -417,7 +417,7 @@ class SecondaryActionAvailabilityTests(unittest.TestCase):
     def test_move_availability_uses_legal_routes_without_changing_orders(self):
         self.assertTrue(self.game.can_issue_selected_move_orders(self.destination))
         self.assertNotIn("order", self.unit)
-        self.assertEqual(self.game.nation_data, {"A": {"armies": []}})
+        self.assertEqual(self.game.world.nation_data, {"A": {"armies": []}})
         self.path.return_value = None
         self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
         self.assertNotIn("order", self.unit)
@@ -431,8 +431,8 @@ class SecondaryActionAvailabilityTests(unittest.TestCase):
         self.game.can_select_map_units.return_value = False
         self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
         self.game.can_select_map_units.return_value = True
-        self.game.tactical_mode = True
-        self.game.player_unit = {"owner": "A", "unit_id": "other"}
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = {"owner": "A", "unit_id": "other"}
         self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
 
     def test_map_hint_requires_a_valid_destination_and_selection(self):
@@ -458,7 +458,7 @@ class SecondaryActionAvailabilityTests(unittest.TestCase):
             self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
 
     def test_editor_paint_holds_require_an_owner_to_pick_or_a_core_to_remove(self):
-        self.game.is_editor = True
+        self.game.session.is_editor = True
         self.game.editor_selection_tool = "PAINT"
         self.game.editor_mode = "NATION"
         self.game.brush_nation = "B"

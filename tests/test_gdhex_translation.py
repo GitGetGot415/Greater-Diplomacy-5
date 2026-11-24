@@ -144,8 +144,8 @@ class GDHEXTranslationTests(unittest.TestCase):
                                 if province["owner"] == "Player"}
             self.assertEqual(player_provinces, {1, 5})
             loaded = main.Map(load_path=str(destination), is_scenario=False, num_players=1)
-            self.assertEqual(len(loaded.id_to_province), 6)
-            self.assertEqual(loaded.player_country, "Player")
+            self.assertEqual(len(loaded.world.id_to_province), 6)
+            self.assertEqual(loaded.session.player_country, "Player")
             loaded.update()
 
     @unittest.skipUnless(SAMPLE.is_file(), "supplied Hex Edition sample is not present")

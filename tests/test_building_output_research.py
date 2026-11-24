@@ -16,7 +16,7 @@ from map_logic import politics
 from map_logic.actions import production_actions
 from map_logic.ai import ai_tech_eval
 from map_logic.system32 import economy_processor, research_processor, turn_processor
-from tests.stub_map_screen import map_double, sample_map_screen
+from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from tests.research_fixtures import research_lock_cases
 
 
@@ -71,7 +71,7 @@ class OutputBonusTests(unittest.TestCase):
             rendered = [call.args[0] for call in screen.small_font.render.call_args_list]
             self.assertTrue(any("Basic Factory" in line and "+46Mat" in line for line in rendered))
             province["cores"] = []
-            screen.nation_data["A"]["economic_value"] = c.POLITICS_MAX
+            screen.world.nation_data["A"]["economic_value"] = c.POLITICS_MAX
             screen._presentation_cache_revision += 1
             tooltip.prepare_building_yields(screen)
             self.assertEqual(screen._tooltip_building_yields[0][1],
@@ -101,7 +101,7 @@ class OutputBonusTests(unittest.TestCase):
                 country = {"research": {}, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
                 game = map_double(map_data={1: province}, nation_data={"A": country},
                                   tactical_mode=False, player_country="A")
-                breakdown = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]["breakdown"]
+                breakdown = queries.calculate_all_economies(game.world.map_data, game.world.nation_data)["A"]["breakdown"]
                 self.assertEqual({res: breakdown[res]["resources"] for res in c.ECON_RESOURCE_KEYS},
                                  {res: 37 if res == econ_res else 0 for res in c.ECON_RESOURCE_KEYS})
 
@@ -141,7 +141,7 @@ class OutputBonusTests(unittest.TestCase):
         self.assertEqual(queries.get_province_building_output(province, research, self.library)["materials"], expected)
         country = {"research": research, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
         game = map_double(map_data={1: province}, nation_data={"A": country}, tactical_mode=False, player_country="A")
-        report = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]
+        report = queries.calculate_all_economies(game.world.map_data, game.world.nation_data)["A"]
         self.assertEqual(report["breakdown"]["materials"]["buildings"], expected)
         economy_processor.process_economy(game)
         self.assertEqual(country["materials"], report["total_inc"]["materials"])
@@ -272,7 +272,7 @@ class OutputBonusTests(unittest.TestCase):
                    "economic_value": c.POLITICS_MIN, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
         game = map_double(map_data={1: self.province()}, nation_data={"A": country},
                                tactical_mode=False, player_country="A")
-        expected = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]
+        expected = queries.calculate_all_economies(game.world.map_data, game.world.nation_data)["A"]
         economy_processor.process_economy(game)
         for res in c.ECON_RESOURCE_KEYS:
             self.assertEqual(country[res], expected["total_inc"][res])
@@ -283,20 +283,20 @@ class OutputBonusTests(unittest.TestCase):
 
         def resolve(drift):
             game = BackendState()
-            game.player_country = "A"
-            game.active_players = ["A"]
-            self.tree["progress"] = {"max_lvl": 1, "years": [game.time_manager.year - 1]}
+            game.session.player_country = "A"
+            game.session.active_players = ["A"]
+            self.tree["progress"] = {"max_lvl": 1, "years": [game.world.time_manager.year - 1]}
             project = {"tech_name": "progress", "points_remaining": 100_000}
             country = {"research": {}, "research_queue": [project], "is_playable": True}
-            game.nation_data["A"] = country
+            game.world.nation_data["A"] = country
             province = {"id": 1, "json_key": "1", "terrain": "plains", "neighbors": [], "owner": "A",
                         "cores": ["A"], "units": [], "buildings": ["Basic Factory"]}
-            game.map_data[1] = game.id_to_province[1] = province
-            politics.set_economic_drift(game.nation_data, "A", drift)
-            politics.set_drift(game.nation_data, "A", drift)
+            game.world.map_data[1] = game.world.id_to_province[1] = province
+            politics.set_economic_drift(game.world.nation_data, "A", drift)
+            politics.set_drift(game.world.nation_data, "A", drift)
             asyncio.run(turn_processor.resolve_turn_logic(game))
-            self.assertEqual(politics.economic_value(game.nation_data, "A"), drift * c.POLITICS_STEP)
-            self.assertEqual(politics.value(game.nation_data, "A"), drift * c.POLITICS_STEP)
+            self.assertEqual(politics.economic_value(game.world.nation_data, "A"), drift * c.POLITICS_STEP)
+            self.assertEqual(politics.value(game.world.nation_data, "A"), drift * c.POLITICS_STEP)
             return country["materials"], 100_000 - project["points_remaining"]
 
         base_materials, base_research = resolve(0)
@@ -432,11 +432,11 @@ class FactoryCostResearchTests(unittest.TestCase):
     def test_new_construction_uses_the_preview_price_and_refunds_the_original_payment(self):
         game = BackendState()
         game.world.runtime_rules = self.runtime
-        game.player_country = "A"
+        game.session.player_country = "A"
         province = {"id": 1, "owner": "A", "cores": ["A"], "buildings": ["Basic Factory"]}
-        game.map_data = game.id_to_province = {1: province}
+        game.world.map_data = game.world.id_to_province = {1: province}
         stockpile = {"materials": 500, "manpower": 500, "fuel": 500}
-        country = game.nation_data["A"] = dict(stockpile, research={"factory": 1},
+        country = game.world.nation_data["A"] = dict(stockpile, research={"factory": 1},
                                                research_queue=[{"tech_name": "first"}])
         queue = "building_queue"
         name = "Factory Lvl 1"
@@ -572,8 +572,8 @@ class FactoryResearchContentTests(unittest.TestCase):
         completed = queries.edited_research_levels({}, "factory", 9, True)
         for research in ({"factory": 2}, {"factory": 8, "bessemer_process": 1}, completed):
             game = sample_map_screen()
-            game.nation_data["Avaria"]["research"] = dict(research)
-            game.map_data[(7, 0, 0)]["buildings"] = ["Factory Lvl 1"]
+            game.world.nation_data["Avaria"]["research"] = dict(research)
+            game.world.map_data[(7, 0, 0)]["buildings"] = ["Factory Lvl 1"]
             saved = json.loads(json.dumps(queries.build_save_dict(game)))
             loaded = queries.merge_country_templates(saved["nation_data"])
             self.assertEqual(loaded["Avaria"]["research"], research)
@@ -593,7 +593,7 @@ class FactoryResearchContentTests(unittest.TestCase):
         with patch.object(queries, "get_tech_tree", return_value=tree), \
                 patch.object(queries, "get_building_library", return_value=library):
             research_processor.process_national_research(game)
-            country = game.nation_data["A"]
+            country = game.world.nation_data["A"]
             self.assertEqual(country["research"]["upgrade"], 1)
             self.assertEqual(queries.get_building_output("Basic Factory", country["research"], library)["materials"], 31 + 19)
             self.assertEqual(queries.get_building_output("Factory Lvl 1", country["research"], library)["materials"], 47)
@@ -623,13 +623,13 @@ class OutputResearchScreenTests(unittest.TestCase):
         cls.game = app_harness.boot_map()
 
     def setUp(self):
-        self.enterContext(patch.object(self.game, "nation_data", copy.deepcopy(self.game.nation_data)))
-        self.country = next(iter(queries.get_living_nations(self.game.map_data)))
-        self.enterContext(patch.object(self.game, "player_country", self.country))
+        self.enterContext(patch.object(self.game.world, "nation_data", copy.deepcopy(self.game.world.nation_data)))
+        self.country = next(iter(queries.get_living_nations(self.game.world.map_data)))
+        self.enterContext(patch.object(self.game.session, "player_country", self.country))
         for flag in ("is_editor", "tactical_mode", "realtime_multiplayer", "multiplayer_mode"):
-            self.enterContext(patch.object(self.game, flag, False))
+            self.enterContext(patch.object(state_owner(self.game, flag), flag, False))
         self.enterContext(patch.object(self.game, "viewing_research_country", "", create=True))
-        self.game.nation_data[self.country].update(research={"basic_factory": 1}, research_queue=[], research_progress={})
+        self.game.world.nation_data[self.country].update(research={"basic_factory": 1}, research_queue=[], research_progress={})
 
     def test_research_nodes_open_details_and_start_the_authoritative_project(self):
         from screens.game.research import Research_Screen
@@ -639,7 +639,7 @@ class OutputResearchScreenTests(unittest.TestCase):
         screen = Research_Screen()
         for tech in techs:
             with self.subTest(tech=tech):
-                country = self.game.nation_data[self.country]
+                country = self.game.world.nation_data[self.country]
                 levels = queries.edited_research_levels({}, tech, 1, True, context=self.game)
                 levels.pop(tech)
                 country.update(research=levels, research_queue=[], research_progress={})
@@ -668,8 +668,8 @@ class OutputResearchScreenTests(unittest.TestCase):
         tree = {"fixture_bonus": {"max_lvl": 1, "building_output_bonuses": [
             {"building_groups": ["industry"],
              "outputs": {res: value - 1 for res, value in multipliers.items()}}]}}
-        self.game.nation_data[self.country]["research"] = {"basic_factory": 1, "factory": 1, "fixture_bonus": 1}
-        province = copy.deepcopy(next(province for province in self.game.map_data.values()
+        self.game.world.nation_data[self.country]["research"] = {"basic_factory": 1, "factory": 1, "fixture_bonus": 1}
+        province = copy.deepcopy(next(province for province in self.game.world.map_data.values()
                                       if province.get("owner") == self.country))
         province.update(buildings=["Basic Factory"], cores=[], building_queue=[], unit_queue=[])
         with (patch.object(queries, "get_building_library", return_value=library),

@@ -24,12 +24,12 @@ class TurnLoopTests(unittest.TestCase):
         from data import queries
         from screens.game.map import Map
         cls.map = Map(load_path=app_harness.SCENARIO_PATH, is_scenario=True, num_players=1)
-        cls.map.selection_mode = False
-        cls.map.force_skip_llm = True
-        country = sorted(queries.get_living_nations(cls.map.map_data))[0]
-        cls.map.player_country = country
-        cls.map.active_players = [country]
-        cls.map.selected_province = next(province for province in cls.map.map_data.values()
+        cls.map.session.selection_mode = False
+        cls.map.session.force_skip_llm = True
+        country = sorted(queries.get_living_nations(cls.map.world.map_data))[0]
+        cls.map.session.player_country = country
+        cls.map.session.active_players = [country]
+        cls.map.selected_province = next(province for province in cls.map.world.map_data.values()
                                           if province.get("owner") == country)
         cls.map.set_play_view_defaults()
 
@@ -41,12 +41,12 @@ class TurnLoopTests(unittest.TestCase):
     def snapshot(game_map):
         from data import queries
         return {
-            "date": game_map.time_manager.get_date_string(),
-            "turns": game_map.time_manager.total_turns,
-            "units": sum(len(p.get("units", [])) for p in game_map.map_data.values()),
+            "date": game_map.world.time_manager.get_date_string(),
+            "turns": game_map.world.time_manager.total_turns,
+            "units": sum(len(p.get("units", [])) for p in game_map.world.map_data.values()),
             "queued": sum(len(p.get("unit_queue", [])) + len(p.get("building_queue", []))
-                          for p in game_map.map_data.values()),
-            "living": set(queries.get_living_nations(game_map.map_data)),
+                          for p in game_map.world.map_data.values()),
+            "living": set(queries.get_living_nations(game_map.world.map_data)),
         }
 
     @staticmethod
@@ -60,10 +60,10 @@ class TurnLoopTests(unittest.TestCase):
             for _ in range(count):
                 # Await preparation before resolution. advance_time starts a background thread.
                 await turn_processor.prepare_turn(game_map)
-                game_map.turn_start_time = pygame.time.get_ticks()
+                game_map.session.turn_start_time = pygame.time.get_ticks()
                 await turn_manager._resolve_turn_and_refresh(game_map)
-                if game_map.thread_error:
-                    raise RuntimeError(game_map.thread_error)
+                if game_map.session.thread_error:
+                    raise RuntimeError(game_map.session.thread_error)
                 game_map.refresh_ui()
                 game_map.draw(surface)
 
@@ -78,10 +78,10 @@ class TurnLoopTests(unittest.TestCase):
         """Defeats can occur during valid combat. Their state must remain consistent."""
         from data import queries
         for country in self.before["living"] - self.after["living"]:
-            data = self.map.nation_data.get(country, {})
+            data = self.map.world.nation_data.get(country, {})
             with self.subTest(country=country):
                 if data.get("faction"):
-                    self.assertTrue(queries.is_government_in_exile(country, self.map.map_data, self.map.nation_data))
+                    self.assertTrue(queries.is_government_in_exile(country, self.map.world.map_data, self.map.world.nation_data))
                 else:
                     self.assertFalse(data.get("at_war_with"))
                     self.assertFalse(data.get("pending_diplomacy"))
@@ -93,7 +93,7 @@ class TurnLoopTests(unittest.TestCase):
         from map_logic.system32 import economy_processor
         from tests.test_consolidated_actions import game
         context = game()
-        province = context.map_data[1]
+        province = context.world.map_data[1]
         library = queries.get_unit_library(context)
         before = len(province["units"])
         production_actions.submit_production(context, "A", province, "unit_queue",
@@ -108,7 +108,7 @@ class TurnLoopTests(unittest.TestCase):
         self.assertEqual(created["max_health"], library["Fixture"]["health"])
 
     def test_nations_keep_their_core_fields(self):
-        for name, data in self.map.nation_data.items():
+        for name, data in self.map.world.nation_data.items():
             if not isinstance(data, dict) or name == "GLOBAL_EVENTS":
                 continue
             with self.subTest(nation=name):
@@ -119,8 +119,8 @@ class TurnLoopTests(unittest.TestCase):
         """Every deduction path is meant to be guarded by an affordability
         check or clamped at zero."""
         from data import queries
-        for name in queries.get_living_nations(self.map.map_data):
-            data = self.map.nation_data.get(name, {})
+        for name in queries.get_living_nations(self.map.world.map_data):
+            data = self.map.world.nation_data.get(name, {})
             for resource in ("materials", "manpower", "fuel"):
                 with self.subTest(nation=name, resource=resource):
                     self.assertGreaterEqual(data.get(resource, 0), 0)

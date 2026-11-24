@@ -691,12 +691,12 @@ class MalformedInputTests(unittest.TestCase):
             (root / "map_data.json").write_text(json.dumps({key: province}))
             game = load_map.load_backend_state(root, skip_initial_income=True,
                                                scenario_settings=queries.get_default_scenario_settings())
-            loaded = next(iter(game.map_data.values()))
+            loaded = next(iter(game.world.map_data.values()))
             self.assertEqual(len(loaded["units"]), 1)
             self.assertEqual(loaded["units"][0]["health"], library[unit_type]["health"])
             self.assertEqual(loaded["unit_queue"], [paid])
             self.assertEqual(loaded["building_queue"], [])
-            self.assertEqual(game.nation_data[country]["research_progress"], {})
+            self.assertEqual(game.world.nation_data[country]["research_progress"], {})
             research_processor.process_national_research(game)
             economy_processor.process_queues(game)
             self.assertEqual(loaded["unit_queue"][0]["turns_remaining"], 1)
@@ -706,7 +706,7 @@ class MalformedInputTests(unittest.TestCase):
             restored = load_map.load_backend_state(root, skip_initial_income=True,
                                                    scenario_settings=queries.get_default_scenario_settings())
             economy_processor.process_queues(restored)
-            self.assertEqual(next(iter(restored.map_data.values()))["unit_queue"], [])
+            self.assertEqual(next(iter(restored.world.map_data.values()))["unit_queue"], [])
 
     def test_local_identity_repairs_and_unknown_refund_fields_remain_supported(self):
         unit = {"unit_id": [], "type": "Fixture"}
@@ -866,7 +866,7 @@ class BuiltInMapTests(unittest.TestCase):
         # Without explicit settings, the load reads the local, Git-ignored scenario_settings.json.
         context = load_backend_state(path, is_scenario=True,
                                      scenario_settings=queries.get_default_scenario_settings())
-        self.assertTrue(context.map_data)
+        self.assertTrue(context.world.map_data)
         save = round_trip(queries.build_save_dict(context, include_provinces=False))
         self.assertEqual(save["version"], c.GAME_VERSION)
         map_data = round_trip(queries.build_map_data_save(context))

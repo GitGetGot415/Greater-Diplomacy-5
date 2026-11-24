@@ -66,7 +66,7 @@ class OccupationTests(unittest.TestCase):
         self.assertLess(readings[0], readings[-1])
 
     def test_holding_all_of_it_is_total(self):
-        for prov in self.game.map_data.values():
+        for prov in self.game.world.map_data.values():
             prov["owner"] = "A"
         self.assertAlmostEqual(war_score.occupation(self.game, ["A"], ["B"])[0], 1.0)
 
@@ -135,8 +135,8 @@ class LeverageTests(unittest.TestCase):
         with the same front line read the same.
         """
         before = war_score.leverage(self.game, ["A"], ["B"])["a"]
-        self.game.nation_data["B"]["war_durations"] = {"A": 40}
-        self.game.nation_data["A"]["war_durations"] = {"B": 40}
+        self.game.world.nation_data["B"]["war_durations"] = {"A": 40}
+        self.game.world.nation_data["A"]["war_durations"] = {"B": 40}
         self.assertEqual(war_score.leverage(self.game, ["A"], ["B"])["a"], before)
 
     def test_the_breakdown_names_both_components(self):

@@ -175,12 +175,12 @@ class NavalContentTests(unittest.TestCase):
         for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 host = tournament_harness.Host()
-                host.nation_data["Leader"]["research"] = dict(locked if mode == "locked" else unlocked)
+                host.world.nation_data["Leader"]["research"] = dict(locked if mode == "locked" else unlocked)
                 move = {"player_intents": [{"type": "research_queue",
                         "tech_names": tech if mode == "malformed" else [tech]}],
-                        "game_version": c.GAME_VERSION, "tournament_session": host.multiplayer_session_key,
-                        "tournament_turn": host.time_manager.total_turns - int(mode == "stale")}
-                before = copy.deepcopy(host.nation_data)
+                        "game_version": c.GAME_VERSION, "tournament_session": host.session.multiplayer_session_key,
+                        "tournament_turn": host.world.time_manager.total_turns - int(mode == "stale")}
+                before = copy.deepcopy(host.world.nation_data)
                 path = harness.write_move(directory, "research.gd5move", "Leader", move)
                 if mode == "wrong_key":
                     with open(path) as file:
@@ -191,11 +191,11 @@ class NavalContentTests(unittest.TestCase):
                 result = harness.import_moves(host, [path])
                 self.assertEqual(result["loaded"], int(mode == "valid"), result["rejections"])
                 if mode == "valid":
-                    self.assertEqual(host.nation_data["Leader"]["research_queue"],
+                    self.assertEqual(host.world.nation_data["Leader"]["research_queue"],
                                      [queries.build_research_project(tech, self.tree[tech]["cost"])])
-                    self.assertEqual(host.nation_data["Member"], before["Member"])
+                    self.assertEqual(host.world.nation_data["Member"], before["Member"])
                 else:
-                    self.assertEqual(host.nation_data, before)
+                    self.assertEqual(host.world.nation_data, before)
 
     def test_finishing_ship_research_unlocks_paid_coastal_production(self):
         self.context.session.player_country = "Spectator"
@@ -244,14 +244,14 @@ class NavalContentTests(unittest.TestCase):
         research = queries.edited_research_levels({}, "dreadnought", 1, True, self.tree)
         for tech in SHIPS.values():
             research = queries.edited_research_levels(research, tech, self.tree[tech]["max_lvl"], True, self.tree)
-        game.nation_data[game.player_country]["research"] = research
-        province = next(iter(game.map_data.values()))
-        province["units"] = [queries.create_unit_dict(name, game.player_country, self.library) for name in self.ships]
+        game.world.nation_data[game.session.player_country]["research"] = research
+        province = next(iter(game.world.map_data.values()))
+        province["units"] = [queries.create_unit_dict(name, game.session.player_country, self.library) for name in self.ships]
         province["unit_queue"] = [production_actions.canonical_queue_entry(
             "unit_queue", name=name, cost=self.library[name]) for name in self.ships]
         saved = json.loads(json.dumps(queries.build_save_dict(game)))
-        loaded = queries.map_data_with_saved_provinces(game.raw_json_data, saved["provinces"])
-        self.assertEqual(saved["nation_data"][game.player_country]["research"], research)
+        loaded = queries.map_data_with_saved_provinces(game.world.raw_json_data, saved["provinces"])
+        self.assertEqual(saved["nation_data"][game.session.player_country]["research"], research)
         self.assertEqual(next(iter(loaded.values()))["units"], province["units"])
         self.assertEqual(next(iter(loaded.values()))["unit_queue"], province["unit_queue"])
         for base, tech in (("Dreadnought I", "dreadnought"), ("Battleship I", "battleship")):
@@ -282,8 +282,8 @@ class NavalScreenTests(unittest.TestCase):
 
         controller, _ = app_harness.boot()
         game = app_harness.boot_map()
-        nations = copy.deepcopy(game.nation_data)
-        country = nations[game.player_country]
+        nations = copy.deepcopy(game.world.nation_data)
+        country = nations[game.session.player_country]
         tree = queries.get_tech_tree(game)
         cases = research_lock_cases(tree, "NAVY")
         if not cases:
@@ -322,8 +322,8 @@ class NavalScreenTests(unittest.TestCase):
 
         controller, _ = app_harness.boot()
         game = app_harness.boot_map()
-        country_id = game.player_country
-        nations = copy.deepcopy(game.nation_data)
+        country_id = game.session.player_country
+        nations = copy.deepcopy(game.world.nation_data)
         country = nations[country_id]
         library, tree = queries.get_unit_library(game), queries.get_tech_tree(game)
         ships = [name for name, stats in library.items() if stats["metadata"]["family"] in SHIPS]
@@ -369,8 +369,8 @@ class NavalScreenTests(unittest.TestCase):
 
         controller, _ = app_harness.boot()
         game = app_harness.boot_map()
-        country_id = game.player_country
-        nations = copy.deepcopy(game.nation_data)
+        country_id = game.session.player_country
+        nations = copy.deepcopy(game.world.nation_data)
         country = nations[country_id]
         country["research"] = queries.edited_research_levels({}, "pre-dreadnought", 1, True)
         country["research_queue"] = []

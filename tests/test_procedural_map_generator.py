@@ -43,7 +43,7 @@ class ProceduralMapGeneratorTests(unittest.TestCase):
 
         self.assertTrue(np.array_equal(grid, expected_grid))
         for province_id, (center, terrain) in expected.items():
-            province = map_screen.id_to_province[province_id]
+            province = map_screen.world.id_to_province[province_id]
             self.assertEqual(province["center"], center)
             self.assertEqual(province["terrain"], terrain)
 

@@ -137,8 +137,8 @@ class RefusalWordingTests(unittest.TestCase):
 
     class Screen(MapDouble):
         def __init__(self, nation_data, player, target):
-            self.nation_data = nation_data
-            self.player_country = player
+            self.world.nation_data = nation_data
+            self.session.player_country = player
             self.selected_province = {"owner": target}
             self.said = []
             fill_state_defaults(self)

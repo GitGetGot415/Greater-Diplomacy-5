@@ -130,12 +130,12 @@ class TransportTests(unittest.TestCase):
                       dict(good, base_id=999), dict(good, target_id=True), dict(good, target_id=999)):
             with self.subTest(order=order), self.assertRaises(ValueError):
                 queries.canonical_air_order(self.game, self.plane, self.base, order)
-        self.game.nation_data["A"]["at_war_with"].remove("B")
-        self.game.nation_data["B"]["at_war_with"].remove("A")
+        self.game.world.nation_data["A"]["at_war_with"].remove("B")
+        self.game.world.nation_data["B"]["at_war_with"].remove("A")
         with self.assertRaises(ValueError):
             queries.canonical_air_order(self.game, self.plane, self.base, good)
-        self.game.nation_data["A"]["at_war_with"].append("B")
-        self.game.nation_data["B"]["at_war_with"].append("A")
+        self.game.world.nation_data["A"]["at_war_with"].append("B")
+        self.game.world.nation_data["B"]["at_war_with"].append("A")
         queries.set_air_cargo(self.game, "A", self.plane, self.base, [])
         self.assertNotIn("AIR_DROP", queries.available_air_missions(self.game, self.plane, self.base))
         for unit in (self.plane, wing(self.base, "Monoplane Bomber I")):
@@ -145,8 +145,8 @@ class TransportTests(unittest.TestCase):
     def test_drop_keeps_carrier_at_base_and_cargo_joins_ground_capture(self):
         target = self.plan_drop()
         tile(self.game, 5, 180, owner="B")
-        self.game.is_editor = False
-        self.game.viewing_ai_moves = True
+        self.game.session.is_editor = False
+        self.game.session.viewing_ai_moves = True
         self.assertEqual(queries.air_unit_mission_icon(self.plane), "AIR_DROP")
         self.assertEqual(queries.unit_map_stack_key(self.plane), ("AIR", "AIR_DROP"))
         self.assertEqual(queries.air_range_preview_kind(self.game, self.plane, target), "AIR_DROP")
@@ -174,7 +174,7 @@ class TransportTests(unittest.TestCase):
         self.assertIn(self.cargo, target["units"])
         self.assertIn(self.plane, self.base["units"])
         self.assertTrue(any(row["unit_id"] == self.cargo["unit_id"] and "Interception" in row["details"]
-                            for row in self.game.unit_event_log["events"]))
+                            for row in self.game.world.unit_event_log["events"]))
 
     def test_tied_drop_capture_returns_cargo_to_its_launch_tile(self):
         target = self.plan_drop()
@@ -182,7 +182,7 @@ class TransportTests(unittest.TestCase):
         # become the return tile for a tied capture after this flight.
         self.cargo["_previous_province_id"] = self.destination["id"]
         wing(target, "Fixture Cargo", "C")
-        self.game.scenario_settings["bounce_tiebreaker"] = True
+        self.game.world.scenario_settings["bounce_tiebreaker"] = True
         air_processor.process_air_orders(self.game)
         combat_processor.check_for_post_combat_captures(self.game)
         self.assertIn(self.cargo, self.base["units"])
@@ -220,8 +220,8 @@ class TransportTests(unittest.TestCase):
 
     def test_drop_cancels_safely_after_peace(self):
         target = self.plan_drop()
-        self.game.nation_data["A"]["at_war_with"].remove("B")
-        self.game.nation_data["B"]["at_war_with"].remove("A")
+        self.game.world.nation_data["A"]["at_war_with"].remove("B")
+        self.game.world.nation_data["B"]["at_war_with"].remove("A")
         air_processor.process_air_orders(self.game)
         self.assertEqual(queries.air_unit_mission(self.plane), "NONE")
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
@@ -281,11 +281,11 @@ class TransportTests(unittest.TestCase):
     def test_ai_drop_respects_tactical_control_and_first_exchange_survival(self):
         target = tile(self.game, 4, 30, owner="B")
         queries.build_air_geometry(self.game)
-        self.game.tactical_mode = True
-        self.game.player_unit = self.cargo
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = self.cargo
         ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [], [target], [])
         self.assertFalse(self.plane.get("air_cargo"))
-        self.game.tactical_mode = False
+        self.game.session.tactical_mode = False
         defender = wing(target, "Fixture Cargo", "B")
         defender["attack"] = self.cargo["health"] * 10
         ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [], [target], [])
@@ -316,10 +316,10 @@ class TransportTests(unittest.TestCase):
         target = tile(self.game, 4, 30, owner="B")
         queries.build_air_geometry(self.game)
         client = deepcopy(self.game)
-        base = client.id_to_province[self.base["id"]]
+        base = client.world.id_to_province[self.base["id"]]
         plane, cargo = base["units"]
         queries.set_air_cargo(client, "A", plane, base, [cargo["unit_id"]])
-        plane["order"] = queries.air_move_order(client, plane, base, client.id_to_province[target["id"]])
+        plane["order"] = queries.air_move_order(client, plane, base, client.world.id_to_province[target["id"]])
         return client, plane, cargo, target
 
     def test_realtime_load_and_drop_in_one_draft_keep_host_health(self):
@@ -379,9 +379,9 @@ class TransportTests(unittest.TestCase):
                           lambda data: move_intents(data, "air_transport")[0].update(cargo_ids=[]),
                           lambda data: data.update(tournament_turn=0)):
             with self.subTest(transform=transform):
-                before = deepcopy(self.game.map_data)
+                before = deepcopy(self.game.world.map_data)
                 self.assertEqual(self.import_client(client, transform)["rejected"], 1)
-                self.assertEqual(self.game.map_data, before)
+                self.assertEqual(self.game.world.map_data, before)
 
     def test_load_release_preserve_identity_health_and_allow_immediate_movement(self):
         self.cargo["order"] = {"type": "MOVE", "path": [2]}
@@ -412,10 +412,10 @@ class TransportTests(unittest.TestCase):
     def test_capacity_is_data_driven_and_rejections_are_atomic(self):
         second = wing(self.base, "Fixture Cargo")
         ids = [self.cargo["unit_id"], second["unit_id"]]
-        before = deepcopy(self.game.map_data)
+        before = deepcopy(self.game.world.map_data)
         with self.assertRaises(ValueError):
             queries.set_air_cargo(self.game, "A", self.plane, self.base, ids)
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
         queries.air_unit_stats(self.plane)["air_transport_capacity"] = 3
         queries.set_air_cargo(self.game, "A", self.plane, self.base, ids)
         self.assertEqual(self.plane["air_cargo"], [self.cargo, second])
@@ -436,17 +436,17 @@ class TransportTests(unittest.TestCase):
 
     def test_paid_order_and_invalid_base_reject_cargo_changes_without_mutation(self):
         self.cargo["order"] = {"type": "REPAIR", "refund": {"cost_materials": 10}}
-        before = deepcopy(self.game.map_data)
+        before = deepcopy(self.game.world.map_data)
         with self.assertRaises(ValueError):
             self.load()
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
         self.cargo["order"] = {"type": "MOVE", "path": []}
         self.load()
         wing(self.base, "Infantry Type 1910", "B")
-        before = deepcopy(self.game.map_data)
+        before = deepcopy(self.game.world.map_data)
         with self.assertRaises(ValueError):
             queries.set_air_cargo(self.game, "A", self.plane, self.base, [])
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
 
     def test_ai_loads_moves_and_releases_ground_reinforcements(self):
         enemy = tile(self.game, 3, 220, owner="B")
@@ -480,8 +480,8 @@ class TransportTests(unittest.TestCase):
         for unit in candidates:
             with self.subTest(unit=unit["type"]), self.assertRaises(ValueError):
                 queries.set_air_cargo(self.game, "A", self.plane, self.base, [unit["unit_id"]])
-        self.game.tactical_mode = True
-        self.game.player_unit = self.cargo
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = self.cargo
         with self.assertRaises(ValueError):
             self.load()
 
@@ -509,22 +509,22 @@ class TransportTests(unittest.TestCase):
         self.load()
         wing(self.base, "Infantry Type 1910", "B")
         with unit_events.record_turn(self.game):
-            queries.prepare_aircraft_for_ground_combat(self.base["units"], self.game.nation_data)
+            queries.prepare_aircraft_for_ground_combat(self.base["units"], self.game.world.nation_data)
         self.assertEqual(self.cargo["health"], 0)
         self.assertEqual(self.plane["health"], 0)
-        self.assertTrue(any(row["unit_id"] == self.cargo["unit_id"] for row in self.game.unit_event_log["events"]))
+        self.assertTrue(any(row["unit_id"] == self.cargo["unit_id"] for row in self.game.world.unit_event_log["events"]))
 
     def test_upkeep_ids_army_membership_and_migration_include_cargo(self):
-        army = queries.create_army("A", [self.cargo["unit_id"]], self.game.nation_data, self.game.map_data)
-        before = queries.calculate_all_economies(self.game.map_data, self.game.nation_data)["A"]["upkeep"]
+        army = queries.create_army("A", [self.cargo["unit_id"]], self.game.world.nation_data, self.game.world.map_data)
+        before = queries.calculate_all_economies(self.game.world.map_data, self.game.world.nation_data)["A"]["upkeep"]
         self.load()
-        self.assertEqual(queries.calculate_all_economies(self.game.map_data, self.game.nation_data)["A"]["upkeep"], before)
-        self.assertEqual(queries.ensure_unit_ids(self.game.map_data), [])
-        queries.normalize_armies(self.game.nation_data, self.game.map_data)
+        self.assertEqual(queries.calculate_all_economies(self.game.world.map_data, self.game.world.nation_data)["A"]["upkeep"], before)
+        self.assertEqual(queries.ensure_unit_ids(self.game.world.map_data), [])
+        queries.normalize_armies(self.game.world.nation_data, self.game.world.map_data)
         self.assertIn(self.cargo["unit_id"], army["unit_ids"])
         self.cargo["health"] /= 2
         queries.get_unit_library()["Fixture Cargo"]["health"] *= 2
-        queries.refresh_unit_stats(self.game.map_data, self.game.nation_data, queries.get_unit_library())
+        queries.refresh_unit_stats(self.game.world.map_data, self.game.world.nation_data, queries.get_unit_library())
         self.assertEqual(self.cargo["health"] / self.cargo["max_health"], 0.5)
 
     def test_carrier_ownership_changes_include_cargo_and_division_counts(self):
@@ -617,8 +617,8 @@ class TransportTests(unittest.TestCase):
 
     def test_realtime_validation_and_application_keep_host_stats(self):
         client = deepcopy(self.game)
-        plane, cargo = client.id_to_province[1]["units"]
-        queries.set_air_cargo(client, "A", plane, client.id_to_province[1], [cargo["unit_id"]])
+        plane, cargo = client.world.id_to_province[1]["units"]
+        queries.set_air_cargo(client, "A", plane, client.world.id_to_province[1], [cargo["unit_id"]])
         cargo["health"] = 1
         commands = [command for command in collect_map_commands(client, "A")
                     if command["type"] in ("air_transport", "unit_order")]
@@ -634,9 +634,9 @@ class TransportTests(unittest.TestCase):
     def test_realtime_release_accepts_ground_order_from_same_draft(self):
         self.load()
         client = deepcopy(self.game)
-        plane = client.id_to_province[1]["units"][0]
-        queries.set_air_cargo(client, "A", plane, client.id_to_province[1], [])
-        client.id_to_province[1]["units"][1]["order"] = {"type": "MOVE", "path": [2]}
+        plane = client.world.id_to_province[1]["units"][0]
+        queries.set_air_cargo(client, "A", plane, client.world.id_to_province[1], [])
+        client.world.id_to_province[1]["units"][1]["order"] = {"type": "MOVE", "path": [2]}
         commands = [command for command in collect_map_commands(client, "A")
                     if command["type"] in ("air_transport", "unit_order")]
         canonical = MapRealtimeDriver(self.game).validate_draft("A", commands)
@@ -668,9 +668,9 @@ class TransportTests(unittest.TestCase):
         for transform in (lambda data: move_intents(data, "air_transport")[0].update(cargo_ids=[foreign["unit_id"]]),
                           duplicate_cargo):
             with self.subTest(transform=transform):
-                before = deepcopy(self.game.map_data)
+                before = deepcopy(self.game.world.map_data)
                 self.assertEqual(self.import_client(client, transform)["rejected"], 1)
-                self.assertEqual(self.game.map_data, before)
+                self.assertEqual(self.game.world.map_data, before)
 
     def test_loaded_carrier_disband_is_rejected_in_ui_and_execution(self):
         self.load()
@@ -687,7 +687,7 @@ class TransportTests(unittest.TestCase):
     def test_snapshot_hides_foreign_cargo_even_without_fog(self):
         self.load()
         snapshot = queries.build_save_dict(self.game)
-        self.game.scenario_settings["fog_of_war"] = False
+        self.game.world.scenario_settings["fog_of_war"] = False
         projected = queries.player_snapshot_projection(self.game, snapshot, "B")
         foreign = projected["provinces"][self.base["json_key"]]["units"][0]
         self.assertNotIn("air_cargo", foreign)
@@ -711,15 +711,15 @@ class TransportTests(unittest.TestCase):
 
     def test_tournament_load_and_release_use_commands_preserve_stats_and_orders(self):
         client = deepcopy(self.game)
-        plane, cargo = client.id_to_province[1]["units"]
-        queries.set_air_cargo(client, "A", plane, client.id_to_province[1], [cargo["unit_id"]])
+        plane, cargo = client.world.id_to_province[1]["units"]
+        queries.set_air_cargo(client, "A", plane, client.world.id_to_province[1], [cargo["unit_id"]])
         cargo["health"] = 1
         self.assertEqual(self.import_client(client)["loaded"], 1)
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
         client = deepcopy(self.game)
-        plane = client.id_to_province[1]["units"][0]
-        queries.set_air_cargo(client, "A", plane, client.id_to_province[1], [])
-        released = client.id_to_province[1]["units"][1]
+        plane = client.world.id_to_province[1]["units"][0]
+        queries.set_air_cargo(client, "A", plane, client.world.id_to_province[1], [])
+        released = client.world.id_to_province[1]["units"][1]
         released["order"] = {"type": "MOVE", "path": [2]}
         released["health"] = 1
         self.assertEqual(self.import_client(client)["loaded"], 1)
@@ -733,9 +733,9 @@ class TransportTests(unittest.TestCase):
                           lambda data: move_intents(data, "air_transport")[0].update(province_id=2),
                           lambda data: data.update(tournament_turn=0)):
             with self.subTest(transform=transform):
-                before = deepcopy(self.game.map_data)
+                before = deepcopy(self.game.world.map_data)
                 self.assertEqual(self.import_client(client, transform)["rejected"], 1)
-                self.assertEqual(self.game.map_data, before)
+                self.assertEqual(self.game.world.map_data, before)
 
     def test_tournament_still_rejects_conflicting_older_transport_projections(self):
         client = deepcopy(self.game)
@@ -744,11 +744,11 @@ class TransportTests(unittest.TestCase):
             transport = move_intents(data, "air_transport")[0]
             data["air_transport"] = [dict(transport, cargo_ids=["different"])]
 
-        before = deepcopy(self.game.map_data)
+        before = deepcopy(self.game.world.map_data)
         summary = self.import_client(client, add_conflicting_projection)
         self.assertEqual(summary["rejected"], 1)
         self.assertIn("Conflicting aircraft cargo choices", summary["rejections"][0]["reason"])
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
 
 
 class TransportSaveSmokeTests(unittest.TestCase):
@@ -763,35 +763,35 @@ class TransportSaveSmokeTests(unittest.TestCase):
         case.setUp()
         with tempfile.TemporaryDirectory() as directory:
             game, _, _, _ = air_tests.AirAppSmokeTests.make_runtime_save(self, directory)
-            base = game.id_to_province[1]
+            base = game.world.id_to_province[1]
             plane = wing(base, "Monoplane Transport I")
             cargo = wing(base, "Fixture Cargo")
             queries.set_air_cargo(game, "A", plane, base, [cargo["unit_id"]])
             cargo["health"] /= 2
-            plane["order"] = queries.air_move_order(game, plane, base, game.id_to_province[2])
+            plane["order"] = queries.air_move_order(game, plane, base, game.world.id_to_province[2])
             from data.map import save_map
             from screens.game.map import Map
             with patch.object(c, "SAVES_DIR", directory):
                 asyncio.run(save_map.save_map_data(game, "cargo"))
             loaded = Map(load_path=os.path.join(directory, "cargo"), skip_initial_income=True)
-            restored = next(u for u in loaded.id_to_province[1]["units"] if u["unit_id"] == plane["unit_id"])
+            restored = next(u for u in loaded.world.id_to_province[1]["units"] if u["unit_id"] == plane["unit_id"])
             self.assertEqual(restored["air_cargo"][0]["unit_id"], cargo["unit_id"])
             self.assertEqual(restored["air_cargo"][0]["health"], cargo["health"])
             self.assertEqual(restored["order"], plane["order"])
-            self.assertFalse(any(u["unit_id"] == cargo["unit_id"] for u in loaded.id_to_province[1]["units"]))
-            loaded.selection_mode = False
-            loaded.player_country = "A"
+            self.assertFalse(any(u["unit_id"] == cargo["unit_id"] for u in loaded.world.id_to_province[1]["units"]))
+            loaded.session.selection_mode = False
+            loaded.session.player_country = "A"
             loaded.select_map_units([restored])
             screen = Orders_Screen()
-            screen.start_with_province(loaded.id_to_province[1], loaded)
+            screen.start_with_province(loaded.world.id_to_province[1], loaded)
             with patch.object(queries, "get_air_targets", side_effect=AssertionError("frame range calculation")), \
                     patch.object(queries, "canonical_air_order", side_effect=AssertionError("frame air rule")):
                 screen.draw(self.surface)
-            queries.set_air_cargo(loaded, "A", restored, loaded.id_to_province[1], [])
+            queries.set_air_cargo(loaded, "A", restored, loaded.world.id_to_province[1], [])
             air_processor.process_air_orders(loaded)
             self.assertEqual(queries.air_unit_mission(restored), "NONE")
             restored.pop("air_cargo")
-            queries.normalize_air_orders(loaded.map_data)
+            queries.normalize_air_orders(loaded.world.map_data)
             self.assertEqual(queries.air_unit_mission_icon(restored), "NONE")
 
     def test_load_filters_disabled_cargo_and_repairs_embarked_truck_stats(self):
@@ -800,7 +800,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
         case.setUp()
         with tempfile.TemporaryDirectory() as directory:
             game, _, _, _ = air_tests.AirAppSmokeTests.make_runtime_save(self, directory)
-            base = game.id_to_province[1]
+            base = game.world.id_to_province[1]
             plane = wing(base, "Monoplane Transport I")
             truck = wing(base, "Fixture Cargo")
             truck["original_type"] = "Fixture Cargo"
@@ -811,7 +811,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
             plane["air_cargo"] = [truck, disabled_cargo]
             base["units"].remove(truck)
             base["units"].remove(disabled_cargo)
-            game.scenario_settings["unit_disabled"] = ["Fixture Disabled"]
+            game.world.scenario_settings["unit_disabled"] = ["Fixture Disabled"]
 
             from data.map import save_map
             from screens.game.map import Map
@@ -820,7 +820,7 @@ class TransportSaveSmokeTests(unittest.TestCase):
             loaded = Map(load_path=os.path.join(directory, "cargo-migrations"),
                          skip_initial_income=True)
 
-        restored = next(unit for unit in loaded.id_to_province[1]["units"]
+        restored = next(unit for unit in loaded.world.id_to_province[1]["units"]
                         if unit["unit_id"] == plane["unit_id"])
         self.assertEqual([unit["type"] for unit in restored["air_cargo"]],
                          ["Truck (Fixture Cargo)"])

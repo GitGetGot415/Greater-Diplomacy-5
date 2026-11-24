@@ -13,7 +13,7 @@ from data import queries
 from screens.editors import research_screens
 from screens.game.research import Research_Screen
 from tests import app_harness
-from tests.stub_map_screen import map_double, sample_map_screen
+from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 
 
 def tech_tree():
@@ -179,14 +179,14 @@ class LevelRequirementTests(unittest.TestCase):
                                  ("get_building_library", {}), ("calculate_all_economies", {}),
                                  ("get_active_ai_nations", ["A"])):
                 stack.enter_context(patch.object(queries, name, return_value=result))
-            game.map_data = {}
+            game.world.map_data = {}
             stack.enter_context(patch.object(ai_research.ai_world, "for_screen", return_value=None))
             stack.enter_context(patch.object(ai_research, "_rank_for_nation", side_effect=lambda available, *args, **kwargs: available))
             ai_research.process_ai_research(game)
-            self.assertEqual([project["tech_name"] for project in game.nation_data["A"]["research_queue"]], ["left"])
-            game.nation_data["A"].update(research={"root": 2, "left": 1}, research_queue=[])
+            self.assertEqual([project["tech_name"] for project in game.world.nation_data["A"]["research_queue"]], ["left"])
+            game.world.nation_data["A"].update(research={"root": 2, "left": 1}, research_queue=[])
             ai_research.process_ai_research(game)
-            self.assertIn("root", [project["tech_name"] for project in game.nation_data["A"]["research_queue"]])
+            self.assertIn("root", [project["tech_name"] for project in game.world.nation_data["A"]["research_queue"]])
 
 
 class EditorResearchStateTests(unittest.TestCase):
@@ -199,18 +199,18 @@ class EditorResearchStateTests(unittest.TestCase):
                                     default_research={"root": 1})
 
     def test_click_toggles_only_the_selected_country_and_keeps_dictionary_references(self):
-        country = self.game.nation_data["A"]
+        country = self.game.world.nation_data["A"]
         research = country["research"]
         queries.toggle_starting_research(self.game, "A", "tip", 2)
         self.assertIs(country["research"], research)
         self.assertEqual(research, {"root": 2, "branch": 2, "tip": 2})
         queries.toggle_starting_research(self.game, "A", "branch", 1)
         self.assertEqual(research, {"root": 2, "branch": 0, "tip": 0})
-        self.assertEqual(self.game.nation_data["B"], {"research": {"root": 1}})
-        self.assertEqual(self.game.default_research, {"root": 1})
+        self.assertEqual(self.game.world.nation_data["B"], {"research": {"root": 1}})
+        self.assertEqual(self.game.world.default_research, {"root": 1})
 
     def test_changed_and_invalid_projects_and_paused_progress_are_cleared(self):
-        country = self.game.nation_data["A"]
+        country = self.game.world.nation_data["A"]
         country.update(research={"root": 2, "branch": 1}, research_queue=[
             {"tech_name": "root", "points_remaining": 20},
             {"tech_name": "tip", "points_remaining": 20},
@@ -226,32 +226,32 @@ class EditorResearchStateTests(unittest.TestCase):
     def test_invalid_editor_permissions_and_removed_countries_cannot_change_research(self):
         for flags in ({"is_editor": False}, {"tactical_mode": True}, {"multiplayer_mode": True},
                       {"realtime_multiplayer": True}):
-            before = copy.deepcopy(self.game.nation_data)
+            before = copy.deepcopy(self.game.world.nation_data)
             with self.subTest(flags=flags), ExitStack() as stack:
                 for key, value in flags.items():
-                    stack.enter_context(patch.object(self.game, key, value))
+                    stack.enter_context(patch.object(state_owner(self.game, key), key, value))
                 with self.assertRaises(ValueError):
                     queries.toggle_starting_research(self.game, "A", "root", 1)
-            self.assertEqual(self.game.nation_data, before)
-        self.game.map_data[1]["owner"] = "B"
+            self.assertEqual(self.game.world.nation_data, before)
+        self.game.world.map_data[1]["owner"] = "B"
         with self.assertRaises(ValueError):
             queries.toggle_starting_research(self.game, "A", "root", 1)
 
     def test_malformed_clicks_do_not_change_country_state(self):
-        before = copy.deepcopy(self.game.nation_data)
+        before = copy.deepcopy(self.game.world.nation_data)
         for key, level in (("missing", 1), ("root", "1"), ("root", True), ("root", 5)):
             with self.subTest(key=key, level=level), self.assertRaises(ValueError):
                 queries.toggle_starting_research(self.game, "A", key, level)
-            self.assertEqual(self.game.nation_data, before)
+            self.assertEqual(self.game.world.nation_data, before)
 
     def test_edited_research_uses_existing_save_schema_and_country_loader(self):
         saved_map = sample_map_screen()
-        saved_map.is_editor = True
+        saved_map.session.is_editor = True
         queries.toggle_starting_research(saved_map, "Avaria", "tip", 2)
         saved = json.loads(json.dumps(queries.build_save_dict(saved_map)))
         loaded = queries.merge_country_templates(saved["nation_data"])
-        self.assertEqual(loaded["Avaria"]["research"], saved_map.nation_data["Avaria"]["research"])
-        self.assertEqual(saved["default_research"], saved_map.default_research)
+        self.assertEqual(loaded["Avaria"]["research"], saved_map.world.nation_data["Avaria"]["research"])
+        self.assertEqual(saved["default_research"], saved_map.world.default_research)
 
 
 class EditorResearchTreeTests(unittest.TestCase):
@@ -263,14 +263,14 @@ class EditorResearchTreeTests(unittest.TestCase):
     def setUp(self):
         self.tree = tech_tree()
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=self.tree))
-        self.enterContext(patch.object(self.map, "is_editor", True))
-        self.enterContext(patch.object(self.map, "tactical_mode", False))
-        self.enterContext(patch.object(self.map, "realtime_multiplayer", False))
-        self.enterContext(patch.object(self.map, "multiplayer_mode", False))
-        self.enterContext(patch.object(self.map, "nation_data", copy.deepcopy(self.map.nation_data)))
-        self.enterContext(patch.object(self.map, "default_research", copy.deepcopy(self.map.default_research)))
-        self.country = next(iter(queries.get_living_nations(self.map.map_data)))
-        self.map.nation_data[self.country].update(research={}, research_queue=[], research_progress={})
+        self.enterContext(patch.object(self.map.session, "is_editor", True))
+        self.enterContext(patch.object(self.map.session, "tactical_mode", False))
+        self.enterContext(patch.object(self.map.session, "realtime_multiplayer", False))
+        self.enterContext(patch.object(self.map.session, "multiplayer_mode", False))
+        self.enterContext(patch.object(self.map.world, "nation_data", copy.deepcopy(self.map.world.nation_data)))
+        self.enterContext(patch.object(self.map.world, "default_research", copy.deepcopy(self.map.world.default_research)))
+        self.country = next(iter(queries.get_living_nations(self.map.world.map_data)))
+        self.map.world.nation_data[self.country].update(research={}, research_queue=[], research_progress={})
         self.enterContext(patch.object(self.map, "show_feedback", Mock()))
         self.screen = Research_Screen()
         self.screen.start_research(self.map, editor_country=self.country)
@@ -295,7 +295,7 @@ class EditorResearchTreeTests(unittest.TestCase):
 
     def test_node_click_grants_locked_levels_and_clicking_completed_level_removes_them(self):
         self.node("tip", 2).callback()
-        research = self.map.nation_data[self.country]["research"]
+        research = self.map.world.nation_data[self.country]["research"]
         self.assertEqual(research, {"root": 2, "branch": 2, "tip": 2})
         self.assertIsNone(self.screen.details_screen)
         self.node("branch", 1).callback()
@@ -305,7 +305,7 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.tree["root"]["level_reqs"] = {"3": {"left": 1}}
         self.screen.start_research(self.map, editor_country=self.country)
         self.node("root", 3).callback()
-        research = self.map.nation_data[self.country]["research"]
+        research = self.map.world.nation_data[self.country]["research"]
         self.assertEqual(research, {"root": 3, "left": 1})
         self.node("left", 1).callback()
         self.assertEqual(research, {"root": 2, "left": 0})
@@ -318,15 +318,15 @@ class EditorResearchTreeTests(unittest.TestCase):
         with patch.object(pygame.mouse, "get_pos", return_value=button.rect.center):
             self.screen.handle_events([pygame.event.Event(event_type, button=1, pos=button.rect.center)
                                        for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)])
-        self.assertEqual(self.map.nation_data[self.country]["research"], {"root": 2, "branch": 2, "tip": 2})
+        self.assertEqual(self.map.world.nation_data[self.country]["research"], {"root": 2, "branch": 2, "tip": 2})
 
     def test_stale_editor_callback_rechecks_permissions(self):
         button = self.node("root", 1)
-        self.map.is_editor = False
+        self.map.session.is_editor = False
         button.callback()
-        self.assertEqual(self.map.nation_data[self.country]["research"], {})
+        self.assertEqual(self.map.world.nation_data[self.country]["research"], {})
         self.screen.start_or_resume_research("root")
-        self.assertEqual(self.map.nation_data[self.country]["research_queue"], [])
+        self.assertEqual(self.map.world.nation_data[self.country]["research_queue"], [])
 
     def test_completed_overview_is_text_only_in_map_editor(self):
         self.node("root", 2).callback()
@@ -334,29 +334,29 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.assertTrue(self.screen.completed_text_surfaces)
         self.assertFalse(any(getattr(button, "editor_tech_key", None) or getattr(button, "is_tech_node", False)
                              for button in self.screen.elements))
-        self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 2)
+        self.assertEqual(self.map.world.nation_data[self.country]["research"]["root"], 2)
         self.assertEqual(self.screen.current_category, "COMPLETED")
 
     def test_country_research_edits_preserve_map_defaults(self):
-        self.map.default_research = {"root": 2, "branch": 1}
+        self.map.world.default_research = {"root": 2, "branch": 1}
         self.screen.refresh_ui()
         self.node("root", 2).callback()
-        self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 2)
+        self.assertEqual(self.map.world.nation_data[self.country]["research"]["root"], 2)
         self.node("root", 1).callback()
-        self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 0)
-        self.assertEqual(self.map.default_research, {"root": 2, "branch": 1})
+        self.assertEqual(self.map.world.nation_data[self.country]["research"]["root"], 0)
+        self.assertEqual(self.map.world.default_research, {"root": 2, "branch": 1})
 
     def test_country_tree_opens_when_the_map_has_no_saved_default(self):
         # Maps that never saved a map default store None; the tree must fall back to the shared template.
-        self.map.default_research = None
+        self.map.world.default_research = None
         editor = research_screens.Research_List_Screen(self.map)
         with patch.object(research_screens, "_run_pygame_sub_screen") as launch:
             editor.edit_country(self.country)
         self.assertTrue(launch.call_args.args[1].editing_starting_research)
-        self.assertIsNone(self.map.default_research)
+        self.assertIsNone(self.map.world.default_research)
 
     def test_spectator_edit_uses_shared_prerequisites_and_dependent_removal(self):
-        with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
+        with patch.object(self.map.session, "is_editor", False), patch.object(self.map.session, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
@@ -364,17 +364,17 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(self.screen.subject_data["research"], {"root": 2, "branch": 2, "tip": 2})
             self.node("branch", 1).callback()
             self.assertEqual(self.screen.subject_data["research"], {"root": 2, "branch": 0, "tip": 0})
-            self.assertEqual(self.map.nation_data[self.country]["research"], {})
+            self.assertEqual(self.map.world.nation_data[self.country]["research"], {})
             self.screen.confirm_research_edit()
-            self.assertEqual(self.map.nation_data[self.country]["research"], {"root": 2, "branch": 0, "tip": 0})
+            self.assertEqual(self.map.world.nation_data[self.country]["research"], {"root": 2, "branch": 0, "tip": 0})
 
     def test_spectator_warns_when_prerequisite_removal_invalidates_a_project(self):
         from ui import dialogs 
-        country = self.map.nation_data[self.country]
+        country = self.map.world.nation_data[self.country]
         country.update(research={"root": 2, "branch": 2, "tip": 1},
                        research_queue=[{"tech_name": "tip", "points_remaining": 40}])
         before = copy.deepcopy(country)
-        with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
+        with patch.object(self.map.session, "is_editor", False), patch.object(self.map.session, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
@@ -391,10 +391,10 @@ class EditorResearchTreeTests(unittest.TestCase):
 
     def test_spectator_preserves_progress_when_an_alternative_prerequisite_remains(self):
         from ui import dialogs 
-        country = self.map.nation_data[self.country]
+        country = self.map.world.nation_data[self.country]
         country.update(research={"root": 1, "left": 2, "right": 1},
                        research_queue=[{"tech_name": "choice", "points_remaining": 40}])
-        with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
+        with patch.object(self.map.session, "is_editor", False), patch.object(self.map.session, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \
                 patch.object(self.map, "viewing_research_mode", "EDIT", create=True):
             self.screen.start_research(self.map)
@@ -407,11 +407,11 @@ class EditorResearchTreeTests(unittest.TestCase):
             self.assertEqual(country["research"], {"root": 1, "left": 1, "right": 1})
 
     def test_reopening_for_an_ordinary_player_clears_editor_mode(self):
-        self.map.is_editor = False
+        self.map.session.is_editor = False
         self.enterContext(patch.object(self.map, "viewing_research_country", "", create=True))
         self.screen.start_research(self.map)
         self.assertFalse(self.screen.editing_starting_research)
-        self.assertEqual(self.screen.subject, self.map.player_country)
+        self.assertEqual(self.screen.subject, self.map.session.player_country)
 
     def test_editor_research_uses_cached_rules_and_handles_scrolling(self):
         for size in ((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), (1280, 720)):

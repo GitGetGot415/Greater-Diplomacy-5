@@ -44,9 +44,9 @@ class Screen(MapDouble):
     centers_need_update = False
 
     def __init__(self, nation_data, map_data):
-        self.nation_data = nation_data
-        self.map_data = map_data
-        self.id_to_province = {p["id"]: p for p in map_data.values()}
+        self.world.nation_data = nation_data
+        self.world.map_data = map_data
+        self.world.id_to_province = {p["id"]: p for p in map_data.values()}
         fill_state_defaults(self)
 
 
@@ -165,7 +165,7 @@ class RetireLandlessTests(unittest.TestCase):
 
     def test_map_editor_can_paint_integrated_puppet_territory(self):
         screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED)
-        screen.is_editor = True
+        screen.session.is_editor = True
         province_to_paint = self.map_data["1"]
         province_to_paint["owner"] = "Unclaimed"
 
@@ -303,7 +303,7 @@ class RetireLandlessTests(unittest.TestCase):
         """Zero provinces is what half of a repaint looks like. Losing the
         scenario's treaties for it would be destructive, not tidy."""
         screen = self.build()
-        screen.is_editor = True
+        screen.session.is_editor = True
         own.retire_landless_nation(screen, "Doomed")
         self.assertEqual(self.nation_data["Doomed"]["faction"], "Pact")
         self.assertEqual(self.nation_data["Empire"]["at_war_with"], ["Doomed"])
@@ -311,7 +311,7 @@ class RetireLandlessTests(unittest.TestCase):
     def test_the_editor_still_erases_a_created_puppet(self):
         """That half always ran there and is how re-annexation cleans up."""
         screen = self.build(is_created_integrated_puppet=True)
-        screen.is_editor = True
+        screen.session.is_editor = True
         own.retire_landless_nation(screen, "Doomed")
         self.assertNotIn("Doomed", self.nation_data)
 

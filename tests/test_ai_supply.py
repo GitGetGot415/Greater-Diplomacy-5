@@ -65,7 +65,7 @@ class AISupplyTests(SupplyFixture):
         guard = division(captured, speed=1)
         enemy = division(front, "B", attack=5)
         world = game(home, captured, front)
-        world.nation_data["B"]["claims"] = [2]
+        world.world.nation_data["B"]["claims"] = [2]
         snapshot = queries.SupplySnapshot(world)
         self.assertEqual(snapshot.status(enemy).readiness, 0)
         recaptured = snapshot.land_projection("B", reopen={2: "B"})
@@ -139,7 +139,7 @@ class AISupplyTests(SupplyFixture):
         division(front, "B")
         world = game(home, front, cut, source, sea, ally)
         for country in ("B", "C"):
-            world.nation_data[country]["faction"] = "Test Faction"
+            world.world.nation_data[country]["faction"] = "Test Faction"
         snapshot = queries.SupplySnapshot(world)
         planner = ai_supply.SupplyPlanner(snapshot, snapshot, "A")
 
@@ -248,7 +248,7 @@ class AISupplyTests(SupplyFixture):
 
         harbor["units"].clear()
         for ship in ships:
-            world.id_to_province[ship["order"]["path"][0]]["units"].append(ship)
+            world.world.id_to_province[ship["order"]["path"][0]]["units"].append(ship)
         ai_movement.process_ai_unit_orders(world, countries=["A"])
 
         self.assertTrue(all(ship["order"]["path"] == [] for ship in ships))
@@ -297,7 +297,7 @@ class AISupplyTests(SupplyFixture):
         relief = division(sea, kind="Supply Test Ship", attack=1000)
         world = game(front, strait, source, sea, distraction)
         for member in ("A", "C"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
 
         ai_movement.process_ai_unit_orders(world, countries=["A"])
 
@@ -313,7 +313,7 @@ class AISupplyTests(SupplyFixture):
         next_unit = division(rear)
         world = game(front, source, blocked, rear)
         for member in ("A", "C"):
-            world.nation_data[member]["faction"] = "Test Faction"
+            world.world.nation_data[member]["faction"] = "Test Faction"
         snapshot = queries.SupplySnapshot(world)
         planner = ai_supply.SupplyPlanner(snapshot, snapshot, "A")
 
@@ -333,7 +333,7 @@ class AISupplyTests(SupplyFixture):
         division(strait, "B", kind="Submarine Supply Test", attack=1000)
         scout = division(sea, kind="Supply Test Ship", attack=1)
         world = game(front, strait, source, sea, distraction)
-        world.scenario_settings["fog_of_war"] = True
+        world.world.scenario_settings["fog_of_war"] = True
 
         ai_movement.process_ai_unit_orders(world, countries=["A"])
 

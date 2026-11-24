@@ -100,7 +100,7 @@ class TenureTests(unittest.TestCase):
 
     def screen(self, nation_data):
         s = Screen(nation_data)
-        s.map_data = {}
+        s.world.map_data = {}
         return s
 
     def tick(self, nd):

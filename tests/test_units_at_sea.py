@@ -71,7 +71,7 @@ class MeetingEngagementUnpackingTests(unittest.TestCase):
         screen, sea, land, afloat, ashore = shoreline_swap()
 
         combat_processor.resolve_meeting_engagement(
-            sea, land, [afloat], [ashore], screen.nation_data)
+            sea, land, [afloat], [ashore], screen.world.nation_data)
 
         self.assertTrue(afloat["type"].startswith("Convoy"),
                         "a convoy was unloaded into open water")
@@ -80,7 +80,7 @@ class MeetingEngagementUnpackingTests(unittest.TestCase):
         screen, sea, land, afloat, ashore = shoreline_swap()
 
         combat_processor.resolve_meeting_engagement(
-            sea, land, [afloat], [ashore], screen.nation_data)
+            sea, land, [afloat], [ashore], screen.world.nation_data)
 
         self.assertEqual(ashore["type"], "Infantry Type 1943",
                          "a convoy caught on land should unload and fight")
@@ -92,7 +92,7 @@ class MeetingEngagementUnpackingTests(unittest.TestCase):
         screen, sea, land, afloat, ashore = shoreline_swap()
 
         combat_processor.resolve_meeting_engagement(
-            land, sea, [ashore], [afloat], screen.nation_data)
+            land, sea, [ashore], [afloat], screen.world.nation_data)
 
         self.assertTrue(afloat["type"].startswith("Convoy"))
         self.assertEqual(ashore["type"], "Infantry Type 1943")

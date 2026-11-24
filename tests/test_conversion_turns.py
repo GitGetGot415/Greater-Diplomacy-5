@@ -27,12 +27,12 @@ class ConversionTurnsTests(unittest.TestCase):
             "cost_materials": 200, "cost_manpower": 40, "cost_fuel": 10,
             "production_time": 1, "naval_unit": True}
         self.ship = wing(self.base, "Fixture Ship")
-        self.game.nation_data["A"]["research"]["trucks"] = 1
+        self.game.world.nation_data["A"]["research"]["trucks"] = 1
 
     def set_turns(self, action, turns):
         name = queries.CONVERSION_ACTIONS[action][0]
-        self.game.scenario_settings.setdefault("conversion_turn_overrides", {})[name] = turns
-        self.game.scenario_settings["use_default_other"] = False
+        self.game.world.scenario_settings.setdefault("conversion_turn_overrides", {})[name] = turns
+        self.game.world.scenario_settings["use_default_other"] = False
 
     def test_legacy_defaults_malformed_values_and_limits(self):
         for action, (name, constant) in queries.CONVERSION_ACTIONS.items():
@@ -41,14 +41,14 @@ class ConversionTurnsTests(unittest.TestCase):
             self.assertEqual(queries.get_conversion_library()[name]["time"], default)
             for invalid in (None, "2", True, 1.5, {}, []):
                 self.set_turns(action, invalid)
-                self.assertEqual(queries.get_conversion_turns(action, self.game.scenario_settings), default)
+                self.assertEqual(queries.get_conversion_turns(action, self.game.world.scenario_settings), default)
             legal_turns = range(c.MIN_CONVERSION_TURNS, c.MAX_CONVERSION_TURNS + 1)
             cases = [(turns, turns) for turns in legal_turns]
             cases.extend(((-5, c.MIN_CONVERSION_TURNS), (0, c.MIN_CONVERSION_TURNS),
                           (c.MAX_CONVERSION_TURNS + 1, c.MAX_CONVERSION_TURNS)))
             for raw, expected in cases:
                 self.set_turns(action, raw)
-                self.assertEqual(queries.get_conversion_turns(action, self.game.scenario_settings), expected)
+                self.assertEqual(queries.get_conversion_turns(action, self.game.world.scenario_settings), expected)
             self.assertEqual(queries.get_conversion_turns(action, {"conversion_turn_overrides": []}), default)
 
     def test_ui_and_execution_use_both_conversion_directions(self):
@@ -97,8 +97,8 @@ class ConversionTurnsTests(unittest.TestCase):
                 if transported:
                     queries.load_transport(self.ship, "Truck")
                 client = deepcopy(self.game)
-                client.scenario_settings["conversion_turn_overrides"] = {}
-                draft = next(u for u in client.id_to_province[self.base["id"]]["units"]
+                client.world.scenario_settings["conversion_turn_overrides"] = {}
+                draft = next(u for u in client.world.id_to_province[self.base["id"]]["units"]
                              if u["unit_id"] == self.ship["unit_id"])
                 draft["order"] = {"type": "CONVERT", "to": target, "turns_left": 0}
                 self.assertEqual(self.fixture.import_client(client)["loaded"], 1)
@@ -113,7 +113,7 @@ class ConversionTurnsTests(unittest.TestCase):
     def test_tournament_rejects_illegal_and_stale_conversion_atomically(self):
         self.set_turns("TRUCK_SHIP", 2)
         client = deepcopy(self.game)
-        draft = next(u for u in client.id_to_province[self.base["id"]]["units"]
+        draft = next(u for u in client.world.id_to_province[self.base["id"]]["units"]
                      if u["unit_id"] == self.ship["unit_id"])
         draft["order"] = {"type": "CONVERT", "to": "Truck", "turns_left": 2}
 
@@ -124,12 +124,12 @@ class ConversionTurnsTests(unittest.TestCase):
         for change in (lambda data: data.update(tournament_turn=0),
                        lambda data: submitted_order(data).update(type=None),
                        lambda data: submitted_order(data).update(to="invalid")):
-            before = deepcopy(self.game.map_data)
+            before = deepcopy(self.game.world.map_data)
             self.assertEqual(self.fixture.import_client(client, change)["rejected"], 1)
-            self.assertEqual(self.game.map_data, before)
-        self.game.nation_data["A"]["research"]["trucks"] = 0
+            self.assertEqual(self.game.world.map_data, before)
+        self.game.world.nation_data["A"]["research"]["trucks"] = 0
         self.assertEqual(self.fixture.import_client(client)["rejected"], 1)
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
 
     def test_ai_drop_projection_and_resolution_use_scenario_recovery(self):
         duration = c.MAX_CONVERSION_TURNS
@@ -148,9 +148,9 @@ class ConversionTurnsTests(unittest.TestCase):
         self.set_turns("TRUCK_SHIP", 1)
         self.set_turns("AIR_DROP_RECOVERY", c.MAX_CONVERSION_TURNS)
         screen = sample_map_screen()
-        screen.scenario_settings = self.game.scenario_settings
+        screen.world.scenario_settings = self.game.world.scenario_settings
         restored = json.loads(json.dumps(queries.build_save_dict(screen)))["scenario_settings"]
-        self.assertEqual(restored, self.game.scenario_settings)
+        self.assertEqual(restored, self.game.world.scenario_settings)
         self.assertEqual(queries.get_conversion_turns("TRUCK_SHIP", restored), 1)
         self.assertEqual(queries.get_conversion_turns("AIR_DROP_RECOVERY", restored), c.MAX_CONVERSION_TURNS)
 

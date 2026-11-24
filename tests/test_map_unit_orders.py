@@ -55,15 +55,15 @@ class MapOrderTests(unittest.TestCase):
         fast = {"owner": "A", "type": "Infantry", "speed": 2}
         p1["units"] = [slow]
         p2["units"] = [fast]
-        game.map_data = {"one": p1, "two": p2, "three": p3}
-        game.id_to_province = {1: p1, 2: p2, 3: p3}
-        game.nation_data = {"A": {"at_war_with": []}}
-        game.player_country = "A"
-        game.selection_mode = game.is_editor = game.viewing_ai_moves = game.ai_is_thinking = False
-        game.tactical_mode = False
-        game.time_manager = TimeHandler()
-        game.unit_event_log = {"turn": game.time_manager.total_turns, "events": []}
-        game.unit_event_read_turns = {}
+        game.world.map_data = {"one": p1, "two": p2, "three": p3}
+        game.world.id_to_province = {1: p1, 2: p2, 3: p3}
+        game.world.nation_data = {"A": {"at_war_with": []}}
+        game.session.player_country = "A"
+        game.session.selection_mode = game.session.is_editor = game.session.viewing_ai_moves = game.session.ai_is_thinking = False
+        game.session.tactical_mode = False
+        game.world.time_manager = TimeHandler()
+        game.world.unit_event_log = {"turn": game.world.time_manager.total_turns, "events": []}
+        game.session.unit_event_read_turns = {}
         game.selected_unit_ids = {id(slow), id(fast)}
         game.unit_selection_drag = None
         game._presentation_cache_revision = 0
@@ -79,7 +79,7 @@ class MapOrderTests(unittest.TestCase):
 
     def test_shift_destination_appends_after_existing_waypoint(self):
         game, slow, fast, destination = self.make_map()
-        self.assertTrue(game.issue_selected_move_orders(game.id_to_province[2]))
+        self.assertTrue(game.issue_selected_move_orders(game.world.id_to_province[2]))
         self.assertTrue(game.issue_selected_move_orders(destination, append=True))
         self.assertEqual(slow["order"]["path"], [2, 3])
         self.assertEqual(fast["order"]["path"], [3])
@@ -136,7 +136,7 @@ class MapOrderTests(unittest.TestCase):
         with patch.object(sound_effects, "play_ui_sound") as sound:
             game.select_map_units([])
             game.select_map_units([{"owner": "B"}])
-            game.viewing_ai_moves = True
+            game.session.viewing_ai_moves = True
             game.select_map_units([slow])
             sound.assert_not_called()
 
@@ -150,10 +150,10 @@ class MapOrderTests(unittest.TestCase):
         origin["units"] = [unit]
         second_origin["units"] = [second_unit]
         game = object.__new__(Map)
-        game.player_country = "A"
-        game.nation_data = {"A": {"armies": [{
+        game.session.player_country = "A"
+        game.world.nation_data = {"A": {"armies": [{
             "id": "army-a", "unit_ids": ["unit-a", "unit-b"]}]}}
-        game.map_data = {"origin": origin, "second": second_origin}
+        game.world.map_data = {"origin": origin, "second": second_origin}
         game.can_select_map_units = lambda: True
         game.select_map_units = Mock()
         game.focus_camera_on_army = Mock()
@@ -171,8 +171,8 @@ class MapOrderTests(unittest.TestCase):
         first_province = {"center": (100, 100)}
         second_province = {"center": (300, 200)}
         game = object.__new__(Map)
-        game.loop_map = False
-        game.map_w = 1000
+        game.world.loop_map = False
+        game.world.map_w = 1000
         game.camera = object()
         game.total_ui_h = 120
 
@@ -213,7 +213,7 @@ class CombatBubbleClickTests(unittest.TestCase):
             self.enterContext(patch.object(map_input, name, return_value=False))
         self.enterContext(patch.object(map_input.diplomatic_popups, "handle_events", return_value=False))
         self.enterContext(patch.object(map_input, "_update_map_hover"))
-        self.game.is_editor = self.game.selection_mode = False
+        self.game.session.is_editor = self.game.session.selection_mode = False
         for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             map_input.handle_map_events(self.game, pygame.event.Event(
                 kind, pos=self.position, button=1))
@@ -247,10 +247,10 @@ class CombatBubbleClickTests(unittest.TestCase):
     def test_bubble_selects_all_own_troops_even_outside_the_fighting_countries(self):
         second = {"owner": "A", "unit_id": "second", "combat_stance": "RESERVE"}
         remote = {"owner": "A", "unit_id": "remote"}
-        self.game.map_data["remote"] = {"units": [remote]}
+        self.game.world.map_data["remote"] = {"units": [remote]}
         self.game.selected_unit_ids = {"remote"}
         self.tile["units"].extend([second, {"owner": "B"}, {"owner": "C"}])
-        self.game.nation_data = {"A": {"at_war_with": []},
+        self.game.world.nation_data = {"A": {"at_war_with": []},
                                  "B": {"at_war_with": ["C"]},
                                  "C": {"at_war_with": ["B"]}}
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
@@ -267,8 +267,8 @@ class CombatBubbleClickTests(unittest.TestCase):
         for owner, tactical in (("B", False), ("A", True)):
             with self.subTest(owner=owner, tactical=tactical):
                 self.unit["owner"] = owner
-                self.game.tactical_mode = tactical
-                self.game.player_unit = {"owner": "A", "unit_id": "remote"}
+                self.game.session.tactical_mode = tactical
+                self.game.session.player_unit = {"owner": "A", "unit_id": "remote"}
                 self.game.selected_unit_ids = {"remote"}
                 self.game._ignore_left_until_release = False
                 event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
@@ -276,8 +276,8 @@ class CombatBubbleClickTests(unittest.TestCase):
                 self.assertEqual(self.game.selected_unit_ids, {"remote"})
 
     def test_tactical_bubble_selects_only_the_controlled_division(self):
-        self.game.tactical_mode = True
-        self.game.player_unit = self.unit
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = self.unit
         self.tile["units"].append({"owner": "A"})
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
 
@@ -290,8 +290,8 @@ class CombatBubbleClickTests(unittest.TestCase):
                                             (c.TOURNAMENT_SPECTATOR, False, False),
                                             ("A", True, False), ("A", True, True)):
             with self.subTest(player=player, realtime=realtime, submitted=submitted):
-                self.game.player_country = player
-                self.game.realtime_multiplayer = realtime
+                self.game.session.player_country = player
+                self.game.session.realtime_multiplayer = realtime
                 self.game.realtime_player_id = "player"
                 self.game.realtime_session = SimpleNamespace(
                     phase="TURN" if submitted else "PROCESSING",
@@ -342,7 +342,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
             invalidate_map_presentation_cache = lambda self: None
             def __init__(self):
                 self.selected_ids = {id(other_selected_unit)}
-                self.tactical_mode = False
+                self.session.tactical_mode = False
                 self.last_selection_additive = None
 
             def is_unit_selected(self, unit):
@@ -430,9 +430,9 @@ class OrdersSelectionRowsTests(unittest.TestCase):
             def __init__(self):
                 self.selected_ids = {id(first)}
                 self.selected_province = None
-                self.nation_data = {"A": {"armies": [{
+                self.world.nation_data = {"A": {"armies": [{
                     "id": "army", "unit_ids": ["first", "second"]}]}}
-                self.map_data = {1: origin}
+                self.world.map_data = {1: origin}
 
             def click_select_map_units(self, units, additive=False):
                 unit_ids = {id(unit) for unit in units}
@@ -488,7 +488,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
 
             def selected_unit_records(self):
                 return [(unit, province)
-                        for province in self.map_data.values()
+                        for province in self.world.map_data.values()
                         for unit in province["units"] if id(unit) in self.selected_ids]
 
             def is_unit_selected(self, unit):
@@ -597,13 +597,13 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         first = {"owner": "A", "type": "Infantry", "health": 0, "max_health": 100}
         second = {"owner": "A", "type": "Infantry", "health": 0, "max_health": 100}
         screen, map_stub, feedback = self._screen(first, second)
-        map_stub.nation_data["A"]["materials"] = 150
+        map_stub.world.nation_data["A"]["materials"] = 150
 
         screen.repair_selected_units()
 
         self.assertNotIn("order", first)
         self.assertNotIn("order", second)
-        self.assertEqual(map_stub.nation_data["A"]["materials"], 150)
+        self.assertEqual(map_stub.world.nation_data["A"]["materials"], 150)
         self.assertIn("Cannot afford repairs", feedback[-1])
 
     def test_repair_selected_replaces_existing_movement_orders(self):
@@ -617,7 +617,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
 
         self.assertEqual(first["order"]["type"], "REPAIR")
         self.assertEqual(second["order"]["type"], "REPAIR")
-        self.assertEqual(map_stub.nation_data["A"]["materials"], 800)
+        self.assertEqual(map_stub.world.nation_data["A"]["materials"], 800)
 
     def test_upgrade_selected_uses_each_units_legal_upgrade_target(self):
         first = {"owner": "A", "type": "Infantry", "order": {"path": [2]}}
@@ -627,7 +627,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         from tests.research_fixtures import fixture_metadata
         screen.unit_library["Infantry"]["metadata"] = fixture_metadata(tier=1)
         screen.unit_library["Fixture upgraded infantry"] = {"metadata": fixture_metadata(tier=2, level=2)}
-        _map_stub.nation_data["A"]["research"] = {"fixture_track": 2}
+        _map_stub.world.nation_data["A"]["research"] = {"fixture_track": 2}
         screen.upgrade_selected_units()
 
         self.assertEqual(first["order"]["target_type"], "Fixture upgraded infantry")
@@ -657,15 +657,15 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry",
                   "order": {"type": "REPAIR", "refund": refund}}
         screen, map_stub, _feedback = self._screen(first, second)
-        map_stub.nation_data["A"]["materials"] = 800
-        map_stub.nation_data["A"]["manpower"] = 900
+        map_stub.world.nation_data["A"]["materials"] = 800
+        map_stub.world.nation_data["A"]["manpower"] = 900
 
         screen.cancel_selected_batch_orders("REPAIR")
 
         self.assertNotIn("order", first)
         self.assertNotIn("order", second)
-        self.assertEqual(map_stub.nation_data["A"]["materials"], 1000)
-        self.assertEqual(map_stub.nation_data["A"]["manpower"], 1000)
+        self.assertEqual(map_stub.world.nation_data["A"]["materials"], 1000)
+        self.assertEqual(map_stub.world.nation_data["A"]["manpower"], 1000)
 
     def test_cancel_selected_upgrade_removes_every_selected_upgrade_order(self):
         first = {"owner": "A", "type": "Infantry", "order": {"type": "UPGRADE"}}
@@ -682,7 +682,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
         screen, game, _feedback = self._screen(first, second)
         records = game.selected_unit_records()
-        game.map_data = {str(province["id"]): province for _unit, province in records}
+        game.world.map_data = {str(province["id"]): province for _unit, province in records}
         with patch.object(sound_effects, "play_ui_sound") as sound:
             screen.cancel_unit_order(0, records[0][1])
             sound.assert_called_once_with("cancel_orders")
@@ -875,12 +875,12 @@ class MapOrderGestureTests(unittest.TestCase):
             "rect": pygame.Rect(10, 10, 20, 20),
             "province": origin, "units": [unit],
         }]
-        map_stub.map_data = {"one": origin, "two": other_origin}
-        map_stub.nation_data = {"A": {"at_war_with": []}}
-        map_stub.player_country = "A"
-        map_stub.selection_mode = map_stub.is_editor = False
-        map_stub.viewing_ai_moves = map_stub.ai_is_thinking = False
-        map_stub.tactical_mode = False
+        map_stub.world.map_data = {"one": origin, "two": other_origin}
+        map_stub.world.nation_data = {"A": {"at_war_with": []}}
+        map_stub.session.player_country = "A"
+        map_stub.session.selection_mode = map_stub.session.is_editor = False
+        map_stub.session.viewing_ai_moves = map_stub.session.ai_is_thinking = False
+        map_stub.session.tactical_mode = False
         map_stub.selected_unit_ids = {id(unit), id(other)}
         map_stub.show_feedback = lambda _text: None
         opened = []
@@ -1098,8 +1098,8 @@ class MapViewDefaultTests(unittest.TestCase):
         with patch("screens.game.map_buttons.render_buttons"):
             player_setup.confirm_player_country(map_stub)
 
-        self.assertEqual(map_stub.player_country, "A")
-        self.assertFalse(map_stub.selection_mode)
+        self.assertEqual(map_stub.session.player_country, "A")
+        self.assertFalse(map_stub.session.selection_mode)
         self.assertEqual(applied, [True])
         self.assertEqual(focused, [("A", True)])
 
@@ -1116,10 +1116,10 @@ class MapViewDefaultTests(unittest.TestCase):
             player_setup.confirm_player_country(map_stub)
         map_stub.focus_camera_on_position.assert_called_once_with(tile["center"], animate=True)
         map_stub.focus_camera_on_country.assert_not_called()
-        self.assertIs(map_stub.player_unit, unit)
+        self.assertIs(map_stub.session.player_unit, unit)
         self.assertNotIn("_is_tactical_ghost", unit)
         self.assertIsNone(map_stub.selected_province)
-        self.assertFalse(map_stub.selection_mode)
+        self.assertFalse(map_stub.session.selection_mode)
 
     def test_starting_spectator_applies_the_play_view_defaults(self):
         applied = []
@@ -1139,18 +1139,18 @@ class MapViewDefaultTests(unittest.TestCase):
         with patch("screens.game.map_buttons.render_buttons"):
             player_setup.start_spectator(map_stub)
 
-        self.assertEqual(map_stub.player_country, "Spectator")
-        self.assertFalse(map_stub.selection_mode)
+        self.assertEqual(map_stub.session.player_country, "Spectator")
+        self.assertFalse(map_stub.session.selection_mode)
         self.assertEqual(applied, [True])
 
     def test_country_focus_uses_core_center_and_unit_visible_zoom(self):
         map_screen = object.__new__(Map)
-        map_screen.map_data = {
+        map_screen.world.map_data = {
             "first": {"owner": "A", "cores": ["A"], "center": (100, 100)},
             "second": {"owner": "A", "cores": ["A"], "center": (300, 200)},
         }
-        map_screen.loop_map = False
-        map_screen.map_w = 1000
+        map_screen.world.loop_map = False
+        map_screen.world.map_w = 1000
         map_screen.min_zoom = 0.5
         map_screen.total_ui_h = 120
         map_screen.camera = type("CameraStub", (), {

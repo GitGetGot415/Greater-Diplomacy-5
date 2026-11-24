@@ -20,12 +20,12 @@ from map_logic.ai import ai_movement, ai_world
 
 class FakeScreen(MapDouble):
     def __init__(self, units):
-        self.map_data = {
+        self.world.map_data = {
             "p1": {"id": 1, "json_key": "p1", "owner": "Avaria", "neighbors": [],
                    "units": units}
         }
-        self.id_to_province = {1: self.map_data["p1"]}
-        self.nation_data = {"Avaria": {}}
+        self.world.id_to_province = {1: self.world.map_data["p1"]}
+        self.world.nation_data = {"Avaria": {}}
         fill_state_defaults(self)
 
 
@@ -82,7 +82,7 @@ class BombardmentScreen(MapDouble):
     """Three tiles in a row: home - near - far."""
 
     def __init__(self, near_units=(), far_units=()):
-        self.map_data = {
+        self.world.map_data = {
             "home": {"id": 1, "json_key": "home", "owner": "Avaria", "neighbors": [2],
                      "units": []},
             "near": {"id": 2, "json_key": "near", "owner": "Bruland", "neighbors": [1, 3],
@@ -90,8 +90,8 @@ class BombardmentScreen(MapDouble):
             "far": {"id": 3, "json_key": "far", "owner": "Bruland", "neighbors": [2],
                     "units": list(far_units)},
         }
-        self.id_to_province = {p["id"]: p for p in self.map_data.values()}
-        self.nation_data = {"Avaria": {"at_war_with": ["Bruland"]},
+        self.world.id_to_province = {p["id"]: p for p in self.world.map_data.values()}
+        self.world.nation_data = {"Avaria": {"at_war_with": ["Bruland"]},
                             "Bruland": {"at_war_with": ["Avaria"]}}
 
 
@@ -118,43 +118,43 @@ class BombardmentTests(unittest.TestCase):
     def gun(self, screen, kind="Fixture Gun"):
         unit = {"type": kind, "owner": "Avaria", "health": 200,
                 "order": {"type": "MOVE", "path": []}}
-        screen.map_data["home"]["units"].append(unit)
+        screen.world.map_data["home"]["units"].append(unit)
         return unit
 
     def test_a_gun_shells_an_adjacent_enemy_instead_of_charging_it(self):
         screen = BombardmentScreen(near_units=[enemy()])
         gun = self.gun(screen)
-        fired = ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"])
+        fired = ai_movement._try_bombard(screen, "Avaria", gun, screen.world.map_data["home"])
         self.assertTrue(fired)
         self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
 
     def test_a_gun_with_nothing_in_range_is_left_to_move(self):
         screen = BombardmentScreen()
         gun = self.gun(screen)
-        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"]))
+        self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun, screen.world.map_data["home"]))
         self.assertEqual(gun["order"], {"type": "MOVE", "path": []})
 
     def test_an_ordinary_unit_never_bombards(self):
         screen = BombardmentScreen(near_units=[enemy()])
         rifles = self.gun(screen, "Fixture Rifles")
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", rifles,
-                                                  screen.map_data["home"]))
+                                                  screen.world.map_data["home"]))
 
     def test_range_two_reaches_past_the_next_tile(self):
         """The artificial long-range gun can reach the farther tile."""
         screen = BombardmentScreen(far_units=[enemy()])
         short, long = self.gun(screen, "Fixture Gun"), self.gun(screen, "Fixture Long Gun")
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", short,
-                                                  screen.map_data["home"]))
+                                                  screen.world.map_data["home"]))
         self.assertTrue(ai_movement._try_bombard(screen, "Avaria", long,
-                                                 screen.map_data["home"]))
+                                                 screen.world.map_data["home"]))
         self.assertEqual(long["order"]["target_id"], 3)
 
     def test_the_heaviest_enemy_stack_is_picked(self):
         screen = BombardmentScreen(near_units=[enemy(attack=10, health=10)],
                                    far_units=[enemy(attack=900, health=5000)])
         gun = self.gun(screen, "Fixture Long Gun")
-        ai_movement._try_bombard(screen, "Avaria", gun, screen.map_data["home"])
+        ai_movement._try_bombard(screen, "Avaria", gun, screen.world.map_data["home"])
         self.assertEqual(gun["order"]["target_id"], 3)
 
     def test_a_tile_holding_only_non_enemies_is_not_shelled(self):
@@ -162,14 +162,14 @@ class BombardmentTests(unittest.TestCase):
         screen = BombardmentScreen(near_units=[neutral])
         gun = self.gun(screen)
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", gun,
-                                                  screen.map_data["home"]))
+                                                  screen.world.map_data["home"]))
 
     def test_a_gun_riding_a_convoy_cannot_fire(self):
         """The loaded name is not in the unit library and not in the table."""
         screen = BombardmentScreen(near_units=[enemy()])
         loaded = self.gun(screen, "Convoy (Fixture Gun)")
         self.assertFalse(ai_movement._try_bombard(screen, "Avaria", loaded,
-                                                  screen.map_data["home"]))
+                                                  screen.world.map_data["home"]))
 
 
 #: Everything _build_target_assignments hands to _assign_unit_orders. Kept in
@@ -213,21 +213,21 @@ class BombardmentPriorityTests(unittest.TestCase):
 
     def screen_with_a_losing_fleet(self):
         screen = BombardmentScreen()
-        home = screen.map_data["home"]
+        home = screen.world.map_data["home"]
         home["neighbors"] = [2, 3]
-        screen.map_data["far"]["neighbors"] = [1, 2]
+        screen.world.map_data["far"]["neighbors"] = [1, 2]
         # A sea tile to run to, and an overwhelming enemy fleet in our own.
         for key in ("home", "near", "far"):
-            screen.map_data[key]["terrain"] = "ocean"
+            screen.world.map_data[key]["terrain"] = "ocean"
         ship = {"type": "Aircraft Carrier III", "owner": "Avaria", "health": 500,
                 "attack": 10, "defense": 0, "order": {"type": "MOVE", "path": []}}
         home["units"] = [ship, dict(enemy(attack=99999, health=99999))]
-        screen.map_data["near"]["units"] = [enemy()]
+        screen.world.map_data["near"]["units"] = [enemy()]
         return screen, ship
 
     def test_a_losing_fleet_withdraws_instead_of_shelling(self):
         screen, ship = self.screen_with_a_losing_fleet()
-        units_info = [(ship, screen.map_data["home"])]
+        units_info = [(ship, screen.world.map_data["home"])]
         battles = ai_movement._track_battles_and_convoys(
             screen, "Avaria", units_info, {"Avaria"}, set(), set(), set())
         self.assertEqual(battles["lost_battles"], {1})
@@ -241,7 +241,7 @@ class BombardmentPriorityTests(unittest.TestCase):
         """Bombarding does not stop a unit fighting where it stands, so a gun
         pinned in a melee has no reason not to also shell the tile next door."""
         screen = BombardmentScreen(near_units=[enemy()])
-        home = screen.map_data["home"]
+        home = screen.world.map_data["home"]
         gun = {"type": "Artillery III", "owner": "Avaria", "health": 200,
                "attack": 100, "defense": 0, "order": {"type": "MOVE", "path": []}}
         home["units"] = [gun, dict(enemy(attack=1, health=1))]
@@ -263,10 +263,10 @@ class ImmediateLossAttackTests(unittest.TestCase):
 
     def screen(self, defender):
         screen = BombardmentScreen(near_units=[defender])
-        attacker_prov = screen.map_data["home"]
+        attacker_prov = screen.world.map_data["home"]
         attacker_prov["units"] = []
         attacker_prov["neighbors"] = [2]
-        screen.map_data["near"]["neighbors"] = [1]
+        screen.world.map_data["near"]["neighbors"] = [1]
         return screen
 
     def attacker(self, attack=100, health=100):
@@ -283,10 +283,10 @@ class ImmediateLossAttackTests(unittest.TestCase):
     def test_it_does_not_charge_when_the_first_exchange_wipes_the_attacker(self):
         screen = self.screen(self.defender(attack=1000, health=1000))
         attacker = self.attacker(attack=1, health=1)
-        screen.map_data["home"]["units"] = [attacker]
+        screen.world.map_data["home"]["units"] = [attacker]
 
         ai_movement._assign_unit_orders(
-            screen, "Avaria", [(attacker, screen.map_data["home"])],
+            screen, "Avaria", [(attacker, screen.world.map_data["home"])],
             self.context(), {1, 2}, set(), {1: [2], 2: [1]})
 
         self.assertEqual(attacker["order"], {"type": "MOVE", "path": []})
@@ -294,10 +294,10 @@ class ImmediateLossAttackTests(unittest.TestCase):
     def test_it_still_charges_when_the_attacker_can_survive(self):
         screen = self.screen(self.defender(attack=1, health=1000))
         attacker = self.attacker(attack=100, health=100)
-        screen.map_data["home"]["units"] = [attacker]
+        screen.world.map_data["home"]["units"] = [attacker]
 
         ai_movement._assign_unit_orders(
-            screen, "Avaria", [(attacker, screen.map_data["home"])],
+            screen, "Avaria", [(attacker, screen.world.map_data["home"])],
             self.context(), {1, 2}, set(), {1: [2], 2: [1]})
 
         self.assertEqual(attacker["order"]["path"], [2])
@@ -315,22 +315,22 @@ class GridScreen(MapDouble):
     """Provinces from {id: (owner, neighbors)}; Avaria and Bruland at war."""
 
     def __init__(self, layout, scenario_settings=None):
-        self.map_data = {}
+        self.world.map_data = {}
         for pid, (owner, neighbors) in layout.items():
-            self.map_data[str(pid)] = {"id": pid, "json_key": str(pid), "owner": owner,
+            self.world.map_data[str(pid)] = {"id": pid, "json_key": str(pid), "owner": owner,
                                        "cores": [owner], "neighbors": list(neighbors),
                                        "units": [], "buildings": [], "terrain": "plains",
                                        "is_coastal": False}
-        self.id_to_province = {p["id"]: p for p in self.map_data.values()}
-        self.nation_data = {"Avaria": {"at_war_with": ["Bruland"]},
+        self.world.id_to_province = {p["id"]: p for p in self.world.map_data.values()}
+        self.world.nation_data = {"Avaria": {"at_war_with": ["Bruland"]},
                             "Bruland": {"at_war_with": ["Avaria"]},
                             "Cirenia": {"at_war_with": []}}
-        self.scenario_settings = dict(scenario_settings or {})
+        self.world.scenario_settings = dict(scenario_settings or {})
         fill_state_defaults(self)
 
     def place(self, pid, *units):
-        self.id_to_province[pid]["units"].extend(units)
-        return [(unit, self.id_to_province[pid]) for unit in units]
+        self.world.id_to_province[pid]["units"].extend(units)
+        return [(unit, self.world.id_to_province[pid]) for unit in units]
 
 
 class NavalReinforcementTests(unittest.TestCase):
@@ -340,11 +340,11 @@ class NavalReinforcementTests(unittest.TestCase):
 
     def board(self, layout):
         screen = GridScreen(layout)
-        for province in screen.id_to_province.values():
+        for province in screen.world.id_to_province.values():
             if province["owner"] == "Ocean":
                 province["terrain"] = "coastal_sea"
             else:
-                province["is_coastal"] = any(screen.id_to_province[n]["owner"] == "Ocean" for n in province["neighbors"])
+                province["is_coastal"] = any(screen.world.id_to_province[n]["owner"] == "Ocean" for n in province["neighbors"])
         return screen
 
     def ship(self, owner="Avaria"):
@@ -364,7 +364,7 @@ class NavalReinforcementTests(unittest.TestCase):
         screen.place(2, self.ship(), self.ship("Bruland"))
         reinforcement += screen.place(3, convoy)
 
-        self.assertEqual(ai_movement._available_reinforcements(screen, "Avaria", screen.id_to_province[2], reinforcement), [reserve])
+        self.assertEqual(ai_movement._available_reinforcements(screen, "Avaria", screen.world.id_to_province[2], reinforcement), [reserve])
 
         self.plan(screen)
 
@@ -391,9 +391,9 @@ class NavalReinforcementTests(unittest.TestCase):
             with self.subTest(mutual_enemy=mutual_enemy):
                 screen = self.board({1: ("Ocean", [2]), 2: ("Ocean", [1])})
                 enemy_owner = "Bruland" if mutual_enemy else "Dornia"
-                screen.nation_data["Avaria"]["faction"] = "Fixture Faction"
-                screen.nation_data["Cirenia"].update(faction="Fixture Faction", at_war_with=[enemy_owner])
-                screen.nation_data.setdefault(enemy_owner, {"at_war_with": []})["at_war_with"].append("Cirenia")
+                screen.world.nation_data["Avaria"]["faction"] = "Fixture Faction"
+                screen.world.nation_data["Cirenia"].update(faction="Fixture Faction", at_war_with=[enemy_owner])
+                screen.world.nation_data.setdefault(enemy_owner, {"at_war_with": []})["at_war_with"].append("Cirenia")
                 reserve = self.ship()
                 screen.place(1, reserve)
                 screen.place(2, self.ship("Cirenia"), self.ship(enemy_owner))
@@ -431,10 +431,10 @@ class WoundedUnitsDoNotChargeTests(unittest.TestCase):
         screen = self.screen(self.defender(attack=1, health=1000))
         hurt = self.attacker(attack=100, health=100)
         hurt["health"] = int(hurt["max_health"] * ai_tuning.AI_REPAIR_HEALTH_FRACTION) - 1
-        screen.map_data["home"]["units"] = [hurt]
+        screen.world.map_data["home"]["units"] = [hurt]
 
         ai_movement._assign_unit_orders(
-            screen, "Avaria", [(hurt, screen.map_data["home"])],
+            screen, "Avaria", [(hurt, screen.world.map_data["home"])],
             self.context(), {1, 2}, set(), {1: [2], 2: [1]})
 
         self.assertEqual(hurt["order"], {"type": "MOVE", "path": []})
@@ -470,10 +470,10 @@ class LoneGuardTests(unittest.TestCase):
         # The weighted count carries the rear-guard penalty; the unit count does not.
         self.assertGreater(built["target_assignments"][1], 1)
         ctx = empty_ctx(**borders, **battles, **built)
-        neighbors = {pid: list(p["neighbors"]) for pid, p in screen.id_to_province.items()}
+        neighbors = {pid: list(p["neighbors"]) for pid, p in screen.world.id_to_province.items()}
 
         ai_movement._assign_unit_orders(screen, "Avaria", units_info, ctx,
-                                        set(screen.id_to_province), set(), neighbors)
+                                        set(screen.world.id_to_province), set(), neighbors)
 
         self.assertEqual(units_info[0][0]["order"]["path"], [])
 
@@ -485,7 +485,7 @@ class SurpriseAttackSettingTests(unittest.TestCase):
         from unittest.mock import patch
         from data import queries
         screen = GridScreen({1: ("Avaria", [])}, {"surprise_attack": world_flag})
-        screen.nation_data["Avaria"]["queued_ai_actions"] = [
+        screen.world.nation_data["Avaria"]["queued_ai_actions"] = [
             {"action": "WAR_DECLARATION", "target": "Cirenia"}]
         with patch.object(queries, "get_scenario_settings",
                           return_value={"surprise_attack": global_flag}):
@@ -503,7 +503,7 @@ class ForecastRetreatTests(unittest.TestCase):
         screen = GridScreen({1: ("Avaria", [2]), 2: ("Avaria", [1])})
         screen.place(1, *ours, *theirs)
         screen.place(2, *reinforcements)
-        return screen, screen.id_to_province[1]
+        return screen, screen.world.id_to_province[1]
 
     def test_a_hopeless_fight_is_lost(self):
         screen, prov = self.tile([fixture_unit(attack=1)],
@@ -544,7 +544,7 @@ class RetreatTileTests(unittest.TestCase):
 
     def pick(self, havens):
         return ai_movement._retreat_tile(self.screen, "Avaria", self.unit,
-                                         self.screen.id_to_province[1], {"Avaria"},
+                                         self.screen.world.id_to_province[1], {"Avaria"},
                                          set(), havens)
 
     def test_a_repair_haven_comes_first(self):
@@ -579,9 +579,9 @@ class CoastThreatTests(unittest.TestCase):
             layout[2] = ("The Rot", [1])
         screen = GridScreen(layout, {"fog_of_war": fog})
         for pid in (10, 11):
-            screen.id_to_province[pid]["terrain"] = "ocean"
+            screen.world.id_to_province[pid]["terrain"] = "ocean"
         for pid in (1, 20):
-            screen.id_to_province[pid]["is_coastal"] = True
+            screen.world.id_to_province[pid]["is_coastal"] = True
         return screen
 
     def threatened(self, screen, enemies=("Bruland",)):
@@ -624,7 +624,7 @@ class CoastThreatTests(unittest.TestCase):
     def test_only_threatened_quiet_coasts_are_destinations(self):
         screen = self.screen(shore_owner="Cirenia")
         borders = ai_movement._discover_borders_and_targets(
-            screen, "Avaria", [screen.id_to_province[1]], ["Bruland"], {"Avaria"})
+            screen, "Avaria", [screen.world.id_to_province[1]], ["Bruland"], {"Avaria"})
         self.assertEqual(borders["coastal_approaches"], {})
 
     def test_rot_border_uses_the_existing_coastal_threat_rule(self):
@@ -632,7 +632,7 @@ class CoastThreatTests(unittest.TestCase):
             with self.subTest(shore_owner=shore_owner):
                 screen = self.screen(shore_owner=shore_owner, rot_border=True)
                 borders = ai_movement._discover_borders_and_targets(
-                    screen, "Avaria", [screen.id_to_province[1]], ["Bruland", "The Rot"], {"Avaria"})
+                    screen, "Avaria", [screen.world.id_to_province[1]], ["Bruland", "The Rot"], {"Avaria"})
                 self.assertEqual(borders["war_borders"], set())
                 self.assertEqual(borders["peace_borders"], set())
                 self.assertEqual(borders["unclaimed_targets"], set())

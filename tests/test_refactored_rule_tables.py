@@ -56,13 +56,13 @@ class FastUnitPathTests(unittest.TestCase):
             4: {"neighbors": [2], "owner": "Closed"},
             5: {"neighbors": [3], "owner": "Open"},
         }
-        self.world = map_double(id_to_province=provinces, nation_data={})
+        self.game = map_double(id_to_province=provinces, nation_data={})
 
     def extend(self, speed, can_push, can_step=True):
         unit = {"speed": speed}
         with patch.object(queries, "is_water_province", return_value=False),                 patch.object(queries, "can_unit_move_step", return_value=can_step):
             return [2] + ai_movement._extend_fast_unit_path(
-                self.world, unit, 2, 1, False, set(), lambda tile: tile, can_push)
+                self.game, unit, 2, 1, False, set(), lambda tile: tile, can_push)
 
     def test_slow_units_keep_their_first_step(self):
         self.assertEqual(self.extend(1, lambda owner: True), [2])

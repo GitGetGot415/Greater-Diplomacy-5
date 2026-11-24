@@ -10,6 +10,7 @@ from data.state_access import BackendState
 from map_logic.ai import ai_letters, ai_movement
 from map_logic.system32 import turn_manager, turn_processor
 from ui.panels import turn_progress
+from tests.stub_map_screen import state_owner
 
 
 class ProgressValuesTests(unittest.TestCase):
@@ -26,7 +27,7 @@ class ProgressValuesTests(unittest.TestCase):
 class TurnCounterTests(unittest.TestCase):
     def trigger(self, *, disabled=False, mode="OFF", countries=("A", "B")):
         context = BackendState()
-        context.scenario_settings = {"ai_disabled": disabled}
+        context.world.scenario_settings = {"ai_disabled": disabled}
         context.draw = mock.Mock()
         for phase in ("letters", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
             setattr(context.session, phase + "_total", 9)
@@ -44,32 +45,32 @@ class TurnCounterTests(unittest.TestCase):
 
     def test_model_off_leaves_rule_based_work_active(self):
         context = self.trigger()
-        self.assertEqual(context.proactive_tasks_total, 2)
-        self.assertEqual(context.movement_tasks_total, 2)
+        self.assertEqual(context.session.proactive_tasks_total, 2)
+        self.assertEqual(context.session.movement_tasks_total, 2)
         for phase in ("letters", "proactive_llm_tasks", "responsive_tasks"):
-            self.assertEqual(getattr(context, phase + "_total"), 0)
-            self.assertEqual(getattr(context, phase + "_completed"), 0)
+            self.assertEqual(getattr(state_owner(context, phase + "_total"), phase + "_total"), 0)
+            self.assertEqual(getattr(state_owner(context, phase + "_completed"), phase + "_completed"), 0)
 
     def test_enabled_model_workloads_remain_pending_until_prepared(self):
         context = self.trigger(mode="FIXTURE_PROVIDER")
         for phase in ("letters", "proactive_llm_tasks", "responsive_tasks"):
-            self.assertEqual(getattr(context, phase + "_total"), -1)
-            self.assertEqual(getattr(context, phase + "_completed"), 0)
+            self.assertEqual(getattr(state_owner(context, phase + "_total"), phase + "_total"), -1)
+            self.assertEqual(getattr(state_owner(context, phase + "_completed"), phase + "_completed"), 0)
 
     def test_disabled_ai_and_empty_ai_rosters_have_no_pending_work(self):
         for settings in ({"disabled": True}, {"countries": ()}):
             with self.subTest(settings=settings):
                 context = self.trigger(mode="FIXTURE_PROVIDER", **settings)
                 for phase in ("letters", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
-                    self.assertEqual(getattr(context, phase + "_total"), 0)
-                    self.assertEqual(getattr(context, phase + "_completed"), 0)
+                    self.assertEqual(getattr(state_owner(context, phase + "_total"), phase + "_total"), 0)
+                    self.assertEqual(getattr(state_owner(context, phase + "_completed"), phase + "_completed"), 0)
 
     def test_direct_disabled_ai_turn_clears_previous_movement_and_model_work(self):
         context = BackendState()
-        context.scenario_settings = {"ai_disabled": True}
+        context.world.scenario_settings = {"ai_disabled": True}
         for phase in ("letters", "movement_tasks", "responsive_tasks"):
-            setattr(context, phase + "_total", -1)
-            setattr(context, phase + "_completed", 4)
+            setattr(state_owner(context, phase + "_total"), phase + "_total", -1)
+            setattr(state_owner(context, phase + "_completed"), phase + "_completed", 4)
         with mock.patch.object(turn_processor.ai_llm_runner, "begin_turn"), \
                 mock.patch.object(turn_processor.scripted_events, "process_scripted_events"), \
                 mock.patch.object(turn_processor.diplomacy_processor, "process_diplomacy_turn"), \
@@ -77,26 +78,26 @@ class TurnCounterTests(unittest.TestCase):
             asyncio.run(turn_processor.prepare_turn(context))
         movement.assert_not_called()
         for phase in ("letters", "movement_tasks", "responsive_tasks"):
-            self.assertEqual(getattr(context, phase + "_total"), 0)
-            self.assertEqual(getattr(context, phase + "_completed"), 0)
+            self.assertEqual(getattr(state_owner(context, phase + "_total"), phase + "_total"), 0)
+            self.assertEqual(getattr(state_owner(context, phase + "_completed"), phase + "_completed"), 0)
 
     def test_model_off_letters_clear_previous_counts(self):
         context = BackendState()
-        context.letters_total, context.letters_completed = 3, 2
+        context.session.letters_total, context.session.letters_completed = 3, 2
         with mock.patch.object(ai_letters.ai_handler, "get_ai_mode", return_value="OFF"):
             ai_letters.process_letters(context)
-        self.assertEqual((context.letters_completed, context.letters_total), (0, 0))
+        self.assertEqual((context.session.letters_completed, context.session.letters_total), (0, 0))
 
     def test_no_letter_writers_clear_the_pending_total(self):
         context = BackendState()
-        context.letters_total = -1
+        context.session.letters_total = -1
         with mock.patch.object(ai_letters.ai_handler, "get_ai_mode", return_value="FIXTURE_PROVIDER"), \
                 mock.patch.object(ai_letters.ai_world, "for_screen"), \
                 mock.patch.object(ai_letters.queries, "get_living_nations", return_value={"A", "B"}), \
                 mock.patch.object(ai_letters.queries, "get_active_ai_nations", return_value=["A", "B"]), \
                 mock.patch.object(ai_letters.ai_evaluation, "llm_enabled_for", return_value=None):
             ai_letters.process_letters(context)
-        self.assertEqual((context.letters_completed, context.letters_total), (0, 0))
+        self.assertEqual((context.session.letters_completed, context.session.letters_total), (0, 0))
 
 
 class MovementCounterTests(unittest.TestCase):
@@ -109,7 +110,7 @@ class MovementCounterTests(unittest.TestCase):
         seen, cleanup = [], []
 
         def assign_air(_context, country, _units):
-            seen.append((country, context.movement_tasks_completed, context.movement_tasks_total))
+            seen.append((country, context.session.movement_tasks_completed, context.session.movement_tasks_total))
             if fail:
                 raise ValueError("Fixture planning failure")
 
@@ -127,7 +128,7 @@ class MovementCounterTests(unittest.TestCase):
             patches.enter_context(mock.patch.object(ai_movement, "_assign_air_orders", side_effect=assign_air))
             patches.enter_context(mock.patch.object(ai_movement, "_assign_maintenance_orders"))
             patches.enter_context(mock.patch.object(ai_movement, "_cancel_opposing_transitions",
-                side_effect=lambda *args: cleanup.append(context.movement_tasks_completed)))
+                side_effect=lambda *args: cleanup.append(context.session.movement_tasks_completed)))
             patches.enter_context(mock.patch.object(ai_movement.queries, "get_active_ai_nations", return_value=list(countries)))
             patches.enter_context(mock.patch.object(ai_movement.queries, "get_all_friendly_nations", return_value=set()))
             patches.enter_context(mock.patch.object(ai_movement.queries, "is_air_unit", side_effect=lambda unit, **kw: unit["kind"] == "air"))
@@ -145,16 +146,16 @@ class MovementCounterTests(unittest.TestCase):
         context, seen, cleanup = self.plan()
         self.assertEqual(seen, [("Air", 1, 3), ("Ground", 2, 3)])
         self.assertEqual(cleanup, [2])
-        self.assertEqual((context.movement_tasks_completed, context.movement_tasks_total), (3, 3))
+        self.assertEqual((context.session.movement_tasks_completed, context.session.movement_tasks_total), (3, 3))
 
     def test_failed_country_is_not_counted_as_complete(self):
         context, seen, cleanup = self.plan(fail=True)
-        self.assertEqual((context.movement_tasks_completed, context.movement_tasks_total), (1, 3))
+        self.assertEqual((context.session.movement_tasks_completed, context.session.movement_tasks_total), (1, 3))
         self.assertEqual(cleanup, [])
 
     def test_empty_roster_has_no_movement_work(self):
         context, seen, cleanup = self.plan(countries=())
-        self.assertEqual((context.movement_tasks_completed, context.movement_tasks_total), (0, 0))
+        self.assertEqual((context.session.movement_tasks_completed, context.session.movement_tasks_total), (0, 0))
         self.assertEqual(seen, [])
 
 

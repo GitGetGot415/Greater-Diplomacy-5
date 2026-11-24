@@ -78,7 +78,7 @@ def alliance_tile(per_nation=8):
     for name, faction in (("A", "Front A"), ("B", "Front A"), ("X", "Front X"), ("Y", "Front X")):
         enemies = ["X", "Y"] if name in ("A", "B") else ["A", "B"]
         screen.add_nation(name, at_war_with=enemies)
-        screen.nation_data[name]["faction"] = faction
+        screen.world.nation_data[name]["faction"] = faction
 
     troops = {n: [unit(n, attack=10) for _ in range(per_nation)]
               for n in ("A", "B", "X", "Y")}
@@ -99,7 +99,7 @@ class TheFixturesFromTheRequestTests(unittest.TestCase):
     def test_two_allies_against_two_allies_form_one_lane(self):
         screen, prov, _troops = alliance_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(len(battle.lanes), 1)
         self.assertEqual(sides_of(battle), [(frozenset(("A", "B")), frozenset(("X", "Y")))])
@@ -116,7 +116,7 @@ class TheFixturesFromTheRequestTests(unittest.TestCase):
         """
         screen, prov, _troops = alliance_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(set(pairs_of(battle)),
                          {frozenset(("A", "X")), frozenset(("A", "Y")),
@@ -125,7 +125,7 @@ class TheFixturesFromTheRequestTests(unittest.TestCase):
     def test_three_mutually_hostile_powers_form_a_triangle(self):
         screen, prov, _troops = free_for_all_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(set(pairs_of(battle)),
                          {frozenset(("A", "B")), frozenset(("B", "C")),
@@ -137,7 +137,7 @@ class TheFixturesFromTheRequestTests(unittest.TestCase):
     def test_coalitions_collapse_to_one_per_nation_when_nobody_is_allied(self):
         screen, _prov, _troops = free_for_all_tile()
 
-        self.assertEqual(combat_rules.coalitions(["A", "B", "C"], screen.nation_data),
+        self.assertEqual(combat_rules.coalitions(["A", "B", "C"], screen.world.nation_data),
                          [["A"], ["B"], ["C"]])
 
 
@@ -178,7 +178,7 @@ class WidthTests(unittest.TestCase):
                         ("p1", "p2"), ("A", "B"), troops, terrains)]
 
                 combat_processor.resolve_meeting_engagement(
-                    *provinces, *troops, screen.nation_data)
+                    *provinces, *troops, screen.world.nation_data)
 
                 for side in troops:
                     self.assertAlmostEqual(damage_taken(side), 10.0 * slots)
@@ -191,7 +191,7 @@ class WidthTests(unittest.TestCase):
         for terrain in (None, "unknown", "mountain", "plains"):
             with self.subTest(terrain=terrain):
                 battle = combat_rules.build_battle(
-                    [prov["units"]], screen.nation_data,
+                    [prov["units"]], screen.world.nation_data,
                     width=c.COMBAT_WIDTH, terrain=terrain)
                 self.assertEqual(battle.lanes[0].slots,
                                  combat_rules.lane_slots(1, c.COMBAT_WIDTH))
@@ -207,7 +207,7 @@ class WidthTests(unittest.TestCase):
                 screen, prov, _ = alliance_tile(per_nation=c.COMBAT_WIDTH)
                 prov["terrain"] = terrain
                 estimate = overlay_renderer._simulate_combat(
-                    [prov["units"]], screen.nation_data, province=prov,
+                    [prov["units"]], screen.world.nation_data, province=prov,
                     max_turns=0)
                 combat_processor.process_combat(screen)
                 self.assertEqual([u["health"] for u in estimate["sides"][0]],
@@ -239,7 +239,7 @@ class WidthTests(unittest.TestCase):
                 side_slots = max(c.MIN_LANE_SLOTS_PER_SIDE, width // 2)
 
                 battle = combat_rules.build_battle(
-                    [province["units"]], screen.nation_data,
+                    [province["units"]], screen.world.nation_data,
                     terrain=province["terrain"])
                 self.assertEqual(len(side_for(battle, "A").front), side_slots)
                 self.assertEqual(battle.width, side_slots + 1)
@@ -295,14 +295,14 @@ class WidthTests(unittest.TestCase):
         screen.add_nation("BIG", at_war_with=["X"])
         screen.add_nation("SMALL", at_war_with=["X"])
         screen.add_nation("X", at_war_with=["BIG", "SMALL"])
-        screen.nation_data["BIG"]["faction"] = screen.nation_data["SMALL"]["faction"] = "Front BIG"
+        screen.world.nation_data["BIG"]["faction"] = screen.world.nation_data["SMALL"]["faction"] = "Front BIG"
 
         troops = {"BIG": [unit("BIG", attack=10) for _ in range(50)],
                   "SMALL": [unit("SMALL", attack=10) for _ in range(2)],
                   "X": [unit("X", attack=10) for _ in range(20)]}
         prov = tile(screen, troops, owner="BIG")
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         small = member_for(battle, "SMALL")
         big = member_for(battle, "BIG")
 
@@ -318,7 +318,7 @@ class WidthTests(unittest.TestCase):
         """Or a nation at war with two powers here fires the same units twice."""
         screen, prov, _troops = free_for_all_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         seated = [u for lane in battle.lanes
                   for side in (lane.a, lane.b)
                   for u in side.front]
@@ -335,7 +335,7 @@ class WidthTests(unittest.TestCase):
         """
         screen, prov, _troops = free_for_all_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(len(battle.lanes), 3)
         for lane in battle.lanes:
@@ -352,7 +352,7 @@ class ReserveTests(unittest.TestCase):
         thin = [unit("B", attack=10)]
         prov = tile(screen, {"A": deep, "B": thin})
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         side = side_for(battle, "A")
         reserve_ids = {id(u) for u in side.reserve}
 
@@ -403,7 +403,7 @@ class ReserveTests(unittest.TestCase):
         prov = tile(screen, {"A": [held] + rank,
                              "B": [unit("B", attack=10)]})
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         side = side_for(battle, "A")
 
         self.assertEqual({id(u) for u in side.front}, {id(u) for u in rank})
@@ -419,7 +419,7 @@ class TargetingTests(unittest.TestCase):
         for u in troops["A"]:
             u["lane_target"] = "C"
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         against_c = next(lane for lane in battle.lanes
                          if {*lane.a.nations, *lane.b.nations} == {"A", "C"})
         a_side = against_c.a if "A" in against_c.a.nations else against_c.b
@@ -430,7 +430,7 @@ class TargetingTests(unittest.TestCase):
         screen, prov, troops = free_for_all_tile(per_nation=2)
         troops["A"][0]["lane_target"] = "NOBODY_HERE"
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertIn("A", battle.engaged)
         self.assertIn(id(troops["A"][0]),
@@ -448,8 +448,8 @@ class CoalitionTests(unittest.TestCase):
         screen.add_nation("ALLY", at_war_with=["FOE"])
         screen.add_nation("FOE", at_war_with=["BIG", "ALLY"])
         screen.add_nation("SMALLFOE", at_war_with=["BIG"])
-        screen.nation_data["BIG"]["faction"] = screen.nation_data["ALLY"]["faction"] = "Front BIG"
-        screen.nation_data["FOE"]["faction"] = screen.nation_data["SMALLFOE"]["faction"] = "Front FOE"
+        screen.world.nation_data["BIG"]["faction"] = screen.world.nation_data["ALLY"]["faction"] = "Front BIG"
+        screen.world.nation_data["FOE"]["faction"] = screen.world.nation_data["SMALLFOE"]["faction"] = "Front FOE"
 
         # Sized so BIG+ALLY's combined muster exactly fills their side's lane
         # cap -- test_slots_held_is_the_answer_the_ai_asks_for depends on
@@ -465,7 +465,7 @@ class CoalitionTests(unittest.TestCase):
         """Standing beside an ally does not enlist you in that ally's wars."""
         screen, prov, troops = self.half_committed_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         ally = member_for(battle, "ALLY")
         untouchable = {id(u) for u in troops["SMALLFOE"]}
 
@@ -487,13 +487,13 @@ class CoalitionTests(unittest.TestCase):
         screen.add_nation("BIG", at_war_with=["FOE"])
         screen.add_nation("NEUTRAL_ALLY", at_war_with=[])
         screen.add_nation("FOE", at_war_with=["BIG"])
-        screen.nation_data["BIG"]["faction"] = screen.nation_data["NEUTRAL_ALLY"]["faction"] = "Front BIG"
+        screen.world.nation_data["BIG"]["faction"] = screen.world.nation_data["NEUTRAL_ALLY"]["faction"] = "Front BIG"
 
         prov = tile(screen, {"BIG": [unit("BIG", attack=10)],
                              "NEUTRAL_ALLY": [unit("NEUTRAL_ALLY", attack=99)],
                              "FOE": [unit("FOE", attack=10)]}, owner="BIG")
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(sides_of(battle), [(frozenset(("BIG",)), frozenset(("FOE",)))])
         self.assertEqual(battle.bystanders, ["NEUTRAL_ALLY"])
@@ -502,11 +502,11 @@ class CoalitionTests(unittest.TestCase):
         """Two callers used to work this out from the lane list themselves."""
         screen, prov, _troops = self.half_committed_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(combat_rules.slots_held(battle, "BIG"),
                          combat_rules.nation_front_capacity("BIG", prov,
-                                                            screen.nation_data))
+                                                            screen.world.nation_data))
 
 
 class DissolveTests(unittest.TestCase):
@@ -528,7 +528,7 @@ class DissolveTests(unittest.TestCase):
                   "C": [unit("C", attack=1, health=1) for _ in range(2)]}
         prov = tile(screen, troops)
 
-        before = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        before = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         self.assertEqual(len(before.lanes), 3)
 
         combat_processor.process_combat(screen)
@@ -536,7 +536,7 @@ class DissolveTests(unittest.TestCase):
         self.assertEqual([u for u in prov["units"] if u["owner"] == "C"], [],
                          "C was supposed to be routed by this exchange")
 
-        after = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        after = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         self.assertEqual(len(after.lanes), 1)
         self.assertGreater(after.lanes[0].slots, before.lanes[0].slots)
 
@@ -564,7 +564,7 @@ class OutnumberedTests(unittest.TestCase):
     def test_a_lone_defender_is_fought_by_everyone_standing_on_it(self):
         screen, prov, troops = self.three_way_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(set(pairs_of(battle)),
                          {frozenset(("SOV", "ROM")), frozenset(("SOV", "GER"))})
@@ -594,7 +594,7 @@ class OutnumberedTests(unittest.TestCase):
     def test_width_counts_a_two_front_unit_once(self):
         screen, prov, _troops = self.three_way_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(battle.width,
                          len({id(u) for lane in battle.lanes
@@ -621,7 +621,7 @@ class HeldBackTests(unittest.TestCase):
         prov = tile(screen, {"JAP": [unit("JAP", attack=50) for _ in range(5)],
                              "CHI": [lone]})
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(len(battle.lanes), 1)
         self.assertEqual([id(u) for u in member_for(battle, "CHI").front], [id(lone)])
@@ -640,7 +640,7 @@ class HeldBackTests(unittest.TestCase):
                                             for _ in range(c.LANE_SLOTS_TYPICAL)],
                              "B": [unit("B", attack=10)]})
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertNotIn(id(held), {id(u) for u in side_for(battle, "A").front})
 
@@ -665,7 +665,7 @@ class HeldBackTests(unittest.TestCase):
         prov = tile(screen, {"A": squad,
                              "B": [unit("B", attack=10) for _ in range(c.LANE_SLOTS_TYPICAL)]})
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         side = side_for(battle, "A")
 
         self.assertEqual(len(side.front), battle.lanes[0].slots)
@@ -686,14 +686,14 @@ class HeldBackTests(unittest.TestCase):
                                        ("X", "", ["A", "B"]),
                                        ("Y", "", ["A", "B"])):
             screen.add_nation(name, at_war_with=enemies)
-            screen.nation_data[name]["faction"] = faction
+            screen.world.nation_data[name]["faction"] = faction
 
         prov = tile(screen, {"A": [unit("A", attack=10) for _ in range(2)],
                              "B": [unit("B", attack=10) for _ in range(8)],
                              "X": [unit("X", attack=90) for _ in range(4)],
                              "Y": [unit("Y", attack=10) for _ in range(4)]})
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         for lane in battle.lanes:
             for side in (lane.a, lane.b):
@@ -737,8 +737,8 @@ class DeterminismTests(unittest.TestCase):
     def test_the_same_fight_resolves_identically_twice(self):
         screen, prov, _troops = free_for_all_tile()
 
-        first = combat_rules.build_battle([prov["units"]], screen.nation_data)
-        second = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        first = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
+        second = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         self.assertEqual(self.signature(first), self.signature(second))
 
@@ -746,13 +746,13 @@ class DeterminismTests(unittest.TestCase):
         """A save round-trip can reorder nation_data; the fight must not notice."""
         screen, prov, _troops = free_for_all_tile()
         baseline = self.signature(
-            combat_rules.build_battle([prov["units"]], screen.nation_data))
+            combat_rules.build_battle([prov["units"]], screen.world.nation_data))
 
-        screen.nation_data = {name: screen.nation_data[name]
-                              for name in reversed(list(screen.nation_data))}
+        screen.world.nation_data = {name: screen.world.nation_data[name]
+                              for name in reversed(list(screen.world.nation_data))}
 
         self.assertEqual(
-            self.signature(combat_rules.build_battle([prov["units"]], screen.nation_data)),
+            self.signature(combat_rules.build_battle([prov["units"]], screen.world.nation_data)),
             baseline)
 
 
@@ -770,11 +770,11 @@ class ChargeProbeTests(unittest.TestCase):
         garrison = [unit("DEF", attack=50) for _ in range(3)]
         charge = [unit("ATK", attack=5, health=10) for _ in range(2)]
 
-        probe = combat_rules.build_battle([garrison, charge], screen.nation_data)
+        probe = combat_rules.build_battle([garrison, charge], screen.world.nation_data)
         predicted = {id(u) for lane in probe.lanes for u in lane.b.front}
 
         prov = tile(screen, {"DEF": garrison, "ATK": charge})
-        fight = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        fight = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         actual = {id(u) for lane in fight.lanes
                   for side in (lane.a, lane.b) if "ATK" in side.nations
                   for u in side.front}
@@ -853,7 +853,7 @@ class AiRotationTests(unittest.TestCase):
         self.assertEqual(hurt.get("combat_stance"), "RESERVE")
         self.assertNotIn(id(hurt),
                          {id(u) for lane in combat_rules.build_battle(
-                             [prov["units"]], screen.nation_data).lanes
+                             [prov["units"]], screen.world.nation_data).lanes
                           for side in (lane.a, lane.b) for u in side.front})
 
     def test_a_hurt_unit_holds_its_slot_when_nobody_can_replace_it(self):

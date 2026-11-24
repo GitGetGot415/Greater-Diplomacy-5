@@ -70,10 +70,10 @@ class Screen(MapDouble):
                   "neighbors": [1], "units": [{"type": "Rifles", "owner": "Borland", "health": 100}],
                   "unit_queue": [], "building_queue": [], "buildings": [], "terrain": "plains",
                   "is_coastal": False}
-        self.map_data = {"1": home, "2": border}
-        self.id_to_province = {1: home, 2: border}
-        self.scenario_settings = {}
-        self.nation_data = {
+        self.world.map_data = {"1": home, "2": border}
+        self.world.id_to_province = {1: home, 2: border}
+        self.world.scenario_settings = {}
+        self.world.nation_data = {
             "Avaria": {"at_war_with": ["Borland"], "puppets": [], "master": "", "faction": "",
                        "research": {}, "materials": 10000, "manpower": 10000, "fuel": 10000},
             "Borland": {"at_war_with": ["Avaria"], "puppets": [], "master": "", "faction": "",
@@ -85,7 +85,7 @@ class Screen(MapDouble):
 class PanicBuildTests(unittest.TestCase):
     def test_the_chosen_unit_is_what_gets_queued(self):
         screen = Screen()
-        home = screen.id_to_province[1]
+        home = screen.world.id_to_province[1]
         queued = []
         candidates = {"Militia": value("Militia", 1.0), "Cavalry": value("Cavalry", 2.0)}
         state = {"upk_man": 0, "upk_mat": 0, "upk_fuel": 0}
@@ -94,7 +94,7 @@ class PanicBuildTests(unittest.TestCase):
                 patch.object(production_actions, "submit_production",
                              side_effect=lambda *a, **k: queued.append(a[4]["unit_type"])):
             ai_construction._panic_build_and_tally_forces(
-                screen, "Avaria", screen.nation_data["Avaria"], [home], library, state,
+                screen, "Avaria", screen.world.nation_data["Avaria"], [home], library, state,
                 {name: v.role for name, v in candidates.items()},
                 panic_candidates=candidates)
         self.assertEqual(queued, ["Cavalry"])

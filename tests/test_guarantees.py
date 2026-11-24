@@ -53,19 +53,19 @@ class GuaranteeTests(unittest.TestCase):
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
-        self.assertEqual(guarantees.guaranteed_targets("A", screen.nation_data), ["B"])
-        self.assertNotIn("B", screen.nation_data["A"]["pending_diplomacy"])
+        self.assertEqual(guarantees.guaranteed_targets("A", screen.world.nation_data), ["B"])
+        self.assertNotIn("B", screen.world.nation_data["A"]["pending_diplomacy"])
 
     def test_revoke_resolves_without_an_acceptance(self):
         screen = StubMapScreen(["A", "B"])
-        screen.nation_data["A"]["guarantees"] = ["B"]
+        screen.world.nation_data["A"]["guarantees"] = ["B"]
         diplomacy_processor.toggle_diplomacy_action(
             screen, "A", "B", guarantees.REVOKE_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
-        self.assertEqual(guarantees.guaranteed_targets("A", screen.nation_data), [])
-        self.assertNotIn("B", screen.nation_data["A"]["pending_diplomacy"])
+        self.assertEqual(guarantees.guaranteed_targets("A", screen.world.nation_data), [])
+        self.assertNotIn("B", screen.world.nation_data["A"]["pending_diplomacy"])
 
     def test_only_a_peaceful_non_faction_target_can_be_guaranteed(self):
         data = {"A": nation(), "B": nation()}

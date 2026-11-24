@@ -20,7 +20,7 @@ class SelfAimedActionTests(unittest.TestCase):
 
     def queue_self_action(self, action):
         info = {"action": action, "turns": 1}
-        self.game.nation_data["TUR"]["pending_diplomacy"]["TUR"] = info
+        self.game.world.nation_data["TUR"]["pending_diplomacy"]["TUR"] = info
         return info
 
     def tasks(self):
@@ -45,7 +45,7 @@ class SelfAimedActionTests(unittest.TestCase):
         diplomacy_processor._resolve_unilateral_replies(
             self.game, results, ["EST", "ROM", "TUR"], [], "TUR", "TUR",
             "CLAIM_FACTION_LEADERSHIP", info)
-        inbox = self.game.nation_data["TUR"].get("inbox", [])
+        inbox = self.game.world.nation_data["TUR"].get("inbox", [])
         self.assertFalse([msg for msg in inbox if msg.get("sender") in ("TUR", "To: TUR")])
 
 

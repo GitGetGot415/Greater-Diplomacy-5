@@ -295,8 +295,8 @@ class ProactiveWordingTests(unittest.TestCase):
         time_manager = Clock()
 
         def __init__(self, nation_data):
-            self.nation_data = nation_data
-            self.map_data = {}
+            self.world.nation_data = nation_data
+            self.world.map_data = {}
 
     def retaliate(self, message, action="CEASEFIRE", llm=True):
         """`llm` marks the words as the model's, as ai_evaluation._reply does.

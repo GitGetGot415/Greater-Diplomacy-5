@@ -101,12 +101,12 @@ def patrol_world(*, patrol_type="Biplane Fighter I", priority="STRONGEST", legac
     if legacy_truck:
         rocket.update(type="Truck (V2 Rocket)", max_health=c.TRUCK_MAX_HP,
                       health=c.TRUCK_MAX_HP * 0.4, naval_unit=False)
-    game.raw_json_data = {p["json_key"]: dict(p) for p in game.map_data.values()}
+    game.world.raw_json_data = {p["json_key"]: dict(p) for p in game.world.map_data.values()}
     game.terrain_map = game.id_map.copy()
     game.political_map = game.id_map.copy()
     game.cores_map = game.id_map.copy()
-    game.is_editor = False
-    game.history = {}
+    game.session.is_editor = False
+    game.world.history = {}
     return game, fighter, rocket
 
 
@@ -120,16 +120,18 @@ def runtime_map(*, force_editor=False):
     def load_fixture(target, load_path, scenario_settings=None):
         yield "Loading Fixture..."
         for name in ("map_data", "id_to_province", "nation_data", "raw_json_data", "history",
-                     "scenario_settings", "script_variables", "default_research", "loop_map",
-                     "active_players", "current_player_index", "id_map", "terrain_map",
-                     "political_map", "cores_map"):
+                     "scenario_settings", "script_variables", "default_research", "loop_map"):
+            setattr(target.world, name, getattr(game.world, name))
+        for name in ("active_players", "current_player_index"):
+            setattr(target.session, name, getattr(game.session, name))
+        for name in ("id_map", "terrain_map", "political_map", "cores_map"):
             setattr(target, name, getattr(game, name))
-        target.time_manager = TimeHandler(start_year=1939)
-        target.time_manager.total_turns = 4
-        target.player_country = "Editor" if force_editor else "A"
+        target.world.time_manager = TimeHandler(start_year=1939)
+        target.world.time_manager.total_turns = 4
+        target.session.player_country = "Editor" if force_editor else "A"
         target.nation_colors = {"A": (80, 100, 120), "B": (140, 160, 180), "C": (200, 220, 240)}
         for name, color in target.nation_colors.items():
-            target.nation_data[name]["color"] = color
+            target.world.nation_data[name]["color"] = color
         runtime_rules.rebuild(target)
         queries.build_air_geometry(target)
 
@@ -143,8 +145,8 @@ def tile(game, pid, x, owner="A", water=False, width=4, center=None):
         "json_key": str(color), "terrain": c.WATER_TERRAINS[0] if water else "Plains",
         "owner": "Ocean" if water else owner, "units": [], "neighbors": [],
         "buildings": [], "cores": [], "resources": {}, "unit_queue": [], "building_queue": []}
-    game.map_data[color] = province
-    game.id_to_province[pid] = province
+    game.world.map_data[color] = province
+    game.world.id_to_province[pid] = province
     pygame.draw.rect(game.id_map, color, pygame.Rect(x, 4, width, 2))
     return province
 

@@ -20,7 +20,7 @@ from map_logic.actions.player_actions import collect_map_commands
 from map_logic.diplomacy import diplomacy_processor, puppet_actions
 from screens.game import puppets_screen
 from tests import app_harness
-from tests.stub_map_screen import map_double, sample_map_screen
+from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from ui.navigation import modal_stack
 
 
@@ -60,49 +60,49 @@ class PuppetReleaseRuleTests(unittest.TestCase):
 
     def canonical(self, entries, old=()):
         return puppet_actions.canonical_puppet_release_queue(
-            self.map.map_data, self.map.nation_data, "Master", entries, old)
+            self.map.world.map_data, self.map.world.nation_data, "Master", entries, old)
 
     def release(self, release_type=c.PUPPET_TYPE_INTEGRATED, keep_cores=False):
         return puppet_actions.finalize_create_puppet(
-            self.map.map_data, self.map.nation_data, "Master", "Core", self.map, keep_cores, release_type)
+            self.map.world.map_data, self.map.world.nation_data, "Master", "Core", self.map, keep_cores, release_type)
 
     def test_each_choice_uses_the_expected_master_faction_and_wars(self):
         for release_type in c.PUPPET_RELEASE_TYPES:
             with self.subTest(release_type=release_type):
                 self.map = release_map()
                 created = self.release(release_type)
-                data = self.map.nation_data[created]
+                data = self.map.world.nation_data[created]
                 independent = release_type == c.PUPPET_RELEASE_INDEPENDENT
                 self.assertEqual(data["master"], "" if independent else "Master")
                 self.assertEqual(data["puppet_type"], "" if independent else release_type)
                 self.assertEqual(data["faction"], "" if independent else "Pact")
                 self.assertEqual(data["at_war_with"], [] if independent else ["Enemy"])
-                self.assertEqual(created in self.map.nation_data["Master"]["puppets"], not independent)
+                self.assertEqual(created in self.map.world.nation_data["Master"]["puppets"], not independent)
                 self.assertEqual(bool(data.get("is_created_integrated_puppet")),
                                  release_type == c.PUPPET_TYPE_INTEGRATED)
-                self.assertEqual(data["research"], self.map.nation_data["Master"]["research"])
-                self.assertIsNot(data["research"], self.map.nation_data["Master"]["research"])
-                self.assertEqual(self.map.map_data["1"]["owner"], created)
-                self.assertEqual(self.map.map_data["2"]["owner"], created)
-                self.assertEqual(self.map.map_data["4"]["owner"], "Other")
+                self.assertEqual(data["research"], self.map.world.nation_data["Master"]["research"])
+                self.assertIsNot(data["research"], self.map.world.nation_data["Master"]["research"])
+                self.assertEqual(self.map.world.map_data["1"]["owner"], created)
+                self.assertEqual(self.map.world.map_data["2"]["owner"], created)
+                self.assertEqual(self.map.world.map_data["4"]["owner"], "Other")
 
     def test_keep_cores_uses_the_same_territory_rule_for_all_choices(self):
         for release_type in c.PUPPET_RELEASE_TYPES:
             self.map = release_map()
-            expected = queries.get_puppet_release_provinces("Master", "Core", self.map.map_data, True)
+            expected = queries.get_puppet_release_provinces("Master", "Core", self.map.world.map_data, True)
             created = self.release(release_type, keep_cores=True)
-            self.assertEqual({p["id"] for p in self.map.map_data.values() if p["owner"] == created},
+            self.assertEqual({p["id"] for p in self.map.world.map_data.values() if p["owner"] == created},
                              {p["id"] for p in expected})
-            self.assertEqual(self.map.map_data["2"]["owner"], "Master")
+            self.assertEqual(self.map.world.map_data["2"]["owner"], "Master")
 
     def test_only_integrated_releases_inherit_master_appearance(self):
         for release_type in c.PUPPET_RELEASE_TYPES:
             with self.subTest(release_type=release_type):
                 self.map = release_map()
-                source = copy.deepcopy(self.map.nation_data["Core"])
-                master = self.map.nation_data["Master"]
+                source = copy.deepcopy(self.map.world.nation_data["Core"])
+                master = self.map.world.nation_data["Master"]
                 created = self.release(release_type)
-                data = self.map.nation_data[created]
+                data = self.map.world.nation_data[created]
                 integrated = release_type == c.PUPPET_TYPE_INTEGRATED
                 expected_name = (f'{master["adjective"]} {source["name"]}' if integrated
                                  else f'{source["name"]} 2')
@@ -111,10 +111,10 @@ class PuppetReleaseRuleTests(unittest.TestCase):
                 self.assertEqual(data["color"], expected_color)
                 self.assertEqual(self.map.nation_colors[created], tuple(expected_color))
                 self.assertEqual(data["adjective"], source["adjective"])
-                self.assertEqual(self.map.nation_data["Core"], source)
+                self.assertEqual(self.map.world.nation_data["Core"], source)
                 saved_map = sample_map_screen()
-                saved_map.nation_data = self.map.nation_data
-                saved_map.map_data = self.map.map_data
+                saved_map.world.nation_data = self.map.world.nation_data
+                saved_map.world.map_data = self.map.world.map_data
                 saved = json.loads(json.dumps(queries.build_save_dict(saved_map)))
                 queries.merge_country_templates(saved["nation_data"])
                 for field in ("name", "color", "adjective"):
@@ -125,19 +125,19 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         for release_type in (c.PUPPET_TYPE_AUTONOMOUS, c.PUPPET_RELEASE_INDEPENDENT):
             with self.subTest(release_type=release_type):
                 self.map = release_map()
-                del self.map.nation_data["Core"]
+                del self.map.world.nation_data["Core"]
                 with mock.patch("data.io.country_io.get_country_stats", return_value=source):
                     created = self.release(release_type)
                 for field in ("name", "color", "adjective"):
-                    self.assertEqual(self.map.nation_data[created][field], source[field])
+                    self.assertEqual(self.map.world.nation_data[created][field], source[field])
                 self.assertEqual(self.map.nation_colors[created], tuple(source["color"]))
 
     def test_no_land_or_invalid_type_creates_no_country(self):
-        original = copy.deepcopy(self.map.nation_data)
-        self.map.map_data["1"]["owner"] = "Other"
-        self.map.map_data["2"]["owner"] = "Other"
+        original = copy.deepcopy(self.map.world.nation_data)
+        self.map.world.map_data["1"]["owner"] = "Other"
+        self.map.world.map_data["2"]["owner"] = "Other"
         self.assertIsNone(self.release())
-        self.assertEqual(self.map.nation_data, original)
+        self.assertEqual(self.map.world.nation_data, original)
         self.map = release_map()
         self.assertIsNone(self.release("Unknown"))
 
@@ -150,41 +150,41 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         canonical = self.canonical(old, old)
         self.assertEqual(canonical[0]["release_type"], c.PUPPET_TYPE_INTEGRATED)
         self.assertEqual(canonical[0]["turns_left"], 2)
-        self.map.nation_data["Master"]["release_puppet_queue"] = old
+        self.map.world.nation_data["Master"]["release_puppet_queue"] = old
         diplomacy_processor._process_claim_queues(self.map)
-        self.assertEqual(self.map.map_data["1"]["owner"], "Master")
+        self.assertEqual(self.map.world.map_data["1"]["owner"], "Master")
         diplomacy_processor._process_claim_queues(self.map)
-        created = self.map.map_data["1"]["owner"]
-        self.assertEqual(self.map.nation_data[created]["puppet_type"], c.PUPPET_TYPE_INTEGRATED)
+        created = self.map.world.map_data["1"]["owner"]
+        self.assertEqual(self.map.world.nation_data[created]["puppet_type"], c.PUPPET_TYPE_INTEGRATED)
 
     def test_resolution_preserves_each_queued_choice(self):
         for release_type in c.PUPPET_RELEASE_TYPES:
             self.map = release_map()
             appearance_source = ("Master" if release_type == c.PUPPET_TYPE_INTEGRATED else "Core")
-            expected_color = self.map.nation_data[appearance_source]["color"][:]
-            self.map.nation_data["Master"]["release_puppet_queue"] = self.canonical(
+            expected_color = self.map.world.nation_data[appearance_source]["color"][:]
+            self.map.world.nation_data["Master"]["release_puppet_queue"] = self.canonical(
                 [{"core_nation": "Core", "release_type": release_type}])
             diplomacy_processor._process_claim_queues(self.map)
-            created = self.map.map_data["1"]["owner"]
-            self.assertEqual(self.map.nation_data[created]["puppet_type"],
+            created = self.map.world.map_data["1"]["owner"]
+            self.assertEqual(self.map.world.nation_data[created]["puppet_type"],
                              "" if release_type == c.PUPPET_RELEASE_INDEPENDENT else release_type)
-            self.assertEqual(self.map.nation_data[created]["color"], expected_color)
-            self.assertEqual(self.map.nation_data["Master"]["release_puppet_queue"], [])
+            self.assertEqual(self.map.world.nation_data[created]["color"], expected_color)
+            self.assertEqual(self.map.world.nation_data["Master"]["release_puppet_queue"], [])
 
     def test_releases_consume_overlapping_core_land_in_queue_order(self):
         entries = self.canonical([{"core_nation": "Core", "release_type": c.PUPPET_RELEASE_INDEPENDENT},
                                   {"core_nation": "Second", "release_type": c.PUPPET_TYPE_AUTONOMOUS}])
-        self.map.nation_data["Master"]["release_puppet_queue"] = entries
+        self.map.world.nation_data["Master"]["release_puppet_queue"] = entries
         diplomacy_processor._process_claim_queues(self.map)
-        first, second = self.map.map_data["1"]["owner"], self.map.map_data["3"]["owner"]
+        first, second = self.map.world.map_data["1"]["owner"], self.map.world.map_data["3"]["owner"]
         self.assertNotEqual(first, second)
-        self.assertEqual(self.map.map_data["2"]["owner"], first)
+        self.assertEqual(self.map.world.map_data["2"]["owner"], first)
 
     def test_new_country_does_not_copy_the_source_release_queue(self):
-        self.map.nation_data["Core"]["release_puppet_queue"] = [{"core_nation": "Other", "turns_left": 3}]
+        self.map.world.nation_data["Core"]["release_puppet_queue"] = [{"core_nation": "Other", "turns_left": 3}]
         created = self.release()
-        self.assertEqual(self.map.nation_data[created]["release_puppet_queue"], [])
-        self.assertEqual(len(self.map.nation_data["Core"]["release_puppet_queue"]), 1)
+        self.assertEqual(self.map.world.nation_data[created]["release_puppet_queue"], [])
+        self.assertEqual(len(self.map.world.nation_data["Core"]["release_puppet_queue"]), 1)
 
     def test_malformed_duplicate_foreign_and_empty_land_requests_are_rejected(self):
         for entries in (None, [None], [{"core_nation": []}], [{"core_nation": "Core", "keep_cores": "yes"}],
@@ -209,19 +209,19 @@ class PuppetReleaseRuleTests(unittest.TestCase):
     def test_release_type_survives_save_dict_round_trip_and_resolution(self):
         for release_type in c.PUPPET_RELEASE_TYPES:
             saved_map = sample_map_screen()
-            saved_map.nation_data = self.map.nation_data
-            saved_map.map_data = self.map.map_data
-            saved_map.nation_data["Master"]["release_puppet_queue"] = self.canonical(
+            saved_map.world.nation_data = self.map.world.nation_data
+            saved_map.world.map_data = self.map.world.map_data
+            saved_map.world.nation_data["Master"]["release_puppet_queue"] = self.canonical(
                 [{"core_nation": "Core", "release_type": release_type}])
             payload = json.loads(json.dumps(queries.build_save_dict(saved_map)))
             loaded = release_map()
-            loaded.nation_data = payload["nation_data"]
-            queries.merge_country_templates(loaded.nation_data)
-            loaded.map_data = queries.map_data_with_saved_provinces(loaded.map_data, payload["provinces"])
-            loaded.id_to_province = {p["id"]: p for p in loaded.map_data.values()}
+            loaded.world.nation_data = payload["nation_data"]
+            queries.merge_country_templates(loaded.world.nation_data)
+            loaded.world.map_data = queries.map_data_with_saved_provinces(loaded.world.map_data, payload["provinces"])
+            loaded.world.id_to_province = {p["id"]: p for p in loaded.world.map_data.values()}
             diplomacy_processor._process_claim_queues(loaded)
-            created = loaded.map_data["1"]["owner"]
-            self.assertEqual(loaded.nation_data[created]["puppet_type"],
+            created = loaded.world.map_data["1"]["owner"]
+            self.assertEqual(loaded.world.nation_data[created]["puppet_type"],
                              "" if release_type == c.PUPPET_RELEASE_INDEPENDENT else release_type)
 
 
@@ -238,53 +238,53 @@ class PuppetFlagInheritanceTests(unittest.TestCase):
             queries.decode_b64_to_surf("DEFAULT", c.FLAG_SIZE, country_name="Core"))
 
     def create(self, world, kind):
-        world.nation_data["Master"]["release_puppet_queue"] = puppet_actions.canonical_puppet_release_queue(
-            world.map_data, world.nation_data, "Master", [{"core_nation": "Core", "release_type": kind}])
+        world.world.nation_data["Master"]["release_puppet_queue"] = puppet_actions.canonical_puppet_release_queue(
+            world.world.map_data, world.world.nation_data, "Master", [{"core_nation": "Core", "release_type": kind}])
         diplomacy_processor._process_claim_queues(world)
-        return world.map_data["1"]["owner"]
+        return world.world.map_data["1"]["owner"]
 
     def test_default_flag_follows_core_country_through_creation_save_and_independence(self):
         for kind in c.PUPPET_RELEASE_TYPES:
             with self.subTest(kind=kind):
                 world = release_map()
-                world.nation_data["Core"]["flag_data"] = "DEFAULT"
+                world.world.nation_data["Core"]["flag_data"] = "DEFAULT"
                 created = self.create(world, kind)
                 self.assertNotEqual(created, "Core")
-                self.assertEqual(world.nation_data[created]["flag_data"], self.expected_flag)
-                self.assertEqual(world.nation_data["Core"]["flag_data"], "DEFAULT")
+                self.assertEqual(world.world.nation_data[created]["flag_data"], self.expected_flag)
+                self.assertEqual(world.world.nation_data["Core"]["flag_data"], "DEFAULT")
                 if kind != c.PUPPET_RELEASE_INDEPENDENT:
-                    puppet_actions.finalize_release(world.map_data, world.nation_data, "Master", created, world)
-                self.assertEqual(world.nation_data[created]["flag_data"], self.expected_flag)
+                    puppet_actions.finalize_release(world.world.map_data, world.world.nation_data, "Master", created, world)
+                self.assertEqual(world.world.nation_data[created]["flag_data"], self.expected_flag)
 
                 saved_map = sample_map_screen()
-                saved_map.nation_data = world.nation_data
-                saved_map.map_data = world.map_data
+                saved_map.world.nation_data = world.world.nation_data
+                saved_map.world.map_data = world.world.map_data
                 payload = json.loads(json.dumps(queries.build_save_dict(saved_map)))
                 loaded = release_map()
-                loaded.nation_data = payload["nation_data"]
+                loaded.world.nation_data = payload["nation_data"]
                 with mock.patch.object(queries, "get_country_data", return_value={}):
-                    queries.merge_country_templates(loaded.nation_data)
+                    queries.merge_country_templates(loaded.world.nation_data)
                 load_map._load_default_images(loaded)
-                self.assertEqual(loaded.nation_data[created]["flag_data"], self.expected_flag)
+                self.assertEqual(loaded.world.nation_data[created]["flag_data"], self.expected_flag)
 
     def test_missing_source_record_still_copies_its_local_flag(self):
         for kind in c.PUPPET_RELEASE_TYPES:
             with self.subTest(kind=kind):
                 world = release_map()
-                source = world.nation_data.pop("Core")
+                source = world.world.nation_data.pop("Core")
                 with mock.patch.object(puppet_actions.country_io, "get_country_stats", return_value=source):
                     created = self.create(world, kind)
-                self.assertEqual(world.nation_data[created]["flag_data"], self.expected_flag)
+                self.assertEqual(world.world.nation_data[created]["flag_data"], self.expected_flag)
 
     def test_custom_source_flag_is_preserved_without_loading_a_default(self):
         custom_flag = queries.get_default_b64()
         for kind in c.PUPPET_RELEASE_TYPES:
             with self.subTest(kind=kind):
                 world = release_map()
-                world.nation_data["Core"]["flag_data"] = custom_flag
+                world.world.nation_data["Core"]["flag_data"] = custom_flag
                 with mock.patch.object(queries, "decode_b64_to_surf", side_effect=AssertionError("Custom flag replaced")):
                     created = self.create(world, kind)
-                self.assertEqual(world.nation_data[created]["flag_data"], custom_flag)
+                self.assertEqual(world.world.nation_data[created]["flag_data"], custom_flag)
 
     def test_creation_can_copy_local_flags_without_a_display(self):
         surface = pygame.display.get_surface()
@@ -294,7 +294,7 @@ class PuppetFlagInheritanceTests(unittest.TestCase):
             queries.clear_image_cache()
             created_world = release_map()
             created = self.create(created_world, c.PUPPET_TYPE_INTEGRATED)
-            self.assertEqual(created_world.nation_data[created]["flag_data"], self.expected_flag)
+            self.assertEqual(created_world.world.nation_data[created]["flag_data"], self.expected_flag)
         finally:
             if previous_size is not None:
                 pygame.display.set_mode(previous_size)
@@ -309,10 +309,10 @@ class PuppetManagementControlTests(unittest.TestCase):
         self.map = release_map()
         self.map.change_state = mock.Mock()
         self.map.feedback_text = ""
-        self.map.nation_data["Master"]["puppets"] = ["Core", "Second"]
+        self.map.world.nation_data["Master"]["puppets"] = ["Core", "Second"]
         for subject, kind in (("Core", c.PUPPET_TYPE_INTEGRATED),
                               ("Second", c.PUPPET_TYPE_AUTONOMOUS)):
-            self.map.nation_data[subject].update(master="Master", puppet_type=kind,
+            self.map.world.nation_data[subject].update(master="Master", puppet_type=kind,
                 siphon_rates={resource: 0 for resource in c.ECON_RESOURCE_KEYS})
         self.projections = self.enterContext(mock.patch.object(queries, "get_economy_projections",
             return_value=({}, {}, {resource: {"siphon": -123} for resource in c.ECON_RESOURCE_KEYS})))
@@ -332,9 +332,9 @@ class PuppetManagementControlTests(unittest.TestCase):
     def add_subjects(self):
         for index in range(12):
             subject = f"Fixture{index}"
-            self.map.nation_data[subject] = dict(name=subject, master="Master", puppets=[],
+            self.map.world.nation_data[subject] = dict(name=subject, master="Master", puppets=[],
                                                 puppet_type=c.PUPPET_TYPE_AUTONOMOUS)
-            self.map.nation_data["Master"]["puppets"].append(subject)
+            self.map.world.nation_data["Master"]["puppets"].append(subject)
         self.screen.refresh_ui()
 
     def test_selection_changes_controls_without_changing_country_identity(self):
@@ -342,26 +342,26 @@ class PuppetManagementControlTests(unittest.TestCase):
                    if isinstance(element, puppets_screen.Button) and element.text.startswith("Second Display\n"))
         self.click(row)
         self.assertEqual(self.screen.selected_subject, "Second")
-        self.assertEqual(self.map.player_country, "Master")
+        self.assertEqual(self.map.session.player_country, "Master")
         self.assertTrue(self.button("Edit").disabled)
         self.assertTrue(self.button("Annex").disabled)
         self.assertTrue(self.button("Take Puppets").disabled)
         self.assertFalse(self.button("Release").disabled)
         self.click(self.button("Release"))
-        self.assertEqual(queries.get_diplomatic_status("Master", "Second", self.map.nation_data)[0], "RELEASE_PUPPET")
+        self.assertEqual(queries.get_diplomatic_status("Master", "Second", self.map.world.nation_data)[0], "RELEASE_PUPPET")
         self.click(self.button("Undo Release"))
-        self.assertFalse(queries.get_diplomatic_status("Master", "Second", self.map.nation_data)[0])
+        self.assertFalse(queries.get_diplomatic_status("Master", "Second", self.map.world.nation_data)[0])
 
     def test_reorder_keeps_selected_subject_and_reaches_move_export(self):
         self.click(self.button("Move Down"))
-        self.assertEqual(self.map.nation_data["Master"]["puppets"], ["Second", "Core"])
+        self.assertEqual(self.map.world.nation_data["Master"]["puppets"], ["Second", "Core"])
         self.assertEqual(self.screen.selected_subject, "Core")
         command = next(command for command in collect_map_commands(self.map, "Master")
                        if command["type"] == "puppet_draft")
         self.assertEqual(command["puppet_order"], ["Second", "Core"])
         self.assertTrue(self.button("Move Down").disabled)
         self.click(self.button("Move Up"))
-        self.assertEqual(self.map.nation_data["Master"]["puppets"], ["Core", "Second"])
+        self.assertEqual(self.map.world.nation_data["Master"]["puppets"], ["Core", "Second"])
 
     def test_projection_cache_refreshes_on_slider_input_and_not_frames_or_scroll(self):
         self.add_subjects()
@@ -378,7 +378,7 @@ class PuppetManagementControlTests(unittest.TestCase):
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1),
                 pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(end[0] - start[0], 0), buttons=(1, 0, 0)),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
-        self.assertEqual(self.map.nation_data["Core"]["siphon_rates"]["manpower"], c.MAX_PUPPET_SIPHON / 2)
+        self.assertEqual(self.map.world.nation_data["Core"]["siphon_rates"]["manpower"], c.MAX_PUPPET_SIPHON / 2)
         self.assertIn(slider, self.screen.elements)
         self.assertEqual(self.projections.call_count, before + 1)
 
@@ -425,35 +425,35 @@ class PuppetManagementControlTests(unittest.TestCase):
 
     def test_callbacks_recheck_subject_control_after_selection(self):
         annex = self.button("Annex")
-        self.map.nation_data["Core"]["master"] = "Other"
+        self.map.world.nation_data["Core"]["master"] = "Other"
         annex.callback()
         self.screen.queue_release("Core")
         self.screen.edit_puppet("Core")
         self.screen.set_siphon("Core", "manpower", c.MAX_PUPPET_SIPHON)
-        self.assertFalse(self.map.nation_data["Master"]["pending_diplomacy"])
-        self.assertEqual(self.map.nation_data["Core"]["siphon_rates"]["manpower"], 0)
+        self.assertFalse(self.map.world.nation_data["Master"]["pending_diplomacy"])
+        self.assertEqual(self.map.world.nation_data["Core"]["siphon_rates"]["manpower"], 0)
         self.map.change_state.assert_not_called()
 
     def test_submitted_realtime_player_cannot_change_an_open_screen(self):
-        self.map.realtime_multiplayer = True
+        self.map.session.realtime_multiplayer = True
         self.map.realtime_player_id = "fixture_player"
         self.map.realtime_session = SimpleNamespace(phase="TURN", players={
             "fixture_player": SimpleNamespace(submitted=True, eliminated=False)})
         self.screen.queue_annex("Core")
         self.screen.move_selected(1)
         self.screen.set_siphon("Core", "fuel", c.MAX_PUPPET_SIPHON)
-        self.assertFalse(self.map.nation_data["Master"]["pending_diplomacy"])
-        self.assertEqual(self.map.nation_data["Master"]["puppets"], ["Core", "Second"])
-        self.assertEqual(self.map.nation_data["Core"]["siphon_rates"]["fuel"], 0)
+        self.assertFalse(self.map.world.nation_data["Master"]["pending_diplomacy"])
+        self.assertEqual(self.map.world.nation_data["Master"]["puppets"], ["Core", "Second"])
+        self.assertEqual(self.map.world.nation_data["Core"]["siphon_rates"]["fuel"], 0)
 
     def test_actions_queue_undo_and_edit_through_existing_paths(self):
         self.click(self.button("Annex"))
-        self.assertEqual(queries.get_diplomatic_status("Master", "Core", self.map.nation_data)[0], "ANNEX_PUPPET")
+        self.assertEqual(queries.get_diplomatic_status("Master", "Core", self.map.world.nation_data)[0], "ANNEX_PUPPET")
         self.click(self.button("Undo Annex"))
-        self.map.nation_data["Core"]["puppets"] = ["Other"]
+        self.map.world.nation_data["Core"]["puppets"] = ["Other"]
         self.screen.refresh_ui()
         self.click(self.button("Take Puppets"))
-        self.assertEqual(queries.get_diplomatic_status("Master", "Core", self.map.nation_data)[0], "TAKE_PUPPETS")
+        self.assertEqual(queries.get_diplomatic_status("Master", "Core", self.map.world.nation_data)[0], "TAKE_PUPPETS")
         self.click(self.button("Undo Take"))
         self.click(self.button("Edit"))
         self.assertEqual(self.map.editing_country, "Core")
@@ -461,7 +461,7 @@ class PuppetManagementControlTests(unittest.TestCase):
         self.assertTrue(self.screen.done)
 
     def test_empty_subject_list_can_still_open_release_and_back_returns_to_map(self):
-        self.map.nation_data["Master"]["puppets"] = []
+        self.map.world.nation_data["Master"]["puppets"] = []
         self.screen.refresh_ui()
         self.assertIsNone(self.screen.selected_subject)
         self.assertTrue(self.button("Move Up").disabled)
@@ -492,7 +492,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.assertEqual(puppets_screen.Create_Puppet_Screen(self.map).release_type, c.PUPPET_TYPE_INTEGRATED)
 
     def test_spectator_picker_keeps_the_viewer_and_queues_for_the_selected_country(self):
-        self.map.player_country = "Spectator"
+        self.map.session.player_country = "Spectator"
         with mock.patch.object(pickers, "open_listbox_selector") as picker, \
                 mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
             puppets_screen.open_puppets_menu(self.map)
@@ -500,15 +500,15 @@ class PuppetReleaseControlTests(unittest.TestCase):
             callback = picker.call_args.args[4]
             callback("Master")
             screen = launch.call_args.args[1]
-        self.assertEqual(self.map.player_country, "Spectator")
+        self.assertEqual(self.map.session.player_country, "Spectator")
         self.assertEqual(screen.releasing_country, "Master")
         screen.set_release_type(c.PUPPET_TYPE_AUTONOMOUS)
         screen.queue_creation("Core")
-        self.assertEqual(self.map.nation_data["Master"]["release_puppet_queue"][0]["release_type"],
+        self.assertEqual(self.map.world.nation_data["Master"]["release_puppet_queue"][0]["release_type"],
                          c.PUPPET_TYPE_AUTONOMOUS)
-        self.assertNotIn("Spectator", self.map.nation_data)
+        self.assertNotIn("Spectator", self.map.world.nation_data)
         screen.cancel_queue("Core")
-        self.assertEqual(self.map.nation_data["Master"]["release_puppet_queue"], [])
+        self.assertEqual(self.map.world.nation_data["Master"]["release_puppet_queue"], [])
 
     def test_normal_player_still_opens_the_subject_manager(self):
         with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
@@ -526,7 +526,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
 
     def test_spectator_back_returns_to_picker_and_allows_another_country(self):
         with mock.patch.object(modal_stack, "_stack", []):
-            self.map.player_country = "Spectator"
+            self.map.session.player_country = "Spectator"
             puppets_screen.open_puppets_menu(self.map)
             picker_modal = modal_stack.active()
             picker = picker_modal.screen
@@ -558,35 +558,35 @@ class PuppetReleaseControlTests(unittest.TestCase):
         screen = puppets_screen.Create_Puppet_Screen(self.map)
         screen.queue_creation("Core")
         screen.queue_creation("Core")
-        self.assertEqual(len(self.map.nation_data["Master"]["release_puppet_queue"]), 1)
-        self.map.map_data["3"]["owner"] = "Other"
+        self.assertEqual(len(self.map.world.nation_data["Master"]["release_puppet_queue"]), 1)
+        self.map.world.map_data["3"]["owner"] = "Other"
         screen.queue_creation("Second")
-        self.assertEqual(len(self.map.nation_data["Master"]["release_puppet_queue"]), 1)
+        self.assertEqual(len(self.map.world.nation_data["Master"]["release_puppet_queue"]), 1)
 
     def test_player_cannot_release_for_another_country(self):
         screen = puppets_screen.Create_Puppet_Screen(self.map, "Other")
         screen.queue_creation("Core")
-        self.assertNotIn("release_puppet_queue", self.map.nation_data["Other"])
+        self.assertNotIn("release_puppet_queue", self.map.world.nation_data["Other"])
 
     def test_permission_changes_block_queued_releases_and_cancellation(self):
-        self.map.player_country = "Spectator"
+        self.map.session.player_country = "Spectator"
         screen = puppets_screen.Create_Puppet_Screen(self.map, "Master")
         screen.queue_creation("Core")
         for attr in ("tactical_mode", "is_editor", "multiplayer_mode", "realtime_multiplayer"):
-            setattr(self.map, attr, True)
+            setattr(state_owner(self.map, attr), attr, True)
             screen.cancel_queue("Core")
             screen.queue_creation("Second")
-            self.assertEqual(len(self.map.nation_data["Master"]["release_puppet_queue"]), 1)
-            setattr(self.map, attr, False)
+            self.assertEqual(len(self.map.world.nation_data["Master"]["release_puppet_queue"]), 1)
+            setattr(state_owner(self.map, attr), attr, False)
 
     def test_submitted_realtime_player_cannot_change_release_queue(self):
-        self.map.realtime_multiplayer = True
+        self.map.session.realtime_multiplayer = True
         self.map.realtime_player_id = "player"
         self.map.realtime_session = SimpleNamespace(phase="TURN", players={
             "player": SimpleNamespace(submitted=True, eliminated=False)})
         screen = puppets_screen.Create_Puppet_Screen(self.map)
         screen.queue_creation("Core")
-        self.assertNotIn("release_puppet_queue", self.map.nation_data["Master"])
+        self.assertNotIn("release_puppet_queue", self.map.world.nation_data["Master"])
 
     def test_draw_uses_cached_territory_previews(self):
         screen = puppets_screen.Create_Puppet_Screen(self.map)

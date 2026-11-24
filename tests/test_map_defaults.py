@@ -127,7 +127,7 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
     def map_screen(self):
         family, names = real_family_units()
         game = world()
-        game.is_editor = True
+        game.session.is_editor = True
         province = tile(game, 7, 8, center=(10.4, 20.6))
         other = tile(game, 8, 20)
         library = queries.get_unit_library()
@@ -168,15 +168,15 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(True)):
             screen.toggle_disabled("unit", family)
         screen.handle_back_key()
-        self.assertEqual(len(game.id_to_province[7]["units"]), 2)
-        self.assertNotIn("map_defaults", game.scenario_settings)
+        self.assertEqual(len(game.world.id_to_province[7]["units"]), 2)
+        self.assertNotIn("map_defaults", game.world.scenario_settings)
         screen = self.open_editor(game)
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(True)):
             screen.toggle_disabled("unit", family)
         screen.save_all()
-        self.assertEqual(game.id_to_province[7]["units"], [])
-        self.assertEqual(len(game.id_to_province[8]["units"]), 1)
-        self.assertEqual(game.scenario_settings["map_defaults"]["unit_disabled"], [family])
+        self.assertEqual(game.world.id_to_province[7]["units"], [])
+        self.assertEqual(len(game.world.id_to_province[8]["units"]), 1)
+        self.assertEqual(game.world.scenario_settings["map_defaults"]["unit_disabled"], [family])
         game.refresh_all_maps.assert_called_once()
         # The map editor's libraries apply the map's defaults.
         self.assertNotIn(family, {queries.get_base_item_name(name) for name in queries.get_unit_library(game)})
@@ -186,7 +186,7 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
         from screens.game import map_input
         game, family = self.map_screen()
         _family, names = real_family_units()
-        game.scenario_settings["map_defaults"] = {"unit_disabled": [family]}
+        game.world.scenario_settings["map_defaults"] = {"unit_disabled": [family]}
         rebuild(game)
         with mock.patch("ui.dialogs.pickers.open_listbox_selector") as picker:
             menus.select_unit_brush(game)
@@ -201,7 +201,7 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
         from screens.editors import scripted_events_editor
         from ui.widgets import text_utils
         enabled = next(name for name in queries.get_unit_library(game))
-        game.nation_data["A"]["scripted_events"] = [{"actions": [{"type": "Spawn Unit", "unit_type": enabled}]}]
+        game.world.nation_data["A"]["scripted_events"] = [{"actions": [{"type": "Spawn Unit", "unit_type": enabled}]}]
         with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=game):
             event_screen = scripted_events_editor._EventEditScreen(game, game, "A", 0)
         label = text_utils.truncate_chars(queries.get_unit_display_name(enabled, context=game), 26)
@@ -214,7 +214,7 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
         self.assertTrue(is_enabled(next(item for item in items if item[1] == enabled)))
         # A brush picked before the family was disabled places nothing.
         game.brush_unit = names[0]
-        province = game.id_to_province[8]
+        province = game.world.id_to_province[8]
         before = list(province["units"])
         self.assertFalse(map_input._place_unit_with_brush(game, province))
         self.assertEqual(province["units"], before)

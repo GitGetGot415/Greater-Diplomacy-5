@@ -1,4 +1,4 @@
-"""Provide explicit state access and legacy map attributes without shadow copies."""
+"""Provide explicit world and session access without shadow copies."""
 
 from data.game_state import WorldState
 from data.session_state import SessionState
@@ -27,15 +27,13 @@ def replace_mapping(owner, name, value):
         current.update(value)
 
 
-def _state_field(owner, name):
-    try:
-        return owner.__dict__[name]
-    except KeyError:
-        raise AttributeError(name) from None
+# World and session fields have one owner. A map attribute with the same name would be a stale copy.
+_OWNERS = {**{item.name: "world" for item in fields(WorldState)},
+           **{item.name: "session" for item in fields(SessionState)}}
 
 
 class StateAccess:
-    """Keep public map attributes as explicit references to canonical owners."""
+    """Own a context's world and session state. Their fields are reached only through those owners."""
 
     # Rules read these on both map types. An instance value replaces each default.
     realtime_server_map = None
@@ -65,6 +63,12 @@ class StateAccess:
             setattr(result, name, owner)
         return result
 
+    def __setattr__(self, name, value):
+        owner = _OWNERS.get(name)
+        if owner is not None:
+            raise AttributeError(f"{name} belongs to {owner}. Set {owner}.{name} instead.")
+        super().__setattr__(name, value)
+
     @property
     def world(self):
         # Map.__new__ is used by older callers and tests before construction.
@@ -85,38 +89,6 @@ class StateAccess:
     @session.setter
     def session(self, value):
         self._session = value
-
-
-class _Forward:
-    """Forward one public map attribute to the field of the same name on its owner."""
-
-    def __init__(self, owner, name):
-        self.owner = owner
-        self.name = name
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self
-        return _state_field(getattr(obj, self.owner), self.name)
-
-    def __set__(self, obj, value):
-        setattr(getattr(obj, self.owner), self.name, value)
-
-    def __delete__(self, obj):
-        del getattr(obj, self.owner).__dict__[self.name]
-
-
-# Every session field is public on the map. World fields not listed here,
-# such as factions and runtime_rules, are reached only through `world`.
-WORLD_ATTRIBUTES = ("map_data", "id_to_province", "nation_data", "raw_json_data", "history",
-                    "scenario_settings", "scenario_metadata", "standalone_export_settings",
-                    "script_variables", "global_rules",
-                    "default_research", "time_manager",
-                    "loop_map", "map_w", "map_h", "unit_event_log")
-for _name in WORLD_ATTRIBUTES:
-    setattr(StateAccess, _name, _Forward("world", _name))
-for _field in fields(SessionState):
-    setattr(StateAccess, _field.name, _Forward("session", _field.name))
 
 
 class BackendState(StateAccess):
@@ -140,7 +112,11 @@ class BackendState(StateAccess):
             self.feedback(message)
 
 
-def viewer_context(viewer, map_data, nation_data, id_to_province):
-    """A backend context that sees the given world as `viewer` outside tactical play, for fog queries."""
+def viewer_context(viewer, map_data, nation_data, id_to_province, tactical_unit=None):
+    """A backend context that sees the given world as `viewer`, for fog queries.
+
+    With a tactical unit, the viewer sees what that controlled division sees.
+    """
     return BackendState(WorldState(map_data=map_data, nation_data=nation_data, id_to_province=id_to_province),
-                        SessionState(player_country=viewer))
+                        SessionState(player_country=viewer, tactical_mode=tactical_unit is not None,
+                                     player_unit=tactical_unit))

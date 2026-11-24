@@ -230,7 +230,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
     def capacity(self, mine, theirs):
         from map_logic.system32 import combat_rules
         screen, prov = self.tile(mine, theirs)
-        return combat_rules.nation_front_capacity("A", prov, screen.nation_data)
+        return combat_rules.nation_front_capacity("A", prov, screen.world.nation_data)
 
     def test_a_lone_defender_is_told_the_whole_lane_is_open_to_it(self):
         self.assertEqual(self.capacity(1, 8), c.LANE_SLOTS_TYPICAL)
@@ -246,7 +246,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
                     combat_rules.combat_width_for_terrain(terrain) // 2)
                 self.assertEqual(
                     combat_rules.nation_front_capacity(
-                        "A", prov, screen.nation_data),
+                        "A", prov, screen.world.nation_data),
                     expected)
 
     def test_a_contested_front_and_its_relief_use_terrain_capacity(self):
@@ -258,7 +258,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
                 slots = combat_rules.lane_slots(
                     1, combat_rules.combat_width_for_terrain(terrain))
                 capacity = combat_rules.nation_front_capacity(
-                    "A", prov, screen.nation_data)
+                    "A", prov, screen.world.nation_data)
                 self.assertEqual(capacity, slots)
                 self.assertEqual(ai_movement._tile_depth({"p1": capacity}, "p1"),
                                  slots * c.AI_RESERVE_DEPTH)
@@ -285,7 +285,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("ALLY", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A", "ALLY"])
-        screen.nation_data["A"]["faction"] = screen.nation_data["ALLY"]["faction"] = "Fixture Coalition"
+        screen.world.nation_data["A"]["faction"] = screen.world.nation_data["ALLY"]["faction"] = "Fixture Coalition"
 
         units = [unit("A", attack=10)]
         units += [unit("ALLY", attack=10) for _ in range(5)]
@@ -293,7 +293,7 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
         prov = screen.add_province("p1", "A", units=units)
 
         self.assertLess(
-            combat_rules.nation_front_capacity("A", prov, screen.nation_data),
+            combat_rules.nation_front_capacity("A", prov, screen.world.nation_data),
             c.LANE_SLOTS_TYPICAL)
 
 
@@ -319,10 +319,10 @@ class ReserveFlowTests(unittest.TestCase):
         screen = StubBattleMap()
         for name, foe in (("A", "E"), ("E", "A")):
             screen.add_nation(name, at_war_with=[foe])
-            screen.nation_data[name]["is_playable"] = True
-        screen.player_country = "HUMAN"
-        screen.active_players = ["HUMAN"]
-        screen.scenario_settings = {}
+            screen.world.nation_data[name]["is_playable"] = True
+        screen.session.player_country = "HUMAN"
+        screen.session.active_players = ["HUMAN"]
+        screen.world.scenario_settings = {}
 
         front = screen.add_province(1, "A",
                                     units=[self.unit("A") for _ in range(defenders)]

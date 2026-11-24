@@ -196,10 +196,10 @@ class ControllerConstructionTests(unittest.TestCase):
         editor_map = main.Map(load_path=app_harness.SCENARIO_PATH,
                               is_scenario=True, force_editor=True)
         editor_map.selected_province = next(
-            province for province in editor_map.map_data.values()
-            if province.get("owner") in editor_map.nation_data)
+            province for province in editor_map.world.map_data.values()
+            if province.get("owner") in editor_map.world.nation_data)
 
-        self.assertEqual(editor_map.player_country, "Editor")
+        self.assertEqual(editor_map.session.player_country, "Editor")
         update_button_states(editor_map)
 
         self.assertTrue(editor_map.btn_ed_nation.visible)
@@ -222,15 +222,15 @@ class ControllerConstructionTests(unittest.TestCase):
         from screens.game.map_buttons import update_button_states
 
         game_map = app_harness.boot_map()
-        original_player = game_map.player_country
+        original_player = game_map.session.player_country
         original_selected = game_map.selected_province
-        original_selection_mode = game_map.selection_mode
+        original_selection_mode = game_map.session.selection_mode
         try:
-            game_map.player_country = "None"
-            game_map.selection_mode = False
+            game_map.session.player_country = "None"
+            game_map.session.selection_mode = False
             game_map.selected_province = next(
-                province for province in game_map.map_data.values()
-                if province.get("owner") in game_map.nation_data)
+                province for province in game_map.world.map_data.values()
+                if province.get("owner") in game_map.world.nation_data)
 
             update_button_states(game_map)
 
@@ -238,9 +238,9 @@ class ControllerConstructionTests(unittest.TestCase):
             self.assertFalse(game_map.btn_declare_war.visible)
             self.assertFalse(game_map.btn_gp_edit.visible)
         finally:
-            game_map.player_country = original_player
+            game_map.session.player_country = original_player
             game_map.selected_province = original_selected
-            game_map.selection_mode = original_selection_mode
+            game_map.session.selection_mode = original_selection_mode
             update_button_states(game_map)
 
     def test_hotseat_ai_preview_keeps_resolution_settings_and_music_available(self):
@@ -248,7 +248,7 @@ class ControllerConstructionTests(unittest.TestCase):
         from map_logic.system32 import turn_manager
 
         game = app_harness.boot_map()
-        players = list(game.nation_data)[:2]
+        players = list(game.world.nation_data)[:2]
         self.addCleanup(render_buttons, game)
         with app_harness.patch_map(game, {
                 "player_country": players[-1], "active_players": players,
@@ -262,13 +262,13 @@ class ControllerConstructionTests(unittest.TestCase):
             with mock.patch.object(turn_manager, "trigger_ai_thread") as prepare:
                 turn_manager.advance_time(game)
             prepare.assert_called_once_with(game)
-            self.assertEqual(game.player_country, "n/a")
-            game.ai_is_thinking = True
+            self.assertEqual(game.session.player_country, "n/a")
+            game.session.ai_is_thinking = True
             update_button_states(game)
             self.assertFalse(game.btn_next_turn.visible)
 
-            game.ai_is_thinking = False
-            game.viewing_ai_moves = True
+            game.session.ai_is_thinking = False
+            game.session.viewing_ai_moves = True
             render_buttons(game)
             update_button_states(game)
             for button in (game.btn_next_turn, game.btn_gp_settings, game.btn_gp_music):
@@ -300,7 +300,7 @@ class ControllerConstructionTests(unittest.TestCase):
                              {"is_saving": True}, {"viewing_ai_moves": False},
                              {"active_players": ["A"]}, {"player_country": "None"},
                              {"multiplayer_mode": True}, {"realtime_multiplayer": True},
-                             {"selected_province": next(iter(game.map_data.values()))}):
+                             {"selected_province": next(iter(game.world.map_data.values()))}):
                 with self.subTest(override=override), app_harness.patch_map(game, override):
                     update_button_states(game)
                     self.assertFalse(game.btn_next_turn.visible)

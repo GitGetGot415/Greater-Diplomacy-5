@@ -27,12 +27,12 @@ from tests.tournament_fixtures import fast_tournament_crypto
 
 def game():
     context = BackendState()
-    context.player_country = "A"
-    context.active_players = ["A"]
-    context.scenario_settings = {"free_repairs": False, "fog_of_war": False}
-    context.multiplayer_session_key = "fixture-session"
+    context.session.player_country = "A"
+    context.session.active_players = ["A"]
+    context.world.scenario_settings = {"free_repairs": False, "fog_of_war": False}
+    context.session.multiplayer_session_key = "fixture-session"
     for name in ("A", "B", "C"):
-        context.nation_data[name] = {
+        context.world.nation_data[name] = {
             "name": name, "adjective": name, "leader_name": "", "leader_title": "",
             "color": [1, 2, 3], "flag_data": "DEFAULT", "portrait_data": "DEFAULT",
             "materials": 100, "manpower": 100, "fuel": 100,
@@ -43,33 +43,33 @@ def game():
             "cost_materials": 40, "cost_manpower": 10, "cost_fuel": 4, "production_time": 2,
             "metadata": fixture_metadata(), "bombard_range": 1}},
         "building_library": {}, "tech_tree": {}}
-    context.world.runtime_rules.rebuild(context.scenario_settings, defaults)
+    context.world.runtime_rules.rebuild(context.world.scenario_settings, defaults)
     unit = {"unit_id": "fixture-unit", "owner": "A", "type": "Fixture",
             "max_health": 20, "health": 10, "attack": 2, "defense": 1, "speed": 1}
     for number in (1, 2):
         province = {"id": number, "json_key": str(number), "owner": "A", "cores": ["A"],
                     "terrain": "plains", "buildings": ["Basic Factory"],
                     "neighbors": [3 - number], "units": [unit] if number == 1 else []}
-        context.map_data[number] = context.id_to_province[number] = province
+        context.world.map_data[number] = context.world.id_to_province[number] = province
     return context
 
 
 class PlayerAutomationTests(unittest.TestCase):
     def test_offline_and_realtime_automate_only_enabled_countries_after_resolution(self):
         offline = BackendState()
-        offline.player_country = "A"
-        offline.nation_data["A"] = {"automation": {"construction": True, "research": True}}
+        offline.session.player_country = "A"
+        offline.world.nation_data["A"] = {"automation": {"construction": True, "research": True}}
         server = BackendState()
-        server.player_country = "None"
-        server.nation_data.update({"A": copy.deepcopy(offline.nation_data["A"]),
+        server.session.player_country = "None"
+        server.world.nation_data.update({"A": copy.deepcopy(offline.world.nation_data["A"]),
                                    "B": {"automation": {"movement": True}}})
         driver = MapRealtimeDriver(server)
         original_roster = queries.get_active_ai_nations
         passes = Mock()
 
         def check_turn(context, *, countries):
-            self.assertEqual(context.time_manager.total_turns, 1)
-            self.assertEqual(countries, [context.player_country])
+            self.assertEqual(context.world.time_manager.total_turns, 1)
+            self.assertEqual(countries, [context.session.player_country])
             self.assertIs(queries.get_active_ai_nations, original_roster)
 
         for runner in (passes.construction, passes.movement, passes.research):
@@ -87,7 +87,7 @@ class PlayerAutomationTests(unittest.TestCase):
             call.construction(server, countries=["A"]), call.research(server, countries=["A"]),
             call.movement(server, countries=["B"]),
         ])
-        self.assertEqual(server.player_country, "None")
+        self.assertEqual(server.session.player_country, "None")
 
 
 class RuntimeOwnerTests(unittest.TestCase):
@@ -112,17 +112,17 @@ class RuntimeOwnerTests(unittest.TestCase):
             for _ in range(3):
                 self.assertEqual(cached_bilateral_response_indicator(context, "B", "TRADE"), "YES")
             self.assertEqual(forecast.call_count, 1)
-            queries.set_country_faction(context.nation_data, "A", "Pact")
+            queries.set_country_faction(context.world.nation_data, "A", "Pact")
             cached_bilateral_response_indicator(context, "B", "TRADE")
             self.assertEqual(forecast.call_count, 2)
 
     def test_world_libraries_indexes_and_draft_copies_are_independent(self):
         first, second = game(), game()
         library = queries.get_unit_library(first)
-        first.scenario_settings.update(unit_range_overrides={"Fixture": {"bombard_range": 3}},
+        first.world.scenario_settings.update(unit_range_overrides={"Fixture": {"bombard_range": 3}},
                                        use_default_range=False)
         defaults = {key: copy.deepcopy(value) for key, value in second.world.runtime_rules.libraries.items()}
-        first.world.runtime_rules.rebuild(first.scenario_settings, defaults)
+        first.world.runtime_rules.rebuild(first.world.scenario_settings, defaults)
         self.assertIs(queries.get_unit_library(first), library)
         self.assertEqual(queries.get_bombardment_range("Fixture", context=first), 3)
         self.assertEqual(queries.get_bombardment_range("Fixture", context=second), 1)
@@ -130,9 +130,9 @@ class RuntimeOwnerTests(unittest.TestCase):
         second_index = queries.get_unit_research_index(queries.get_unit_library(second), context=second)
         draft = copy.copy(first)
         queries.get_unit_library(draft)["Fixture"]["cost_materials"] = 999
-        draft.scenario_settings["free_repairs"] = True
+        draft.world.scenario_settings["free_repairs"] = True
         self.assertEqual(library["Fixture"]["cost_materials"], 40)
-        self.assertFalse(first.scenario_settings["free_repairs"])
+        self.assertFalse(first.world.scenario_settings["free_repairs"])
         first.world.runtime_rules.rebuild({}, defaults)
         self.assertEqual(first.world.runtime_rules.indexes, {})
         self.assertIs(queries.get_unit_research_index(queries.get_unit_library(second), context=second), second_index)
@@ -140,36 +140,36 @@ class RuntimeOwnerTests(unittest.TestCase):
     def test_world_combat_settings_and_diplomacy_caches_do_not_cross(self):
         from map_logic.system32 import combat_rules
         first, second = game(), game()
-        unit = first.map_data[1]["units"][0]
-        first.scenario_settings["damage_at_zero_health"] = 0
-        second.scenario_settings["damage_at_zero_health"] = 1
-        self.assertEqual(combat_rules.health_damage_multiplier(unit, first.nation_data), .5)
-        self.assertEqual(combat_rules.health_damage_multiplier(unit, second.nation_data), 1)
-        queries.set_country_faction(first.nation_data, "A", "Fixture Pact")
-        queries.set_country_faction(first.nation_data, "B", "Fixture Pact")
+        unit = first.world.map_data[1]["units"][0]
+        first.world.scenario_settings["damage_at_zero_health"] = 0
+        second.world.scenario_settings["damage_at_zero_health"] = 1
+        self.assertEqual(combat_rules.health_damage_multiplier(unit, first.world.nation_data), .5)
+        self.assertEqual(combat_rules.health_damage_multiplier(unit, second.world.nation_data), 1)
+        queries.set_country_faction(first.world.nation_data, "A", "Fixture Pact")
+        queries.set_country_faction(first.world.nation_data, "B", "Fixture Pact")
         with queries.diplomacy_snapshot():
-            self.assertIn("B", queries.friendly_nations_view("A", first.nation_data))
-            self.assertNotIn("B", queries.friendly_nations_view("A", second.nation_data))
+            self.assertIn("B", queries.friendly_nations_view("A", first.world.nation_data))
+            self.assertNotIn("B", queries.friendly_nations_view("A", second.world.nation_data))
 
 
 class FactionOwnerTests(unittest.TestCase):
     def test_identity_survives_rename_succession_snapshot_and_unknown_fields(self):
         context = game()
         before_random = random.getstate()
-        queries.set_country_faction(context.nation_data, "A", "Fixture Pact")
-        queries.set_country_faction(context.nation_data, "B", "Fixture Pact")
-        queries.set_faction_leadership(context.nation_data, "A", True)
+        queries.set_country_faction(context.world.nation_data, "A", "Fixture Pact")
+        queries.set_country_faction(context.world.nation_data, "B", "Fixture Pact")
+        queries.set_faction_leadership(context.world.nation_data, "A", True)
         identity = queries.get_country_faction_id(context, "A")
         record = context.world.factions[identity]
         record["future"] = {"retained": True}
-        queries.save_faction_pre_war_map("Fixture Pact", context.map_data, context.nation_data)
-        self.assertTrue(faction_actions.rename_faction(context.nation_data, "A", "Fixture Pact", "Renamed Pact"))
-        faction_leadership.transfer(context.nation_data, "A", "B")
+        queries.save_faction_pre_war_map("Fixture Pact", context.world.map_data, context.world.nation_data)
+        self.assertTrue(faction_actions.rename_faction(context.world.nation_data, "A", "Fixture Pact", "Renamed Pact"))
+        faction_leadership.transfer(context.world.nation_data, "A", "B")
         self.assertEqual(queries.get_country_faction_id(context, "B"), identity)
         self.assertEqual(record["members"], ["A", "B"])
         self.assertEqual(record["pre_war_borders"], {"1": "A", "2": "A"})
-        self.assertNotIn("FACTION_WAR_MAPS", context.nation_data)
-        self.assertEqual(queries.get_historical_owner(context.map_data[1], "Renamed Pact", context.nation_data), "A")
+        self.assertNotIn("FACTION_WAR_MAPS", context.world.nation_data)
+        self.assertEqual(queries.get_historical_owner(context.world.map_data[1], "Renamed Pact", context.world.nation_data), "A")
         snapshot = json.loads(json.dumps(queries.build_save_dict(context)))
         self.assertEqual(snapshot["nation_data"]["FACTION_WAR_MAPS"], {"Renamed Pact": {"1": "A", "2": "A"}})
         # Canonical records take precedence over stale country projections.
@@ -178,7 +178,7 @@ class FactionOwnerTests(unittest.TestCase):
         restored = BackendState()
         apply_authoritative_snapshot(restored, snapshot)
         self.assertEqual(restored.world.factions, context.world.factions)
-        self.assertEqual(restored.nation_data["A"]["faction"], "Renamed Pact")
+        self.assertEqual(restored.world.nation_data["A"]["faction"], "Renamed Pact")
         self.assertEqual(random.getstate(), before_random)
 
     def test_legacy_conversion_is_reproducible_and_keeps_country_border_history_separate(self):
@@ -188,13 +188,13 @@ class FactionOwnerTests(unittest.TestCase):
         self.assertEqual(faction_records.canonical_records(nations), faction_records.canonical_records(copy.deepcopy(nations)))
         context = BackendState(WorldState(nation_data=nations))
         faction_records.restore(context)
-        self.assertNotIn("FACTION_WAR_MAPS", context.nation_data)
+        self.assertNotIn("FACTION_WAR_MAPS", context.world.nation_data)
         identity = queries.get_country_faction_id(context, "A")
         self.assertEqual(context.world.factions[identity]["pre_war_borders"], {"1": "A"})
-        self.assertEqual(context.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
-        faction_actions.disband_faction(context.nation_data, "Pact")
+        self.assertEqual(context.world.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
+        faction_actions.disband_faction(context.world.nation_data, "Pact")
         self.assertEqual(context.world.factions, {})
-        self.assertEqual(context.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
+        self.assertEqual(context.world.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
 
     def test_reading_legacy_factions_can_initialize_during_country_iteration(self):
         world = WorldState(nation_data={"A": {"faction": "Pact"}, "FACTION_WAR_MAPS": {"Pact": {"1": "A"}}})
@@ -203,8 +203,8 @@ class FactionOwnerTests(unittest.TestCase):
 
     def test_projection_filters_unknown_private_faction_data(self):
         context = game()
-        queries.set_country_faction(context.nation_data, "A", "Pact")
-        queries.set_faction_leadership(context.nation_data, "A", True)
+        queries.set_country_faction(context.world.nation_data, "A", "Pact")
+        queries.set_faction_leadership(context.world.nation_data, "A", True)
         identity = queries.get_country_faction_id(context, "A")
         context.world.factions[identity]["private_plan"] = "hidden"
         snapshot = queries.player_snapshot_projection(context, queries.build_save_dict(context), "B")
@@ -215,42 +215,42 @@ class FactionOwnerTests(unittest.TestCase):
 class SharedActionTests(unittest.TestCase):
     def test_previews_repeated_repairs_and_cancellation_do_not_duplicate_payment(self):
         context = game()
-        province = context.map_data[1]
+        province = context.world.map_data[1]
         unit = province["units"][0]
-        before = copy.deepcopy(context.nation_data["A"])
+        before = copy.deepcopy(context.world.nation_data["A"])
         result = unit_actions.prepare_action(context, "A", province, unit, {"type": "REPAIR"})
-        self.assertEqual(context.nation_data["A"], before)
+        self.assertEqual(context.world.nation_data["A"], before)
         self.assertEqual(result.cost["cost_materials"], 20)
         unit_actions.apply_action(context, "A", province, unit, {"type": "REPAIR"})
-        paid = copy.deepcopy(context.nation_data["A"])
+        paid = copy.deepcopy(context.world.nation_data["A"])
         unit["order"]["turns_left"] = 3
         unit_actions.apply_action(context, "A", province, unit, {"type": "REPAIR"})
-        self.assertEqual(context.nation_data["A"], paid)
+        self.assertEqual(context.world.nation_data["A"], paid)
         self.assertEqual(unit["order"]["turns_left"], 3)
         unit_actions.cancel_action(context, "A", province, unit)
-        self.assertEqual(context.nation_data["A"], before)
+        self.assertEqual(context.world.nation_data["A"], before)
         unit_actions.cancel_action(context, "A", province, unit)
-        self.assertEqual(context.nation_data["A"], before)
+        self.assertEqual(context.world.nation_data["A"], before)
 
     def test_tactical_division_repairs_cost_nothing_for_any_country(self):
         context = game()
-        province = context.map_data[1]
+        province = context.world.map_data[1]
         unit = province["units"][0]
         self.assertGreater(unit_actions.repair_costs(context, unit)["cost_materials"], 0)
-        context.tactical_mode = True
-        context.player_unit = unit
-        before = copy.deepcopy(context.nation_data)
+        context.session.tactical_mode = True
+        context.session.player_unit = unit
+        before = copy.deepcopy(context.world.nation_data)
         result = unit_actions.prepare_action(context, "A", province, unit, {"type": "REPAIR"})
         self.assertEqual(set(result.cost.values()), {0})
         unit_actions.apply_action(context, "A", province, unit, {"type": "REPAIR"})
         self.assertEqual(unit["order"]["type"], "REPAIR")
-        self.assertEqual(context.nation_data, before)
+        self.assertEqual(context.world.nation_data, before)
         unit_actions.cancel_action(context, "A", province, unit)
-        self.assertEqual(context.nation_data, before)
+        self.assertEqual(context.world.nation_data, before)
 
     def test_local_tournament_and_realtime_apply_the_same_choices(self):
         local, realtime, tournament = game(), game(), game()
-        province = local.map_data[1]
+        province = local.world.map_data[1]
         unit_actions.apply_action(local, "A", province, province["units"][0], {"type": "REPAIR"})
         commands = collect_map_commands(local, "A")
         PlayerActions(realtime).apply_drafts({"A": commands})
@@ -263,86 +263,86 @@ class SharedActionTests(unittest.TestCase):
                     self.assertEqual(summary["loaded"], 1, summary)
         for other in (realtime, tournament):
             for key in ("materials", "manpower", "fuel"):
-                self.assertEqual(other.nation_data["A"][key], local.nation_data["A"][key])
-            self.assertEqual(other.map_data[1]["units"][0]["order"], local.map_data[1]["units"][0]["order"])
+                self.assertEqual(other.world.nation_data["A"][key], local.world.nation_data["A"][key])
+            self.assertEqual(other.world.map_data[1]["units"][0]["order"], local.world.map_data[1]["units"][0]["order"])
 
     def test_invalid_complete_draft_and_combined_budget_leave_state_unchanged(self):
         context = game()
-        context.nation_data["A"]["materials"] = 50
+        context.world.nation_data["A"]["materials"] = 50
         commands = [{"type": "unit_order", "province_id": 1, "unit_id": "fixture-unit",
                      "order": {"type": "REPAIR"}},
                     {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
                      "items": [{"unit_type": "Fixture"}]}]
-        before = copy.deepcopy((context.map_data, context.nation_data))
+        before = copy.deepcopy((context.world.map_data, context.world.nation_data))
         with self.assertRaises(ValueError):
             PlayerActions(context).apply_drafts({"A": commands})
-        self.assertEqual((context.map_data, context.nation_data), before)
+        self.assertEqual((context.world.map_data, context.world.nation_data), before)
         with self.assertRaises(ValueError):
             MapRealtimeDriver(context).validate_draft("B", commands[:1])
-        self.assertEqual((context.map_data, context.nation_data), before)
+        self.assertEqual((context.world.map_data, context.world.nation_data), before)
 
     def test_cancelling_an_unsent_request_does_not_require_current_legality(self):
         from map_logic.diplomacy import diplomacy_processor
         context = game()
-        queries.set_country_faction(context.nation_data, "A", "Pact")
-        queries.set_faction_leadership(context.nation_data, "A", True)
+        queries.set_country_faction(context.world.nation_data, "A", "Pact")
+        queries.set_faction_leadership(context.world.nation_data, "A", True)
         diplomacy_processor.toggle_diplomacy_action(context, "A", "B", "FACTION_INVITE")
-        queries.set_faction_leadership(context.nation_data, "A", False)
+        queries.set_faction_leadership(context.world.nation_data, "A", False)
         self.assertFalse(availability(context, "A", "B", "FACTION_INVITE").allowed)
         diplomacy_processor.toggle_diplomacy_action(context, "A", "B", "FACTION_INVITE")
-        self.assertNotIn("B", context.nation_data["A"]["pending_diplomacy"])
+        self.assertNotIn("B", context.world.nation_data["A"]["pending_diplomacy"])
 
     def test_queue_refund_can_pay_for_repair_before_domain_application(self):
         context = game()
-        context.nation_data["A"]["materials"] = 0
-        context.map_data[1]["unit_queue"] = [{"unit_type": "Fixture", "turns_remaining": 2,
+        context.world.nation_data["A"]["materials"] = 0
+        context.world.map_data[1]["unit_queue"] = [{"unit_type": "Fixture", "turns_remaining": 2,
                                               "refund": {"cost_materials": 20}}]
         commands = [{"type": "unit_order", "province_id": 1, "unit_id": "fixture-unit",
                      "order": {"type": "REPAIR"}},
                     {"type": "province_queue", "province_id": 1, "queue": "unit_queue", "items": []}]
         for _ in range(2):
             PlayerActions(context).apply_drafts({"A": commands})
-            self.assertEqual(context.nation_data["A"]["materials"], 0)
-            self.assertEqual(context.map_data[1]["unit_queue"], [])
-            self.assertEqual(context.map_data[1]["units"][0]["order"]["type"], "REPAIR")
+            self.assertEqual(context.world.nation_data["A"]["materials"], 0)
+            self.assertEqual(context.world.map_data[1]["unit_queue"], [])
+            self.assertEqual(context.world.map_data[1]["units"][0]["order"]["type"], "REPAIR")
 
     def test_complete_drafts_preserve_repeat_and_cancel_volunteer_reservations(self):
         from map_logic.diplomacy import diplomacy_lifecycle, volunteers
         local, host = game(), game()
         for context in (local, host):
-            context.nation_data["B"]["at_war_with"] = ["C"]
-            context.nation_data["C"]["at_war_with"] = ["B"]
-            context.nation_data["A"]["armies"] = [{"id": "fixture-army", "name": "Fixture army",
+            context.world.nation_data["B"]["at_war_with"] = ["C"]
+            context.world.nation_data["C"]["at_war_with"] = ["B"]
+            context.world.nation_data["A"]["armies"] = [{"id": "fixture-army", "name": "Fixture army",
                                                        "unit_ids": ["fixture-unit"]}]
-            queries.normalize_armies(context.nation_data, context.map_data)
-        unit = host.map_data[1]["units"][0]
-        diplomacy_lifecycle.put_request(local.nation_data, "A", "B", volunteers.ACTION)
-        _, error = volunteers.create_offer(local, "A", "B", [(local.map_data[1], local.map_data[1]["units"][0])])
+            queries.normalize_armies(context.world.nation_data, context.world.map_data)
+        unit = host.world.map_data[1]["units"][0]
+        diplomacy_lifecycle.put_request(local.world.nation_data, "A", "B", volunteers.ACTION)
+        _, error = volunteers.create_offer(local, "A", "B", [(local.world.map_data[1], local.world.map_data[1]["units"][0])])
         self.assertFalse(error)
         commands = collect_map_commands(local, "A")
         for _ in range(2):
             PlayerActions(host).apply_drafts({"A": commands})
-            queries.normalize_armies(host.nation_data, host.map_data)
-            mission = volunteers.missions(host.nation_data, "A")["B"]
+            queries.normalize_armies(host.world.nation_data, host.world.map_data)
+            mission = volunteers.missions(host.world.nation_data, "A")["B"]
             self.assertIs(mission["held_units"][0]["unit"], unit)
-            self.assertEqual(host.nation_data["A"]["armies"][0]["unit_ids"], [unit["unit_id"]])
-            self.assertNotIn(unit, host.map_data[1]["units"])
+            self.assertEqual(host.world.nation_data["A"]["armies"][0]["unit_ids"], [unit["unit_id"]])
+            self.assertNotIn(unit, host.world.map_data[1]["units"])
         cancelled = copy.deepcopy(host)
         volunteers.cancel_offer(cancelled, "A", "B")
         PlayerActions(host).apply_drafts({"A": collect_map_commands(cancelled, "A")})
-        self.assertIn(unit, host.map_data[1]["units"])
-        self.assertEqual(volunteers.missions(host.nation_data, "A"), {})
+        self.assertIn(unit, host.world.map_data[1]["units"])
+        self.assertEqual(volunteers.missions(host.world.nation_data, "A"), {})
 
     def test_shared_diplomacy_checks_subject_control_and_self_targeted_actions(self):
         context = game()
         command = {"type": "country_diplomacy", "pending": {"B": {"action": "ANNEX_PUPPET"}}}
-        before = copy.deepcopy(context.nation_data)
+        before = copy.deepcopy(context.world.nation_data)
         with self.assertRaises(ValueError):
             PlayerActions(context).apply_drafts({"A": [command]})
-        self.assertEqual(context.nation_data, before)
-        queries.set_country_faction(context.nation_data, "A", "Pact")
-        queries.set_country_faction(context.nation_data, "B", "Pact")
-        queries.set_faction_leadership(context.nation_data, "A", True)
+        self.assertEqual(context.world.nation_data, before)
+        queries.set_country_faction(context.world.nation_data, "A", "Pact")
+        queries.set_country_faction(context.world.nation_data, "B", "Pact")
+        queries.set_faction_leadership(context.world.nation_data, "A", True)
         command["pending"] = {"A": {"action": "DISBAND_FACTION"}}
         self.assertEqual(PlayerActions(context).validate_draft("A", [command])[0]["pending"]["A"]["action"],
                          "DISBAND_FACTION")

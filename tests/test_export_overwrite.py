@@ -212,10 +212,10 @@ class ExportOverwriteTests(unittest.TestCase):
             self.ask.call_args.kwargs["on_result"](False)
             exporter.assert_not_called()
         self.assertEqual(destination.read_bytes(), b"original tournament")
-        self.assertEqual(host.multiplayer_pending_key_regen, {"Player"})
-        self.assertEqual(host.multiplayer_keys_dict, {"Player": "player-key"})
-        self.assertEqual(host.multiplayer_protected_countries, {"Player"})
-        self.assertEqual(host.submitted_moves, {"Player"})
+        self.assertEqual(host.session.multiplayer_pending_key_regen, {"Player"})
+        self.assertEqual(host.session.multiplayer_keys_dict, {"Player": "player-key"})
+        self.assertEqual(host.session.multiplayer_protected_countries, {"Player"})
+        self.assertEqual(host.session.submitted_moves, {"Player"})
         host.show_feedback.assert_not_called()
 
     def test_host_confirm_runs_export_before_resetting_submissions(self):
@@ -229,16 +229,16 @@ class ExportOverwriteTests(unittest.TestCase):
         destination.write_bytes(b"original tournament")
 
         def export(*_args):
-            self.assertEqual(host.submitted_moves, {"Player"})
+            self.assertEqual(host.session.submitted_moves, {"Player"})
             destination.write_bytes(b"new tournament")
 
         with mock.patch.object(tournament_files, "export_tournament", side_effect=export) as exporter:
             multiplayer_host_panel.export_next_turn(host)
             self.ask.call_args.kwargs["on_result"](True)
-            exporter.assert_called_once_with(host, str(destination), "host-key", host.multiplayer_keys_dict)
+            exporter.assert_called_once_with(host, str(destination), "host-key", host.session.multiplayer_keys_dict)
         self.assertEqual(destination.read_bytes(), b"new tournament")
-        self.assertEqual(host.submitted_moves, set())
-        self.assertEqual(host.multiplayer_protected_countries, set())
+        self.assertEqual(host.session.submitted_moves, set())
+        self.assertEqual(host.session.multiplayer_protected_countries, set())
         host.show_feedback.assert_called_once()
 
     def test_player_export_button_waits_for_overwrite_confirmation(self):
@@ -247,9 +247,9 @@ class ExportOverwriteTests(unittest.TestCase):
 
         game = app_harness.boot_map()
         self.addCleanup(render_buttons, game)
-        player = next(cid for cid, data in game.nation_data.items()
+        player = next(cid for cid, data in game.world.nation_data.items()
                       if isinstance(data, dict) and data.get("is_playable"))
-        turn = game.time_manager.total_turns
+        turn = game.world.time_manager.total_turns
         destination = self.downloads / f"Turn_{turn}_{player}.gd5move"
         destination.write_bytes(b"original move")
         with app_harness.patch_map(game, {

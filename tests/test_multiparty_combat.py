@@ -84,7 +84,7 @@ def lanes_of(screen, prov):
     nation on the left against every nation on the right. The key is "these two
     can shoot each other here", which is the question every caller is asking.
     """
-    battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+    battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
     return {frozenset((mine, theirs)): lane
             for lane in battle.lanes
             for mine in lane.a.nations for theirs in lane.b.nations}
@@ -124,7 +124,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
         # damage scaling (combat_rules.health_damage_multiplier) means a unit's
         # volley depends on its health *going into* the fight, and process_combat
         # is about to reduce that health as a side effect of applying the damage.
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         expected = sum(combat_rules.volley(side.front, battle.shares)
                        for lane in battle.lanes
                        for side in (lane.a, lane.b))
@@ -205,7 +205,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
         prov = screen.add_province(
             "p1", "A", units=[u for side in troops.values() for u in side])
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         seated = sum(len(side.front) for lane in battle.lanes for side in (lane.a, lane.b))
 
         # Ten duels among five mutually hostile powers, so the floor binds:
@@ -247,7 +247,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
 
         # Volleys are measured before any of them land, so B's shot goes off
         # even though B is wiped out by the same exchange.
-        self.assertEqual(screen.map_data["p1"]["units"], killer)
+        self.assertEqual(screen.world.map_data["p1"]["units"], killer)
         self.assertAlmostEqual(damage_taken(killer), 25.0, places=6)
 
 
@@ -266,7 +266,7 @@ class BystanderTests(unittest.TestCase):
 
         # Measured before combat lands -- see the note in
         # test_a_nation_deals_its_front_rank_s_attack_once.
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         expected = sum(combat_rules.volley(side.front, battle.shares)
                        for lane in battle.lanes
                        for side in (lane.a, lane.b))
@@ -306,7 +306,7 @@ class BystanderTests(unittest.TestCase):
         """
         screen, prov, troops = five_nation_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
         self.assertNotIn("D", battle.bystanders)
         self.assertIn(frozenset(("B", "D")), set(lanes_of(screen, prov)))
 
@@ -348,7 +348,7 @@ class BystanderTests(unittest.TestCase):
 
         combat_processor.process_combat(screen)
 
-        survivors = screen.map_data["p1"]["units"]
+        survivors = screen.world.map_data["p1"]["units"]
         self.assertIn(neutral, survivors, "a bystander's ship was scuttled by someone else's war")
         self.assertNotIn(theirs, survivors, "a belligerent's ship should still be scuttled on land")
 
@@ -388,7 +388,7 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
     def test_build_battle_leaves_out_everyone_with_nobody_to_shoot(self):
         screen, prov, _troops = five_nation_tile()
 
-        battle = combat_rules.build_battle([prov["units"]], screen.nation_data)
+        battle = combat_rules.build_battle([prov["units"]], screen.world.nation_data)
 
         # Only E, which is at war with nobody here. Everyone with an enemy on
         # this tile is in a lane against them, however short of units they are.
@@ -410,7 +410,7 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
         b, cc = unit("B", attack=10), unit("C", attack=10)
 
         # B and C are at war with each other, and marching shoulder to shoulder.
-        battle = combat_rules.build_battle([[b, cc], a], screen.nation_data)
+        battle = combat_rules.build_battle([[b, cc], a], screen.world.nation_data)
 
         pairs = {frozenset((mine, theirs)) for lane in battle.lanes
                  for mine in lane.a.nations for theirs in lane.b.nations}
@@ -437,7 +437,7 @@ class HeadOnTests(unittest.TestCase):
         p2 = screen.add_province("p2", "C", units=[cc])
 
         result = combat_processor.resolve_meeting_engagement(
-            p1, p2, [a, e], [cc], screen.nation_data)
+            p1, p2, [a, e], [cc], screen.world.nation_data)
 
         self.assertEqual(damage_taken([e]), 0)
         self.assertAlmostEqual(damage_taken([a]), 100.0, places=6)
@@ -454,7 +454,7 @@ class HeadOnTests(unittest.TestCase):
         p2 = screen.add_province("p2", "C", units=[cc])
 
         combat_processor.resolve_meeting_engagement(
-            p1, p2, [a, e], [cc], screen.nation_data)
+            p1, p2, [a, e], [cc], screen.world.nation_data)
 
         self.assertTrue(a.get("_combat_locked"))
         self.assertFalse(e.get("_combat_locked"),
@@ -471,7 +471,7 @@ class HeadOnTests(unittest.TestCase):
         p2 = screen.add_province("p2", "C", units=[cc])
 
         result = combat_processor.resolve_meeting_engagement(
-            p1, p2, [a, e], [cc], screen.nation_data)
+            p1, p2, [a, e], [cc], screen.world.nation_data)
 
         self.assertIn(e, result.survivors1)
         self.assertIn(a, result.survivors1)
@@ -489,7 +489,7 @@ class HeadOnTests(unittest.TestCase):
 
         movement_processor.process_movement(screen)
 
-        self.assertIn(e, screen.map_data["p3"]["units"],
+        self.assertIn(e, screen.world.map_data["p3"]["units"],
                       "a bystander was stopped by a swap it was not part of")
 
 
@@ -499,11 +499,11 @@ class PredictionBubbleTests(unittest.TestCase):
     def weigh(self, screen, prov, friendly_nations):
         """The real thing draw_combat_bubbles calls, not a restatement of it."""
         return overlay_renderer.combat_strengths(
-            [prov["units"]], screen.nation_data, friendly_nations)
+            [prov["units"]], screen.world.nation_data, friendly_nations)
 
     def winner_fixture(self):
         screen = StubBattleMap()
-        screen.player_country = "A"
+        screen.session.player_country = "A"
         screen.visible_provinces = None
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
@@ -520,7 +520,7 @@ class PredictionBubbleTests(unittest.TestCase):
         before = deepcopy(province)
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], screen.nation_data, province=province)
+            [province["units"]], screen.world.nation_data, province=province)
 
         self.assertEqual(outcome["winner_nation"], "A")
         self.assertIsNotNone(outcome["turns"])
@@ -528,15 +528,15 @@ class PredictionBubbleTests(unittest.TestCase):
         for _ in range(outcome["turns"]):
             combat_processor.process_combat(screen)
         self.assertEqual({u["owner"] for u in province["units"]}, {"A", "NEUTRAL"})
-        self.assertFalse(queries.is_province_in_active_combat(province, screen.nation_data))
+        self.assertFalse(queries.is_province_in_active_combat(province, screen.world.nation_data))
         self.assertEqual(province["units"][-1], before["units"][-1])
 
     def test_neutral_ally_does_not_become_the_predicted_winner(self):
         screen, province = self.winner_fixture()
-        screen.nation_data["A"]["faction"] = screen.nation_data["NEUTRAL"]["faction"] = "Fixture Coalition"
+        screen.world.nation_data["A"]["faction"] = screen.world.nation_data["NEUTRAL"]["faction"] = "Fixture Coalition"
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], screen.nation_data, province=province)
+            [province["units"]], screen.world.nation_data, province=province)
 
         self.assertEqual(outcome["winner_nation"], "A")
 
@@ -546,7 +546,7 @@ class PredictionBubbleTests(unittest.TestCase):
         province["terrain"] = c.WATER_TERRAINS[0]
 
         self.assertEqual(overlay_renderer._estimated_combat_winner(
-            province["units"], province, screen.nation_data), "A")
+            province["units"], province, screen.world.nation_data), "A")
 
     def test_volunteer_winner_uses_host_allegiance(self):
         screen, province = self.winner_fixture()
@@ -554,7 +554,7 @@ class PredictionBubbleTests(unittest.TestCase):
         province["units"][0].update(owner="DONOR", volunteer_host="A")
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], screen.nation_data, province=province)
+            [province["units"]], screen.world.nation_data, province=province)
 
         self.assertEqual(outcome["winner_nation"], "A")
 
@@ -563,7 +563,7 @@ class PredictionBubbleTests(unittest.TestCase):
         province["units"][0]["attack"] = 0
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], screen.nation_data, province=province)
+            [province["units"]], screen.world.nation_data, province=province)
 
         self.assertIsNone(outcome["winner_nation"])
         self.assertIsNone(outcome["turns"])
@@ -575,7 +575,7 @@ class PredictionBubbleTests(unittest.TestCase):
 
         with patch.object(queries, "get_unit_library", return_value=library):
             outcome = overlay_renderer.estimated_combat_outcome(
-                [province["units"]], screen.nation_data, province=province)
+                [province["units"]], screen.world.nation_data, province=province)
 
         self.assertEqual(outcome["winner_nation"], "A")
         self.assertEqual(outcome["turns"], 0)
@@ -584,7 +584,7 @@ class PredictionBubbleTests(unittest.TestCase):
         screen, province = self.winner_fixture()
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], screen.nation_data, province=province, max_turns=0)
+            [province["units"]], screen.world.nation_data, province=province, max_turns=0)
 
         self.assertIsNone(outcome["winner_nation"])
         self.assertIsNone(outcome["turns"])
@@ -595,7 +595,7 @@ class PredictionBubbleTests(unittest.TestCase):
         province["units"][1]["attack"] = 1000
 
         outcome = overlay_renderer.estimated_combat_outcome(
-            [province["units"]], screen.nation_data, province=province)
+            [province["units"]], screen.world.nation_data, province=province)
 
         self.assertIsNone(outcome["winner_nation"])
         self.assertIsNotNone(outcome["turns"])
@@ -628,8 +628,8 @@ class PredictionBubbleTests(unittest.TestCase):
 
     def test_an_unseen_enemy_order_does_not_remove_a_possible_defender(self):
         screen = StubBattleMap()
-        screen.player_country = "A"
-        screen.viewing_ai_moves = False
+        screen.session.player_country = "A"
+        screen.session.viewing_ai_moves = False
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -648,13 +648,13 @@ class PredictionBubbleTests(unittest.TestCase):
 
     def test_another_nation_s_movement_does_not_create_a_prediction(self):
         screen = StubBattleMap()
-        screen.player_country = "A"
-        screen.viewing_ai_moves = False
+        screen.session.player_country = "A"
+        screen.session.viewing_ai_moves = False
         screen.add_nation("A", at_war_with=["C"])
         screen.add_nation("B", at_war_with=["C"])
         screen.add_nation("C", at_war_with=["A", "B"])
-        screen.nation_data["A"]["faction"] = "PACT"
-        screen.nation_data["B"]["faction"] = "PACT"
+        screen.world.nation_data["A"]["faction"] = "PACT"
+        screen.world.nation_data["B"]["faction"] = "PACT"
 
         ally_attacker = unit("B", path=["target"])
         defender = unit("C", path=[])
@@ -708,7 +708,7 @@ class PredictionBubbleTests(unittest.TestCase):
         screen.add_nation("ALLY")
         screen.add_nation("X", at_war_with=["Y"])
         screen.add_nation("Y", at_war_with=["X"])
-        screen.nation_data["P"]["faction"] = screen.nation_data["ALLY"]["faction"] = "Fixture Coalition"
+        screen.world.nation_data["P"]["faction"] = screen.world.nation_data["ALLY"]["faction"] = "Fixture Coalition"
 
         prov = screen.add_province("p1", "X", units=[
             unit("ALLY", attack=50), unit("X", attack=100), unit("Y", attack=100)])

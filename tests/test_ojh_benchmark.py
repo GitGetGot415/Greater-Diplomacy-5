@@ -71,10 +71,10 @@ class PlayTurnTests(unittest.TestCase):
         self.saved_force_skip = ai_handler.FORCE_SKIP
         with redirect_stdout(io.StringIO()):
             self.map = main.Map(load_path=app_harness.SCENARIO_PATH, is_scenario=True, num_players=1)
-        self.map.player_country = "Spectator"
-        self.map.active_players = []
-        self.map.selection_mode = False
-        self.map.skip_ai_view = True
+        self.map.session.player_country = "Spectator"
+        self.map.session.active_players = []
+        self.map.session.selection_mode = False
+        self.map.session.skip_ai_view = True
 
     def tearDown(self):
         self.ai_handler.FORCE_SKIP = self.saved_force_skip
@@ -82,22 +82,22 @@ class PlayTurnTests(unittest.TestCase):
     def test_one_turn_runs_both_phases_and_restores_run_background(self):
         import asyncio
         background = self.turn_manager.run_background
-        turns_before = self.map.time_manager.total_turns
+        turns_before = self.map.world.time_manager.total_turns
         with redirect_stdout(io.StringIO()):
             seconds = asyncio.run(self.tool.play_turn(self.map))
         self.assertGreater(seconds, 0.0)
-        self.assertEqual(self.map.time_manager.total_turns, turns_before + 1)
-        self.assertFalse(self.map.ai_is_thinking)
-        self.assertFalse(self.map.is_refreshing)
-        self.assertFalse(self.map.viewing_ai_moves)
-        self.assertIsNone(self.map.thread_error)
+        self.assertEqual(self.map.world.time_manager.total_turns, turns_before + 1)
+        self.assertFalse(self.map.session.ai_is_thinking)
+        self.assertFalse(self.map.session.is_refreshing)
+        self.assertFalse(self.map.session.viewing_ai_moves)
+        self.assertIsNone(self.map.session.thread_error)
         self.assertIs(self.turn_manager.run_background, background)
 
     def test_model_diplomacy_is_skipped_like_the_force_skip_button(self):
         import asyncio
         with redirect_stdout(io.StringIO()):
             asyncio.run(self.tool.play_turn(self.map))
-        self.assertTrue(self.map.force_skip_llm)
+        self.assertTrue(self.map.session.force_skip_llm)
         self.assertTrue(self.ai_handler.FORCE_SKIP)
 
 

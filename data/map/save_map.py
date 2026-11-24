@@ -33,7 +33,7 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
             # Only the UI's explicit destination choice bypasses the default roots.
             save_path = os.path.abspath(save_path)
             save_name = os.path.basename(save_path)
-            if self.is_editor:
+            if self.session.is_editor:
                 queries.validated_scenario_name(save_name)
             os.makedirs(save_path, exist_ok=overwrite)
         elif self.session.is_editor:

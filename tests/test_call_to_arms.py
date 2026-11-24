@@ -151,10 +151,10 @@ class BackstopTests(unittest.TestCase):
 
     def host(self, nd):
         host = self.Host()
-        host.nation_data = nd
-        host.map_data = {}
-        host.scenario_settings = {}
-        host.global_rules = []
+        host.world.nation_data = nd
+        host.world.map_data = {}
+        host.world.scenario_settings = {}
+        host.world.global_rules = []
         return host
 
     def hungary(self):
@@ -202,7 +202,7 @@ class ObsoleteWarRequestTests(unittest.TestCase):
         self.host.set_faction("Alliance", "Master", "Subject", "Ally")
         self.host.set_war("Master", "Enemy")
         self.host.set_war("Ally", "Enemy")
-        self.nd = self.host.nation_data
+        self.nd = self.host.world.nation_data
         diplomacy_messages.set_pending(self.nd, "Subject", "Master", "JOIN_WARS", turns=1)
 
     def test_crossed_requests_make_the_queued_acceptance_a_shared_outcome(self):

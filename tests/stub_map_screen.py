@@ -21,7 +21,7 @@ from data import queries
 import data.constants as c
 from data.game_state import WorldState
 from data.session_state import SessionState
-from data.state_access import StateAccess, WORLD_ATTRIBUTES, _Forward
+from data.state_access import StateAccess
 
 
 # Presentation state of a live Map that shared draw and input helpers read.
@@ -50,19 +50,13 @@ UI_STATE = {
 
 
 def fill_state_defaults(target):
-    """Give a map double every world and session field that a live Map exposes.
+    """Give a map double the presentation defaults of a live Map.
 
-    Rules read these fields directly, so a double without one fails like an
-    incompletely built Map. Fields that the double already has are kept.
+    World and session state belongs to the double's own owners (see MapDouble).
+    Attributes that the double already has are kept.
     """
-    world, session = WorldState(), SessionState()
-    names = [(world, name) for name in WORLD_ATTRIBUTES]
-    names += [(session, item.name) for item in fields(SessionState)]
-    for owner, name in names:
-        if not hasattr(target, name):
-            setattr(target, name, getattr(owner, name))
     for name, value in vars(StateAccess).items():
-        if not name.startswith("__") and not isinstance(value, (_Forward, property, FunctionType)):
+        if not name.startswith("__") and not isinstance(value, (property, FunctionType)):
             if not hasattr(target, name):
                 setattr(target, name, value)
     for name, value in UI_STATE.items():
@@ -76,12 +70,12 @@ SESSION_FIELDS = frozenset(item.name for item in fields(SessionState))
 
 
 def state_owner(double, name):
-    """The world or session object that owns `name` on a map double, or None."""
+    """The object that owns `name` on a map double: its world, its session, or the double itself."""
     if name in WORLD_FIELDS:
         return double.world
     if name in SESSION_FIELDS:
         return double.session
-    return None
+    return double
 
 
 class MapDouble(StateAccess):
@@ -108,8 +102,7 @@ class MapDouble(StateAccess):
 
     def __init__(self, **attributes):
         for name, value in attributes.items():
-            owner = state_owner(self, name)
-            setattr(self if owner is None else owner, name, value)
+            setattr(state_owner(self, name), name, value)
 
 
 def map_double(**attributes):
@@ -122,8 +115,7 @@ def mock_map(**attributes):
     double = mock.Mock()
     double.world, double.session = WorldState(), SessionState()
     for name, value in attributes.items():
-        owner = state_owner(double, name)
-        setattr(double if owner is None else owner, name, value)
+        setattr(state_owner(double, name), name, value)
     return double
 
 
@@ -186,25 +178,25 @@ class StubMapScreen(MapDouble):
     """Minimal map_screen for the diplomacy engine."""
 
     def __init__(self, nations, human_players=("A",)):
-        self.nation_data = {}
-        self.map_data = {}
-        self.id_to_province = {}
-        self.time_manager = StubTimeManager()
-        self.active_players = list(human_players)
-        self.player_country = self.active_players[0] if self.active_players else ""
-        self.tactical_mode = False
+        self.world.nation_data = {}
+        self.world.map_data = {}
+        self.world.id_to_province = {}
+        self.world.time_manager = StubTimeManager()
+        self.session.active_players = list(human_players)
+        self.session.player_country = self.session.active_players[0] if self.session.active_players else ""
+        self.session.tactical_mode = False
 
         # LLM plumbing -- skipped entirely, answers come from the fallback table
-        self.force_skip_llm = True
-        self.loading_status_text = ""
-        self.responsive_tasks_total = 0
-        self.responsive_tasks_completed = 0
-        self.proactive_llm_tasks = []
+        self.session.force_skip_llm = True
+        self.session.loading_status_text = ""
+        self.session.responsive_tasks_total = 0
+        self.session.responsive_tasks_completed = 0
+        self.session.proactive_llm_tasks = []
         # Each AI nation's menu of legal moves, held between the proactive
         # pass that builds it and the director pass that picks from it.
-        self.proactive_choices = []
-        self.proactive_tasks_total = 0
-        self.proactive_tasks_completed = 0
+        self.session.proactive_choices = []
+        self.session.proactive_tasks_total = 0
+        self.session.proactive_tasks_completed = 0
         # The turn loading screen's model threads panel, closed.
         self.llm_threads_open = False
         self.llm_threads_selected = None
@@ -214,16 +206,16 @@ class StubMapScreen(MapDouble):
         self.ai_world = None
 
         self.feedback = []
-        self.scenario_settings = {}
-        self.script_variables = []
+        self.world.scenario_settings = {}
+        self.world.script_variables = []
 
         # conquer_province repaints the political map surface unless one of
         # these says a repaint would be pointless. There is no surface here at
         # all, so it always is -- which is what lets a deal that moves territory
         # be tested without pygame.
-        self.is_editor = False
-        self.viewing_ai_moves = False
-        self.ai_is_thinking = True
+        self.session.is_editor = False
+        self.session.viewing_ai_moves = False
+        self.session.ai_is_thinking = True
         self.centers_need_update = False
         self.map_mode = "POLITICAL"
         self.political_map = None
@@ -244,7 +236,7 @@ class StubMapScreen(MapDouble):
 
     def _add_nation(self, name):
         prov_id = self._next_prov_id
-        self.nation_data[name] = {
+        self.world.nation_data[name] = {
             "name": name,
             "is_playable": True,
             "at_war_with": [],
@@ -280,8 +272,8 @@ class StubMapScreen(MapDouble):
                 "neighbors": [], "units": [], "buildings": [],
                 "map_color": (prov_id, 0, 0)}
         prov.update(fields)
-        self.map_data[str(prov_id)] = prov
-        self.id_to_province[prov_id] = prov
+        self.world.map_data[str(prov_id)] = prov
+        self.world.id_to_province[prov_id] = prov
         return prov
 
     def border(self, *prov_ids):
@@ -294,17 +286,17 @@ class StubMapScreen(MapDouble):
         to say who is next door to it.
         """
         for prov_id in prov_ids:
-            mine = self.id_to_province[int(prov_id)].setdefault("neighbors", [])
+            mine = self.world.id_to_province[int(prov_id)].setdefault("neighbors", [])
             for other in prov_ids:
                 if other != prov_id and int(other) not in mine:
                     mine.append(int(other))
 
     def home_of(self, nation):
         """The first province this nation was given. See _add_nation."""
-        return next(p for p in self.map_data.values() if p["owner"] == nation)
+        return next(p for p in self.world.map_data.values() if p["owner"] == nation)
 
     def owner_of(self, prov_id):
-        return self.id_to_province[prov_id]["owner"]
+        return self.world.id_to_province[prov_id]["owner"]
 
     def show_feedback(self, text):
         self.feedback.append(text)
@@ -326,7 +318,7 @@ class StubMapScreen(MapDouble):
     def run_turn(self):
         """Advances one diplomatic turn."""
         from map_logic.diplomacy import diplomacy_processor
-        self.time_manager.total_turns += 1
+        self.world.time_manager.total_turns += 1
         diplomacy_processor.process_diplomacy_turn(self)
 
     def thread(self, owner, other):
@@ -335,7 +327,7 @@ class StubMapScreen(MapDouble):
         Returns (direction, content) pairs where direction is "in" or "out".
         """
         out = []
-        for msg in reversed(self.nation_data[owner]["inbox"]):
+        for msg in reversed(self.world.nation_data[owner]["inbox"]):
             sender = msg.get("sender", "")
             if sender == other:
                 out.append(("in", msg.get("content", "")))
@@ -349,21 +341,21 @@ class StubMapScreen(MapDouble):
 
     def pending(self, sender, target):
         from map_logic.diplomacy import diplomacy_messages
-        return diplomacy_messages.get_pending(self.nation_data, sender, target)
+        return diplomacy_messages.get_pending(self.world.nation_data, sender, target)
 
     def pending_action(self, sender, target):
         return self.pending(sender, target).get("action", "")
 
     def set_war(self, a, b):
-        self.nation_data[a]["at_war_with"].append(b)
-        self.nation_data[b]["at_war_with"].append(a)
+        self.world.nation_data[a]["at_war_with"].append(b)
+        self.world.nation_data[b]["at_war_with"].append(a)
 
     def set_faction(self, faction_name, leader, *members):
-        self.nation_data[leader]["faction"] = faction_name
-        self.nation_data[leader]["is_faction_leader"] = True
+        self.world.nation_data[leader]["faction"] = faction_name
+        self.world.nation_data[leader]["is_faction_leader"] = True
         for m in members:
-            self.nation_data[m]["faction"] = faction_name
-            self.nation_data[m]["is_faction_leader"] = False
+            self.world.nation_data[m]["faction"] = faction_name
+            self.world.nation_data[m]["is_faction_leader"] = False
 
     def propose(self, sender, target, action, message="", parameters=None):
         """Queues an outgoing proposal exactly as the player's buttons would."""
@@ -375,7 +367,7 @@ class StubMapScreen(MapDouble):
         """Queues an answer to an incoming proposal."""
         from map_logic.diplomacy import diplomacy_processor
         return diplomacy_processor.toggle_diplomatic_response(
-            self.nation_data, responder, sender, verdict, action, message)
+            self.world.nation_data, responder, sender, verdict, action, message)
 
 
 def synchronous_progress(jobs, worker, _caption, on_result):

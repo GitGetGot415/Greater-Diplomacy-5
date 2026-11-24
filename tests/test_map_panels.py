@@ -35,9 +35,9 @@ class MapPanelScrollTests(unittest.TestCase):
         # The panels only exist with a province selected outside selection mode,
         # which is the state the map starts a scenario in.
         self.map.selected_province = next(
-            province for province in self.map.map_data.values()
+            province for province in self.map.world.map_data.values()
             if province.get("owner") not in c.UNPLAYABLE_NATIONS)
-        self.map.selection_mode = False
+        self.map.session.selection_mode = False
         self.map.refresh_ui()
         self.map.draw(self.surface)
 
@@ -52,9 +52,9 @@ class MapPanelScrollTests(unittest.TestCase):
 
     def test_panels_are_only_live_with_a_selection(self):
         self.assertTrue(map_input._panels_are_live(self.map))
-        self.map.selection_mode = True
+        self.map.session.selection_mode = True
         self.assertFalse(map_input._panels_are_live(self.map))
-        self.map.selection_mode = False
+        self.map.session.selection_mode = False
 
     def test_wheel_over_a_panel_scrolls_it_and_not_the_others(self):
         for name in map_input.MAP_PANELS:
@@ -118,7 +118,7 @@ class MapPanelScrollTests(unittest.TestCase):
 
     def test_click_in_a_bar_uses_event_position_not_current_cursor(self):
         """A queued click on a bar cannot select the stale tile under the cursor."""
-        self.map.selection_mode = True
+        self.map.session.selection_mode = True
         map_position = (self.surface.get_width() // 2,
                         self.surface.get_height() // 2)
         bar_position = self.map.top_bar_rect.center
@@ -150,7 +150,7 @@ class MapPanelScrollTests(unittest.TestCase):
     def test_province_menu_blocks_tile_selection_behind_opaque_artwork(self):
         """Covered tiles cannot replace the province shown in the menu."""
         current = self.map.selected_province
-        replacement = next(province for province in self.map.map_data.values()
+        replacement = next(province for province in self.map.world.map_data.values()
                            if province is not current)
         pos = (300, self.surface.get_height() // 2)
         self.assertTrue(map_input.ui_bars.province_menu_occludes_map_position(
@@ -168,7 +168,7 @@ class MapPanelScrollTests(unittest.TestCase):
     def test_province_menu_keeps_its_transparent_map_window_clickable(self):
         """A visible province replaces the current selection through clear artwork."""
         current = self.map.selected_province
-        replacement = next(province for province in self.map.map_data.values()
+        replacement = next(province for province in self.map.world.map_data.values()
                            if (province is not current
                                and province.get("owner") not in c.UNPLAYABLE_NATIONS))
         original_mode = self.map.secondary_mode

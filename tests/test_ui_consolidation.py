@@ -622,7 +622,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 mock.patch.object(game.btn_gp_edit, "disabled", False), \
                 mock.patch.object(game, "change_state") as navigate:
             self.assertEqual(self.click_sounds(game.btn_gp_edit), ["paper"])
-            self.assertEqual(game.editing_country, game.player_country)
+            self.assertEqual(game.editing_country, game.session.player_country)
         navigate.assert_called_once_with("EDIT_COUNTRY")
 
     def test_list_and_checkbox_selection_play_subcategory_once(self):
@@ -696,7 +696,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         self.assertEqual(self.click_sounds(button_named(screen, "Queue")), ["send_message"])
         self.assertEqual(screen.compose_text, "")
         self.assertEqual(screen.drafts, ["Fixture message"])
-        pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
+        pending = diplomacy_messages.get_pending(screen.map_screen.world.nation_data, "A", "B")
         self.assertEqual(pending["message"], "Fixture message")
 
     def test_deleting_a_queued_message_plays_delete_once_and_preserves_other_drafts(self):
@@ -712,7 +712,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
             screen.additional_events(click(rectangle.center))
         sound.assert_called_once_with("delete_message")
         self.assertEqual(screen.drafts, ["Keep this"])
-        pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
+        pending = diplomacy_messages.get_pending(screen.map_screen.world.nation_data, "A", "B")
         self.assertEqual(pending["message"], "Keep this")
 
     def test_blocked_or_invalid_message_deletion_does_not_play_delete(self):
@@ -722,7 +722,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         for tactical, index, y in ((True, 0, 300), (False, 5, 300), (False, 0, c.SCREEN_HEIGHT - 30)):
             with self.subTest(tactical=tactical, index=index, y=y):
                 screen = self.message_screen("")
-                screen.map_screen.tactical_mode = tactical
+                screen.map_screen.session.tactical_mode = tactical
                 screen.drafts = ["Keep this"]
                 rectangle = pygame.Rect(700, y, 25, 25)
                 screen.draft_edit_rects = [(rectangle, index)]
@@ -738,13 +738,13 @@ class OneSoundPerClickTests(SharedUiTestCase):
         for turns in (0, 1):
             with self.subTest(turns=turns):
                 screen = self.message_screen("")
-                screen.map_screen.nation_data["A"]["pending_diplomacy"] = {
+                screen.map_screen.world.nation_data["A"]["pending_diplomacy"] = {
                     "B": {"action": "TRADE", "turns": turns, "parameters": {}}}
                 rectangle = pygame.Rect(700, 300, 25, 25)
                 screen.draft_edit_rects = [(rectangle, "TRADE_OFFER")]
                 with mock.patch.object(sound_effects, "play_ui_sound") as sound:
                     screen.additional_events(click(rectangle.center))
-                pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
+                pending = diplomacy_messages.get_pending(screen.map_screen.world.nation_data, "A", "B")
                 if turns:
                     sound.assert_not_called()
                     self.assertEqual(pending["action"], "TRADE")

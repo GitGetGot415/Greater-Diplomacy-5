@@ -80,13 +80,13 @@ class UnitMetadataTests(unittest.TestCase):
                                                      wraps=queries.get_unit_research_index))
             ai_research.process_ai_research(game)
             self.assertEqual(checks.call_count, 1)
-            self.assertEqual(game.nation_data["A"]["research_queue"], game.nation_data["B"]["research_queue"])
-            self.assertEqual({project["tech_name"] for project in game.nation_data["A"]["research_queue"]},
+            self.assertEqual(game.world.nation_data["A"]["research_queue"], game.world.nation_data["B"]["research_queue"])
+            self.assertEqual({project["tech_name"] for project in game.world.nation_data["A"]["research_queue"]},
                              set(tree))
             self.assertEqual(ai_tech_eval.units_unlocked_by("fixture_track", research, library), ("later",))
             checks.reset_mock()
             library["later"]["metadata"]["requirements"].append({"tech": "locked", "level": 1})
-            for country in game.nation_data.values():
+            for country in game.world.nation_data.values():
                 country["research_queue"].clear()
             ai_research.process_ai_research(game)
             self.assertEqual(checks.call_count, 1)

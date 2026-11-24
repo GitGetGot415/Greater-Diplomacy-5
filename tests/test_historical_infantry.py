@@ -263,11 +263,11 @@ class HistoricalInfantryTests(unittest.TestCase):
     def test_current_save_round_trip_preserves_early_research_units_and_progress(self):
         game = sample_map_screen()
         research = queries.get_time_appropriate_research(c.START_YEAR)
-        game.nation_data[game.player_country].update(
+        game.world.nation_data[game.session.player_country].update(
             research=research, research_queue=[queries.build_research_project("infantry_type", 123)],
             research_progress={"infantry_type": 123})
-        province = next(iter(game.map_data.values()))
-        province["units"] = [queries.create_unit_dict(name, game.player_country, self.library)
+        province = next(iter(game.world.map_data.values()))
+        province["units"] = [queries.create_unit_dict(name, game.session.player_country, self.library)
                              for name in ai_unit_eval.buildable_units(research, self.library)
                              if name in self.early]
         saved = json.loads(json.dumps(queries.build_save_dict(game)))
@@ -279,19 +279,19 @@ class HistoricalInfantryTests(unittest.TestCase):
     def test_realtime_snapshot_preserves_current_early_research(self):
         game = sample_map_screen()
         research = queries.get_time_appropriate_research(c.START_YEAR)
-        game.nation_data[game.player_country]["research"] = research
+        game.world.nation_data[game.session.player_country]["research"] = research
         snapshot = json.loads(json.dumps(queries.build_save_dict(game)))
         game.refresh_all_maps = Mock()
         apply_authoritative_snapshot(game, snapshot)
-        self.assertEqual(game.nation_data[game.player_country]["research"], research)
+        self.assertEqual(game.world.nation_data[game.session.player_country]["research"], research)
 
     def test_current_vehicle_save_refreshes_stats_and_keeps_health_and_paid_queue(self):
         game = sample_map_screen()
-        province = next(iter(game.map_data.values()))
+        province = next(iter(game.world.map_data.values()))
         names = {}
         for name, stats in self.vehicles.items():
             names.setdefault(stats["metadata"]["family"], name)
-        province["units"] = [{"type": name, "owner": game.player_country, "unit_id": family,
+        province["units"] = [{"type": name, "owner": game.session.player_country, "unit_id": family,
                                "health": 25, "max_health": 100, "attack": 3, "defense": 1,
                                "speed": 1, "order": {"type": "MOVE", "path": []}}
                               for family, name in names.items()]
@@ -300,7 +300,7 @@ class HistoricalInfantryTests(unittest.TestCase):
         province["unit_queue"] = copy.deepcopy(paid_queue)
         province["buildings"] = ["Basic Factory"]
         province["resources"] = {}
-        game.nation_data[game.player_country]["research"] = self.final_research.copy()
+        game.world.nation_data[game.session.player_country]["research"] = self.final_research.copy()
         saved = queries.build_save_dict(game)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -309,7 +309,7 @@ class HistoricalInfantryTests(unittest.TestCase):
             (root / "meta.json").write_text(json.dumps(saved))
             loaded = load_map.load_backend_state(directory, skip_initial_income=True,
                                                 scenario_settings=queries.get_default_scenario_settings())
-            loaded_province = next(iter(loaded.map_data.values()))
+            loaded_province = next(iter(loaded.world.map_data.values()))
             self.assertEqual(loaded_province["unit_queue"], paid_queue)
             for unit in loaded_province["units"]:
                 stats = self.library[unit["type"]]
@@ -321,19 +321,19 @@ class HistoricalInfantryTests(unittest.TestCase):
             (root / "meta.json").write_text(json.dumps(current))
             restored = load_map.load_backend_state(directory, skip_initial_income=True,
                                                   scenario_settings=queries.get_default_scenario_settings())
-            self.assertEqual(next(iter(restored.map_data.values()))["units"], loaded_province["units"])
-            self.assertEqual(next(iter(restored.map_data.values()))["unit_queue"], paid_queue)
+            self.assertEqual(next(iter(restored.world.map_data.values()))["units"], loaded_province["units"])
+            self.assertEqual(next(iter(restored.world.map_data.values()))["unit_queue"], paid_queue)
 
     def test_disk_load_migrates_legacy_history_then_preserves_a_new_save(self):
         game = sample_map_screen()
-        province = next(iter(game.map_data.values()))
-        province["units"] = [{"type": "Infantry Type 1911", "owner": game.player_country,
+        province = next(iter(game.world.map_data.values()))
+        province["units"] = [{"type": "Infantry Type 1911", "owner": game.session.player_country,
                               "unit_id": "legacy-unit", "health": 25, "max_health": 100,
                               "order": {"type": "MOVE", "path": []}}]
         province["unit_queue"] = []
         province["buildings"] = ["Basic Factory"]
         province["resources"] = {}
-        game.nation_data[game.player_country]["research"] = {"infantry_type": 2, "militia": 0}
+        game.world.nation_data[game.session.player_country]["research"] = {"infantry_type": 2, "militia": 0}
         saved = queries.build_save_dict(game)
         saved.pop("research_years")
         # A save from an older release. Conversion does not depend on the stamp.
@@ -341,7 +341,7 @@ class HistoricalInfantryTests(unittest.TestCase):
         saved["default_research"] = {"infantry_type": 1}
         history = {"1": {"nation_data": copy.deepcopy(saved["nation_data"]),
                          "day": 1, "month": 0, "year": 1911, "provinces": saved["provinces"]}}
-        history["1"]["nation_data"][game.player_country]["research"]["infantry_type"] = 1
+        history["1"]["nation_data"][game.session.player_country]["research"]["infantry_type"] = 1
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             pygame.image.save(pygame.Surface((1, 1)), root / "id_map.png")
@@ -351,22 +351,22 @@ class HistoricalInfantryTests(unittest.TestCase):
             loaded = load_map.load_backend_state(directory, history_turn=1, skip_initial_income=True,
                                                 scenario_settings=queries.get_default_scenario_settings())
             expected = sum(year <= 1910 for year in self.tree["infantry_type"]["years"])
-            self.assertEqual(loaded.nation_data[game.player_country]["research"]["infantry_type"], expected)
-            self.assertEqual(loaded.default_research["infantry_type"], expected)
-            self.assertEqual(loaded.history["1"]["nation_data"][game.player_country]["research"]["infantry_type"], expected)
-            loaded_unit = next(iter(loaded.map_data.values()))["units"][0]
+            self.assertEqual(loaded.world.nation_data[game.session.player_country]["research"]["infantry_type"], expected)
+            self.assertEqual(loaded.world.default_research["infantry_type"], expected)
+            self.assertEqual(loaded.world.history["1"]["nation_data"][game.session.player_country]["research"]["infantry_type"], expected)
+            loaded_unit = next(iter(loaded.world.map_data.values()))["units"][0]
             unit_type = migrations.equipment_stage_aliases()["Infantry Type 1911"]
             self.assertEqual(loaded_unit["type"], unit_type)
             self.assertEqual(loaded_unit["unit_id"], "legacy-unit")
             self.assertEqual(loaded_unit["health"], self.library[unit_type]["health"] / 4)
             current = queries.build_save_dict(loaded)
             (root / "meta.json").write_text(json.dumps(current))
-            history_io.write(directory, loaded.history)
+            history_io.write(directory, loaded.world.history)
             restored = load_map.load_backend_state(directory, skip_initial_income=True,
                                                   scenario_settings=queries.get_default_scenario_settings())
-            self.assertEqual(restored.nation_data[game.player_country]["research"],
-                             loaded.nation_data[game.player_country]["research"])
-            self.assertEqual(next(iter(restored.map_data.values()))["units"], [loaded_unit])
+            self.assertEqual(restored.world.nation_data[game.session.player_country]["research"],
+                             loaded.world.nation_data[game.session.player_country]["research"])
+            self.assertEqual(next(iter(restored.world.map_data.values()))["units"], [loaded_unit])
 
 
 class HistoricalResearchMigrationTests(unittest.TestCase):

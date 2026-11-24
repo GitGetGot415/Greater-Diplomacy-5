@@ -19,6 +19,7 @@ from unittest.mock import Mock, patch
 import data.constants as c
 from data import queries
 from tests import app_harness
+from tests.stub_map_screen import state_owner
 
 
 class SubjectTests(unittest.TestCase):
@@ -34,32 +35,32 @@ class SubjectTests(unittest.TestCase):
         tree = {"test_research": {"display_name": "Test research", "category": "INDUSTRY",
                                   "years": [1900], "max_lvl": 1, "cost": 100, "req": {}}}
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=tree))
-        nation_data = deepcopy(self.map.nation_data)
+        nation_data = deepcopy(self.map.world.nation_data)
         for country in nation_data.values():
             country.update(research={}, research_queue=[], research_progress={})
-        self.enterContext(patch.object(self.map, "nation_data", nation_data))
-        self.enterContext(patch.object(self.map, "is_editor", False))
+        self.enterContext(patch.object(self.map.world, "nation_data", nation_data))
+        self.enterContext(patch.object(self.map.session, "is_editor", False))
         self.enterContext(patch.object(self.map.session, "multiplayer_mode", False))
         self.enterContext(patch.object(self.map.session, "realtime_multiplayer", False))
         self.enterContext(patch.object(self.map, "viewing_research_mode", "VIEW", create=True))
         self.enterContext(patch.object(self.map, "show_feedback", Mock()))
-        self.saved = {a: getattr(self.map, a, None)
+        self.saved = {a: getattr(state_owner(self.map, a), a, None)
                       for a in ("player_country", "viewing_research_country", "tactical_mode")}
         self.addCleanup(self.restore)
         self.map.viewing_research_country = ""
 
     def restore(self):
         for attr, value in self.saved.items():
-            setattr(self.map, attr, value)
+            setattr(state_owner(self.map, attr), attr, value)
 
     def others(self, count=1):
         """Living nations that are not the player, for pointing the screen at."""
         from data import queries
-        living = sorted(queries.get_living_nations(self.map.map_data))
-        return [n for n in living if n != self.map.player_country][:count]
+        living = sorted(queries.get_living_nations(self.map.world.map_data))
+        return [n for n in living if n != self.map.session.player_country][:count]
 
     def spectate(self, nation, mode="VIEW"):
-        self.map.player_country = "Spectator"
+        self.map.session.player_country = "Spectator"
         self.map.viewing_research_country = nation
         self.map.viewing_research_mode = mode
         self.screen.start_research(self.map)
@@ -68,19 +69,19 @@ class SubjectTests(unittest.TestCase):
 
     def test_a_player_sees_their_own_research(self):
         self.screen.start_research(self.map)
-        self.assertEqual(self.screen.subject, self.map.player_country)
+        self.assertEqual(self.screen.subject, self.map.session.player_country)
 
     def test_a_player_is_unaffected_by_a_stale_choice(self):
         """The picker's leftovers must not follow a player into their own tree."""
         self.map.viewing_research_country = ""
         self.screen.start_research(self.map)
-        self.assertEqual(self.screen.subject, self.map.player_country)
+        self.assertEqual(self.screen.subject, self.map.session.player_country)
 
     def test_a_spectator_sees_the_nation_they_picked(self):
         target = self.others()[0]
         self.spectate(target)
         self.assertEqual(self.screen.subject, target)
-        self.assertIs(self.screen.subject_data, self.map.nation_data[target])
+        self.assertIs(self.screen.subject_data, self.map.world.nation_data[target])
 
     def test_the_screen_builds_and_paints_for_someone_else(self):
         """It used to KeyError on "Spectator" before reaching any of this."""
@@ -95,20 +96,20 @@ class SubjectTests(unittest.TestCase):
             self.skipTest("scenario has only one non-player nation")
         first, second = picks
         self.spectate(first, "EDIT")
-        before_second = deepcopy(self.map.nation_data[second])
+        before_second = deepcopy(self.map.world.nation_data[second])
 
         tech = next(iter(self.screen.tech_tree))
         self.screen.open_modal({"tech_key": tech, "level": 1})
 
-        self.assertEqual(self.map.nation_data[second],
+        self.assertEqual(self.map.world.nation_data[second],
                          before_second, "editing one nation touched another")
         self.assertEqual(self.screen.subject_data["research"], {tech: 1})
-        self.assertEqual(self.map.nation_data[first]["research"], {})
-        self.assertEqual(self.map.nation_data[first]["research_queue"], [])
+        self.assertEqual(self.map.world.nation_data[first]["research"], {})
+        self.assertEqual(self.map.world.nation_data[first]["research_queue"], [])
         self.screen.open_modal({"tech_key": tech, "level": 1})
         self.assertEqual(self.screen.subject_data["research"], {tech: 0})
         self.screen.confirm_research_edit()
-        self.assertEqual(self.map.nation_data[first]["research"], {tech: 0})
+        self.assertEqual(self.map.world.nation_data[first]["research"], {tech: 0})
 
     # -- the switch -----------------------------------------------------
 
@@ -121,7 +122,7 @@ class SubjectTests(unittest.TestCase):
     def test_with_the_switch_off_nothing_can_be_queued(self):
         target = self.others()[0]
         self.spectate(target, "EDIT")
-        self.map.nation_data[target]["research_queue"] = []
+        self.map.world.nation_data[target]["research_queue"] = []
 
         original = c.SPECTATOR_CAN_EDIT_RESEARCH
         c.SPECTATOR_CAN_EDIT_RESEARCH = False
@@ -129,8 +130,8 @@ class SubjectTests(unittest.TestCase):
             self.assertFalse(self.screen.can_edit)
             self.screen.start_or_resume_research(next(iter(self.screen.tech_tree)))
             self.screen.open_modal({"tech_key": next(iter(self.screen.tech_tree)), "level": 1})
-            self.assertEqual(self.map.nation_data[target]["research_queue"], [])
-            self.assertEqual(self.map.nation_data[target]["research"], {})
+            self.assertEqual(self.map.world.nation_data[target]["research_queue"], [])
+            self.assertEqual(self.map.world.nation_data[target]["research"], {})
         finally:
             c.SPECTATOR_CAN_EDIT_RESEARCH = original
 
@@ -154,8 +155,8 @@ class SubjectTests(unittest.TestCase):
 
     def test_a_player_still_gets_the_action_button(self):
         self.screen.start_research(self.map)
-        self.map.tactical_mode = False
-        self.map.nation_data[self.map.player_country]["research_queue"] = []
+        self.map.session.tactical_mode = False
+        self.map.world.nation_data[self.map.session.player_country]["research_queue"] = []
         self.screen.open_modal(self.available_node())
         labels = [getattr(el, "text", "") for el in self.screen.details_screen.elements]
         self.assertIn("Start Research", labels)
@@ -164,7 +165,7 @@ class SubjectTests(unittest.TestCase):
     def test_view_mode_opens_details_but_cannot_change_research(self):
         target = self.others()[0]
         self.spectate(target)
-        before = deepcopy(self.map.nation_data[target])
+        before = deepcopy(self.map.world.nation_data[target])
         button = next(button for button in self.screen.elements if getattr(button, "is_tech_node", False))
         button.callback()
         self.assertIsNotNone(self.screen.details_screen)
@@ -172,7 +173,7 @@ class SubjectTests(unittest.TestCase):
         self.screen.start_or_resume_research("test_research")
         self.screen.pause_research("test_research")
         self.screen.toggle_editor_tech("test_research", 1)
-        self.assertEqual(self.map.nation_data[target], before)
+        self.assertEqual(self.map.world.nation_data[target], before)
 
     def test_edit_callback_rechecks_local_mode_and_living_country(self):
         target = self.others()[0]
@@ -182,17 +183,17 @@ class SubjectTests(unittest.TestCase):
                       {"realtime_multiplayer": True}, {"player_country": target}):
             with self.subTest(flags=flags), ExitStack() as stack:
                 for key, value in flags.items():
-                    stack.enter_context(patch.object(self.map, key, value))
+                    stack.enter_context(patch.object(state_owner(self.map, key), key, value))
                 button.callback()
-                self.assertEqual(self.map.nation_data[target]["research"], {})
-        with patch.object(self.map, "map_data", {}):
+                self.assertEqual(self.map.world.nation_data[target]["research"], {})
+        with patch.object(self.map.world, "map_data", {}):
             button.callback()
-            self.assertEqual(self.map.nation_data[target]["research"], {})
+            self.assertEqual(self.map.world.nation_data[target]["research"], {})
 
     def test_exit_popup_save_preserves_live_references_and_other_fields(self):
         from ui import dialogs 
         target = self.others()[0]
-        country = self.map.nation_data[target]
+        country = self.map.world.nation_data[target]
         research, queue, progress = country["research"], country["research_queue"], country["research_progress"]
         self.spectate(target, "EDIT")
         self.screen.toggle_editor_tech("test_research", 1)
@@ -215,7 +216,7 @@ class SubjectTests(unittest.TestCase):
     def test_exit_and_back_key_popup_discard_all_draft_changes(self):
         from ui import dialogs 
         target = self.others()[0]
-        before = deepcopy(self.map.nation_data[target])
+        before = deepcopy(self.map.world.nation_data[target])
         for exit_method in ("Exit", "back"):
             with self.subTest(exit_method=exit_method):
                 self.spectate(target, "EDIT")
@@ -230,10 +231,10 @@ class SubjectTests(unittest.TestCase):
                             dispatch_global_keys(self.screen, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F8))
                     ask.assert_called_once()
                     self.assertFalse(self.screen.done)
-                    self.assertEqual(self.map.nation_data[target], before)
+                    self.assertEqual(self.map.world.nation_data[target], before)
                     ask.call_args.args[2](False)
                 self.assertTrue(self.screen.done)
-                self.assertEqual(self.map.nation_data[target], before)
+                self.assertEqual(self.map.world.nation_data[target], before)
 
     def test_exit_prompt_blocks_duplicate_prompts_and_edits_until_answered(self):
         from ui import dialogs 
@@ -269,7 +270,7 @@ class SubjectTests(unittest.TestCase):
             self.assertIs(self.screen.spectator_draft, draft)
             self.assertEqual(draft, before)
             self.assertEqual((self.screen.current_category, self.screen.scroll_x, self.screen.target_scroll_x), view)
-            self.assertEqual(self.map.nation_data[target]["research"], {})
+            self.assertEqual(self.map.world.nation_data[target]["research"], {})
             callback(False)  # An old popup answer cannot discard the retained draft.
             self.assertFalse(self.screen.done)
             self.screen.toggle_editor_tech("test_research", 1)
@@ -290,7 +291,7 @@ class SubjectTests(unittest.TestCase):
         self.spectate(target, "EDIT")
         callback(True)
         self.assertFalse(self.screen.done)
-        self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.assertEqual(self.map.world.nation_data[target]["research"], {})
         self.assertEqual(self.screen.spectator_draft["research"], {})
 
     def test_real_go_back_popup_keeps_edit_open_and_cancel_still_discards(self):
@@ -310,7 +311,7 @@ class SubjectTests(unittest.TestCase):
         self.assertTrue(modal_stack.is_empty())
         self.assertFalse(self.screen.done)
         self.assertIs(self.screen.spectator_draft, draft)
-        self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.assertEqual(self.map.world.nation_data[target]["research"], {})
         self.screen.exit_screen()
         modal = modal_stack.active()
         no = modal.screen.no_rect.center
@@ -318,7 +319,7 @@ class SubjectTests(unittest.TestCase):
                              pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=no)])
         modal.update()
         self.assertTrue(self.screen.done)
-        self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.assertEqual(self.map.world.nation_data[target]["research"], {})
 
     def test_popup_save_rechecks_permission_and_leaves_draft_open_on_failure(self):
         from ui import dialogs 
@@ -330,7 +331,7 @@ class SubjectTests(unittest.TestCase):
             with patch.object(c, "SPECTATOR_CAN_EDIT_RESEARCH", False):
                 ask.call_args.args[2](True)
             self.assertFalse(self.screen.done)
-            self.assertEqual(self.map.nation_data[target]["research"], {})
+            self.assertEqual(self.map.world.nation_data[target]["research"], {})
             self.assertEqual(self.screen.spectator_draft["research"], {"test_research": 1})
             self.screen.exit_screen()
             ask.call_args.args[2](False)
@@ -343,7 +344,7 @@ class SubjectTests(unittest.TestCase):
             self.spectate(target)
             self.screen.exit_screen()
             self.assertTrue(self.screen.done)
-            self.map.player_country = target
+            self.map.session.player_country = target
             self.map.viewing_research_country = ""
             self.screen.start_research(self.map)
             self.screen.exit_screen()
@@ -353,7 +354,7 @@ class SubjectTests(unittest.TestCase):
     def test_progress_warning_no_preserves_draft_and_yes_discards_only_draft_progress(self):
         from ui import dialogs 
         target = self.others()[0]
-        country = self.map.nation_data[target]
+        country = self.map.world.nation_data[target]
         country.update(research_queue=[{"tech_name": "test_research", "points_remaining": 40}],
                        research_progress={"test_research": 30}, current_research="test_research")
         before = deepcopy(country)
@@ -383,7 +384,7 @@ class SubjectTests(unittest.TestCase):
     def test_paused_progress_requires_warning_and_is_cleared_on_confirm(self):
         from ui import dialogs 
         target = self.others()[0]
-        country = self.map.nation_data[target]
+        country = self.map.world.nation_data[target]
         country["research_progress"] = {"test_research": 40}
         self.spectate(target, "EDIT")
         with patch.object(dialogs, "ask_yes_no") as ask:
@@ -398,8 +399,8 @@ class SubjectTests(unittest.TestCase):
     def test_warning_callbacks_cannot_change_a_cancelled_or_reopened_edit(self):
         from ui import dialogs 
         target = self.others()[0]
-        self.map.nation_data[target]["research_progress"] = {"test_research": 40}
-        before = deepcopy(self.map.nation_data[target])
+        self.map.world.nation_data[target]["research_progress"] = {"test_research": 40}
+        before = deepcopy(self.map.world.nation_data[target])
         self.spectate(target, "EDIT")
         with patch.object(dialogs, "ask_yes_no") as ask:
             self.screen.toggle_editor_tech("test_research", 1)
@@ -408,7 +409,7 @@ class SubjectTests(unittest.TestCase):
             self.screen.exit_screen()
             ask.call_args.args[2](False)
         callback(True)
-        self.assertEqual(self.map.nation_data[target], before)
+        self.assertEqual(self.map.world.nation_data[target], before)
         self.spectate(target, "EDIT")
         callback(True)
         self.assertEqual(self.screen.subject_data, queries.country_research_edit_state(before))
@@ -421,18 +422,18 @@ class SubjectTests(unittest.TestCase):
                       {"player_country": target}, {"viewing_research_country": "missing"}, {"is_editor": True}):
             with self.subTest(flags=flags), ExitStack() as stack:
                 for key, value in flags.items():
-                    stack.enter_context(patch.object(self.map, key, value))
+                    stack.enter_context(patch.object(state_owner(self.map, key), key, value))
                 self.screen.confirm_research_edit()
                 self.assertFalse(self.screen.done)
-                self.assertEqual(self.map.nation_data[target]["research"], {})
+                self.assertEqual(self.map.world.nation_data[target]["research"], {})
         with patch.object(c, "SPECTATOR_CAN_EDIT_RESEARCH", False):
             self.screen.confirm_research_edit()
-            self.assertEqual(self.map.nation_data[target]["research"], {})
-        self.map.nation_data[target]["research_progress"]["test_research"] = 40
+            self.assertEqual(self.map.world.nation_data[target]["research"], {})
+        self.map.world.nation_data[target]["research_progress"]["test_research"] = 40
         self.screen.confirm_research_edit()
         self.assertFalse(self.screen.done)
-        self.assertEqual(self.map.nation_data[target]["research_progress"], {"test_research": 40})
-        self.assertEqual(self.map.nation_data[target]["research"], {})
+        self.assertEqual(self.map.world.nation_data[target]["research_progress"], {"test_research": 40})
+        self.assertEqual(self.map.world.nation_data[target]["research"], {})
 
     def test_completed_overview_has_no_edit_actions(self):
         self.spectate(self.others()[0], "EDIT")
@@ -452,7 +453,7 @@ class SubjectTests(unittest.TestCase):
     def test_tactical_mode_is_still_read_only(self):
         """The switch was added beside this rule, not on top of it."""
         self.screen.start_research(self.map)
-        self.map.tactical_mode = True
+        self.map.session.tactical_mode = True
         self.assertFalse(self.screen.can_edit)
 
 
@@ -481,7 +482,7 @@ class PickerTests(unittest.TestCase):
                 editor_menus.spec_select_research_country(self.map)
                 picker = launch.call_args.args[1]
                 self.assertEqual(picker.items, queries.country_picker_items(
-                    sorted(queries.get_living_nations(self.map.map_data)), self.map.nation_data))
+                    sorted(queries.get_living_nations(self.map.world.map_data)), self.map.world.nation_data))
                 picker.set_mode(mode)
                 picker.select(picker.items[0])
                 self.assertEqual(self.map.viewing_research_country, picker.items[0][1])
@@ -520,7 +521,7 @@ class PickerTests(unittest.TestCase):
 
     def test_network_and_tactical_spectators_can_only_select_view(self):
         for flag in ("multiplayer_mode", "realtime_multiplayer", "tactical_mode"):
-            with self.subTest(flag=flag), patch.object(self.map, flag, True):
+            with self.subTest(flag=flag), patch.object(state_owner(self.map, flag), flag, True):
                 picker = self.picker()
                 picker.set_mode("EDIT")
                 self.assertEqual(picker.mode, "VIEW")
@@ -534,11 +535,11 @@ class AppearanceSwitchTests(unittest.TestCase):
         cls.screen = cls.controller.states["EDIT_COUNTRY"]
 
     def setUp(self):
-        self.saved_player = self.map.player_country
-        self.addCleanup(lambda: setattr(self.map, "player_country", self.saved_player))
+        self.saved_player = self.map.session.player_country
+        self.addCleanup(lambda: setattr(self.map.session, "player_country", self.saved_player))
 
     def test_a_spectator_may_edit_appearance_by_default(self):
-        self.map.player_country = "Spectator"
+        self.map.session.player_country = "Spectator"
         self.screen.map_screen = self.map
         self.assertTrue(self.screen.can_edit)
 
@@ -546,22 +547,22 @@ class AppearanceSwitchTests(unittest.TestCase):
         target = getattr(self.map, "editing_country", None)
         self.addCleanup(lambda: setattr(self.map, "editing_country", target)
                         if target is not None else None)
-        self.map.player_country = "Spectator"
+        self.map.session.player_country = "Spectator"
         self.screen.start_editor(self.map)
 
-        before = dict(self.map.nation_data[self.screen.editing_country])
+        before = dict(self.map.world.nation_data[self.screen.editing_country])
         original = c.SPECTATOR_CAN_EDIT_APPEARANCE
         c.SPECTATOR_CAN_EDIT_APPEARANCE = False
         try:
             self.screen.country_name = "Renamed By A Spectator"
             self.screen.save_and_exit()
-            after = self.map.nation_data[self.screen.editing_country]
+            after = self.map.world.nation_data[self.screen.editing_country]
             self.assertEqual(after.get("name"), before.get("name"))
         finally:
             c.SPECTATOR_CAN_EDIT_APPEARANCE = original
 
     def test_with_the_switch_off_the_save_button_is_inert(self):
-        self.map.player_country = "Spectator"
+        self.map.session.player_country = "Spectator"
         self.screen.start_editor(self.map)
         original = c.SPECTATOR_CAN_EDIT_APPEARANCE
         c.SPECTATOR_CAN_EDIT_APPEARANCE = False

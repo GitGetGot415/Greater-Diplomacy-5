@@ -16,13 +16,13 @@ from data import queries
 class StateContainerTests(unittest.TestCase):
     def test_defaults_are_independent_and_compatibility_attributes_share_owners(self):
         first, second = BackendState(), BackendState()
-        first.nation_data["A"] = {"materials": 3}
-        first.active_players.append("A")
+        first.world.nation_data["A"] = {"materials": 3}
+        first.session.active_players.append("A")
         self.assertEqual(second.world.nation_data, {})
         self.assertEqual(second.session.active_players, [])
-        self.assertIs(first.nation_data, first.world.nation_data)
-        self.assertIs(first.active_players, first.session.active_players)
-        first.player_country = "A"
+        self.assertIs(first.world.nation_data, first.world.nation_data)
+        self.assertIs(first.session.active_players, first.session.active_players)
+        first.session.player_country = "A"
         first.session.viewing_country = "B"
         self.assertEqual(first.session.player_country, "A")
         self.assertEqual(first.session.viewing_country, "B")
@@ -35,8 +35,8 @@ class StateContainerTests(unittest.TestCase):
         replace_mapping(context.world, "nation_data", countries)
         self.assertEqual(countries, {"A": {}})
         draft = copy.copy(context)
-        draft.nation_data = {"B": {}}
-        draft.active_players.append("B")
+        draft.world.nation_data = {"B": {}}
+        draft.session.active_players.append("B")
         self.assertEqual(context.world.nation_data, {"A": {}})
         self.assertEqual(context.session.active_players, [])
 

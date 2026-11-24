@@ -57,9 +57,9 @@ class Screen(MapDouble):
     """Two owned provinces, plus one next door that can be given an enemy."""
 
     def __init__(self, provs, at_war=("Borland",)):
-        self.map_data = {str(p["id"]): p for p in provs}
-        self.id_to_province = {p["id"]: p for p in provs}
-        self.nation_data = {
+        self.world.map_data = {str(p["id"]): p for p in provs}
+        self.world.id_to_province = {p["id"]: p for p in provs}
+        self.world.nation_data = {
             "Avaria": {"at_war_with": list(at_war), "puppets": [],
                        "master": "", "faction": "", "research": {}},
             "Borland": {"at_war_with": ["Avaria"], "puppets": [],
@@ -81,7 +81,7 @@ class DisbandChoiceTests(unittest.TestCase):
     def disband(self, provs, deficits=("cost_fuel",), values=None, at_war=("Borland",)):
         screen = Screen(provs, at_war=at_war)
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], [p for p in provs if p["owner"] == "Avaria"],
+            screen, screen.world.nation_data["Avaria"], [p for p in provs if p["owner"] == "Avaria"],
             "Avaria", list(deficits), LIBRARY, values)
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
@@ -114,13 +114,13 @@ class DisbandChoiceTests(unittest.TestCase):
         """Obsolescence stays the first key -- that part was always right."""
         keep, obsolete = unit("Heavy Gun"), unit("Scout Car")
         screen = Screen([province(1, [keep, obsolete])])
-        screen.nation_data["Avaria"]["research"] = {}
+        screen.world.nation_data["Avaria"]["research"] = {}
         import data.queries as queries
         real = queries.is_unit_obsolete
         queries.is_unit_obsolete = lambda t, r: t == "Scout Car"
         try:
             ai_construction._disband_worst_unit_if_deficit(
-                screen, screen.nation_data["Avaria"], list(screen.map_data.values()),
+                screen, screen.world.nation_data["Avaria"], list(screen.world.map_data.values()),
                 "Avaria", ["cost_fuel"], LIBRARY,
                 {"Scout Car": value("Scout Car", 9.0), "Heavy Gun": value("Heavy Gun", 1.0)})
         finally:
@@ -136,7 +136,7 @@ class NeverAtTheFrontTests(unittest.TestCase):
         screen = Screen(provs)
         mine = [p for p in provs if p["owner"] == "Avaria"]
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
+            screen, screen.world.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
@@ -174,10 +174,10 @@ class NeverAtTheFrontTests(unittest.TestCase):
 
     def run_disband_at_peace(self, provs):
         screen = Screen(provs, at_war=())
-        screen.nation_data["Borland"]["at_war_with"] = []
+        screen.world.nation_data["Borland"]["at_war_with"] = []
         mine = [p for p in provs if p["owner"] == "Avaria"]
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
+            screen, screen.world.nation_data["Avaria"], mine, "Avaria", ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
@@ -188,7 +188,7 @@ class NotWhatYouAreBuildingTests(unittest.TestCase):
     def run_disband(self, provs):
         screen = Screen(provs)
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"], provs, "Avaria", ["cost_fuel"], LIBRARY, {})
+            screen, screen.world.nation_data["Avaria"], provs, "Avaria", ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
                 if u.get("order", {}).get("type") == "DISBAND"]
 
@@ -255,13 +255,13 @@ class TacticalPlayerTests(unittest.TestCase):
                 "order": {"type": "MOVE", "path": []}}
 
     def tactical(self, screen, unit):
-        screen.tactical_mode = True
-        screen.player_unit = unit
+        screen.session.tactical_mode = True
+        screen.session.player_unit = unit
         return screen
 
     def cull(self, screen, provs):
         ai_construction._disband_worst_unit_if_deficit(
-            screen, screen.nation_data["Avaria"],
+            screen, screen.world.nation_data["Avaria"],
             [p for p in provs if p["owner"] == "Avaria"], "Avaria",
             ["cost_fuel"], LIBRARY, {})
         return [u for p in provs for u in p["units"]
@@ -298,8 +298,8 @@ class TacticalPlayerTests(unittest.TestCase):
         me = unit("Scout Car")
         provs = [province(1, [me])]
         screen = Screen(provs)
-        screen.tactical_mode = False
-        screen.player_unit = me
+        screen.session.tactical_mode = False
+        screen.session.player_unit = me
 
         self.assertEqual(self.cull(screen, provs), [me])
 
@@ -320,7 +320,7 @@ class FuelGuardTests(unittest.TestCase):
         """One purchase pass, and what came out of it."""
         provs = [province(1, [])]
         screen = Screen(provs, at_war=())
-        data = screen.nation_data["Avaria"]
+        data = screen.world.nation_data["Avaria"]
         data.update({"materials": 100000, "manpower": 100000, "fuel": 100000})
 
         values = {"Scout Car": value("Scout Car", 9.0),   # burns fuel, rated best

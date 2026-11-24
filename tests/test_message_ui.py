@@ -39,7 +39,7 @@ class Screen(MapDouble):
     player_country = "Player"
 
     def __init__(self, nation_data):
-        self.nation_data = nation_data
+        self.world.nation_data = nation_data
         self.diplomatic_popups = []
         fill_state_defaults(self)
 
@@ -148,7 +148,7 @@ class TacticalModeTests(unittest.TestCase):
         self.msg = {"sender": "Avaria", "content": "We propose a trade.",
                     "type": "DIPLOMACY", "read": False, "date": "1 January 1939"}
         self.screen = Screen({"Player": nation(inbox=[self.msg]), "Avaria": nation()})
-        self.screen.tactical_mode = True
+        self.screen.session.tactical_mode = True
 
     def test_no_alert_is_raised(self):
         diplomatic_popups.spawn_popups_for_player(self.screen)
@@ -170,14 +170,14 @@ class TacticalModeTests(unittest.TestCase):
         their old host signed."""
         diplomatic_popups.spawn_popups_for_player(self.screen)
 
-        self.screen.tactical_mode = False
+        self.screen.session.tactical_mode = False
         diplomatic_popups.spawn_popups_for_player(self.screen)
 
         self.assertEqual(self.screen.diplomatic_popups, [])
 
     def test_a_strategic_player_still_gets_them(self):
         """Guards the tests above against passing for the wrong reason."""
-        self.screen.tactical_mode = False
+        self.screen.session.tactical_mode = False
 
         diplomatic_popups.spawn_popups_for_player(self.screen)
 
@@ -349,7 +349,7 @@ class ConversationInteractionTests(unittest.TestCase):
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=row.rect.center),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=row.rect.center)])
         self.assertEqual(screen.selected_recipient, "B")
-        messages = screen.map_screen.nation_data["P"]["inbox"]
+        messages = screen.map_screen.world.nation_data["P"]["inbox"]
         self.assertFalse(messages[0]["read"])
         self.assertTrue(messages[1]["read"])
 
@@ -371,8 +371,8 @@ class ConversationInteractionTests(unittest.TestCase):
         screen = self.make_screen()
         for index in range(20):
             country = f"C{index:02}"
-            screen.map_screen.nation_data[country] = nation(name=f"Country {index:02}", is_playable=True)
-            screen.map_screen.map_data[100 + index] = {"owner": country}
+            screen.map_screen.world.nation_data[country] = nation(name=f"Country {index:02}", is_playable=True)
+            screen.map_screen.world.map_data[100 + index] = {"owner": country}
         screen.toggle_add_contact()
         screen.contact_scroll_y = screen.max_contact_scroll
         screen.refresh_ui()
@@ -385,7 +385,7 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertEqual(screen.selected_recipient, "C19")
         self.assertFalse(screen.show_all_contacts)
         self.assertTrue(screen.text_input_active)
-        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "C19"), {})
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "C19"), {})
 
     def test_fixed_controls_cannot_scroll_or_activate_hidden_thread_actions(self):
         screen = self.make_screen()
@@ -422,7 +422,7 @@ class ConversationInteractionTests(unittest.TestCase):
             screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
             screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
         self.assertIs(screen.processed_messages, prepared)
-        screen.map_screen.nation_data["P"]["inbox"].insert(0, {
+        screen.map_screen.world.nation_data["P"]["inbox"].insert(0, {
             "sender": "A", "content": "New message", "read": False, "type": "TEXT", "date": "Today"})
         screen.refresh_ui()
         self.assertEqual(screen.processed_messages[0]["msg_data"]["content"], "New message")
@@ -472,7 +472,7 @@ class ConversationInteractionTests(unittest.TestCase):
         from screens.game import messages as messages_module
 
         screen = self.make_screen()
-        screen.map_screen.nation_data["P"]["inbox"].insert(0, {
+        screen.map_screen.world.nation_data["P"]["inbox"].insert(0, {
             "sender": "To: A", "content": "Sent message", "read": True, "type": "TEXT", "date": "Today"})
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         with mock.patch.object(messages_module.time, "monotonic", return_value=50.0):
@@ -504,7 +504,7 @@ class ConversationInteractionTests(unittest.TestCase):
         from screens.game import messages as messages_module
 
         screen = self.make_screen()
-        screen.map_screen.nation_data["P"]["inbox"].append({
+        screen.map_screen.world.nation_data["P"]["inbox"].append({
             "sender": "B", "type": "DIPLOMACY", "content": "Shared outcome", "action": dm.SHARED_OUTCOME_ACTION,
         })
         screen.select_recipient("A")
@@ -515,7 +515,7 @@ class ConversationInteractionTests(unittest.TestCase):
 
     def test_legacy_game_notices_show_once_and_cannot_be_forwarded(self):
         screen = self.make_screen()
-        inbox = screen.map_screen.nation_data["P"]["inbox"]
+        inbox = screen.map_screen.world.nation_data["P"]["inbox"]
         old_notice = {"sender": "A", "type": "DIPLOMACY", "content": "Mutual ceasefire agreements signed.",
                       "date": "Today", "system_notice": True, "message_id": "first"}
         inbox.extend((old_notice, dict(old_notice, sender="To: A", message_id="second")))
@@ -527,16 +527,16 @@ class ConversationInteractionTests(unittest.TestCase):
         notices = [row for row in screen.processed_messages if row["msg_data"].get("is_system")]
         self.assertEqual(len(notices), 2)
         self.assertTrue(all(row["forward_button"] is None for row in notices))
-        pending = dm.queue_forwarded_message(screen.map_screen.nation_data, "P", "B", "P", old_notice)
+        pending = dm.queue_forwarded_message(screen.map_screen.world.nation_data, "P", "B", "P", old_notice)
         self.assertEqual(pending, "This message cannot be forwarded.")
         with self.assertRaises(ValueError):
-            dm.canonical_forward_fields(screen.map_screen.nation_data, "P", {"forwarded_message": old_notice})
-        text = dm.automatic_decline_text("A", "P", screen.map_screen.nation_data)
+            dm.canonical_forward_fields(screen.map_screen.world.nation_data, "P", {"forwarded_message": old_notice})
+        text = dm.automatic_decline_text("A", "P", screen.map_screen.world.nation_data)
         self.assertTrue(any(row["msg_data"]["content"] == text for row in notices))
 
     def test_older_named_auto_decline_does_not_get_the_current_offer_controls(self):
         screen = self.make_screen()
-        data = screen.map_screen.nation_data
+        data = screen.map_screen.world.nation_data
         text = dm.automatic_decline_text("P", "A", data)
         data["P"]["inbox"].append({"sender": "A", "type": "DIPLOMACY", "action": "TRADE", "content": text})
         dm.set_pending(data, "A", "P", "TRADE", turns=1)
@@ -548,7 +548,7 @@ class ConversationInteractionTests(unittest.TestCase):
 
     def test_obsolete_war_request_shows_the_reason_instead_of_reply_buttons(self):
         screen = self.make_screen()
-        data = screen.map_screen.nation_data
+        data = screen.map_screen.world.nation_data
         data["P"]["faction"] = data["A"]["faction"] = "Alliance"
         request = dm.set_pending(data, "A", "P", "JOIN_WARS", turns=1)
         data["P"]["inbox"].append({"sender": "A", "type": "DIPLOMACY", "action": "JOIN_WARS",
@@ -586,14 +586,14 @@ class ConversationInteractionTests(unittest.TestCase):
             screen.draw(surface)
             forward_rect = next(rect for rect, _message in screen.forward_button_rects if rect.width and rect.height)
             delete_rect = next(rect for rect, _index in screen.draft_edit_rects if rect.width and rect.height)
-            state = copy.deepcopy(screen.map_screen.nation_data)
+            state = copy.deepcopy(screen.map_screen.world.nation_data)
             surfaces = [prepared["surface"] for prepared in screen.processed_messages]
             screen.select_recipient("A")
             screen.update()
         self.assertIsNone(screen.selected_recipient)
         self.assertFalse(screen.text_input_active)
         self.assertEqual([prepared["surface"] for prepared in screen.exiting_thread["messages"]], surfaces)
-        self.assertEqual(screen.map_screen.nation_data, state)
+        self.assertEqual(screen.map_screen.world.nation_data, state)
         halfway = 11.0 + messages_module.MSG_BUBBLE_EXIT_ANIM_SECONDS / 2
         with mock.patch.object(messages_module.time, "monotonic", return_value=halfway), \
                 mock.patch.object(dm, "get_pending", side_effect=AssertionError("Exit read diplomacy")), \
@@ -608,7 +608,7 @@ class ConversationInteractionTests(unittest.TestCase):
             screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=forward_rect.center))
             screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=delete_rect.center))
             forward.assert_not_called()
-        self.assertEqual(screen.map_screen.nation_data, state)
+        self.assertEqual(screen.map_screen.world.nation_data, state)
         with mock.patch.object(messages_module.time, "monotonic", return_value=11.0 + messages_module.MSG_BUBBLE_EXIT_ANIM_SECONDS + 0.001):
             screen.update()
         self.assertIsNone(screen.exiting_thread)
@@ -628,7 +628,7 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertEqual(screen.selected_recipient, "B")
         self.assertTrue(screen.text_input_active)
         self.assertEqual([prepared["msg_data"]["content"] for prepared in screen.processed_messages], ["Other conversation"])
-        self.assertEqual(screen.map_screen.nation_data["P"]["draft_lists"]["A"], ["Saved on deselect"])
+        self.assertEqual(screen.map_screen.world.nation_data["P"]["draft_lists"]["A"], ["Saved on deselect"])
 
     def test_mark_unread_uses_exit_cache_and_still_marks_the_conversation_unread(self):
         from screens.game import messages as messages_module
@@ -639,7 +639,7 @@ class ConversationInteractionTests(unittest.TestCase):
             screen.mark_thread_unread()
         self.assertIsNone(screen.selected_recipient)
         self.assertIsNotNone(screen.exiting_thread)
-        self.assertFalse(screen.map_screen.nation_data["P"]["inbox"][0]["read"])
+        self.assertFalse(screen.map_screen.world.nation_data["P"]["inbox"][0]["read"])
         screen.start_messages(screen.map_screen)
         self.assertIsNone(screen.exiting_thread)
 
@@ -649,7 +649,7 @@ class ConversationInteractionTests(unittest.TestCase):
         for submit_with_enter in (False, True):
             with self.subTest(enter=submit_with_enter):
                 screen = self.make_screen()
-                previous = copy.deepcopy(dm.set_pending(screen.map_screen.nation_data, "P", "A", "MSG:Previous turn", turns=1))
+                previous = copy.deepcopy(dm.set_pending(screen.map_screen.world.nation_data, "P", "A", "MSG:Previous turn", turns=1))
                 screen.select_recipient("A")
                 self.assertTrue(screen.compose_enabled)
                 screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h, unicode="h", mod=0))
@@ -664,8 +664,8 @@ class ConversationInteractionTests(unittest.TestCase):
                         pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=queue.rect.center),
                         pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=queue.rect.center)])
                 self.assertEqual(screen.compose_text, "")
-                self.assertEqual(screen.map_screen.nation_data["P"]["draft_lists"]["A"], ["h"])
-                self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), previous)
+                self.assertEqual(screen.map_screen.world.nation_data["P"]["draft_lists"]["A"], ["h"])
+                self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "A"), previous)
                 screen.select_recipient("B")
                 screen.select_recipient("A")
                 self.assertEqual(screen.drafts, ["h"])
@@ -707,7 +707,7 @@ class ConversationInteractionTests(unittest.TestCase):
         for tactical, action in ((False, "TRADE"), (True, "MSG:Previous turn")):
             with self.subTest(tactical=tactical, action=action):
                 screen = self.make_screen(tactical=tactical)
-                dm.set_pending(screen.map_screen.nation_data, "P", "A", action, turns=1)
+                dm.set_pending(screen.map_screen.world.nation_data, "P", "A", action, turns=1)
                 screen.select_recipient("A")
                 self.assertFalse(screen.compose_enabled)
                 screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h, unicode="h", mod=0))
@@ -727,27 +727,27 @@ class ConversationInteractionTests(unittest.TestCase):
         delete_rect, _index = next((rect, index) for rect, index in screen.draft_edit_rects if rect.width and rect.height)
         screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=delete_rect.center))
         self.assertEqual(screen.drafts, [])
-        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "A"), {})
 
     def test_forward_to_an_existing_text_conversation_keeps_both_drafts_visible(self):
         screen = self.make_screen()
-        dm.queue_text_message(screen.map_screen.nation_data, "P", "B", "Already queued")
+        dm.queue_text_message(screen.map_screen.world.nation_data, "P", "B", "Already queued")
         screen.select_recipient("A")
-        original = screen.map_screen.nation_data["P"]["inbox"][0]
+        original = screen.map_screen.world.nation_data["P"]["inbox"][0]
         screen.queue_forward(original, "B")
         screen.select_recipient("B")
         contents = [prepared["msg_data"]["content"] for prepared in screen.processed_messages]
         self.assertIn("Already queued", contents)
         self.assertTrue(any(original["content"] in text for text in contents))
         screen.save_current_draft()
-        pending = dm.get_pending(screen.map_screen.nation_data, "P", "B")
+        pending = dm.get_pending(screen.map_screen.world.nation_data, "P", "B")
         self.assertEqual(pending["action"], dm.FORWARD_ACTION)
         self.assertEqual(pending["forwarded_message"], original)
-        self.assertEqual(screen.map_screen.nation_data["P"]["draft_lists"]["B"], ["Already queued"])
+        self.assertEqual(screen.map_screen.world.nation_data["P"]["draft_lists"]["B"], ["Already queued"])
 
     def test_tactical_mode_blocks_writes_and_keeps_treaty_view_available(self):
         screen = self.make_screen(tactical=True)
-        screen.map_screen.nation_data["P"]["pending_ratification"] = {"signatory": "A"}
+        screen.map_screen.world.nation_data["P"]["pending_ratification"] = {"signatory": "A"}
         screen.select_recipient("A")
         buttons = {element.text: element for element in screen.elements + screen.offer_buttons}
         for label in ("Queue", "Trade", "Ratify Treaty", "Refuse & Leave Faction"):
@@ -758,7 +758,7 @@ class ConversationInteractionTests(unittest.TestCase):
             screen.answer_ratification(True)
             answer.assert_not_called()
         screen.send_message()
-        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "A"), {})
 
     def test_no_reply_controls_exist_without_an_open_offer(self):
         screen = self.make_screen()
@@ -775,13 +775,13 @@ class ConversationInteractionTests(unittest.TestCase):
         screen.map_screen.refresh_diplomacy_maps = mock.Mock()
         screen.select_recipient("A")
         terms = {"give_materials": 4}
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1, parameters=terms)
+        dm.set_pending(screen.map_screen.world.nation_data, "A", "P", "TRADE", turns=1, parameters=terms)
         for verdict in (dm.RESPONSE_ACCEPT, dm.RESPONSE_REJECT):
             with self.subTest(verdict=verdict):
                 screen.refresh_ui()
                 buttons = {button.text: button for button in screen.offer_buttons}
                 buttons["Accept Trade" if verdict == dm.RESPONSE_ACCEPT else "Decline Trade"].callback()
-                self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), (verdict, "TRADE"))
+                self.assertEqual(dm.get_response_status(screen.map_screen.world.nation_data, "P", "A"), (verdict, "TRADE"))
                 buttons = {button.text: button for button in screen.offer_buttons}
                 undo = buttons["Undo Accept" if verdict == dm.RESPONSE_ACCEPT else "Undo Decline"]
                 opposite = buttons["Decline Trade" if verdict == dm.RESPONSE_ACCEPT else "Accept Trade"]
@@ -792,8 +792,8 @@ class ConversationInteractionTests(unittest.TestCase):
                     buttons["View Trade Deal"].callback()
                     view.assert_called_once_with(screen.map_screen, "A", params=terms)
                 undo.callback()
-                self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), ("", ""))
-        dm.clear_pending(screen.map_screen.nation_data, "A", "P")
+                self.assertEqual(dm.get_response_status(screen.map_screen.world.nation_data, "P", "A"), ("", ""))
+        dm.clear_pending(screen.map_screen.world.nation_data, "A", "P")
         screen.refresh_ui()
         self.assertEqual(screen.offer_buttons, [])
 
@@ -805,7 +805,7 @@ class ConversationInteractionTests(unittest.TestCase):
     def test_reply_buttons_sit_under_the_message_that_made_the_offer(self):
         screen = self.make_screen()
         screen.map_screen.refresh_diplomacy_maps = mock.Mock()
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.set_pending(screen.map_screen.world.nation_data, "A", "P", "TRADE", turns=1)
         dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "Coal for oil?")
         screen.select_recipient("A")
         self.assertEqual(self.offer_owner(screen, "Accept Trade")["msg_data"]["content"], "Coal for oil?")
@@ -814,17 +814,17 @@ class ConversationInteractionTests(unittest.TestCase):
                             if button.text == "Accept Trade" and rect.width and rect.height)
         for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             screen.additional_events(pygame.event.Event(kind, button=1, pos=rect.center))
-        self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"),
+        self.assertEqual(dm.get_response_status(screen.map_screen.world.nation_data, "P", "A"),
                          (dm.RESPONSE_ACCEPT, "TRADE"))
 
     def test_a_ratification_and_a_request_from_one_country_are_both_answerable(self):
         from map_logic.diplomacy import ratification
 
         screen = self.make_screen()
-        screen.map_screen.nation_data["P"]["pending_ratification"] = {"signatory": "A", "opponent": "B"}
+        screen.map_screen.world.nation_data["P"]["pending_ratification"] = {"signatory": "A", "opponent": "B"}
         dm.send_message(screen.map_screen, "A", "P", "Ratify our treaty.", "DIPLOMACY",
                         extra={"action": ratification.ACTION})
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.set_pending(screen.map_screen.world.nation_data, "A", "P", "TRADE", turns=1)
         dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "Coal for oil?")
         screen.select_recipient("A")
         ratify, trade = self.offer_owner(screen, "Ratify Treaty"), self.offer_owner(screen, "Accept Trade")
@@ -835,7 +835,7 @@ class ConversationInteractionTests(unittest.TestCase):
 
     def test_an_offer_whose_message_is_gone_still_gets_a_bubble_to_answer(self):
         screen = self.make_screen()
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "FACTION_INVITE", turns=1)
+        dm.set_pending(screen.map_screen.world.nation_data, "A", "P", "FACTION_INVITE", turns=1)
         screen.select_recipient("A")
         owner = self.offer_owner(screen, "Accept Faction Invite")
         self.assertEqual(owner["msg_data"]["content"], dm.announcement_for("FACTION_INVITE"))
@@ -843,9 +843,9 @@ class ConversationInteractionTests(unittest.TestCase):
     def test_an_earlier_resolved_offer_keeps_no_controls(self):
         """Only the open request's own message gets them, matched by request ID."""
         screen = self.make_screen()
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.set_pending(screen.map_screen.world.nation_data, "A", "P", "TRADE", turns=1)
         dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "Old offer.")
-        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.set_pending(screen.map_screen.world.nation_data, "A", "P", "TRADE", turns=1)
         dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "New offer.")
         screen.select_recipient("A")
         owners = [prepared["msg_data"]["content"] for prepared in screen.processed_messages
@@ -861,7 +861,7 @@ class ConversationInteractionTests(unittest.TestCase):
             with self.subTest(verdict=verdict):
                 terms = deal.new(deal.KIND_PEACE, ["A", "P"], ["B"], [deal.white_peace()])
                 request = {"signatory": "A", "verdict": verdict, "deal": terms}
-                screen.map_screen.nation_data["P"]["pending_ratification"] = request
+                screen.map_screen.world.nation_data["P"]["pending_ratification"] = request
                 screen.refresh_ui()
                 buttons = {button.text: button for button in screen.offer_buttons}
                 undo_label = "Ratified (undo)" if verdict == ratification.RATIFY else "Refused (undo)"
@@ -882,19 +882,19 @@ class ConversationInteractionTests(unittest.TestCase):
         import copy
 
         screen = self.make_screen()
-        previous = copy.deepcopy(dm.set_pending(screen.map_screen.nation_data, "P", "B", "MSG:Already sent", turns=1))
+        previous = copy.deepcopy(dm.set_pending(screen.map_screen.world.nation_data, "P", "B", "MSG:Already sent", turns=1))
         screen.select_recipient("A")
-        source = screen.map_screen.nation_data["P"]["inbox"][0]
+        source = screen.map_screen.world.nation_data["P"]["inbox"][0]
         screen.queue_forward(source, "B")
         screen.select_recipient("B")
         screen.save_current_draft()
-        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "B")["request_id"], previous["request_id"])
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "B")["request_id"], previous["request_id"])
         self.assertTrue(any(source["content"] in prepared["msg_data"]["content"] for prepared in screen.processed_messages))
         screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
         rectangle, _index = next((rect, index) for rect, index in screen.draft_edit_rects
                                  if index == f"FORMAL_{dm.FORWARD_ACTION}")
         screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=rectangle.center))
-        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "B"), previous)
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "B"), previous)
 
 
 class ConversationThemeTests(unittest.TestCase):
@@ -924,14 +924,14 @@ class ConversationThemeTests(unittest.TestCase):
         screen.select_recipient("A")
         screen.compose_text = "Still typing"
         screen.drafts = ["Already queued"]
-        state = copy.deepcopy(screen.map_screen.nation_data)
+        state = copy.deepcopy(screen.map_screen.world.nation_data)
         picker = self.open_picker(screen)
         # A modal can finish after the underlying screen's selection changes.
         screen.selected_recipient = "B"
         picker.call_args.args[3]((12, 34, 56))
-        self.assertEqual(screen.map_screen.conversation_colors, {"A": [12, 34, 56]})
-        self.assertEqual(other_game.map_screen.conversation_colors, {})
-        self.assertEqual(screen.map_screen.nation_data, state)
+        self.assertEqual(screen.map_screen.session.conversation_colors, {"A": [12, 34, 56]})
+        self.assertEqual(other_game.map_screen.session.conversation_colors, {})
+        self.assertEqual(screen.map_screen.world.nation_data, state)
         self.assertEqual(screen.compose_text, "Still typing")
         self.assertEqual(screen.drafts, ["Already queued"])
         self.assertEqual(self.settings, settings_before)
@@ -961,10 +961,10 @@ class ConversationThemeTests(unittest.TestCase):
         second_game = self.make_screen().map_screen
         screen.start_messages(second_game)
         screen.select_recipient("A")
-        self.assertEqual(second_game.conversation_colors, {})
+        self.assertEqual(second_game.session.conversation_colors, {})
         self.open_picker(screen).call_args.args[3]((78, 90, 12))
-        self.assertEqual(first_game.conversation_colors, {"A": [12, 34, 56]})
-        self.assertEqual(second_game.conversation_colors, {"A": [78, 90, 12]})
+        self.assertEqual(first_game.session.conversation_colors, {"A": [12, 34, 56]})
+        self.assertEqual(second_game.session.conversation_colors, {"A": [78, 90, 12]})
 
     def test_picker_opened_for_a_previous_game_cannot_color_the_new_game(self):
         screen = self.make_screen()
@@ -974,8 +974,8 @@ class ConversationThemeTests(unittest.TestCase):
         second_game = self.make_screen().map_screen
         screen.start_messages(second_game)
         picker.call_args.args[3]((12, 34, 56))
-        self.assertEqual(first_game.conversation_colors, {"A": [12, 34, 56]})
-        self.assertEqual(second_game.conversation_colors, {})
+        self.assertEqual(first_game.session.conversation_colors, {"A": [12, 34, 56]})
+        self.assertEqual(second_game.session.conversation_colors, {})
 
     def test_no_selection_cannot_open_picker_and_cancel_does_not_save(self):
         screen = self.make_screen()
@@ -984,7 +984,7 @@ class ConversationThemeTests(unittest.TestCase):
         self.open_picker(screen).assert_not_called()
         screen.select_recipient("A")
         self.open_picker(screen).assert_called_once()
-        self.assertEqual(screen.map_screen.conversation_colors, {})
+        self.assertEqual(screen.map_screen.session.conversation_colors, {})
         self.settings_writer.assert_not_called()
 
     def test_local_theme_is_available_in_tactical_mode(self):
@@ -993,7 +993,7 @@ class ConversationThemeTests(unittest.TestCase):
         button = next(button for button in screen.elements if button.text == "Theme")
         self.assertFalse(button.disabled)
         self.open_picker(screen).call_args.args[3]((12, 34, 56))
-        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "A"), {})
 
 
 if __name__ == "__main__":

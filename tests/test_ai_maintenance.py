@@ -37,10 +37,10 @@ def province(pid, units=(), owner="Avaria", neighbors=(), industry=False):
 
 class Screen(MapDouble):
     def __init__(self, provs, at_war=("Borland",)):
-        self.map_data = {str(p["id"]): p for p in provs}
-        self.id_to_province = {p["id"]: p for p in provs}
-        self.scenario_settings = {}
-        self.nation_data = {
+        self.world.map_data = {str(p["id"]): p for p in provs}
+        self.world.id_to_province = {p["id"]: p for p in provs}
+        self.world.scenario_settings = {}
+        self.world.nation_data = {
             "Avaria": {"at_war_with": list(at_war), "puppets": [],
                        "master": "", "faction": "", "research": {},
                        "materials": 10000, "manpower": 10000, "fuel": 10000},
@@ -365,7 +365,7 @@ class UpgradeReachabilityTests(unittest.TestCase):
         library = {"Militia I": {"metadata": fixture_metadata(tier=1)},
                    "Militia II": {"metadata": fixture_metadata(tier=2, level=2)}}
         screen = Screen(provs, at_war=())
-        screen.nation_data["Avaria"]["research"] = {"fixture_track": 2}
+        screen.world.nation_data["Avaria"]["research"] = {"fixture_track": 2}
         with patch.object(queries, "get_unit_library", return_value=library):
             run(screen, provs, [(idle, prov)], **ctx_over)
         return idle

@@ -43,7 +43,7 @@ class VictorsTermsTests(unittest.TestCase):
 
         for ours in ("RUS", "FRA"):
             self.game.set_war(ours, "FOE")
-        war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, "FOE")
+        war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, "FOE")
 
         # FRA overruns them. RUS takes nothing -- it cannot even reach FOE.
         for prov in self.taken:
@@ -56,14 +56,14 @@ class VictorsTermsTests(unittest.TestCase):
         """Province ids the deal moves. tile_transfers keys them as the map
         does, which is not always the type the caller wrote them down as."""
         return {str(prov_id) for prov_id
-                in deal.tile_transfers(agreement, self.game.map_data,
-                                       self.game.nation_data)}
+                in deal.tile_transfers(agreement, self.game.world.map_data,
+                                       self.game.world.nation_data)}
 
     def test_a_bloc_leader_asks_for_the_ground_its_member_is_standing_on(self):
         """RUS holds nothing itself; the demand is FRA's conquests, to FRA."""
         agreement = self.terms(0.95)
-        transfers = deal.tile_transfers(agreement, self.game.map_data,
-                                        self.game.nation_data)
+        transfers = deal.tile_transfers(agreement, self.game.world.map_data,
+                                        self.game.world.nation_data)
 
         self.assertEqual(self.demanded(agreement),
                          {str(prov["id"]) for prov in self.taken})
@@ -137,12 +137,12 @@ class SeparatePeacePriceTests(unittest.TestCase):
 
     def test_the_price_lands_on_the_member_and_nobody_else(self):
         agreement = self.terms("MEMBER")
-        cost = deal.demand_fraction(agreement, "MEMBER", self.game.map_data,
-                                    self.game.nation_data, whole_side=False)
+        cost = deal.demand_fraction(agreement, "MEMBER", self.game.world.map_data,
+                                    self.game.world.nation_data, whole_side=False)
         self.assertGreater(cost, 0.0, "leaving the bloc has to cost something")
         self.assertEqual(
-            deal.demand_fraction(agreement, "FOE", self.game.map_data,
-                                 self.game.nation_data, whole_side=False),
+            deal.demand_fraction(agreement, "FOE", self.game.world.map_data,
+                                 self.game.world.nation_data, whole_side=False),
             0.0)
 
     def offers_of(self, proposer):
@@ -179,7 +179,7 @@ class SilentLossRatificationTests(unittest.TestCase):
         self.taken = self.game.add_province("FOE", cores=["FOE"])
         for ours in ("RUS", "FRA"):
             self.game.set_war(ours, "FOE")
-        war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, "FOE")
+        war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, "FOE")
         self.taken["owner"] = "FRA"
 
     def bound_by(self, agreement):

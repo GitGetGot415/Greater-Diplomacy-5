@@ -30,19 +30,19 @@ class TreatyEffectTests(unittest.TestCase):
         puppet at all."""
         host = self.world()
         self.apply(host, "TRADE", params={"puppet_state": "SENDER"})
-        self.assertEqual(host.nation_data["B"]["master"], "A")
-        self.assertIn("B", host.nation_data["A"]["puppets"])
+        self.assertEqual(host.world.nation_data["B"]["master"], "A")
+        self.assertIn("B", host.world.nation_data["A"]["puppets"])
 
     def test_puppet_trade_the_other_way_round(self):
         host = self.world()
         self.apply(host, "TRADE", params={"puppet_state": "RECEIVER"})
-        self.assertEqual(host.nation_data["A"]["master"], "B")
-        self.assertIn("A", host.nation_data["B"]["puppets"])
+        self.assertEqual(host.world.nation_data["A"]["master"], "B")
+        self.assertIn("A", host.world.nation_data["B"]["puppets"])
 
     def test_plain_trade_creates_no_puppet(self):
         host = self.world()
         self.apply(host, "TRADE", params={"give_materials": 10})
-        self.assertEqual(host.nation_data["B"].get("master", ""), "")
+        self.assertEqual(host.world.nation_data["B"].get("master", ""), "")
 
     def test_accepting_peace_says_something(self):
         """Regression: this looked up an ACCEPT_PEACE fallback that was never
@@ -57,14 +57,14 @@ class TreatyEffectTests(unittest.TestCase):
         """Even a scripted AI acceptance cannot execute an enemy's trade."""
         host = self.world()
         host.set_war("A", "B")
-        before = (int(host.nation_data["A"].get("materials", 0) or 0),
-                  int(host.nation_data["B"].get("fuel", 0) or 0))
+        before = (int(host.world.nation_data["A"].get("materials", 0) or 0),
+                  int(host.world.nation_data["B"].get("fuel", 0) or 0))
         outcome = treaty_effects.apply_treaty_effect(
             host, "TRADE", "A", "B", {"give_materials": 500, "take_fuel": 100},
             escrow={"materials": 500})
         self.assertEqual(outcome.blocked, ai_prompts.AI_FALLBACK_RESPONSES["TRADE_AT_WAR"])
-        self.assertEqual(int(host.nation_data["A"].get("materials", 0)), before[0] + 500)
-        self.assertEqual(int(host.nation_data["B"].get("fuel", 0) or 0), before[1])
+        self.assertEqual(int(host.world.nation_data["A"].get("materials", 0)), before[0] + 500)
+        self.assertEqual(int(host.world.nation_data["B"].get("fuel", 0) or 0), before[1])
 
     def test_military_access_says_something(self):
         host = self.world()
@@ -76,7 +76,7 @@ class TreatyEffectTests(unittest.TestCase):
         a player-initiated faction left no trace in the event log."""
         host = self.world()
         self.apply(host, "CREATE_FACTION")
-        log = host.nation_data.get("GLOBAL_EVENTS", {}).get("log", [])
+        log = host.world.nation_data.get("GLOBAL_EVENTS", {}).get("log", [])
         self.assertTrue(any("faction" in entry.lower() for entry in log),
                         "founding a faction logged no global event")
         self.assertFalse(any("Diplomatic agreement reached" in entry for entry in log))
@@ -95,7 +95,7 @@ class TreatyEffectTests(unittest.TestCase):
                 diplomacy_processor._resolve_ai_answer(ai, results, ["A", "B"], [], "A", "B", "TRADE", ai.pending("A", "B"))
 
                 for host in (human, ai):
-                    self.assertEqual(host.nation_data["GLOBAL_EVENTS"]["log"], ["Diplomatic agreement reached between B and A."])
+                    self.assertEqual(host.world.nation_data["GLOBAL_EVENTS"]["log"], ["Diplomatic agreement reached between B and A."])
                     self.assertEqual(host.inbound("A", "B"), [message])
 
     def test_peace_blocked_at_resolution_does_not_announce_an_agreement(self):
@@ -103,64 +103,64 @@ class TreatyEffectTests(unittest.TestCase):
         host.set_war("A", "B")
         host.propose("A", "B", "PEACE_TREATY")
         host.answer("B", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY", "We accepted.")
-        host.nation_data["A"]["at_war_with"].clear()
-        host.nation_data["B"]["at_war_with"].clear()
+        host.world.nation_data["A"]["at_war_with"].clear()
+        host.world.nation_data["B"]["at_war_with"].clear()
         diplomacy_processor._process_queued_responses(host)
 
         self.assertEqual(host.inbound("A", "B"), [ai_prompts.AI_FALLBACK_RESPONSES["NO_WAR_TO_SETTLE"]])
-        self.assertFalse(host.nation_data.get("GLOBAL_EVENTS", {}).get("log"))
+        self.assertFalse(host.world.nation_data.get("GLOBAL_EVENTS", {}).get("log"))
 
     # -- role symmetry ---------------------------------------------------
 
     def test_faction_invite_puts_the_accepter_in_the_proposers_faction(self):
         host = self.world()
-        host.nation_data["A"]["faction"] = "Pact"
-        host.nation_data["A"]["is_faction_leader"] = True
+        host.world.nation_data["A"]["faction"] = "Pact"
+        host.world.nation_data["A"]["is_faction_leader"] = True
         self.apply(host, "FACTION_INVITE", "A", "B")
-        self.assertEqual(host.nation_data["B"]["faction"], "Pact")
+        self.assertEqual(host.world.nation_data["B"]["faction"], "Pact")
 
     def test_join_request_puts_the_proposer_in_the_accepters_faction(self):
         """The mirror image of the invite: roles swap, effect is the same."""
         host = self.world()
-        host.nation_data["B"]["faction"] = "Pact"
-        host.nation_data["B"]["is_faction_leader"] = True
+        host.world.nation_data["B"]["faction"] = "Pact"
+        host.world.nation_data["B"]["is_faction_leader"] = True
         self.apply(host, "JOIN_FACTION_REQ", "A", "B")
-        self.assertEqual(host.nation_data["A"]["faction"], "Pact")
+        self.assertEqual(host.world.nation_data["A"]["faction"], "Pact")
 
     def test_ceasefire_ends_the_war_both_ways(self):
         host = self.world()
         host.set_war("A", "B")
         self.apply(host, "CEASEFIRE")
-        self.assertNotIn("B", host.nation_data["A"]["at_war_with"])
-        self.assertNotIn("A", host.nation_data["B"]["at_war_with"])
+        self.assertNotIn("B", host.world.nation_data["A"]["at_war_with"])
+        self.assertNotIn("A", host.world.nation_data["B"]["at_war_with"])
 
     def test_military_access_is_one_way(self):
         host = self.world()
         self.apply(host, "REQ_MILITARY_ACCESS", "A", "B")
-        self.assertIn("A", host.nation_data["B"]["military_access"])
-        self.assertNotIn("B", host.nation_data["A"]["military_access"])
+        self.assertIn("A", host.world.nation_data["B"]["military_access"])
+        self.assertNotIn("B", host.world.nation_data["A"]["military_access"])
 
     def test_swapping_the_roles_swaps_who_grants_access(self):
         host = self.world()
         self.apply(host, "REQ_MILITARY_ACCESS", "B", "A")
-        self.assertIn("B", host.nation_data["A"]["military_access"])
-        self.assertNotIn("A", host.nation_data["B"]["military_access"])
+        self.assertIn("B", host.world.nation_data["A"]["military_access"])
+        self.assertNotIn("A", host.world.nation_data["B"]["military_access"])
 
     # -- blocked agreements ----------------------------------------------
 
     def test_invite_is_blocked_when_the_accepter_already_has_a_faction(self):
         host = self.world()
-        host.nation_data["A"]["faction"] = "Pact"
-        host.nation_data["B"]["faction"] = "Other"
+        host.world.nation_data["A"]["faction"] = "Pact"
+        host.world.nation_data["B"]["faction"] = "Other"
         outcome = self.apply(host, "FACTION_INVITE", "A", "B")
         self.assertTrue(outcome.blocked)
-        self.assertEqual(host.nation_data["B"]["faction"], "Other")
+        self.assertEqual(host.world.nation_data["B"]["faction"], "Other")
 
     def test_create_faction_is_blocked_when_either_side_is_taken(self):
         for taken in ("A", "B"):
             with self.subTest(taken=taken):
                 host = self.world()
-                host.nation_data[taken]["faction"] = "Other"
+                host.world.nation_data[taken]["faction"] = "Other"
                 outcome = self.apply(host, "CREATE_FACTION")
                 self.assertTrue(outcome.blocked)
 
@@ -184,16 +184,16 @@ class TreatyEffectTests(unittest.TestCase):
             "clauses": [{"type": "TILES", "from": "Bulgaria",
                          "to": "Ottoman Empire", "ids": [bulgaria_province["id"]]}],
         }
-        host.nation_data["Bulgaria"]["pending_diplomacy"]["Ottoman Empire"] = {
+        host.world.nation_data["Bulgaria"]["pending_diplomacy"]["Ottoman Empire"] = {
             "action": "TRADE", "parameters": terms}
-        host.nation_data["Ottoman Empire"]["diplo_responses"]["Bulgaria"] = {
+        host.world.nation_data["Ottoman Empire"]["diplo_responses"]["Bulgaria"] = {
             "verdict": "ACCEPT", "action": "TRADE", "parameters": terms}
 
         diplomacy_processor._process_queued_responses(host)
 
         self.assertEqual(bulgaria_province["owner"], "Ottoman Empire")
-        self.assertEqual(host.nation_data["Ottoman Empire"]["diplo_responses"], {})
-        self.assertEqual(host.nation_data["Bulgaria"]["pending_diplomacy"], {})
+        self.assertEqual(host.world.nation_data["Ottoman Empire"]["diplo_responses"], {})
+        self.assertEqual(host.world.nation_data["Bulgaria"]["pending_diplomacy"], {})
 
 
 if __name__ == "__main__":

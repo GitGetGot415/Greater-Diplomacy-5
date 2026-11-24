@@ -64,8 +64,8 @@ class EditorScreenSmokeTests(unittest.TestCase):
     def test_scripted_events_global_rules_add_and_delete(self):
         from screens.editors import scripted_events_editor as se
         from map_logic.diplomacy import global_rules
-        saved_rules = self.map.global_rules
-        self.map.global_rules = []
+        saved_rules = self.map.world.global_rules
+        self.map.world.global_rules = []
         try:
             screen = se._GlobalRulesScreen(self.map, self.map)
             first, second = (country for _label, country in screen.country_items[:2])
@@ -77,7 +77,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 screen.country, screen.target = second, first  # The same mutual rule, reversed.
                 screen.add_rule()
             show_error.assert_called_once()
-            self.assertEqual(self.map.global_rules,
+            self.assertEqual(self.map.world.global_rules,
                              [{"country": first, "rule": global_rules.MAKE_PEACE, "target": second,
                                "strength": global_rules.WEAK, "bypass_scripted_events": False}])
             self.exercise(screen)
@@ -86,13 +86,13 @@ class EditorScreenSmokeTests(unittest.TestCase):
             self.assertEqual(show_info.call_args.kwargs["align"], "left")
             screen.select(0)
             screen.delete_rule()
-            self.assertEqual(self.map.global_rules, [])
+            self.assertEqual(self.map.world.global_rules, [])
         finally:
-            self.map.global_rules = saved_rules
+            self.map.world.global_rules = saved_rules
 
     def test_scripted_events_event_edit(self):
         from screens.editors import scripted_events_editor as se
-        target = self.map.player_country
+        target = self.map.session.player_country
         self.exercise(se._EventEditScreen(self.map, self.map, target))
 
     # -- screens/editors/ (date_economy/research/brush/diplomacy) --
@@ -131,14 +131,14 @@ class EditorScreenSmokeTests(unittest.TestCase):
 
     def interesting_entries(self):
         from data import queries
-        playable = queries.playable_start_countries(self.map.map_data, self.map.nation_data)
+        playable = queries.playable_start_countries(self.map.world.map_data, self.map.world.nation_data)
         return [{"country": country, "rank": rank, "description": "Fixture description " * 20}
                 for country, rank in zip(playable, ("major", "major", "minor"))]
 
     def test_export_screen_lists_interesting_countries(self):
         from screens.editors.standalone_export import Standalone_Export_Screen, screen_runner
         entries = self.interesting_entries()
-        with mock.patch.dict(self.map.standalone_export_settings, {"interesting_countries": entries}):
+        with mock.patch.dict(self.map.world.standalone_export_settings, {"interesting_countries": entries}):
             screen = Standalone_Export_Screen()
             screen.on_enter(self.controller, None)
             self.exercise(screen)
@@ -158,7 +158,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         first = screen.window_preview_surface
         screen.refresh_ui()  # Scrolling rebuilds the screen the same way.
         self.assertIs(screen.window_preview_surface, first)
-        with mock.patch.dict(self.map.standalone_export_settings, {"background_color": [9, 8, 7]}):
+        with mock.patch.dict(self.map.world.standalone_export_settings, {"background_color": [9, 8, 7]}):
             screen.refresh_ui()
             self.assertIsNot(screen.window_preview_surface, first)
             self.exercise(screen)
@@ -194,7 +194,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
     def test_country_selector_panel_surrounds_the_title_and_country_buttons(self):
         from screens.setup import country_select
         screen = country_select.Country_Select_Screen()
-        screen.show(self.map.nation_data, self.interesting_entries(), {})
+        screen.show(self.map.world.nation_data, self.interesting_entries(), {})
         cards = [button for button in screen.elements if button.rect.top >= country_select.MAJOR_TOP
                  and button.text != "Select Country"]
         self.assertEqual(len(cards), len(screen.entries) + 1)  # Every country, then Other Countries.
@@ -214,7 +214,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from screens.setup import country_select
         screen = country_select.Country_Select_Screen()
         self.exercise(screen)  # Before on_enter it shows only Back.
-        screen.nation_data = self.map.nation_data
+        screen.nation_data = self.map.world.nation_data
         screen.entries = self.interesting_entries()
         screen.images = {entry["country"]: screen._images(entry["country"]) for entry in screen.entries}
         screen.selected = screen.entries[-1]["country"]
@@ -245,7 +245,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
     def make_game_preview(self, entries=None):
         from screens.editors.standalone_export import Standalone_Menu_Preview
         entries = self.interesting_entries() if entries is None else entries
-        return Standalone_Menu_Preview("Fixture", {"interesting_countries": entries}, self.controller, self.map.nation_data, entries)
+        return Standalone_Menu_Preview("Fixture", {"interesting_countries": entries}, self.controller, self.map.world.nation_data, entries)
 
     def click_preview_button(self, preview, label):
         button = next(button for button in preview.current_screen.elements if getattr(button, "text", None) == label)
@@ -458,13 +458,13 @@ class EditorScreenSmokeTests(unittest.TestCase):
     def test_personality_edit(self):
         """Takes a country as well as the map, unlike its siblings."""
         from screens import editors as editor_screens
-        self.exercise(editor_screens.Personality_Edit_Screen(self.map, self.map.player_country))
+        self.exercise(editor_screens.Personality_Edit_Screen(self.map, self.map.session.player_country))
 
     def test_country_edit_windows(self):
         from screens import editors as editor_screens
         for name in ("Politics_Edit_Screen", "Starting_Economy_Edit_Screen"):
             with self.subTest(screen=name):
-                self.exercise(getattr(editor_screens, name)(self.map, self.map.player_country))
+                self.exercise(getattr(editor_screens, name)(self.map, self.map.session.player_country))
 
     # -- the other modal tool windows ------------------------------------
 

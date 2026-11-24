@@ -259,7 +259,7 @@ class MapCameraBoundsTests(unittest.TestCase):
         camera.pos = pygame.Vector2(-500, 100)
         camera.target_pos = pygame.Vector2(-500, 100)
         self_map = _map(loop_map=False)
-        self_map.selection_mode = True
+        self_map.session.selection_mode = True
 
         camera.update(self_map, 720)
 

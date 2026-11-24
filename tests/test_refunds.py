@@ -68,9 +68,9 @@ class StubMap(MapDouble):
     """Just enough map for clear_player_construction."""
 
     def __init__(self, provinces, player="A"):
-        self.player_country = player
-        self.map_data = {str(i): p for i, p in enumerate(provinces)}
-        self.nation_data = {player: nation()}
+        self.session.player_country = player
+        self.world.map_data = {str(i): p for i, p in enumerate(provinces)}
+        self.world.nation_data = {player: nation()}
 
 
 class ClearPlayerConstructionTests(unittest.TestCase):
@@ -81,7 +81,7 @@ class ClearPlayerConstructionTests(unittest.TestCase):
 
         automation_logic.clear_player_construction(game_map)
 
-        self.assertEqual(game_map.nation_data["A"],
+        self.assertEqual(game_map.world.nation_data["A"],
                          {"materials": 100, "manpower": 10, "fuel": 5})
         self.assertEqual(prov["building_queue"], [])
 
@@ -91,8 +91,8 @@ class ClearPlayerConstructionTests(unittest.TestCase):
 
         automation_logic.clear_player_construction(game_map)
 
-        self.assertEqual(game_map.nation_data["A"]["manpower"], 50)
-        self.assertEqual(game_map.nation_data["A"]["materials"], 20)
+        self.assertEqual(game_map.world.nation_data["A"]["manpower"], 50)
+        self.assertEqual(game_map.world.nation_data["A"]["materials"], 20)
         self.assertEqual(prov["unit_queue"], [])
 
     def test_both_queues_across_several_provinces(self):
@@ -105,8 +105,8 @@ class ClearPlayerConstructionTests(unittest.TestCase):
 
         automation_logic.clear_player_construction(game_map)
 
-        self.assertEqual(game_map.nation_data["A"]["materials"], 150)
-        self.assertEqual(game_map.nation_data["A"]["manpower"], 50)
+        self.assertEqual(game_map.world.nation_data["A"]["materials"], 150)
+        self.assertEqual(game_map.world.nation_data["A"]["manpower"], 50)
         self.assertTrue(all(not p.get("building_queue") and not p.get("unit_queue")
                             for p in provs))
 
@@ -117,7 +117,7 @@ class ClearPlayerConstructionTests(unittest.TestCase):
 
         automation_logic.clear_player_construction(game_map)
 
-        self.assertEqual(game_map.nation_data["A"]["materials"], 100)
+        self.assertEqual(game_map.world.nation_data["A"]["materials"], 100)
         self.assertEqual(len(theirs["building_queue"]), 1)
 
 

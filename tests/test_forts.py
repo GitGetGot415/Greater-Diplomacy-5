@@ -104,9 +104,9 @@ class FortTests(unittest.TestCase):
                             "cost_manpower": 0, "cost_fuel": 0},
             }],
         }
-        screen.map_data = {1: source, 2: target}
-        screen.id_to_province = {1: source, 2: target}
-        screen.nation_data = {
+        screen.world.map_data = {1: source, 2: target}
+        screen.world.id_to_province = {1: source, 2: target}
+        screen.world.nation_data = {
             "A": {"materials": 0, "at_war_with": ["B"]},
             "B": {"at_war_with": ["A"]},
         }
@@ -115,7 +115,7 @@ class FortTests(unittest.TestCase):
 
         self.assertEqual(queries.get_fort_level(target), 4)
         self.assertEqual(target["building_queue"], [])
-        self.assertEqual(screen.nation_data["A"]["materials"], 7000)
+        self.assertEqual(screen.world.nation_data["A"]["materials"], 7000)
         self.assertEqual(gun["order"], {"type": "MOVE", "path": []})
 
     def test_ui_shows_fort_defense_as_a_separate_bonus(self):

@@ -32,14 +32,14 @@ class Fixture(unittest.TestCase):
         self.mine = [self.game.add_province("A", cores=["A"]) for _ in range(6)]
         self.theirs = [self.game.add_province("B", cores=["B"]) for _ in range(6)]
         for nation in ("A", "B"):
-            war_actions.save_own_pre_war_map(self.game.map_data, self.game.nation_data, nation)
+            war_actions.save_own_pre_war_map(self.game.world.map_data, self.game.world.nation_data, nation)
         self.game.set_war("A", "B")
         self.at_war_for(20)
         self.world = ai_world.for_screen(self.game)
 
     def at_war_for(self, turns):
-        self.game.nation_data["A"]["war_durations"] = {"B": turns}
-        self.game.nation_data["B"]["war_durations"] = {"A": turns}
+        self.game.world.nation_data["A"]["war_durations"] = {"B": turns}
+        self.game.world.nation_data["B"]["war_durations"] = {"A": turns}
 
     def _take(self, provinces, taker, count):
         for prov in provinces[:count]:

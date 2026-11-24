@@ -37,9 +37,9 @@ class SubmittedTurnDiplomacyTests(unittest.TestCase):
     def test_submitted_player_cannot_call_a_faction_member_to_arms(self):
         game = StubMapScreen(["A", "B", "C"], human_players=["A"])
         game.set_faction("Pact", "A", "B")
-        game.nation_data["A"]["at_war_with"] = ["C"]
+        game.world.nation_data["A"]["at_war_with"] = ["C"]
         game.selected_province = game.home_of("B")
-        game.realtime_multiplayer = True
+        game.session.realtime_multiplayer = True
         game.realtime_player_id = "local"
         game.realtime_session = SimpleNamespace(
             phase="TURN", players={"local": SimpleNamespace(submitted=True, eliminated=False)})
@@ -107,7 +107,7 @@ class BilateralDeliveryTests(unittest.TestCase):
         # turn 2: A receives the acceptance and is in the faction
         game.run_turn()
         self.assertIn("Welcome, friend.", game.inbound("A", "B"))
-        self.assertEqual(game.nation_data["A"]["faction"], "Pact")
+        self.assertEqual(game.world.nation_data["A"]["faction"], "Pact")
         self.assertEqual(game.pending_action("A", "B"), "", "the answered request should be cleared")
 
     def test_faction_leader_can_accept_a_join_request(self):
@@ -122,12 +122,12 @@ class BilateralDeliveryTests(unittest.TestCase):
         from map_logic.diplomacy import player_diplomacy_actions
         player_diplomacy_actions.handle_accept_req(game, "B", "Granted.")
 
-        verdict, action = diplomacy_messages.get_response_status(game.nation_data, "A", "B")
+        verdict, action = diplomacy_messages.get_response_status(game.world.nation_data, "A", "B")
         self.assertEqual((verdict, action), (ACCEPT, "JOIN_FACTION_REQ"),
                          f"acceptance was refused: {game.feedback}")
 
         game.run_turn()
-        self.assertEqual(game.nation_data["B"]["faction"], "Pact")
+        self.assertEqual(game.world.nation_data["B"]["faction"], "Pact")
 
 
 class SimultaneousRequestTests(unittest.TestCase):
@@ -154,12 +154,12 @@ class SimultaneousRequestTests(unittest.TestCase):
         game.answer("A", "B", ACCEPT, "REQ_MILITARY_ACCESS", message="Passage granted.")
         game.answer("B", "A", ACCEPT, "TRADE", message="Deal.")
 
-        before = game.nation_data["B"]["materials"]
+        before = game.world.nation_data["B"]["materials"]
         game.run_turn()
 
         # turn 2: both agreements executed
-        self.assertIn("B", game.nation_data["A"]["military_access"])
-        self.assertEqual(game.nation_data["B"]["materials"], before + 100,
+        self.assertIn("B", game.world.nation_data["A"]["military_access"])
+        self.assertEqual(game.world.nation_data["B"]["materials"], before + 100,
                          "the trade terms should have come from the proposer's offer")
 
     def test_answering_does_not_destroy_our_own_outgoing_proposal(self):
@@ -192,9 +192,9 @@ class SimultaneousRequestTests(unittest.TestCase):
         game.answer("A", "B", REJECT, "REQ_MILITARY_ACCESS")
         game.run_turn()
 
-        self.assertIn("A", game.nation_data["B"]["military_access"],
+        self.assertIn("A", game.world.nation_data["B"]["military_access"],
                       "B agreed to let A through and should have")
-        self.assertNotIn("B", game.nation_data["A"]["military_access"],
+        self.assertNotIn("B", game.world.nation_data["A"]["military_access"],
                          "A refused, so B must not have gained access")
 
 
@@ -250,14 +250,14 @@ class PeaceCounterofferTests(unittest.TestCase):
         game = self.world(players=("A",))
         game.propose("A", "B", "PEACE_TREATY", parameters=self.terms("A", "B"))
         game.run_turn()
-        diplomacy_lifecycle.put_request(game.nation_data, "B", "A", "PEACE_TREATY", parameters=self.terms("B", "A"))
+        diplomacy_lifecycle.put_request(game.world.nation_data, "B", "A", "PEACE_TREATY", parameters=self.terms("B", "A"))
         ai_replies = {("A", "B", "PEACE_TREATY"): {"accepted": True, "message": "We accept."}}
         with patch.object(diplomacy_processor, "_execute_ai_tasks", return_value=ai_replies):
             game.run_turn()
 
         self.assertEqual(game.inbound("A", "B"), ["We accept."])
         self.assertFalse(game.pending("B", "A"))
-        self.assertEqual(game.nation_data["B"]["restrictions"]["demilitarized"], 6)
+        self.assertEqual(game.world.nation_data["B"]["restrictions"]["demilitarized"], 6)
 
     def crossed_offers(self, players=("A", "B")):
         game = self.world(players=players)
@@ -276,7 +276,7 @@ class PeaceCounterofferTests(unittest.TestCase):
                     game.answer(b, a, ACCEPT, "PEACE_TREATY")
                 game.run_turn()
 
-                n = game.nation_data
+                n = game.world.nation_data
                 choice = peace_scope.pending_choice(n, "A", "B")
                 self.assertTrue(choice)
                 self.assertTrue(queries.has_unanswered_request("A", "B", n))
@@ -299,7 +299,7 @@ class PeaceCounterofferTests(unittest.TestCase):
         for choose_b in (False, True):
             with self.subTest(choose_b=choose_b):
                 game = self.crossed_offers()
-                n = game.nation_data
+                n = game.world.nation_data
                 stock = n["A"].get("materials", 0)
                 game.pending("A", "B")["escrow"] = {"materials": 20}
                 for a, b in (("A", "B"), ("B", "A")):
@@ -323,14 +323,14 @@ class PeaceCounterofferTests(unittest.TestCase):
         with patch.object(diplomacy_processor, "_execute_ai_tasks", return_value=ai_replies):
             game.run_turn()
 
-        choice = peace_scope.pending_choice(game.nation_data, "A", "B")
+        choice = peace_scope.pending_choice(game.world.nation_data, "A", "B")
         self.assertTrue(choice)
-        peace_scope.choose_offer(game.nation_data, "A", "B", choice["round_id"], "A")
+        peace_scope.choose_offer(game.world.nation_data, "A", "B", choice["round_id"], "A")
         with patch.object(diplomacy_processor.ai_opinion, "peace_verdict",
                           side_effect=lambda _world, _nation, proposer, *_: SimpleNamespace(accepted=True, slack=int(proposer == "A"))):
             game.run_turn()
-        self.assertEqual(game.nation_data["B"]["restrictions"]["demilitarized"], 6)
-        self.assertFalse(peace_scope.pending_choice(game.nation_data, "A", "B"))
+        self.assertEqual(game.world.nation_data["B"]["restrictions"]["demilitarized"], 6)
+        self.assertFalse(peace_scope.pending_choice(game.world.nation_data, "A", "B"))
 
     def test_accepting_the_same_terms_in_both_directions_needs_no_choice(self):
         game = self.crossed_offers()
@@ -338,16 +338,16 @@ class PeaceCounterofferTests(unittest.TestCase):
         for accepter, proposer in (("A", "B"), ("B", "A")):
             game.answer(accepter, proposer, ACCEPT, "PEACE_TREATY")
         game.run_turn()
-        self.assertFalse(peace_scope.pending_choice(game.nation_data, "A", "B"))
-        self.assertNotIn("B", game.nation_data["A"]["at_war_with"])
-        self.assertEqual(game.nation_data["B"]["restrictions"]["demilitarized"], 6)
+        self.assertFalse(peace_scope.pending_choice(game.world.nation_data, "A", "B"))
+        self.assertNotIn("B", game.world.nation_data["A"]["at_war_with"])
+        self.assertEqual(game.world.nation_data["B"]["restrictions"]["demilitarized"], 6)
 
     def test_only_participants_can_submit_choices_for_the_current_round(self):
         game = self.crossed_offers()
         for a, b in (("A", "B"), ("B", "A")):
             game.answer(a, b, ACCEPT, "PEACE_TREATY")
         game.run_turn()
-        n = game.nation_data
+        n = game.world.nation_data
         choice = peace_scope.pending_choice(n, "A", "B")
         service = PlayerActions(game)
         selection = {"round_id": choice["round_id"], "proposer": "B"}
@@ -367,18 +367,18 @@ class PeaceCounterofferTests(unittest.TestCase):
         game.propose("A", "B", "PEACE_TREATY", parameters=self.terms("A", "B"))
         game.run_turn()
         game.answer("B", "A", ACCEPT, "PEACE_TREATY")
-        stock = game.nation_data["A"].get("materials", 0)
+        stock = game.world.nation_data["A"].get("materials", 0)
         game.pending("A", "B")["escrow"] = {"materials": 20}
-        diplomacy_lifecycle.put_request(game.nation_data, "B", "A", "TRADE", turns=1)
-        finalize_neutral(game.nation_data, "A", "B")
+        diplomacy_lifecycle.put_request(game.world.nation_data, "B", "A", "TRADE", turns=1)
+        finalize_neutral(game.world.nation_data, "A", "B")
 
-        treaty_effects.expire_obsolete_peace(game.nation_data)
-        treaty_effects.expire_obsolete_peace(game.nation_data)
+        treaty_effects.expire_obsolete_peace(game.world.nation_data)
+        treaty_effects.expire_obsolete_peace(game.world.nation_data)
         self.assertFalse(game.pending("A", "B"))
-        self.assertFalse(diplomacy_messages.get_response(game.nation_data, "B", "A"))
+        self.assertFalse(diplomacy_messages.get_response(game.world.nation_data, "B", "A"))
         self.assertEqual(game.pending_action("B", "A"), "TRADE")
         self.assertTrue(game.inbound("B", "A"))
-        self.assertEqual(game.nation_data["A"]["materials"], stock + 20)
+        self.assertEqual(game.world.nation_data["A"]["materials"], stock + 20)
 
 
 class SameOutcomeMergeTests(unittest.TestCase):
@@ -392,10 +392,10 @@ class SameOutcomeMergeTests(unittest.TestCase):
         game.propose("B", "A", "FACTION_INVITE", message="Come join us.")
         game.run_turn()
 
-        self.assertEqual(game.nation_data["A"]["faction"], "Pact")
+        self.assertEqual(game.world.nation_data["A"]["faction"], "Pact")
         self.assertEqual(game.pending_action("A", "B"), "")
         self.assertEqual(game.pending_action("B", "A"), "")
-        notices = [[msg for msg in game.nation_data[country]["inbox"] if diplomacy_messages.is_system_notice(msg)]
+        notices = [[msg for msg in game.world.nation_data[country]["inbox"] if diplomacy_messages.is_system_notice(msg)]
                    for country in ("A", "B")]
         self.assertEqual([len(inbox) for inbox in notices], [1, 1])
         self.assertEqual(notices[0][0]["message_id"], notices[1][0]["message_id"])
@@ -410,7 +410,7 @@ class SameOutcomeMergeTests(unittest.TestCase):
         game.propose("B", "A", "JOIN_WARS", message="We join your fight!")
         game.run_turn()
 
-        self.assertIn("C", game.nation_data["B"]["at_war_with"],
+        self.assertIn("C", game.world.nation_data["B"]["at_war_with"],
                       "the merged call to arms should have pulled B into A's war")
 
 
@@ -423,14 +423,14 @@ class RejectionAndCooldownTests(unittest.TestCase):
         game.propose("B", "A", "JOIN_FACTION_REQ", message="We ask to join.")
         game.run_turn()
 
-        cooldowns = game.nation_data["B"].get("diplo_cooldowns", {}).get("A", {})
+        cooldowns = game.world.nation_data["B"].get("diplo_cooldowns", {}).get("A", {})
         self.assertEqual(cooldowns.get("JOIN_FACTION_REQ", 0), 0,
                          "a request in transit must not be on cooldown yet")
 
         game.answer("A", "B", REJECT, "JOIN_FACTION_REQ", message="No.")
         game.run_turn()
 
-        cooldowns = game.nation_data["B"].get("diplo_cooldowns", {}).get("A", {})
+        cooldowns = game.world.nation_data["B"].get("diplo_cooldowns", {}).get("A", {})
         self.assertGreater(cooldowns.get("JOIN_FACTION_REQ", 0), 0,
                            "being turned down should start the cooldown")
 
@@ -442,10 +442,10 @@ class RejectionAndCooldownTests(unittest.TestCase):
         game.run_turn()   # delivered
         game.run_turn()   # A never answered
 
-        text = diplomacy_messages.automatic_decline_text("B", "A", game.nation_data)
+        text = diplomacy_messages.automatic_decline_text("B", "A", game.world.nation_data)
         self.assertIn(text, game.inbound("B", "A"))
         self.assertIn(text, game.inbound("A", "B"))
-        copies = [game.nation_data[country]["inbox"][0] for country in ("A", "B")]
+        copies = [game.world.nation_data[country]["inbox"][0] for country in ("A", "B")]
         self.assertTrue(all(diplomacy_messages.is_system_notice(msg) for msg in copies))
         self.assertEqual(copies[0]["message_id"], copies[1]["message_id"])
         self.assertEqual(diplomacy_messages.message_category(copies[0]), diplomacy_messages.MESSAGE_CATEGORIES["JOIN_FACTION_REQ"])
@@ -459,10 +459,10 @@ class RejectionAndCooldownTests(unittest.TestCase):
         game.run_turn()
 
         game.answer("A", "B", ACCEPT, "JOIN_FACTION_REQ")
-        self.assertEqual(diplomacy_messages.get_response_status(game.nation_data, "A", "B")[0], ACCEPT)
+        self.assertEqual(diplomacy_messages.get_response_status(game.world.nation_data, "A", "B")[0], ACCEPT)
 
         game.answer("A", "B", ACCEPT, "JOIN_FACTION_REQ")  # click again = undo
-        self.assertEqual(diplomacy_messages.get_response_status(game.nation_data, "A", "B"), ("", ""))
+        self.assertEqual(diplomacy_messages.get_response_status(game.world.nation_data, "A", "B"), ("", ""))
 
 
 class TextMessageTests(unittest.TestCase):
@@ -470,9 +470,9 @@ class TextMessageTests(unittest.TestCase):
         """save_current_draft writes both a MSG: action and a draft_lists entry."""
         game = StubMapScreen(["A", "B"], human_players=["A"])
 
-        game.nation_data["A"]["pending_diplomacy"]["B"] = {
+        game.world.nation_data["A"]["pending_diplomacy"]["B"] = {
             "action": "MSG:Hello there.", "turns": 0, "message": "Hello there."}
-        game.nation_data["A"]["draft_lists"]["B"] = ["Hello there."]
+        game.world.nation_data["A"]["draft_lists"]["B"] = ["Hello there."]
 
         game.run_turn()
 
@@ -482,9 +482,9 @@ class TextMessageTests(unittest.TestCase):
         game = StubMapScreen(["A", "B"], human_players=["A"])
         game.set_faction("Pact", "B")
 
-        game.nation_data["A"]["pending_diplomacy"]["B"] = {
+        game.world.nation_data["A"]["pending_diplomacy"]["B"] = {
             "action": "JOIN_FACTION_REQ", "turns": 0, "message": "Let us join you."}
-        game.nation_data["A"]["draft_lists"]["B"] = ["Also, greetings."]
+        game.world.nation_data["A"]["draft_lists"]["B"] = ["Also, greetings."]
 
         game.run_turn()
 
@@ -535,7 +535,7 @@ class ProactiveAITests(unittest.TestCase):
         self.run_proactive(game)
 
         self.assertEqual(game.pending_action("C", "A"), "JOIN_FACTION_REQ")
-        self.assertTrue(game.nation_data["Z"]["pending_diplomacy"],
+        self.assertTrue(game.world.nation_data["Z"]["pending_diplomacy"],
                         "Z was skipped entirely because C queued a faction request")
 
     def test_a_request_in_flight_is_not_put_on_cooldown(self):
@@ -550,7 +550,7 @@ class ProactiveAITests(unittest.TestCase):
         ai_diplomacy.process_basic_proactive_ai(game)
         ai_diplomacy.process_proactive_llm_tasks(game)
 
-        cooldowns = game.nation_data["A"].get("diplo_cooldowns", {}).get("B", {})
+        cooldowns = game.world.nation_data["A"].get("diplo_cooldowns", {}).get("B", {})
         self.assertEqual(cooldowns.get("CALL_TO_ARMS", 0), 0)
 
 
@@ -566,8 +566,8 @@ class UnreadBadgeTests(unittest.TestCase):
         game.propose("B", "A", "JOIN_FACTION_REQ", message="We ask to join.")
         game.run_turn()
 
-        self.assertTrue(queries.has_unanswered_request("A", "B", game.nation_data))
-        self.assertIn("B", queries.get_pending_request_senders("A", game.nation_data))
+        self.assertTrue(queries.has_unanswered_request("A", "B", game.world.nation_data))
+        self.assertIn("B", queries.get_pending_request_senders("A", game.world.nation_data))
         # A message the player can actually open backs the notification
         self.assertTrue(game.inbound("A", "B"))
 
@@ -597,7 +597,7 @@ class UnreadBadgeTests(unittest.TestCase):
                     self["FACTION_WAR_MAPS"] = {}
                 return super().get(key, default)
 
-        live = GrowingNationData(game.nation_data)
+        live = GrowingNationData(game.world.nation_data)
 
         self.assertIn("B", queries.get_pending_request_senders("A", live))
         self.assertGreaterEqual(queries.get_unread_message_count("A", live), 1)
@@ -613,7 +613,7 @@ class UnreadBadgeTests(unittest.TestCase):
         game.run_turn()
         game.answer("A", "B", ACCEPT, "JOIN_FACTION_REQ")
 
-        self.assertFalse(queries.has_unanswered_request("A", "B", game.nation_data))
+        self.assertFalse(queries.has_unanswered_request("A", "B", game.world.nation_data))
 
 
 if __name__ == "__main__":

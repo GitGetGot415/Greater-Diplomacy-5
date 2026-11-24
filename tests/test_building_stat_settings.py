@@ -175,13 +175,13 @@ class BuildingStatPersistenceTests(unittest.TestCase):
 
     def test_lobby_rules_keep_the_loaded_map_defaults(self):
         game = world()
-        game.scenario_settings = {"map_defaults": MAP_DEFAULTS}
+        game.world.scenario_settings = {"map_defaults": MAP_DEFAULTS}
         driver = MapRealtimeDriver(game)
         lobby = {"use_default_buildings": False, "building_stat_overrides": PLAYER_STATS,
                  "map_defaults": {"building_stat_overrides": {"Fixture Fort": {"cost_materials": 1}}}}
         driver.configure_scenario_settings(lobby)
-        self.assertEqual(game.scenario_settings["map_defaults"], MAP_DEFAULTS)
-        self.assertEqual(game.scenario_settings["building_stat_overrides"], PLAYER_STATS)
+        self.assertEqual(game.world.scenario_settings["map_defaults"], MAP_DEFAULTS)
+        self.assertEqual(game.world.scenario_settings["building_stat_overrides"], PLAYER_STATS)
         self.assertEqual(driver.snapshot()["scenario_settings"]["map_defaults"], MAP_DEFAULTS)
 
 

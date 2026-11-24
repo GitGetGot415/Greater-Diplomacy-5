@@ -190,15 +190,15 @@ class ResearchInputTests(unittest.TestCase):
         from data import constants as c, queries
         from screens.game.research import Research_Screen
         from ui.rendering import symbol_loader
-        nation_data = copy.deepcopy(self.map.nation_data)
-        nation_data[self.map.player_country].update(research={"sample": 1}, research_queue=[])
-        self.enterContext(patch.object(self.map, "nation_data", nation_data))
-        self.enterContext(patch.object(self.map, "tactical_mode", False))
+        nation_data = copy.deepcopy(self.map.world.nation_data)
+        nation_data[self.map.session.player_country].update(research={"sample": 1}, research_queue=[])
+        self.enterContext(patch.object(self.map.world, "nation_data", nation_data))
+        self.enterContext(patch.object(self.map.session, "tactical_mode", False))
         self.enterContext(patch.object(self.map, "viewing_research_country", "", create=True))
         self.enterContext(patch.object(c, "UNIT_ART_STYLE", "classic"))
         tree = {"sample": {"display_name": "Renamed technology", "category": "INDUSTRY",
-                           "max_lvl": 2, "years": [self.map.time_manager.year - 10,
-                                                    self.map.time_manager.year],
+                           "max_lvl": 2, "years": [self.map.world.time_manager.year - 10,
+                                                    self.map.world.time_manager.year],
                            "cost": 100, "req": {}}}
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=tree))
         self.enterContext(patch.object(research_display, "get_config", return_value=display_config()))

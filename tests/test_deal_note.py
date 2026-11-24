@@ -57,7 +57,7 @@ class DeliveryTests(unittest.TestCase):
 
     def send(self, note):
         diplomacy_messages.set_pending(
-            self.game.nation_data, "A", "B", "TRADE",
+            self.game.world.nation_data, "A", "B", "TRADE",
             parameters={"give_materials": 400},
             message="you receive 400 Materials.", note=note)
         self.game.run_turn()
@@ -83,9 +83,9 @@ class DeliveryTests(unittest.TestCase):
 
     def test_reopening_the_offer_recovers_the_note(self):
         diplomacy_messages.set_pending(
-            self.game.nation_data, "A", "B", "TRADE",
+            self.game.world.nation_data, "A", "B", "TRADE",
             parameters={"give_materials": 400}, message="terms", note=NOTE)
-        pending = diplomacy_messages.get_pending(self.game.nation_data, "A", "B")
+        pending = diplomacy_messages.get_pending(self.game.world.nation_data, "A", "B")
         self.assertEqual(pending.get("note"), NOTE)
 
 

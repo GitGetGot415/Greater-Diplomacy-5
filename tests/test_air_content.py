@@ -19,7 +19,7 @@ from map_logic.system32.research_processor import process_national_research
 from tests import app_harness
 from tests.research_fixtures import research_lock_cases
 from tests.tournament_fixtures import fast_tournament_crypto
-from tests.stub_map_screen import map_double, sample_map_screen
+from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
 # Read current content for checks of data use across systems.
@@ -383,11 +383,11 @@ class AirRulesTests(unittest.TestCase):
 
     def test_existing_save_shape_preserves_techs_progress_and_unit_queue(self):
         map_ref = sample_map_screen()
-        country = map_ref.nation_data["Avaria"]
+        country = map_ref.world.nation_data["Avaria"]
         country.update(research={key: 1 for key in AIR_CONTENT},
                        research_queue=[{"tech_name": "jet_fighter", "points_remaining": 50}],
                        research_progress={"jet_engine": 75})
-        province = next(iter(map_ref.map_data.values()))
+        province = next(iter(map_ref.world.map_data.values()))
         province["unit_queue"] = [{"unit_type": "Biplane Fighter I", "turns_remaining": 1}]
         saved = json.loads(json.dumps(queries.build_save_dict(map_ref)))
         self.assertEqual(saved["nation_data"]["Avaria"], country)
@@ -431,10 +431,10 @@ class AirRealtimeTests(unittest.TestCase):
         for tech, (_, requirements, _) in AIR_CONTENT.items():
             command = {"type": "research_queue", "tech_names": [tech]}
             for prerequisite, required_level in requirements.items():
-                self.map.nation_data["A"]["research"] = dict(requirements, **{prerequisite: required_level - 1})
+                self.map.world.nation_data["A"]["research"] = dict(requirements, **{prerequisite: required_level - 1})
                 with self.subTest(tech=tech, prerequisite=prerequisite), self.assertRaises(RealtimeError):
                     self.driver.validate_draft("A", [command])
-            self.map.nation_data["A"]["research"] = dict(requirements)
+            self.map.world.nation_data["A"]["research"] = dict(requirements)
             project = self.driver.validate_draft("A", [command])[0]["projects"][0]
             self.assertEqual(project["tech_name"], tech)
             self.assertEqual(project["points_remaining"], queries.get_tech_tree()[tech]["cost"])
@@ -447,10 +447,10 @@ class AirRealtimeTests(unittest.TestCase):
                 command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
                            "items": [{"unit_type": name, "turns_remaining": 0}]}
                 with self.subTest(unit=name):
-                    self.map.nation_data["A"]["research"] = {tech: level - 1}
+                    self.map.world.nation_data["A"]["research"] = {tech: level - 1}
                     with self.assertRaises(RealtimeError):
                         self.driver.validate_draft("A", [command])
-                    self.map.nation_data["A"]["research"] = {tech: level}
+                    self.map.world.nation_data["A"]["research"] = {tech: level}
                     item = self.driver.validate_draft("A", [command])[0]["items"][0]
                     self.assertEqual(item["turns_remaining"], queries.get_unit_library()[name]["production_time"])
 
@@ -460,7 +460,7 @@ class AirRealtimeTests(unittest.TestCase):
         if requirements:
             with self.assertRaises(RealtimeError):
                 self.driver.validate_draft("A", [command])
-        self.map.nation_data["A"]["research"] = dict(requirements)
+        self.map.world.nation_data["A"]["research"] = dict(requirements)
         canonical = self.driver.validate_draft("A", [command])[0]
         self.assertEqual(canonical["projects"][0]["points_remaining"],
                          queries.get_tech_tree()["jet_fighter"]["cost"])
@@ -476,7 +476,7 @@ class AirRealtimeTests(unittest.TestCase):
             if requirements:
                 with self.assertRaises(RealtimeError):
                     self.driver.validate_draft("A", [command])
-            self.map.nation_data["A"]["research"] = dict(requirements)
+            self.map.world.nation_data["A"]["research"] = dict(requirements)
             projects = self.driver.validate_draft("A", [command])[0]["projects"]
             self.assertEqual(projects[0]["tech_name"], tech_key)
             self.assertEqual(projects[0]["points_remaining"],
@@ -489,13 +489,13 @@ class AirRealtimeTests(unittest.TestCase):
                        "items": [{"unit_type": unit_name, "turns_remaining": 0, "refund": {}}]}
             with self.assertRaises(RealtimeError):
                 self.driver.validate_draft("A", [command])
-            self.map.nation_data["A"]["research"] = {tech_key: queries.get_unit_research_requirement(unit_name)[1]}
+            self.map.world.nation_data["A"]["research"] = {tech_key: queries.get_unit_research_requirement(unit_name)[1]}
             canonical = self.driver.validate_draft("A", [command])[0]["items"][0]
             stats = queries.get_unit_library()[unit_name]
             self.assertEqual(canonical["turns_remaining"], stats["production_time"])
             self.assertEqual(canonical["refund"], {key: stats[key] for key in
                                                   ("cost_materials", "cost_manpower", "cost_fuel")})
-            self.map.map_data["home"]["owner"] = "B"
+            self.map.world.map_data["home"]["owner"] = "B"
             with self.assertRaises(RealtimeError):
                 self.driver.validate_draft("A", [command])
 
@@ -505,18 +505,18 @@ class AirRealtimeTests(unittest.TestCase):
             self.reset_map()
             harness = tournament_harness.TournamentMoveTests()
             host = tournament_harness.Host()
-            host.runtime_rules = self.rules
-            province = copy.deepcopy(self.map.map_data["home"])
+            host.world.runtime_rules = self.rules
+            province = copy.deepcopy(self.map.world.map_data["home"])
             province.update(json_key="home", owner="Leader", cores=["Leader"],
                             is_coastal=queries.get_unit_metadata(unit_name)["recruitment"]["coastal"])
-            host.map_data = {"home": province}
-            host.id_to_province = {province["id"]: province}
+            host.world.map_data = {"home": province}
+            host.world.id_to_province = {province["id"]: province}
             research = {tech_key: queries.get_unit_research_requirement(unit_name)[1]}
             research_queue = [{"tech_name": "jet_engine", "points_remaining": 50}]
-            host.nation_data["Leader"].update(research=research.copy(), research_queue=copy.deepcopy(research_queue))
+            host.world.nation_data["Leader"].update(research=research.copy(), research_queue=copy.deepcopy(research_queue))
             stats = queries.get_unit_library()[unit_name]
             for resource in c.ECON_RESOURCE_KEYS:
-                host.nation_data["Leader"][resource] = 1 + stats[f"cost_{resource}"]
+                host.world.nation_data["Leader"][resource] = 1 + stats[f"cost_{resource}"]
             expected = production_actions.prepare_production(
                 host, "Leader", province, "unit_queue", {"unit_type": unit_name}).order
             older_entry = {key: value for key, value in expected.items() if key != "refund"}
@@ -526,9 +526,9 @@ class AirRealtimeTests(unittest.TestCase):
                 path = harness.write_move(directory, "air.gd5move", "Leader", move)
                 result = harness.import_moves(host, [path])
             self.assertEqual(result["loaded"], 1, result["rejections"])
-            self.assertEqual(host.nation_data["Leader"]["research_queue"], research_queue)
-            self.assertEqual(host.map_data["home"]["unit_queue"], [expected])
-            self.assertEqual(host.nation_data["Leader"]["research"], research)
+            self.assertEqual(host.world.nation_data["Leader"]["research_queue"], research_queue)
+            self.assertEqual(host.world.map_data["home"]["unit_queue"], [expected])
+            self.assertEqual(host.world.nation_data["Leader"]["research"], research)
 
 
 class AirScreenTests(unittest.TestCase):
@@ -541,18 +541,18 @@ class AirScreenTests(unittest.TestCase):
         self.research = self.controller.states["RESEARCH"]
         self.production = self.controller.states["PRODUCTION"]
         self.addCleanup(self.restore_screens)
-        self.country = self.map.player_country
-        nation_data = copy.deepcopy(self.map.nation_data)
+        self.country = self.map.session.player_country
+        nation_data = copy.deepcopy(self.map.world.nation_data)
         country = nation_data[self.country]
         country["research"] = {key: data["max_lvl"] for key, data in queries.get_tech_tree().items()}
         country["research_queue"] = []
         for resource in c.ECON_RESOURCE_KEYS:
             country[resource] = 1 + sum(stats.get(f"cost_{resource}", 0)
                                       for stats in queries.get_unit_library().values())
-        self.enterContext(mock.patch.object(self.map, "nation_data", nation_data))
-        self.enterContext(mock.patch.object(self.map, "tactical_mode", False))
+        self.enterContext(mock.patch.object(self.map.world, "nation_data", nation_data))
+        self.enterContext(mock.patch.object(self.map.session, "tactical_mode", False))
         self.enterContext(mock.patch.object(self.map, "viewing_research_country", "", create=True))
-        self.province = copy.deepcopy(next(p for p in self.map.map_data.values() if p["owner"] == self.country))
+        self.province = copy.deepcopy(next(p for p in self.map.world.map_data.values() if p["owner"] == self.country))
         self.province.update(buildings=["Basic Factory"], cores=[self.country], is_coastal=False,
                              unit_queue=[], building_queue=[])
 
@@ -573,7 +573,7 @@ class AirScreenTests(unittest.TestCase):
                          "naval_unit": False, "metadata": metadata}}
         tree = {tech: {"category": "AIR", "display_name": family, "max_lvl": 1, "years": [1900],
                        "cost": 37, "req": {}, "level_names": {"1": name}}}
-        country = self.map.nation_data[self.country]
+        country = self.map.world.nation_data[self.country]
         country.update(research={tech: 1}, custom_production_units=[])
         with mock.patch.object(queries, "get_unit_library", return_value=library), \
                 mock.patch.object(queries, "get_tech_tree", return_value=tree):
@@ -647,7 +647,7 @@ class AirScreenTests(unittest.TestCase):
         # Use an artificial multiplier to check data propagation.
         library[fighters[0]] = dict(library[fighters[0]], air_attack_multiplier=2.75)
         self.enterContext(mock.patch.object(self.production, "unit_library", library))
-        self.map.nation_data[self.country]["custom_production_units"] = fighters
+        self.map.world.nation_data[self.country]["custom_production_units"] = fighters
         font_get = fonts.get
         small_font = mock.Mock(wraps=font_get("small"))
         with mock.patch.object(fonts, "get", side_effect=lambda name: small_font if name == "small" else font_get(name)):
@@ -675,7 +675,7 @@ class AirScreenTests(unittest.TestCase):
                 self.assertTrue(self.production.other_start_y <= y < self.production.other_end_y)
         expected = [name for key, (_, _, name) in AIR_CONTENT.items()
                     if name in queries.get_unit_library() and not queries.is_unit_obsolete(
-                        queries.get_base_unit_name(name), self.map.nation_data[self.country]["research"])]
+                        queries.get_base_unit_name(name), self.map.world.nation_data[self.country]["research"])]
         self.assertEqual(air_rows, len(expected))
         self.assertEqual(recruitment_rows, 1)
         self.assertNotIn("recruit", [prefix for prefix, *_ in SECTION_PANELS])
@@ -683,7 +683,7 @@ class AirScreenTests(unittest.TestCase):
         self.production.draw(self.surface)
 
     def test_production_replacements_hide_default_rows_but_allow_custom_rows(self):
-        country = self.map.nation_data[self.country]
+        country = self.map.world.nation_data[self.country]
         cases = aircraft_replacement_cases()
         self.assertTrue(cases)
         for obsolete, replacement, tech in cases:
@@ -713,12 +713,12 @@ class AirScreenTests(unittest.TestCase):
                      {"player_country": "Spectator"})
         for changes in scenarios:
             with self.subTest(changes=changes), mock.patch.object(c, "SPECTATOR_CAN_EDIT_PRODUCTION", False):
-                with mock.patch.dict(self.map.nation_data[self.country],
+                with mock.patch.dict(self.map.world.nation_data[self.country],
                                      {"research": changes["research"]} if "research" in changes else {}):
                     with ExitStack() as stack:
                         for key, value in changes.items():
                             if key != "research":
-                                stack.enter_context(mock.patch.object(self.map, key, value))
+                                stack.enter_context(mock.patch.object(state_owner(self.map, key), key, value))
                         self.production.buy_unit("Biplane Fighter I")
             self.assertEqual(self.province["unit_queue"], [])
         self.production.buy_unit("Biplane Fighter I")

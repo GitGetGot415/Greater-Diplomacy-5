@@ -46,7 +46,7 @@ class AirMissionPlanningTests(unittest.TestCase):
         self.ground = wing(self.enemy, "Ground Target", "B")
 
     def plan(self):
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A",
                 [(self.support, self.base), (self.screen, self.base)])
 
@@ -62,7 +62,7 @@ class AirMissionPlanningTests(unittest.TestCase):
         # pays; the AI never flies a strike it projects to lose.
         self.library["Ground Target"]["cost_materials"] = 20000
         another = wing(self.base, "Screen Wing")
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A",
                 [(self.screen, self.base), (another, self.base)])
         self.assertEqual(self.screen["order"]["type"], "AIR_PATROL")
@@ -94,15 +94,15 @@ class AirMissionPlanningTests(unittest.TestCase):
         hidden = tile(self.game, 3, 50, owner="B")
         self.enemy["units"].remove(self.incoming)
         hidden["units"].append(self.incoming)
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": True}), patch.object(
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": True}), patch.object(
                 queries, "get_visible_provinces", return_value=({1, 2}, set())):
             ai_movement._assign_air_orders(self.game, "A", [(self.screen, self.base)])
         self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
 
     def test_enemy_orders_do_not_change_mission_choice_and_forecasts_do_not_mutate_units(self):
-        before = deepcopy(self.game.map_data)
+        before = deepcopy(self.game.world.map_data)
         ai_movement._air_exchange_value(self.game, [self.screen], [self.incoming], air_combat=True)
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
         for order in ({"type": "AIR_ATTACK", "target_id": 1}, {"type": "AIR_PATROL"}, None):
             with self.subTest(order=order):
                 self.incoming["order"] = order
@@ -130,8 +130,8 @@ class AirMissionPlanningTests(unittest.TestCase):
         self.assertEqual(ai_movement._air_patrol_threats(self.game, "A", None), {})
 
     def test_tactical_patrol_counts_as_cover_without_changing_its_order(self):
-        self.game.tactical_mode = True
-        self.game.player_unit = self.screen
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = self.screen
         self.screen["order"] = queries.canonical_air_order(self.game, self.screen, self.base,
             {"type": "AIR_PATROL", "priority": "RANDOM"})
         before = dict(self.screen["order"])
@@ -146,13 +146,13 @@ class AirMissionPlanningTests(unittest.TestCase):
         expected_damage = sum(unit["attack"] for unit in wings) * queries.air_stack_attack_efficiency(len(wings))
         pain = ai_unit_eval.unit_pain(self.library[self.ground["type"]], dict.fromkeys(ai_unit_eval.RESOURCES, 1.0))
         expected = expected_damage / self.ground["max_health"] * pain
-        before = deepcopy(self.game.map_data)
+        before = deepcopy(self.game.world.map_data)
         self.assertAlmostEqual(ai_movement._air_exchange_value(self.game, wings, [self.ground], target=self.enemy), expected)
-        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.world.map_data, before)
 
     def test_ai_strike_comparison_includes_tactical_players_committed_stack(self):
-        self.game.tactical_mode = True
-        self.game.player_unit = self.support
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = self.support
         self.support["order"] = queries.canonical_air_order(self.game, self.support, self.base,
             {"type": "AIR_ATTACK", "target_id": self.enemy["id"]})
         before = deepcopy(self.support["order"])
@@ -168,7 +168,7 @@ class AirMissionPlanningTests(unittest.TestCase):
     def strike_only(self, *wings):
         """Plan these aircraft with no enemy aircraft around to defend against."""
         self.enemy["units"] = [u for u in self.enemy["units"] if u is not self.incoming]
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(w, self.base) for w in wings])
 
     def test_a_strike_that_loses_more_than_it_destroys_is_not_flown(self):
@@ -209,7 +209,7 @@ class AirMissionPlanningTests(unittest.TestCase):
         self.base["buildings"] = ["Basic Factory"]
         self.support["health"] = self.support["max_health"] * ai_tuning.AI_REPAIR_HEALTH_FRACTION / 2
         for resource in ("materials", "manpower", "fuel"):
-            self.game.nation_data["A"][resource] = 10 ** 6
+            self.game.world.nation_data["A"][resource] = 10 ** 6
         self.strike_only(self.support)
         self.assertEqual(self.support["order"]["type"], "REPAIR")
 
@@ -377,9 +377,9 @@ class AirMoveSafetyTests(unittest.TestCase):
     def test_army_target_area_preserves_an_aircrafts_active_ground_route(self):
         self.plane["type"] = "Test Missile"
         self.base["neighbors"] = [self.safe["id"]]
-        queries.ensure_unit_ids(self.game.map_data)
+        queries.ensure_unit_ids(self.game.world.map_data)
         army = queries.create_army("A", [self.plane["unit_id"]],
-            self.game.nation_data, self.game.map_data)
+            self.game.world.nation_data, self.game.world.map_data)
         self.plane["order"] = {"type": "MOVE", "path": [self.safe["id"]]}
         before = deepcopy(self.plane["order"])
         for target in (self.base, self.safe):
@@ -433,7 +433,7 @@ class AirMoveSafetyTests(unittest.TestCase):
                 self.assertFalse(self.move(self.safe))
                 self.assertEqual(self.plane["order"], before)
                 self.assertIsNone(queries.find_unit_move_path(self.plane, self.base,
-                    self.safe["id"], self.game.id_to_province, self.game.nation_data))
+                    self.safe["id"], self.game.world.id_to_province, self.game.world.nation_data))
 
     def test_missile_click_on_hostile_units_uses_a_strike(self):
         self.plane["type"] = "Test Missile"
@@ -473,7 +473,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         attacker = wing(self.enemy, "Infantry Type 1910", "B")
         attacker["speed"] = 1
         self.enemy["neighbors"] = [self.base["id"]]
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"]["type"], "AIR_REPOSITION")
         self.assertEqual(self.plane["order"]["target_id"], self.safe["id"])
@@ -485,23 +485,23 @@ class AirMoveSafetyTests(unittest.TestCase):
         attacker["speed"] = 1
         self.enemy["neighbors"] = [self.base["id"], self.safe["id"]]
         inland = tile(self.game, 4, 110)
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"]["target_id"], inland["id"])
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": True}), patch.object(
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": True}), patch.object(
                 queries, "get_visible_provinces", return_value=({1, 3, 4}, set())):
             self.assertEqual(ai_movement._air_base_threats(self.game, "A", {1, 3, 4}), set())
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"]["type"], "AIR_PATROL")
 
     def test_tactical_division_keeps_its_order_during_evacuation(self):
-        self.game.tactical_mode = True
-        self.game.player_unit = self.plane
+        self.game.session.tactical_mode = True
+        self.game.session.player_unit = self.plane
         self.plane["order"] = {"type": "AIR_PATROL", "base_id": 1, "priority": "RANDOM"}
         before = dict(self.plane["order"])
         wing(self.enemy, "Infantry Type 1910", "B")
         self.enemy["neighbors"] = [1]
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
         self.assertEqual(self.plane["order"], before)
 
@@ -511,7 +511,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.enemy["neighbors"] = [middle["id"]]
         middle["neighbors"] = [self.base["id"]]
         attacker["order"] = {"type": "MOVE", "path": []}
-        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
             attacker["speed"] = 1
             self.assertNotIn(1, ai_movement._air_base_threats(self.game, "A", None))
             attacker["speed"] = 2
@@ -521,7 +521,7 @@ class AirMoveSafetyTests(unittest.TestCase):
 
     def test_legacy_patrol_default_and_invalid_saved_landing_cancel_safely(self):
         self.plane["order"] = {"type": "AIR_PATROL"}
-        queries.normalize_air_orders(self.game.map_data)
+        queries.normalize_air_orders(self.game.world.map_data)
         self.assertEqual(self.plane["order"]["priority"], queries.AIR_DEFAULT_PRIORITY)
         self.plane["order"] = {"type": "AIR_REPOSITION", "base_id": 1, "target_id": 2}
         air_processor.process_air_orders(self.game)

@@ -17,7 +17,7 @@ from screens.editors import menus as editor_menus
 from screens.editors import standalone_export
 from screens.editors.date_economy_screens import Editor_Metadata_Screen
 from screens.editors.standalone_export import Standalone_Export_Screen
-from tests.stub_map_screen import mock_map, map_double
+from tests.stub_map_screen import state_owner, mock_map, map_double
 
 
 def editor():
@@ -43,25 +43,25 @@ class ScenarioMetadataTests(unittest.TestCase):
         return kwargs["on_result"](os.path.join(start_dir, kwargs["initial_name"]))
 
     def test_apply_validates_before_changing_state_and_preserves_unknown_metadata(self):
-        self.game.scenario_metadata = {"extension": {"keep": True}}
+        self.game.world.scenario_metadata = {"extension": {"keep": True}}
         queries.set_editor_metadata(self.game, " My Scenario ", "Author", "Description")
-        self.assertEqual(self.game.editor_scenario_name, "My Scenario")
-        self.assertEqual(self.game.scenario_metadata,
+        self.assertEqual(self.game.session.editor_scenario_name, "My Scenario")
+        self.assertEqual(self.game.world.scenario_metadata,
                          {"author": "Author", "description": "Description", "extension": {"keep": True}})
-        before = copy.deepcopy(self.game.scenario_metadata)
+        before = copy.deepcopy(self.game.world.scenario_metadata)
         for name, author, description in (("../outside", "A", "D"), ("Name", None, "D"), ("Name", "A", [])):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 queries.set_editor_metadata(self.game, name, author, description)
-            self.assertEqual(self.game.scenario_metadata, before)
-            self.assertEqual(self.game.editor_scenario_name, "My Scenario")
+            self.assertEqual(self.game.world.scenario_metadata, before)
+            self.assertEqual(self.game.session.editor_scenario_name, "My Scenario")
 
     def test_permissions_rechecked_when_metadata_is_applied(self):
         for key, value in (("is_editor", False), ("multiplayer_mode", True), ("realtime_multiplayer", True),
                            ("tactical_mode", True), ("is_saving", True), ("is_refreshing", True),
                            ("ai_is_thinking", True), ("viewing_ai_moves", True)):
-            with self.subTest(key=key), mock.patch.object(self.game, key, value), self.assertRaises(ValueError):
+            with self.subTest(key=key), mock.patch.object(state_owner(self.game, key), key, value), self.assertRaises(ValueError):
                 queries.set_editor_metadata(self.game, "Name", "Author", "Description")
-        self.assertEqual(self.game.scenario_metadata, {})
+        self.assertEqual(self.game.world.scenario_metadata, {})
 
     def test_names_cannot_escape_the_scenario_directory(self):
         for name in ("../outside", "..", ".", "a/b", "a\\b", "C:outside", "bad?name", "ends.", "CON", "nul.txt"):
@@ -77,28 +77,28 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertNotIn("editor_scenario_name", saved)
         self.assertNotIn("scenario_name", saved)
         saved["scenario_metadata"]["author"] = "Other"
-        self.assertEqual(self.game.scenario_metadata["author"], "Creator")
+        self.assertEqual(self.game.world.scenario_metadata["author"], "Creator")
 
     def test_older_maps_default_to_empty_metadata_and_name_uses_current_folder(self):
-        self.game.scenario_metadata = {"author": "Previous author"}
+        self.game.world.scenario_metadata = {"author": "Previous author"}
         load_map.restore_scenario_metadata(self.game, {}, os.path.join(self.directory, "Renamed Folder"))
-        self.assertEqual(self.game.scenario_metadata, {"author": "", "description": ""})
-        self.assertEqual(self.game.editor_scenario_name, "Renamed Folder")
+        self.assertEqual(self.game.world.scenario_metadata, {"author": "", "description": ""})
+        self.assertEqual(self.game.session.editor_scenario_name, "Renamed Folder")
         load_map.restore_scenario_metadata(self.game, None)
-        self.assertEqual(self.game.editor_scenario_name, "")
-        self.game.is_editor = False
+        self.assertEqual(self.game.session.editor_scenario_name, "")
+        self.game.session.is_editor = False
         load_map.restore_scenario_metadata(self.game, {}, os.path.join(self.directory, "Saved Game"))
-        self.assertEqual(self.game.editor_scenario_name, "")
+        self.assertEqual(self.game.session.editor_scenario_name, "")
 
     def test_named_and_unnamed_saves_prefill_the_destination_picker(self):
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             ready = mock.Mock()
-            self.game.editor_scenario_name = "Chosen Name"
+            self.game.session.editor_scenario_name = "Chosen Name"
             editor_menus.prepare_editor_save(self.game, ready)
             ready.assert_called_once_with(os.path.join(self.directory, "Chosen Name"), False)
             self.assertEqual(self.picker.call_args.kwargs["initial_name"], "Chosen Name")
             ready.reset_mock()
-            self.game.editor_scenario_name = ""
+            self.game.session.editor_scenario_name = ""
             with mock.patch.object(editor_menus, "datetime") as clock:
                 clock.now.return_value.strftime.return_value = "timestamp"
                 editor_menus.prepare_editor_save(self.game, ready)
@@ -116,12 +116,12 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.picker.side_effect = None
         ready = mock.Mock()
         editor_menus.prepare_editor_save(self.game, ready)
-        self.game.multiplayer_mode = True
+        self.game.session.multiplayer_mode = True
         self.picker.call_args.kwargs["on_result"](os.path.join(self.directory, "Chosen"))
         ready.assert_not_called()
 
     def test_collision_offers_overwrite_numbered_copy_and_cancel(self):
-        self.game.editor_scenario_name = "Existing"
+        self.game.session.editor_scenario_name = "Existing"
         for name in ("Existing", "Existing-1", "Existing-2"):
             os.mkdir(os.path.join(self.directory, name))
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
@@ -137,12 +137,12 @@ class ScenarioMetadataTests(unittest.TestCase):
             callback(True)
             ready.assert_called_once_with(os.path.join(self.directory, "Existing"), True)
             ready.reset_mock()
-            self.game.realtime_multiplayer = True
+            self.game.session.realtime_multiplayer = True
             callback(True)
             ready.assert_not_called()
 
     def test_numbered_copy_skips_files_and_rechecks_names_at_confirmation(self):
-        self.game.editor_scenario_name = "Existing"
+        self.game.session.editor_scenario_name = "Existing"
         os.mkdir(os.path.join(self.directory, "Existing"))
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             ready = mock.Mock()
@@ -153,7 +153,7 @@ class ScenarioMetadataTests(unittest.TestCase):
             ready.assert_called_once_with(os.path.join(self.directory, "Existing-2"), False)
 
     def test_save_preparation_rejects_invalid_names_before_prompting_or_writing(self):
-        self.game.editor_scenario_name = "../outside"
+        self.game.session.editor_scenario_name = "../outside"
         ready = mock.Mock()
         with mock.patch("ui.dialogs.show_error") as error, mock.patch("ui.dialogs.ask_yes_no") as ask:
             editor_menus.prepare_editor_save(self.game, ready)
@@ -166,14 +166,14 @@ class ScenarioMetadataTests(unittest.TestCase):
         for key, value in (("is_editor", False), ("multiplayer_mode", True), ("realtime_multiplayer", True),
                            ("tactical_mode", True), ("is_saving", True), ("is_refreshing", True),
                            ("ai_is_thinking", True), ("viewing_ai_moves", True)):
-            with self.subTest(key=key), mock.patch.object(self.game, key, value), \
+            with self.subTest(key=key), mock.patch.object(state_owner(self.game, key), key, value), \
                     mock.patch("ui.dialogs.ask_yes_no") as ask:
                 editor_menus.prepare_editor_save(self.game, ready)
                 ask.assert_not_called()
                 ready.assert_not_called()
 
     def write_scenario(self, name=None, overwrite=False, save_path=None):
-        self.game.is_saving = True
+        self.game.session.is_saving = True
         with mock.patch.object(save_map.pygame.image, "save"), \
                 mock.patch.object(queries, "scrub_default_images"), \
                 mock.patch.object(save_map, "sync_persisted_dir") as sync:
@@ -190,9 +190,9 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertNotIn("name", saved["scenario_metadata"])
         loaded = editor()
         load_map.restore_scenario_metadata(loaded, saved, os.path.join(self.directory, "Renamed"))
-        self.assertEqual(loaded.editor_scenario_name, "Renamed")
-        self.assertEqual(loaded.scenario_metadata, saved["scenario_metadata"])
-        self.assertFalse(self.game.is_saving)
+        self.assertEqual(loaded.session.editor_scenario_name, "Renamed")
+        self.assertEqual(loaded.world.scenario_metadata, saved["scenario_metadata"])
+        self.assertFalse(self.game.session.is_saving)
 
     def test_existing_folder_requires_explicit_overwrite_in_the_writer(self):
         path = os.path.join(self.directory, "Existing")
@@ -205,7 +205,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertIsNone(result)
         with open(meta_path) as handle:
             self.assertEqual(handle.read(), "Preserve previous scenario")
-        self.assertFalse(self.game.is_saving)
+        self.assertFalse(self.game.session.is_saving)
         result, _sync = self.write_scenario("Existing", overwrite=True)
         self.assertEqual(result, path)
         with open(meta_path) as handle:
@@ -214,14 +214,14 @@ class ScenarioMetadataTests(unittest.TestCase):
     def test_chosen_paths_outside_the_default_roots_round_trip_for_games_and_maps(self):
         for is_editor in (True, False):
             with self.subTest(is_editor=is_editor), tempfile.TemporaryDirectory() as outside:
-                self.game.is_editor = is_editor
-                self.game.scenario_metadata = {"author": "Creator", "description": "Chosen destination"}
+                self.game.session.is_editor = is_editor
+                self.game.world.scenario_metadata = {"author": "Creator", "description": "Chosen destination"}
                 destination = os.path.join(outside, "Chosen Name")
                 path, _sync = self.write_scenario(save_path=destination)
                 self.assertEqual(path, destination)
                 saved, map_data, _history = load_map.read_save_files(path)
-                self.assertEqual(saved["scenario_metadata"], self.game.scenario_metadata)
-                self.assertEqual(saved["nation_data"], self.game.nation_data)
+                self.assertEqual(saved["scenario_metadata"], self.game.world.scenario_metadata)
+                self.assertEqual(saved["nation_data"], self.game.world.nation_data)
                 self.assertIn("p", map_data)
                 self.assertEqual(os.listdir(self.directory), [])
 
@@ -231,7 +231,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         previous = os.path.join(destination, "meta.json")
         with open(previous, "w") as handle:
             handle.write("Keep existing save")
-        self.game.is_editor = False
+        self.game.session.is_editor = False
         with mock.patch("builtins.print"):
             path, _sync = self.write_scenario(save_path=destination)
         self.assertIsNone(path)
@@ -244,7 +244,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         previous_meta = os.path.join(previous, "meta.json")
         with open(previous_meta, "w") as handle:
             handle.write("Keep the previous scenario")
-        self.game.editor_scenario_name = "Existing"
+        self.game.session.editor_scenario_name = "Existing"
         ready = mock.Mock()
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             editor_menus.prepare_editor_save(self.game, ready)
@@ -252,7 +252,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         destination, overwrite = ready.call_args.args
         path, _sync = self.write_scenario(overwrite=overwrite, save_path=destination)
         self.assertEqual(path, os.path.join(self.directory, "Existing-1"))
-        self.assertEqual(self.game.editor_scenario_name, "Existing-1")
+        self.assertEqual(self.game.session.editor_scenario_name, "Existing-1")
         with open(previous_meta) as handle:
             self.assertEqual(handle.read(), "Keep the previous scenario")
 
@@ -269,10 +269,10 @@ class ScenarioMetadataTests(unittest.TestCase):
                             refresh_all_maps=mock.Mock())
         metadata = {"author": "Author", "description": "Description"}
         apply_authoritative_snapshot(client, {"scenario_metadata": metadata, "nation_data": {"A": {}}})
-        self.assertEqual(client.scenario_metadata, metadata)
-        self.assertIsNot(client.scenario_metadata, metadata)
+        self.assertEqual(client.world.scenario_metadata, metadata)
+        self.assertIsNot(client.world.scenario_metadata, metadata)
         apply_authoritative_snapshot(client, {"nation_data": {"A": {}}})
-        self.assertEqual(client.scenario_metadata, {"author": "", "description": ""})
+        self.assertEqual(client.world.scenario_metadata, {"author": "", "description": ""})
 
     def test_editor_metadata_screen_applies_through_shared_permission_checks(self):
         screen = object.__new__(Editor_Metadata_Screen)
@@ -280,12 +280,12 @@ class ScenarioMetadataTests(unittest.TestCase):
         screen.fields = {key: SimpleNamespace(text=value, active=False)
                          for key, value in (("name", "Name"), ("author", "Author"), ("description", "Description"))}
         screen.done = False
-        self.assertEqual(self.game.scenario_metadata, {})
+        self.assertEqual(self.game.world.scenario_metadata, {})
         screen.apply()
         self.assertTrue(screen.done)
-        self.assertEqual(self.game.editor_scenario_name, "Name")
-        self.assertEqual(self.game.scenario_metadata, {"author": "Author", "description": "Description"})
-        self.game.multiplayer_mode = True
+        self.assertEqual(self.game.session.editor_scenario_name, "Name")
+        self.assertEqual(self.game.world.scenario_metadata, {"author": "Author", "description": "Description"})
+        self.game.session.multiplayer_mode = True
         screen.done = False
         with mock.patch("ui.dialogs.show_error") as error:
             screen.apply()
@@ -303,7 +303,7 @@ class ScenarioMetadataTests(unittest.TestCase):
     def test_standalone_export_screen_exports_only_a_saved_scenario_and_returns_to_the_map(self):
         screen = object.__new__(Standalone_Export_Screen)
         screen.map_screen, screen.done, screen.next_state = self.game, False, None
-        self.game.editor_scenario_name = "Fixture"
+        self.game.session.editor_scenario_name = "Fixture"
         with mock.patch("ui.dialogs.show_error") as error, \
                 mock.patch.object(standalone_export.screen_runner, "run_loading") as loading:
             screen.export()
@@ -377,7 +377,7 @@ class ScenarioMetadataTests(unittest.TestCase):
     def test_standalone_export_settings_change_only_with_valid_values_in_an_idle_editor(self):
         queries.set_standalone_export_setting(self.game, "background_color", [1, 2, 3])
         queries.set_standalone_background_image(self.game, self.png_bytes())
-        settings = self.game.standalone_export_settings
+        settings = self.game.world.standalone_export_settings
         self.assertEqual(settings["background_color"], [1, 2, 3])
         self.assertEqual(base64.b64decode(settings["background_image"]), self.png_bytes())
         before = copy.deepcopy(settings)
@@ -391,12 +391,12 @@ class ScenarioMetadataTests(unittest.TestCase):
         settings["interesting_countries"] = []
         with self.assertRaises(ValueError):
             queries.set_standalone_background_image(self.game, b"GIF89a not a png")
-        self.game.multiplayer_mode = True
+        self.game.session.multiplayer_mode = True
         with self.assertRaises(ValueError):
             queries.set_standalone_export_setting(self.game, "background_image", "")
         self.assertEqual(settings, before)
         # Clear Image stores empty text in an idle editor.
-        self.game.multiplayer_mode = False
+        self.game.session.multiplayer_mode = False
         queries.set_standalone_export_setting(self.game, "background_image", "")
         self.assertEqual(settings["background_image"], "")
 
@@ -404,18 +404,18 @@ class ScenarioMetadataTests(unittest.TestCase):
         queries.set_editor_metadata(self.game, "Exported", "Author", "Description")
         queries.set_standalone_export_setting(self.game, "background_color", [7, 8, 9])
         queries.set_standalone_background_image(self.game, self.png_bytes())
-        music = queries.normalized_standalone_export_settings({"music": {"album_name": "Fixture Soundtrack", "starting_song": "Intro.mp3", "songs": [{"name": "Intro.mp3", "data": base64.b64encode(b"fixture audio").decode("ascii")}], "icon": self.game.standalone_export_settings["background_image"]}})["music"]
+        music = queries.normalized_standalone_export_settings({"music": {"album_name": "Fixture Soundtrack", "starting_song": "Intro.mp3", "songs": [{"name": "Intro.mp3", "data": base64.b64encode(b"fixture audio").decode("ascii")}], "icon": self.game.world.standalone_export_settings["background_image"]}})["music"]
         queries.set_standalone_export_setting(self.game, "music", music)
         path, _sync = self.write_scenario()
         saved, _map, _history = load_map.read_save_files(path)
         loaded = editor()
         load_map.restore_scenario_metadata(loaded, saved, path)
-        self.assertEqual(loaded.standalone_export_settings,
-                         queries.normalized_standalone_export_settings(self.game.standalone_export_settings))
+        self.assertEqual(loaded.world.standalone_export_settings,
+                         queries.normalized_standalone_export_settings(self.game.world.standalone_export_settings))
         older = editor()
-        older.standalone_export_settings["background_color"] = [7, 8, 9]
+        older.world.standalone_export_settings["background_color"] = [7, 8, 9]
         load_map.restore_scenario_metadata(older, {}, path)
-        self.assertEqual(older.standalone_export_settings, queries.normalized_standalone_export_settings({}))
+        self.assertEqual(older.world.standalone_export_settings, queries.normalized_standalone_export_settings({}))
 
     def test_export_writes_the_settings_to_game_json_and_the_game_reads_them(self):
         settings = queries.normalized_standalone_export_settings({"background_color": [4, 5, 6]})
@@ -462,7 +462,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map as map_module
 
         game = self.game
-        game.editor_scenario_name = "Existing"
+        game.session.editor_scenario_name = "Existing"
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)
         game.draw = mock.Mock()
         os.mkdir(os.path.join(self.directory, "Existing"))
@@ -471,20 +471,20 @@ class ScenarioMetadataTests(unittest.TestCase):
                 mock.patch.object(map_module.pygame.display, "get_surface"), \
                 mock.patch.object(map_module.pygame.display, "flip"):
             game.save_map_data()
-            self.assertFalse(game.is_saving)
+            self.assertFalse(game.session.is_saving)
             background.assert_not_called()
             ask.call_args.args[2](None)
             background.assert_not_called()
             ask.call_args.args[2](True)
             background.assert_called_once_with(save_map.save_map_data, game, None, overwrite=True,
                                                save_path=os.path.join(self.directory, "Existing"))
-            self.assertTrue(game.is_saving)
+            self.assertTrue(game.session.is_saving)
 
     def test_game_save_button_waits_for_the_picker_before_starting_work(self):
         from screens.game import map as map_module
 
         game = self.game
-        game.is_editor = False
+        game.session.is_editor = False
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)
         game.draw = mock.Mock()
         self.picker.side_effect = None
@@ -496,7 +496,7 @@ class ScenarioMetadataTests(unittest.TestCase):
             game.save_map_data()
             self.assertEqual(self.picker.call_args.args[2], self.directory)
             background.assert_not_called()
-            self.assertFalse(game.is_saving)
+            self.assertFalse(game.session.is_saving)
             callback = self.picker.call_args.kwargs["on_result"]
             callback(None)
             background.assert_not_called()
@@ -508,8 +508,8 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map as map_module
 
         game = self.game
-        game.is_editor = False
-        game.realtime_multiplayer = True
+        game.session.is_editor = False
+        game.session.realtime_multiplayer = True
         game.realtime_session = SimpleNamespace(phase="GAME_OVER", completed_metadata=mock.Mock(return_value={}))
         game.realtime_server_map = mock.Mock()
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)
@@ -527,8 +527,8 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map as map_module
 
         game = self.game
-        game.is_editor = False
-        game.realtime_multiplayer = True
+        game.session.is_editor = False
+        game.session.realtime_multiplayer = True
         game.realtime_session = SimpleNamespace(phase="GAME_OVER", completed_metadata=lambda: {"offline_view": "spectator"})
         game.realtime_server_map = None
         game.save_map_data = MethodType(map_module.Map.save_map_data, game)
@@ -542,7 +542,7 @@ class ScenarioMetadataTests(unittest.TestCase):
             self.picker.call_args.kwargs["on_result"](destination)
             background.assert_called_once_with(save_map.save_map_data, game, None, overwrite=False,
                                                save_path=destination)
-            self.assertEqual(game.player_country, "Spectator")
+            self.assertEqual(game.session.player_country, "Spectator")
             self.assertEqual(game.realtime_match_metadata, {"offline_view": "spectator"})
 
 

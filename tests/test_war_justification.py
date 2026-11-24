@@ -28,14 +28,14 @@ class WarScreenTestCase(unittest.TestCase):
 
         # The harness map is shared across the run and earlier modules move
         # provinces around on it, so ownership is read live rather than cached.
-        landed = [n for n in sorted(queries.get_living_nations(self.map.map_data))
-                  if n not in c.UNPLAYABLE_NATIONS and n in self.map.nation_data]
+        landed = [n for n in sorted(queries.get_living_nations(self.map.world.map_data))
+                  if n not in c.UNPLAYABLE_NATIONS and n in self.map.world.nation_data]
         self.player, self.target = landed[0], landed[1]
 
-        self.map.player_country = self.player
-        self.map.active_players = [self.player]
+        self.map.session.player_country = self.player
+        self.map.session.active_players = [self.player]
         for nation in (self.player, self.target):
-            data = self.map.nation_data[nation]
+            data = self.map.world.nation_data[nation]
             data["at_war_with"] = []
             data["pending_diplomacy"] = {}
             data["claims"] = []
@@ -45,7 +45,7 @@ class WarScreenTestCase(unittest.TestCase):
             data["faction"] = ""
             data["master"] = ""
 
-        self.their_prov = next(p for p in self.map.map_data.values()
+        self.their_prov = next(p for p in self.map.world.map_data.values()
                                if p.get("owner") == self.target)
         # A tile they hold that we have no historic claim on, so "Take Claims"
         # genuinely starts unavailable.
@@ -76,11 +76,11 @@ class DeclareWarScreenTests(WarScreenTestCase):
                         "no route from declaring war to fabricating a claim")
 
     def test_a_matured_claim_unlocks_take_claims(self):
-        self.map.nation_data[self.player]["claims"] = [self.their_prov["id"]]
+        self.map.world.nation_data[self.player]["claims"] = [self.their_prov["id"]]
         self.assertTrue(self.war_screen().wargoal_options[0]["enabled"])
 
     def test_it_reports_how_long_a_justification_still_has_to_run(self):
-        self.map.nation_data[self.player]["claim_queue"] = [
+        self.map.world.nation_data[self.player]["claim_queue"] = [
             {"prov_id": self.their_prov["id"], "turns_left": c.CLAIM_TURN_NON_CORE}]
 
         screen = self.war_screen()
@@ -91,8 +91,8 @@ class DeclareWarScreenTests(WarScreenTestCase):
         self.assertEqual(len(screen.justifying), 1)
 
     def test_a_claim_being_justified_elsewhere_is_not_this_wars_business(self):
-        mine = next(p for p in self.map.map_data.values() if p.get("owner") == self.player)
-        self.map.nation_data[self.player]["claim_queue"] = [
+        mine = next(p for p in self.map.world.map_data.values() if p.get("owner") == self.player)
+        self.map.world.nation_data[self.player]["claim_queue"] = [
             {"prov_id": mine["id"], "turns_left": 2}]
 
         screen = self.war_screen()
@@ -116,25 +116,25 @@ class ClaimPickerTests(WarScreenTestCase):
         screen = self.picker()
         screen.toggle_claim(self.their_prov)
 
-        queued = [q["prov_id"] for q in self.map.nation_data[self.player]["claim_queue"]]
+        queued = [q["prov_id"] for q in self.map.world.nation_data[self.player]["claim_queue"]]
         self.assertIn(self.their_prov["id"], queued)
 
     def test_clicking_it_again_takes_it_back_off(self):
         screen = self.picker()
         screen.toggle_claim(self.their_prov)
         screen.toggle_claim(self.their_prov)
-        self.assertEqual(self.map.nation_data[self.player]["claim_queue"], [])
+        self.assertEqual(self.map.world.nation_data[self.player]["claim_queue"], [])
 
     def test_a_justification_takes_turns_to_mature(self):
         screen = self.picker()
         screen.toggle_claim(self.their_prov)
-        entry = self.map.nation_data[self.player]["claim_queue"][0]
+        entry = self.map.world.nation_data[self.player]["claim_queue"][0]
         self.assertEqual(entry["turns_left"], c.CLAIM_TURN_NON_CORE)
 
     def test_the_editor_overview_still_browses_every_claim(self):
         from screens.game.claims_screen import Claims_Screen
 
-        self.map.is_editor = True
+        self.map.session.is_editor = True
         try:
             overview = Claims_Screen(self.map)
             self.assertFalse(overview.is_picker)
@@ -142,7 +142,7 @@ class ClaimPickerTests(WarScreenTestCase):
             self.assertEqual(overview.view_mode, "GLOBAL")
             overview.draw(self.surface)
         finally:
-            self.map.is_editor = False
+            self.map.session.is_editor = False
 
 
 if __name__ == "__main__":

@@ -193,13 +193,13 @@ class TreatyTests(unittest.TestCase):
     def test_validate_says_so_before_the_offer_is_ever_sent(self):
         agreement = deal.new(deal.KIND_TRADE, ["Distant"], ["Buyer"],
                              [deal.tiles_clause("Distant", "Buyer", [self.far["id"]])])
-        problems = deal.validate(agreement, self.game.map_data, self.game.nation_data)
+        problems = deal.validate(agreement, self.game.world.map_data, self.game.world.nation_data)
         self.assertTrue(any("cannot reach" in p for p in problems), problems)
 
     def test_an_ally_cannot_be_used_as_a_pair_of_hands(self):
         """Routing the province to somebody who *can* reach it is fine; routing
         it to somebody who cannot is the loophole, and it is judged on them."""
-        self.game.nation_data["Buyer"]["faction"] = self.game.nation_data["Seller"]["faction"] = "Fixture Coalition"
+        self.game.world.nation_data["Buyer"]["faction"] = self.game.world.nation_data["Seller"]["faction"] = "Fixture Coalition"
 
         self.trade(self.far["id"], "Distant", receiver="Seller")
         self.assertEqual(self.game.owner_of(self.far["id"]), "Seller",
@@ -246,7 +246,7 @@ class TreatyTests(unittest.TestCase):
             deal.tiles_clause("Seller", "Buyer", [self.near["id"]]),
             deal.tiles_clause("Distant", "Buyer", [self.far["id"]]),
         ])
-        problems = deal.validate(agreement, self.game.map_data, self.game.nation_data)
+        problems = deal.validate(agreement, self.game.world.map_data, self.game.world.nation_data)
         self.assertEqual(problems, [])
 
     def test_dropping_the_connector_is_not_a_way_round_the_rule(self):
@@ -257,7 +257,7 @@ class TreatyTests(unittest.TestCase):
         if the near one had never been asked for."""
         agreement = deal.new(deal.KIND_TRADE, ["Distant"], ["Buyer"],
                              [deal.tiles_clause("Distant", "Buyer", [self.far["id"]])])
-        problems = deal.validate(agreement, self.game.map_data, self.game.nation_data)
+        problems = deal.validate(agreement, self.game.world.map_data, self.game.world.nation_data)
         self.assertTrue(any("cannot reach" in p for p in problems), problems)
 
         notes = deal_effects.execute(self.game, agreement)
