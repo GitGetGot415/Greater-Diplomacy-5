@@ -56,6 +56,20 @@ class TransportTests(unittest.TestCase):
     def load(self):
         queries.set_air_cargo(self.game, "A", self.plane, self.base, [self.cargo["unit_id"]])
 
+    def factory(self, province, *, output=100000, name="Basic Factory"):
+        library = dict(queries.get_building_library())
+        library[name] = {"group": "industry", "prod_materials": output, "prod_manpower": output}
+        self.enterContext(patch.object(queries, "get_building_library", return_value=library))
+        province.update(buildings=[name], cores=["A", "B"])
+        return province
+
+    def plan_air(self, *, fog=False):
+        queries.build_air_geometry(self.game)
+        records = [(unit, province) for province in self.game.world.map_data.values()
+                   for unit in province["units"] if unit["owner"] == "A"]
+        with patch.dict(self.game.world.scenario_settings, {"use_default_other": False, "fog_of_war": fog}):
+            ai_movement._assign_air_orders(self.game, "A", records)
+
     def screen(self):
         screen = Orders_Screen()
         screen.map_screen = self.game
@@ -268,29 +282,99 @@ class TransportTests(unittest.TestCase):
         self.assertEqual(strike.args[0][0], [bomber])
         self.assertIn(self.cargo, target["units"])
 
-    def test_ai_loads_and_drops_only_legal_cargo_on_reachable_enemy_land(self):
-        target = tile(self.game, 4, 30, owner="B")
-        queries.build_air_geometry(self.game)
-        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [],
-                                          [target], [(self.plane, self.base), (self.cargo, self.base)])
+    def test_ai_prefers_a_reachable_supplied_factory_to_the_nearest_enemy_land(self):
+        tile(self.game, 3, 23, owner="B")
+        target = self.factory(tile(self.game, 4, 40, owner="B"))
+        self.plan_air()
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
         self.assertEqual(self.plane["order"]["type"], "AIR_DROP")
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
         self.assertIn(self.plane["order"], ai_movement.legal_air_candidates(self.game, self.plane, self.base))
         self.assertNotIn("AIR_ATTACK", {order["type"] for order in
             ai_movement.legal_air_candidates(self.game, self.plane, self.base)})
 
-    def test_ai_drop_respects_tactical_control_and_first_exchange_survival(self):
-        target = tile(self.game, 4, 30, owner="B")
-        queries.build_air_geometry(self.game)
+    def test_ai_drop_respects_tactical_control_and_skips_defended_targets(self):
+        target = self.factory(tile(self.game, 4, 30, owner="B"))
         self.game.session.tactical_mode = True
         self.game.session.player_unit = self.cargo
-        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [], [target], [])
+        self.plan_air()
         self.assertFalse(self.plane.get("air_cargo"))
         self.game.session.tactical_mode = False
-        defender = wing(target, "Fixture Cargo", "B")
-        defender["attack"] = self.cargo["health"] * 10
-        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base, [], [target], [])
+        wing(target, "Fixture Cargo", "B")
+        self.plan_air()
         self.assertFalse(self.plane.get("air_cargo"))
+
+    def test_ai_drop_checks_all_recovery_turns_for_visible_counterattackers(self):
+        target = self.factory(tile(self.game, 4, 30, owner="B"))
+        enemy = tile(self.game, 7, 180, owner="B")
+        self.connect(target, tile(self.game, 5, 140, owner="B"), tile(self.game, 6, 160, owner="B"), enemy)
+        wing(enemy, "Fixture Cargo", "B")["speed"] = 1
+        name = queries.CONVERSION_ACTIONS["AIR_DROP_RECOVERY"][0]
+        settings = self.game.world.scenario_settings
+        settings.update(use_default_other=False, conversion_turn_overrides={name: 2}, fog_of_war=False)
+        self.plan_air()
+        self.assertFalse(self.plane.get("air_cargo"))
+        settings["conversion_turn_overrides"][name] = 1
+        self.plan_air()
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
+
+    def test_ai_skips_factories_under_enemy_patrol_coverage_or_fog(self):
+        target = self.factory(tile(self.game, 4, 30, owner="B"))
+        enemy = tile(self.game, 5, 120, owner="B")
+        fighter = wing(enemy, "Monoplane Fighter I", "B")
+        self.plan_air()
+        self.assertFalse(self.plane.get("air_cargo"))
+        enemy["units"].remove(fighter)
+        with patch.object(ai_movement.ai_world.AIWorld, "visible_provinces", return_value={1, 2, 5}):
+            self.plan_air(fog=True)
+        self.assertFalse(self.plane.get("air_cargo"))
+        with patch.object(ai_movement.ai_world.AIWorld, "visible_provinces", return_value={1, 2, 4, 5}):
+            self.plan_air(fog=True)
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
+
+    def test_ai_skips_an_inland_factory_that_an_enemy_convoy_can_reach_after_landing(self):
+        target = self.factory(tile(self.game, 4, 30, owner="B"))
+        shore = tile(self.game, 5, 70, owner="B")
+        sea = tile(self.game, 6, 120, water=True)
+        self.connect(sea, shore, target)
+        convoy = wing(sea, "Fixture Cargo", "B")
+        queries.load_transport(convoy, "Convoy", context=self.game)
+        self.plan_air()
+        self.assertFalse(self.plane.get("air_cargo"))
+
+    def test_coastal_raid_needs_open_supply_when_local_production_is_small(self):
+        self.factory(self.base)
+        target = self.factory(tile(self.game, 4, 30, owner="B"), output=2, name="Factory Lvl 1")
+        sea = tile(self.game, 5, 20, water=True)
+        sea["terrain"] = "ocean"
+        self.base["is_coastal"] = target["is_coastal"] = True
+        self.connect(self.base, sea, target)
+        self.enterContext(patch.object(c, "BASE_YIELDS", dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)))
+        blocker = wing(sea, "Battleship I", "B")
+        self.plan_air()
+        self.assertFalse(self.plane.get("air_cargo"))
+        sea["units"].remove(blocker)
+        self.plan_air()
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
+
+    def test_air_transport_keeps_the_last_border_guard_ashore(self):
+        target = self.factory(tile(self.game, 4, 30, owner="B"))
+        self.connect(self.base, tile(self.game, 3, 140, owner="B"))
+        self.plan_air()
+        self.assertFalse(self.plane.get("air_cargo"))
+        self.assertIn(self.cargo, self.base["units"])
+        wing(self.base, "Fixture Cargo")
+        self.plan_air()
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
+
+    def test_two_transports_do_not_assign_the_same_factory_raid(self):
+        target = self.factory(tile(self.game, 4, 30, owner="B"))
+        second = wing(self.base, "Monoplane Transport")
+        reserve = wing(self.base, "Fixture Cargo")
+        self.plan_air()
+        self.assertEqual(self.plane["order"]["target_id"], target["id"])
+        self.assertFalse(second.get("air_cargo"))
+        self.assertIn(reserve, self.base["units"])
 
     def test_drop_ui_picker_targets_and_rechecks_permissions(self):
         target = self.plan_drop()
@@ -449,19 +533,36 @@ class TransportTests(unittest.TestCase):
             queries.set_air_cargo(self.game, "A", self.plane, self.base, [])
         self.assertEqual(self.game.world.map_data, before)
 
-    def test_ai_loads_moves_and_releases_ground_reinforcements(self):
-        enemy = tile(self.game, 3, 220, owner="B")
-        queries.build_air_geometry(self.game)
-        records = [(self.plane, self.base), (self.cargo, self.base)]
-        relocation = queries.air_move_order(self.game, self.plane, self.base, self.destination, "MOVE")
-        ai_movement._assign_air_transport(self.game, "A", self.plane, self.base,
-                                          [relocation], [enemy], records)
+    def connect(self, *provinces):
+        for left, right in zip(provinces, provinces[1:]):
+            for source, target in ((left, right), (right, left)):
+                if target["id"] not in source["neighbors"]:
+                    source["neighbors"].append(target["id"])
+
+    def test_ai_ferries_ground_reinforcements_then_unloads_them_to_march(self):
+        front = tile(self.game, 3, 150)
+        enemy = tile(self.game, 4, 220, owner="B")
+        self.base["neighbors"].clear()
+        self.destination["neighbors"].clear()
+        detour = [tile(self.game, index, 240 + index * 10) for index in range(5, 8)]
+        self.connect(self.base, *detour, self.destination, front, enemy)
+        self.plan_air()
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
-        self.assertEqual(self.plane["order"], relocation)
+        self.assertEqual(self.plane["order"]["type"], "AIR_REPOSITION")
+        self.assertEqual(self.plane["order"]["target_id"], self.destination["id"])
         air_processor.process_air_orders(self.game)
-        ai_movement._assign_air_transport(self.game, "A", self.plane, self.destination, [], [enemy], records)
+        ai_movement.process_ai_unit_orders(self.game, countries=["A"])
         self.assertEqual(self.plane["air_cargo"], [])
-        self.assertIn((self.cargo, self.destination), records)
+        self.assertIn(self.cargo, self.destination["units"])
+        self.assertFalse(queries.unit_is_air_drop_recovering(self.cargo))
+        self.assertEqual(self.cargo["order"]["path"][0], front["id"])
+
+    def test_ai_leaves_cargo_ashore_when_flying_would_not_save_time(self):
+        front = tile(self.game, 3, 150)
+        self.connect(self.destination, front, tile(self.game, 4, 220, owner="B"))
+        self.plan_air()
+        self.assertFalse(self.plane.get("air_cargo"))
+        self.assertIn(self.cargo, self.base["units"])
 
     def test_ai_transport_valuation_uses_capacity_range_and_separate_role(self):
         library = queries.get_unit_library()

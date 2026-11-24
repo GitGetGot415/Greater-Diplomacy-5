@@ -3,6 +3,7 @@
 from collections import defaultdict, deque
 from contextlib import contextmanager
 from contextvars import ContextVar
+from copy import copy
 from dataclasses import dataclass, field, replace
 
 import data.constants as c
@@ -513,6 +514,41 @@ class SupplySnapshot:
                 opened[member] = {tile for tile, owner in recaptured.items() if owner in permitted}
                 closed[member] = closed.get(member, set()) | (recaptured.keys() - opened[member])
         return self._route_projection(country, closed, opened, recaptured)
+
+    def land_supply_after_capture(self, country, captures, arrivals):
+        """Project supply for ground units at their proposed landing provinces."""
+        arrivals = tuple(arrivals)
+        view = copy(self)
+        view.unit_data = self.unit_data.copy()
+        view.land_units = self.land_units.copy()
+        locations = defaultdict(list, self.land_units.get(country, {}))
+        view.land_units[country] = locations
+        view.networks = {}
+        view.route_projections = {}
+        view.share_sources = {}
+        view.domestic_networks = self.domestic_networks.copy()
+        view.domestic_networks.pop(country, None)
+
+        library = queries.get_unit_library(self.production.context)
+        for tile, unit in arrivals:
+            identity = supply_unit_key(unit)
+            previous_identity = identity if identity in self.unit_data else id(unit)
+            current = self.unit_data.get(previous_identity)
+            if current is not None:
+                remaining = [key for key in locations[current.province] if key != previous_identity]
+                if remaining:
+                    locations[current.province] = remaining
+                else:
+                    del locations[current.province]
+                data = replace(current, province=tile)
+            else:
+                demand = queries.get_live_unit_upkeep(unit, library, self.nations)
+                data = SupplyUnit(unit, country, unit["owner"], tile, demand)
+            locations[tile] = [*locations[tile], identity]
+            view.unit_data[identity] = data
+
+        network = view.land_projection(country, reopen=captures)
+        return tuple(view.status(unit, network=network) for _, unit in arrivals)
 
     def sea_projection(self, country, *, block=(), reopen=(), blocker=None, departing=None):
         """Recalculate supply under hypothetical sea occupations or clearances."""

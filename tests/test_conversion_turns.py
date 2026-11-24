@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 from data import constants as c, queries
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
-from map_logic.ai import ai_movement
-from map_logic.system32 import air_processor, movement_processor
+from map_logic.system32 import air_processor, combat_processor, movement_processor
 from tests import test_air_transport as transport_tests
 from tests.air_fixtures import tile, wing
 from tests.stub_map_screen import sample_map_screen
@@ -134,14 +133,12 @@ class ConversionTurnsTests(unittest.TestCase):
     def test_ai_drop_projection_and_resolution_use_scenario_recovery(self):
         duration = c.MAX_CONVERSION_TURNS
         self.set_turns("AIR_DROP_RECOVERY", duration)
-        target = tile(self.game, 4, 30, owner="B")
-        queries.build_air_geometry(self.game)
-        with patch.object(ai_movement, "_attackers_would_survive", return_value=True) as projection:
-            ai_movement._assign_air_transport(self.game, "A", self.fixture.plane, self.base, [], [target], [])
-        dropped = projection.call_args.args[3]
-        self.assertTrue(dropped)
-        self.assertTrue(all(queries.air_drop_recovery_turns(unit) == duration for unit in dropped))
+        target = self.fixture.factory(tile(self.game, 4, 30, owner="B"))
+        self.fixture.plan_air()
         air_processor.process_air_orders(self.game)
+        with patch.object(self.game, "presentation_enabled", False):
+            combat_processor.check_for_post_combat_captures(self.game)
+        self.assertEqual(target["owner"], "A")
         self.assertEqual(queries.air_drop_recovery_turns(self.fixture.cargo), duration)
 
     def test_save_dictionary_preserves_independent_scenario_timers(self):

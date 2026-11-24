@@ -3,6 +3,7 @@ from data.state_access import world_for, session_for
 from collections import defaultdict, deque
 from itertools import combinations, product
 import heapq
+from math import ceil, inf
 import data.constants as c
 from map_logic.ai import ai_tuning
 from data import queries
@@ -261,7 +262,7 @@ def _aircraft_repair_order(context, country, unit, base, threatened, candidates)
         queries.air_distance_squared(context, base, order["target_id"]), order["target_id"]))
 
 
-def _assign_air_orders(context, country, units_info):
+def _assign_air_orders(context, country, units_info, *, factories=None, known_supply=None, actual_supply=None):
     """Reusable aircraft fly; one-use weapons relocate through legal land paths.
 
     Three passes over the aircraft that are free for a mission:
@@ -294,6 +295,8 @@ def _assign_air_orders(context, country, units_info):
                and queries.air_target_is_hostile({"owner": country}, province,
                    world_state.nation_data, visible_only=True)]
     threatened = _air_base_threats(context, country, visible)
+    logistics = None
+    cargo_changed = False
     unit_library = queries.get_unit_library(context)
     tech_tree = queries.get_tech_tree(context)
     patrol_threats = _air_patrol_threats(context, country, visible)
@@ -388,7 +391,19 @@ def _assign_air_orders(context, country, units_info):
                 queries.air_distance_squared(context, base, order["target_id"]), order["target_id"])), authority="ai")
             continue
         if queries.air_unit_can_transport(unit, context=context):
-            _assign_air_transport(context, country, unit, base, safe_repositions, enemies, all_units_info)
+            if logistics is None:
+                if factories is None:
+                    factories = _factory_objectives(context, country, visible, world.provs_by_owner)
+                if known_supply is None:
+                    known_supply = queries.SupplySnapshot(context, visible_to=country, visible_provinces=visible)
+                transport_ranges = [(base, queries.air_order_radius(plane, "AIR_DROP", context=context) ** 2)
+                                    for plane, base in units_info if queries.air_unit_can_transport(plane, context=context)]
+                reachable_factories = {tile: score for tile, score in factories.items()
+                                       if any(queries.air_distance_squared(context, base, tile) <= radius
+                                              for base, radius in transport_ranges)}
+                logistics = _air_transport_logistics(context, country, reachable_factories, known_supply, actual_supply)
+            if _assign_air_transport(context, country, unit, base, safe_repositions, all_units_info, logistics):
+                cargo_changed = True
             continue
         repair = _aircraft_repair_order(context, country, unit, base, threatened, candidates)
         if repair:
@@ -517,59 +532,198 @@ def _assign_air_orders(context, country, units_info):
             unit_actions.apply_action(context, country, base, unit, patrol, authority="ai")
             for target_id in queries.get_air_targets(context, unit, base, "AIR_PATROL"):
                 patrol_cover.setdefault(target_id, []).append(unit)
+    return cargo_changed
 
 
-def _assign_air_transport(context, country, plane, base, repositions, enemies, units_info):
-    """Drop ground reinforcements on viable enemy land or use accessible bases."""
-    world_state = world_for(context)
-    cargo = plane.get("air_cargo", [])
-    selected = cargo or sorted((unit for unit in base.get("units", [])
-        if queries.air_cargo_is_eligible(plane, unit, context=context)
-        and not queries.is_tactical_player_unit(context, unit)
-        and not queries.unit_has_active_order(unit)),
-        key=queries.calculate_unit_strength, reverse=True)[:queries.air_transport_capacity(plane, context=context)]
-    # Evaluate a possible load without changing state when no flight is useful.
-    loaded = dict(plane, air_cargo=selected)
-    dropped = [dict(unit) for unit in selected]
-    for unit in dropped:
-        queries.begin_air_drop_recovery(unit, world_state.scenario_settings)
-    drops = []
-    for target in enemies:
-        if (not queries.air_drop_target_is_legal(loaded, target, world_state.nation_data)
-                or not queries.air_target_in_range(context, loaded, base, "AIR_DROP", target["id"])):
+def _safe_raid_targets(context, country, factories, known):
+    if not factories:
+        return {}
+    provinces = known.provinces
+    enemies = set(queries.get_enemies(country, known.nations))
+    targets = {tile: value for tile, value in factories.items() if not known.occupants.get(tile, set()) & enemies}
+    turns = 1 + queries.get_conversion_turns("AIR_DROP_RECOVERY", world_for(context).scenario_settings)
+    land = provinces.keys() - known.water
+
+    def threaten(mover, origin, budget, stops=frozenset()):
+        reach = _operational_paths(context, mover, origin, provinces, budget, stops)
+        for target in tuple(targets):
+            if target in reach:
+                targets.pop(target)
+                continue
+            # Another enemy may only be able to enter after ownership changes.
+            recipient = targets[target][1]
+            captured = dict(provinces[target], owner=recipient, _turn_start_owner=recipient)
+            if any(near in reach and near not in stops and len(reach[near]) < budget
+                   and queries.can_unit_move_step(mover, provinces[near], captured, known.nations, context=context)
+                   for near in captured.get("neighbors", ())):
+                targets.pop(target)
+        return reach
+
+    for tile, units in known.visible_units.items():
+        base = provinces[tile]
+        for unit in units:
+            if not targets:
+                return targets
+            if queries.get_unit_combat_owner(unit) not in enemies:
+                continue
+            if queries.is_air_unit(unit, context=context):
+                if (queries.air_unit_can_patrol(unit, context=context)
+                        and queries.air_unit_can_launch(context, unit, dict(base, units=units))):
+                    for target in tuple(targets):
+                        if queries.air_target_in_range(context, unit, base, "AIR_PATROL", target):
+                            targets.pop(target)
+                continue
+            # Use a visible division's full movement allowance. Current enemy
+            # orders and supply shortfalls cannot be relied on through recovery.
+            ground = dict(unit, order=None)
+            if unit.get("type", "").startswith("Convoy"):
+                queries.revert_transport(ground, context=context)
+                if queries.unit_display_domain(ground, context=context) != "LAND":
+                    continue
+                sailing = queries.unit_movement_speed(unit, supply={})
+                if sailing <= 0:
+                    continue
+                shores = threaten(dict(unit, order=None), base, sailing * turns, land)
+                march = queries.unit_movement_speed(ground, supply={})
+                for shore in shores.keys() & land:
+                    if not targets:
+                        break
+                    if shores[shore]:
+                        # Landing unpacks the division during movement. Allow
+                        # the whole landing turn for its march in the forecast.
+                        remaining = turns - (len(shores[shore]) - 1) // sailing
+                        threaten(ground, provinces[shore], march * remaining)
+            elif queries.unit_display_domain(ground, context=context) == "LAND":
+                threaten(ground, base, queries.unit_movement_speed(ground, supply={}) * turns)
+    return targets
+
+
+def _air_transport_logistics(context, country, factories, known, actual_supply):
+    """Share a country's raid candidates and friendly land routes across its transports."""
+    supply = ai_supply.SupplyPlanner(actual_supply if actual_supply is not None else known, known, country)
+    provinces = known.provinces
+    allies = queries.get_all_friendly_nations(country, known.nations)
+    visible = known.visible_provinces
+    walkable = {tile: provinces[tile] for tile in known.for_country(country).province_area.keys() - known.water}
+    guards = set(supply.critical)
+    front = set()
+    for tile, province in walkable.items():
+        if province["owner"] not in allies:
             continue
-        visible_target = dict(target, units=queries.filter_visible_units(
-            target.get("units", []), country, target, world_state.nation_data))
-        if _attackers_would_survive(context, country, visible_target, dropped):
-            drops.append(queries.canonical_air_order(context, loaded, base,
-                {"type": "AIR_DROP", "target_id": target["id"]}))
-    if drops:
-        if not cargo:
-            queries.ensure_unit_ids(world_state.map_data)
-            queries.set_air_cargo(context, country, plane, base, [unit["unit_id"] for unit in selected])
-        unit_actions.apply_action(context, country, base, plane, min(drops, key=lambda order: (
-            queries.air_distance_squared(context, base, order["target_id"]), order["target_id"])), authority="ai")
-        return
-    target = min(enemies, key=lambda p: (queries.air_distance_squared(context, base, p["id"]), p["id"])) if enemies else None
-    destination = min(repositions, key=lambda order: (
-        queries.air_distance_squared(context, world_state.id_to_province[order["target_id"]], target["id"]),
-        order["target_id"])) if target and repositions else None
-    improves = destination and queries.air_distance_squared(
-        context, world_state.id_to_province[destination["target_id"]], target["id"]) < queries.air_distance_squared(
-            context, base, target["id"])
-    if cargo and not improves:
-        released = list(cargo)
-        queries.set_air_cargo(context, country, plane, base, [])
-        units_info.extend((unit, base) for unit in released)
-        return
-    if not improves:
-        return
+        neighbors = [provinces[near] for near in province.get("neighbors", ()) if near in provinces and near not in known.water]
+        if any(neighbor["owner"] in known.nations and neighbor["owner"] not in allies for neighbor in neighbors):
+            guards.add(tile)
+        if not any((visible is None or neighbor["id"] in visible)
+                   and (neighbor["owner"] in supply.enemies or known.occupants.get(neighbor["id"], set()) & supply.enemies)
+                   for neighbor in neighbors):
+            continue
+        garrison = sum(len(known.land_units.get(ally, {}).get(tile, ())) for ally in allies)
+        capacity = combat_rules.nation_front_capacity(country, dict(province, units=known.visible_units.get(tile, ())), known.nations)
+        if garrison < max(1, capacity):
+            front.add(tile)
+    return known, _safe_raid_targets(context, country, factories, known), walkable, front, guards, {}
+
+
+def _air_ferry_order(context, cargo, base, repositions, known, walkable, front):
+    if not front or not repositions:
+        return None
+    speed = min(queries.unit_movement_speed(unit, supply=known) for unit in cargo)
+    if speed <= 0:
+        return None
+    # Eligible ground cargo shares the same land entry rules. Use the whole
+    # group's slowest movement allowance when comparing walking times.
+    if base["id"] in front:
+        return None
+    walker = cargo[0]
+    paths = (queries.find_unit_move_paths_to_destinations(walker, base, front, walkable, known.nations, context=context)
+             if base["id"] in walkable else {})
+    on_foot = {target: ceil(len(path) / speed) for target, path in paths.items()}
+    current_best = min(on_foot.values(), default=inf)
+    if current_best <= 1:
+        return None
+
+    # One reverse search gives each landing point its closest reachable front.
+    incoming = defaultdict(list)
+    for tile, province in walkable.items():
+        for neighbor in province.get("neighbors", ()):
+            if neighbor in walkable:
+                incoming[neighbor].append(tile)
+    nearest = {tile: (tile, 0) for tile in front}
+    pending = deque(sorted(front))
+    landings = {order["target_id"] for order in repositions} & walkable.keys()
+    unseen = landings - nearest.keys()
+    while pending and unseen:
+        tile = pending.popleft()
+        front_tile, distance = nearest[tile]
+        if 1 + ceil((distance + 1) / speed) >= current_best:
+            continue
+        for earlier in incoming[tile]:
+            if earlier in nearest or not queries.can_unit_move_step(walker, walkable[earlier], walkable[tile], known.nations, context=context):
+                continue
+            nearest[earlier] = front_tile, distance + 1
+            unseen.discard(earlier)
+            pending.append(earlier)
+
+    options = []
+    for order in repositions:
+        landing_id = order["target_id"]
+        if landing_id in nearest:
+            target, distance = nearest[landing_id]
+            total = 1 + ceil(distance / speed)
+            options.append((total - on_foot.get(target, inf), total, landing_id, order))
+    return min(options)[-1] if options else None
+
+
+def _assign_air_transport(context, country, plane, base, repositions, units_info, logistics):
+    """Commit a safe raid or a useful ferry flight, and release idle cargo."""
+    known, raid_targets, walkable, front, guards, raids = logistics
+    cargo = plane.get("air_cargo", [])
+    selected = cargo
     if not cargo:
-        if not selected:
-            return
-        queries.ensure_unit_ids(world_state.map_data)
+        ground = [unit for unit in base.get("units", ()) if queries.air_cargo_is_eligible(plane, unit, context=context)]
+        limit = queries.air_transport_capacity(plane, context=context)
+        if base["id"] in guards:
+            limit = min(limit, max(0, len(ground) - 1))
+        selected = sorted((unit for unit in ground if not queries.is_tactical_player_unit(context, unit)
+                           and not queries.unit_has_active_order(unit)),
+                          key=queries.calculate_unit_strength, reverse=True)[:limit]
+    if not selected:
+        return False
+
+    loaded = dict(plane, air_cargo=selected)
+    order = None
+    raid = sorted(raid_targets, key=lambda tile: (-raid_targets[tile][0],
+                  queries.air_distance_squared(context, base, tile), tile))
+    for tile in raid:
+        target = known.provinces[tile]
+        if (not queries.air_drop_target_is_legal(loaded, target, known.nations)
+                or not queries.air_target_in_range(context, loaded, base, "AIR_DROP", tile)):
+            continue
+        recipient = raid_targets[tile][1]
+        captures = {target_id: owner for target_id, (owner, _) in raids.items()}
+        captures[tile] = recipient
+        arrivals = [(target_id, unit) for target_id, (_, units) in raids.items() for unit in units]
+        arrivals.extend((tile, unit) for unit in selected)
+        statuses = known.land_supply_after_capture(country, captures, arrivals)
+        if all(status.readiness >= 1 for status in statuses):
+            order = queries.canonical_air_order(context, loaded, base, {"type": "AIR_DROP", "target_id": tile})
+            break
+    if order is None:
+        order = _air_ferry_order(context, selected, base, repositions, known, walkable, front)
+    if order is None:
+        if cargo:
+            queries.set_air_cargo(context, country, plane, base, [])
+            units_info.extend((unit, base) for unit in cargo)
+        return bool(cargo)
+
+    if not cargo:
+        queries.ensure_unit_ids(world_for(context).map_data)
         queries.set_air_cargo(context, country, plane, base, [unit["unit_id"] for unit in selected])
-    unit_actions.apply_action(context, country, base, plane, destination, authority="ai")
+    unit_actions.apply_action(context, country, base, plane, order, authority="ai")
+    if order["type"] == "AIR_DROP":
+        tile = order["target_id"]
+        raids[tile] = raid_targets.pop(tile)[1], selected
+    return not cargo
 
 
 def build_neighbor_index(id_to_province):
@@ -1230,8 +1384,8 @@ def _reserve_strike_orders(context, ai_name, units_info, ctx, reserved, ground_i
     Here every new fight (_new_fights) is planned with every unit that could
     reach it this turn, and started only with a group the retreat check would
     keep there (_strike_group). The fights that need the fewest units go first,
-    then productive factories and the land worth most at the peace table, so the army masses on the
-    fights it can win before spreading to the rest. Units left over join a
+    then productive factories and the land worth most at the peace table.
+    The army masses on the fights it can win. Units left over join a
     fight already started, up to what its tile can use.
 
     `ctx["new_fights"]` tells the per-unit pass which tiles it must not start
@@ -2796,7 +2950,11 @@ def _generate_unit_orders(context, *, countries=None):
         best_factory = max((value for value, _ in factories.values()), default=1)
         known_supply = queries.SupplySnapshot(context, visible_to=ai_name, visible_provinces=visible, source=actual_supply)
         with queries.combat_supply(known_supply if visible is None else None):
-            _assign_air_orders(context, ai_name, units_info)
+            cargo_changed = _assign_air_orders(context, ai_name, units_info, factories=factories,
+                                              known_supply=known_supply, actual_supply=actual_supply)
+        if cargo_changed:
+            actual_supply = queries.SupplySnapshot(context, source=actual_supply)
+            known_supply = queries.SupplySnapshot(context, visible_to=ai_name, visible_provinces=visible, source=actual_supply)
         units_info = [(unit, base) for unit, base in units_info
                       if not queries.is_air_unit(unit, context=context) and not queries.is_air_transport(unit, context=context)
                       and any(current is unit for current in base.get("units", []))]
