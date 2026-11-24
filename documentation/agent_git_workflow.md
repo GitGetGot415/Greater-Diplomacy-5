@@ -6,7 +6,7 @@ By default you should never do this. Unless the user allows it.
 
 1. An explicit request to make changes authorizes creating a local feature branch from `main`, staging the changes for that task, and committing them locally. Answer questions and review-only requests without creating a branch.
 2. Check `git status --short --branch` before editing. Use `git switch -c <branch> main` in a clean checkout. If the checkout has unrelated work, use a separate Git worktree based on `main` to preserve the user's changes and staging area. Make task commits on the feature branch.
-3. Split the work into focused commits that can be reviewed independently. Keep each change with its relevant tests. A single commit is NEVER fine, unless it is literally impossible to do this.
+3. Split the work into focused commits that can be reviewed independently. Keep each change with its relevant tests. A single commit is NEVER fine, unless you're changing only one tile.
 4. Review the staged diff before each commit. Include only changes that belong to the task and follow the repository's verification rules.
 
 ## Credit the agent in commit messages
