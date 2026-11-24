@@ -2,7 +2,7 @@ from data.state_access import world_for, session_for
 import asyncio
 from map_logic.diplomacy import diplomacy_processor, treaty_effects
 from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy, ai_letters,
-                          scripted_events, ai_llm_runner, ai_world, automation_logic)
+                          scripted_events, ai_handler, ai_llm_runner, ai_world, automation_logic)
 from map_logic.system32 import (
     combat_processor,
     movement_processor,
@@ -15,6 +15,30 @@ from data import queries
 
 from map_logic.diplomacy import faction_records
 from map_logic.system32 import unit_events, air_processor
+
+
+def _reset_ai_progress(session_state, ai_total, model_total):
+    totals = {"proactive_tasks": ai_total, "movement_tasks": ai_total,
+              "letters": model_total, "proactive_llm_tasks": model_total,
+              "responsive_tasks": model_total}
+    for phase, total in totals.items():
+        session_state.progress[phase].total = total
+        session_state.progress[phase].completed = 0
+    session_state.proactive_llm_tasks = []
+
+
+def initialize_ai_progress(context, *, multi_turn=False):
+    """Set known workloads and reset counts before preparing a turn."""
+    world_state = world_for(context)
+    ai_disabled = queries.get_scenario_flag(
+        "ai_disabled", c.DEFAULT_AI_DISABLED, world_state.scenario_settings)
+    # Normal turn setup has always shuffled here. Counting for multi-turn
+    # progress must leave the existing simulation's random sequence alone.
+    ai_total = len(queries.get_active_ai_nations(context, randomize=not multi_turn))
+    if ai_disabled:
+        ai_total = 0
+    model_total = -1 if ai_total and not multi_turn and ai_handler.get_ai_mode() != "OFF" else 0
+    _reset_ai_progress(session_for(context), ai_total, model_total)
 
 
 async def prepare_turn(context):
@@ -112,18 +136,7 @@ async def prepare_turn(context):
     else:
         print("[SYSTEM] AI is OFF. Skipping standard AI actions...")
 
-        # Since AI is off, we still need to clear proactive tasks to avoid errors
-        session_state.proactive_llm_tasks = []
-        session_state.progress["proactive_tasks"].total = 0
-        session_state.progress["proactive_tasks"].completed = 0
-        session_state.progress["proactive_llm_tasks"].total = 0
-        session_state.progress["proactive_llm_tasks"].completed = 0
-        session_state.progress["movement_tasks"].total = 0
-        session_state.progress["movement_tasks"].completed = 0
-        session_state.progress["letters"].total = 0
-        session_state.progress["letters"].completed = 0
-        session_state.progress["responsive_tasks"].total = 0
-        session_state.progress["responsive_tasks"].completed = 0
+        _reset_ai_progress(session_state, 0, 0)
 
     # --- Process Scripted Events ---
     # Moved here so AI can't immediately issue orders to units spawned by events this turn
@@ -283,11 +296,13 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
 
     if c.RECORD_HISTORY:
         # --- MULTI-TURN OPTIMIZATION ---
-        is_multi = session_state.progress["multi_turns"].total > 0
-        is_last_multi = not is_multi or (session_state.progress["multi_turns"].completed >= session_state.progress["multi_turns"].total - 1)
+        multi_turns = session_state.progress["multi_turns"]
+        is_multi = multi_turns.total > 0
+        # The turn being resolved counts toward the existing snapshot window.
+        near_batch_end = multi_turns.completed + 1 >= multi_turns.total - 1
         is_spectator = session_state.player_country == "Spectator"
         
-        if is_multi and not is_last_multi and not is_spectator:
+        if is_multi and not near_batch_end and not is_spectator:
             pass # Skip deepcopying thousands of dictionaries on skipped turns
         else:
             print("[SYSTEM] Saving Turn History Snapshot...")

@@ -6,7 +6,7 @@ from data import queries
 from map_logic import custom_battle
 from ui.rendering import map_utils, symbol_loader
 from ui.rendering.font_manager import fonts
-from map_logic.system32 import combat_rules
+from map_logic.system32 import combat_forecast, combat_rules
 # The battle forecast is shared with the rule-based AI, so it lives in system32.
 # These names stay importable from here for the map, battle screen and tests.
 from map_logic.system32.combat_forecast import (
@@ -768,15 +768,11 @@ def midpoint_bounce_outcomes(map_screen):
             outcomes.append({"pair": pair, "origin_id": origin["id"], "target_id": target["id"], "overrun": True})
             continue
         with queries.combat_supply(queries.presentation_supply(map_screen)):
-            estimate = estimated_combat_outcome(
-                [side_a, side_b], map_screen.world.nation_data,
-                grounded_sides={index for index, province in enumerate((prov_a, prov_b))
-                                if not queries.is_water_province(province)})
-        winner_side = estimate.get("winner_side")
-        is_overrun = (winner_side in (0, 1)
-                      and estimate.get("turns") in (0, 1))
+            winner_side = combat_forecast.meeting_overrun_side(
+                prov_a, prov_b, side_a, side_b, map_screen.world.nation_data)
+        is_overrun = winner_side is not None
 
-        if is_overrun and winner_side == 1:
+        if winner_side == 1:
             origin_id, target_id = prov_b["id"], prov_a["id"]
         else:
             origin_id, target_id = prov_a["id"], prov_b["id"]

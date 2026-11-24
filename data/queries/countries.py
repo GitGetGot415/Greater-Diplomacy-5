@@ -364,7 +364,7 @@ def is_foreign_playable(owner, player_country, nation_data):
     return owner != player_country and owner in nation_data and nation_data[owner].get("is_playable", False)
 
 
-def get_active_ai_nations(context):
+def get_active_ai_nations(context, *, randomize=True):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
     world_state = world_for(context)
     session_state = session_for(context)
@@ -390,7 +390,8 @@ def get_active_ai_nations(context):
             ai_nations.append(name)
             
     # Randomize the order the AI processes countries
-    random.shuffle(ai_nations)
+    if randomize:
+        random.shuffle(ai_nations)
     
     return ai_nations
 

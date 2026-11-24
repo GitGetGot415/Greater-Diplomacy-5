@@ -9,6 +9,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from data.queries import movement
 from ui.rendering import overlay_renderer
 from ui.rendering import country_names
 from ui.rendering import symbol_loader
@@ -79,6 +80,20 @@ class ArmyQueryTests(unittest.TestCase):
         ]}
         self.world = {"one": self.first, "two": self.second}
         self.nations = {"A": {"armies": []}, "B": {"armies": []}}
+
+    def test_batched_routes_keep_shortest_path_ties_and_destination_order(self):
+        provinces = {tile: {"id": tile, "neighbors": neighbors} for tile, neighbors in
+                     ((1, [2, 10]), (2, [3, 4]), (10, [3]), (3, []), (4, []), (5, []))}
+        destinations = [4, 3, 4, 1, 5, 99]
+        expected = {4: [2, 4], 3: [10, 3], 1: []}
+        with patch.object(movement, "can_unit_move_step", return_value=True) as can_move:
+            routes = movement.find_unit_move_paths_to_destinations(
+                {}, provinces[1], destinations, provinces, {})
+            self.assertEqual(can_move.call_count, 4)
+            self.assertEqual(list(routes.items()), list(expected.items()))
+            for target in destinations:
+                self.assertEqual(movement.find_unit_move_path(
+                    {}, provinces[1], target, provinces, {}), expected.get(target))
 
     def test_unassigned_contains_all_owned_unit_types_outside_real_armies(self):
         self.second["owner"] = "B"

@@ -5,7 +5,6 @@ from data.platform import run_background
 from map_logic.system32 import turn_processor
 from ui.panels import diplomatic_popups
 from map_logic.ai import ai_handler
-from data import queries
 from data.session_state import LOCAL_PLAY
 from map_logic.actions.player_actions import PlayerActions, PlayerActionError, collect_map_commands
 import data.constants as c
@@ -82,29 +81,7 @@ def trigger_ai_thread(context):
     ai_handler.FORCE_SKIP = False
     ai_handler.CURRENT_TURN_ID += 1
         
-    # Pre-calculate determinable totals so the UI instantly knows the workload
-    ai_disabled = queries.get_scenario_flag(
-        "ai_disabled", c.DEFAULT_AI_DISABLED, world_for(context).scenario_settings)
-    ai_count = len(queries.get_active_ai_nations(context))
-    if ai_disabled:
-        ai_count = 0
-    session_state.progress["proactive_tasks"].total = ai_count
-    session_state.progress["proactive_tasks"].completed = 0
-    session_state.progress["movement_tasks"].total = ai_count
-    session_state.progress["movement_tasks"].completed = 0
-    
-    # Unknown model workloads stay pending; no AI or no model means N/A.
-    model_pending = -1 if ai_count and ai_handler.get_ai_mode() != "OFF" else 0
-    session_state.progress["proactive_llm_tasks"].total = model_pending
-    session_state.progress["proactive_llm_tasks"].completed = 0
-    session_state.proactive_llm_tasks = []
-    
-    session_state.progress["responsive_tasks"].total = model_pending
-    session_state.progress["responsive_tasks"].completed = 0
-
-    # Clear last turn's work. Model phases with no work remain visible as N/A.
-    session_state.progress["letters"].total = model_pending
-    session_state.progress["letters"].completed = 0
+    turn_processor.initialize_ai_progress(context)
     
     # Map Refresh always executes exactly 7 background render passes now
     session_state.progress["refresh_tasks"].total = 7

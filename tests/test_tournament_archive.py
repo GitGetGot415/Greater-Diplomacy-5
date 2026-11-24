@@ -107,6 +107,38 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(self.host.world.raw_json_data, original_raw)
         self.assertFalse(io.load_tournament(str(path), "invalid-key")[0])
 
+    def test_spectator_filter_preserves_the_distinct_archive_and_loaded_views(self):
+        country_id = self.host.session.player_country
+        country = self.host.world.nation_data[country_id]
+        country.update(materials=7, research={"fixture": 1}, inbox=["private"], peace_choices={"private": True})
+        province = next(iter(self.host.world.map_data.values()))
+        province["units"] = [{"type": "Fixture", "order": {"type": "MOVE"}, "air_cargo": [{"type": "Cargo"}]}]
+        saved = {
+            "nation_data": {country_id: country, "shared": {"orders": ["shared"]}},
+            "provinces": {"fixture": province},
+            "_raw_map_data": {"legacy": copy.deepcopy(province)},
+        }
+        before = copy.deepcopy(saved)
+
+        projected = io.build_tournament_spectator_save(saved)
+
+        self.assertEqual(saved, before)
+        self.assertEqual(projected["nation_data"]["shared"], {"orders": ["shared"]})
+        for record in (projected["provinces"]["fixture"], projected["_raw_map_data"]["legacy"]):
+            self.assertEqual(record["building_queue"], [])
+            self.assertEqual(record["units"], [{"type": "Fixture"}])
+
+        io.strip_sensitive_data_for_tournament_spectator(self.host)
+
+        for record in (country, projected["nation_data"][country_id]):
+            self.assertEqual(record["inbox"], [])
+            self.assertNotIn("peace_choices", record)
+        self.assertEqual(projected["nation_data"][country_id]["materials"], 0)
+        self.assertEqual(projected["nation_data"][country_id]["research"], {})
+        self.assertEqual((country["materials"], country["research"]), (7, {"fixture": 1}))
+        self.assertEqual(province["building_queue"], before["provinces"]["fixture"]["building_queue"])
+        self.assertEqual(province["units"], [{"type": "Fixture"}])
+
     @fast_tournament_crypto()
     def test_host_supply_is_delivered_only_to_the_unit_owner(self):
         owner, other = list(self.keys)[:2]

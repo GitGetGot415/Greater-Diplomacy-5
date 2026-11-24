@@ -5,8 +5,20 @@ retreat decision all ask the same question: who wins this fight, and how soon.
 They must get the same answer, so the simulation lives here rather than in a
 UI module the AI would otherwise have to import.
 """
+import copy
+
 from data import queries
 from map_logic.system32 import combat_processor, combat_rules
+
+
+def meeting_overrun_side(province1, province2, units1, units2, nation_data):
+    """Return the only surviving travel side after one volley, if any."""
+    first = copy.deepcopy([queries.supply_combat_profile(unit) for unit in units1])
+    second = copy.deepcopy([queries.supply_combat_profile(unit) for unit in units2])
+    result = combat_processor.resolve_meeting_volley(province1, province2, first, second, nation_data)
+    if bool(result.survivors1) == bool(result.survivors2):
+        return None
+    return 0 if result.survivors1 else 1
 
 
 def combat_winner_from_survivors(units, engaged):

@@ -2,6 +2,7 @@
 
 import asyncio
 from contextlib import ExitStack
+import random
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -11,6 +12,7 @@ from data.state_access import BackendState
 from map_logic.actions.player_actions import PlayerActionError
 from map_logic.ai import ai_letters, ai_movement
 from map_logic.system32 import turn_manager, turn_processor
+from screens.game.map import Map
 from ui.panels import turn_progress
 
 
@@ -81,7 +83,7 @@ class TurnCounterTests(unittest.TestCase):
         for phase in ("letters", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
             context.session.progress[phase].total = 9
             context.session.progress[phase].completed = 8
-        with mock.patch.object(turn_manager.queries, "get_active_ai_nations", return_value=list(countries)), \
+        with mock.patch.object(turn_processor.queries, "get_active_ai_nations", return_value=list(countries)), \
                 mock.patch.object(turn_manager.ai_handler, "get_ai_mode", return_value=mode), \
                 mock.patch.object(turn_manager.ai_handler, "FORCE_SKIP", True), \
                 mock.patch.object(turn_manager.ai_handler, "CURRENT_TURN_ID", 0), \
@@ -113,6 +115,26 @@ class TurnCounterTests(unittest.TestCase):
                 for phase in ("letters", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
                     self.assertEqual(context.session.progress[phase].total, 0)
                     self.assertEqual(context.session.progress[phase].completed, 0)
+
+    def test_multi_turn_setup_counts_ai_without_advancing_random_state(self):
+        context = BackendState()
+        for country in ("A", "B", "C"):
+            context.world.nation_data[country] = {"is_playable": True}
+            context.world.map_data[country] = {"owner": country}
+        context.session.active_players = ["A"]
+        with mock.patch.object(turn_processor.ai_handler, "get_ai_mode", return_value="FIXTURE_PROVIDER"):
+            for disabled, expected in ((False, 2), (True, 0)):
+                with self.subTest(disabled=disabled):
+                    context.world.scenario_settings = {"ai_disabled": disabled}
+                    random_before = random.getstate()
+                    turn_processor.initialize_ai_progress(context, multi_turn=True)
+                    self.assertEqual(random.getstate(), random_before)
+                    for phase in ("proactive_tasks", "movement_tasks"):
+                        progress = context.session.progress[phase]
+                        self.assertEqual((progress.completed, progress.total), (0, expected))
+                    for phase in ("letters", "proactive_llm_tasks", "responsive_tasks"):
+                        progress = context.session.progress[phase]
+                        self.assertEqual((progress.completed, progress.total), (0, 0))
 
     def test_direct_disabled_ai_turn_clears_previous_movement_and_model_work(self):
         context = BackendState()
@@ -147,6 +169,54 @@ class TurnCounterTests(unittest.TestCase):
                 mock.patch.object(ai_letters.ai_evaluation, "llm_enabled_for", return_value=None):
             ai_letters.process_letters(context)
         self.assertEqual((context.session.progress["letters"].completed, context.session.progress["letters"].total), (0, 0))
+
+
+class MultiTurnProgressTests(unittest.TestCase):
+    def test_counter_advances_after_success_and_abort_finishes_the_current_turn(self):
+        for stop, expected in (("finish", 3), ("abort", 2), ("failure", 1)):
+            with self.subTest(stop=stop):
+                context = BackendState()
+                progress = context.session.progress["multi_turns"]
+                progress.total = 3
+                counts_during_resolution = []
+
+                async def resolve(state):
+                    counts_during_resolution.append(progress.completed)
+                    if progress.completed == 1:
+                        if stop == "failure":
+                            raise ValueError("fixture error")
+                        if stop == "abort":
+                            state.session.multi_turn_abort_requested = True
+
+                with mock.patch.object(turn_processor, "prepare_turn"), \
+                        mock.patch.object(turn_processor, "resolve_turn_logic", side_effect=resolve), \
+                        mock.patch.object(turn_processor.ai_handler, "FORCE_SKIP", False):
+                    asyncio.run(Map._run_multi_turn_thread(context, 3))
+
+                self.assertEqual(progress.completed, expected)
+                self.assertEqual(progress.total, 2 if stop == "abort" else 3)
+                self.assertEqual(counts_during_resolution, [0, 1, 2] if stop == "finish" else [0, 1])
+                self.assertEqual(bool(context.session.thread_error), stop == "failure")
+                self.assertTrue(context.session.multi_turn_processing_complete)
+
+    def test_history_keeps_the_same_last_two_turns_of_a_batch(self):
+        context = BackendState()
+        context.session.player_country = "A"
+        progress = context.session.progress["multi_turns"]
+        progress.total = 4
+        recorded = []
+
+        def snapshot(state):
+            recorded.append(state.world.time_manager.total_turns)
+
+        with mock.patch.object(turn_processor, "prepare_turn"), \
+                mock.patch.object(turn_processor, "snapshot_history", side_effect=snapshot), \
+                mock.patch.object(turn_processor.c, "RECORD_HISTORY", True), \
+                mock.patch.object(turn_processor.ai_handler, "FORCE_SKIP", False):
+            asyncio.run(Map._run_multi_turn_thread(context, 4))
+
+        self.assertFalse(context.session.thread_error)
+        self.assertEqual(recorded, [3, 4])
 
 
 class MovementCounterTests(unittest.TestCase):

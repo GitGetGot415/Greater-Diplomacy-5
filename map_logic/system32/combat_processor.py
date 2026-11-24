@@ -322,14 +322,35 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     it handed in to find the dead. `fought` is the id()s of the units that were
     actually in a firing line, which is what the callers gate "stop here" on.
     """
-    # Both armies are crossing the same boundary: its narrower terrain limits
-    # the fight, independent of which endpoint the caller happens to list first.
     unit_events.set_locations(prov1, units1)
     unit_events.set_locations(prov2, units2)
+    result = resolve_meeting_volley(prov1, prov2, units1, units2, nation_data)
+
+    # Only lock them in combat if the enemy survived -- and only the ones who
+    # were fighting. A bystander crossing at the same moment walks on.
+    fighters1 = [u for u in result.survivors1 if id(u) in result.fought]
+    fighters2 = [u for u in result.survivors2 if id(u) in result.fought]
+
+    if fighters2:
+        for u in fighters1:
+            u["_combat_locked"] = True
+    if fighters1:
+        for u in fighters2:
+            u["_combat_locked"] = True
+
+    prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
+    prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
+
+    return result
+
+
+def resolve_meeting_volley(prov1, prov2, units1, units2, nation_data):
+    """Apply a single simultaneous crossing volley to the supplied units."""
     queries.prepare_aircraft_for_ground_combat(units1, nation_data, units2,
                                              on_land=not queries.is_water_province(prov1), context=nation_data)
     queries.prepare_aircraft_for_ground_combat(units2, nation_data, units1,
                                              on_land=not queries.is_water_province(prov2), context=nation_data)
+    # The narrower endpoint limits the fight, regardless of travel direction.
     battle = combat_rules.build_battle(
         [units1, units2], nation_data,
         width=combat_rules.meeting_combat_width(prov1, prov2),
@@ -367,23 +388,8 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
 
     surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
     surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
-
-    # Only lock them in combat if the enemy survived -- and only the ones who
-    # were fighting. A bystander crossing at the same moment walks on.
-    fighters1 = [u for u in surviving_units1 if id(u) in fought]
-    fighters2 = [u for u in surviving_units2 if id(u) in fought]
-
-    if fighters2:
-        for u in fighters1:
-            u["_combat_locked"] = True
-    if fighters1:
-        for u in fighters2:
-            u["_combat_locked"] = True
-
-    prov1["units"] = [u for u in prov1["units"] if u.get("health", 0) > 0]
-    prov2["units"] = [u for u in prov2["units"] if u.get("health", 0) > 0]
-
     return MeetingResult(surviving_units1, surviving_units2, fought)
+
 
 def process_meeting_engagements(context):
     """Resolve hostile crossings, or defer a tactical crossing to its destination tile."""
