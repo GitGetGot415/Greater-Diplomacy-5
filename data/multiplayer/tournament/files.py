@@ -140,6 +140,36 @@ def strip_sensitive_data_for_player(context, country_id):
     load_map.apply_authoritative_snapshot(context, snapshot)
 
 
+def _strip_spectator_countries(nation_data, *, for_archive=False):
+    if not isinstance(nation_data, dict):
+        return
+    for country in nation_data.values():
+        # Shared metadata, such as faction war maps, has its own schema.
+        if not isinstance(country, dict) or "is_playable" not in country:
+            continue
+        country.update(production_queue=[], manpower_pool=0, materials_pool=0, fuel_pool=0,
+                       orders=[], current_research=None, research_queue=[], inbox=[],
+                       pending_diplomacy={}, diplo_responses={})
+        if for_archive:
+            country.update(manpower=0, materials=0, fuel=0, research={})
+        for key in ("peace_choices", "ai_notebook", *politics.DRIFT_KEYS, "research_funding_slider"):
+            country.pop(key, None)
+
+
+def _strip_spectator_provinces(provinces, *, for_archive=False):
+    if not isinstance(provinces, dict):
+        return
+    for province in provinces.values():
+        if not isinstance(province, dict):
+            continue
+        if for_archive:
+            province.update(building_queue=[], unit_queue=[], orders=[])
+        for unit in province.get("units", []):
+            if isinstance(unit, dict):
+                unit.pop("order", None)
+                unit.pop("air_cargo", None)
+
+
 def strip_sensitive_data_for_tournament_spectator(context):
     """Project a tournament archive into the fog-limited spectator view.
 
@@ -156,31 +186,8 @@ def strip_sensitive_data_for_tournament_spectator(context):
     session_state.active_players = [c.TOURNAMENT_SPECTATOR]
     session_state.current_player_index = 0
 
-    for country in world_state.nation_data.values():
-        # ``nation_data`` also contains shared metadata such as faction war
-        # maps. It is not a country record and must retain its own schema.
-        if not isinstance(country, dict) or "is_playable" not in country:
-            continue
-        country["production_queue"] = []
-        country["manpower_pool"] = 0
-        country["materials_pool"] = 0
-        country["fuel_pool"] = 0
-        country["orders"] = []
-        country["current_research"] = None
-        country["research_queue"] = []
-        country["inbox"] = []
-        country["pending_diplomacy"] = {}
-        country["diplo_responses"] = {}
-        country.pop("peace_choices", None)
-        country.pop("ai_notebook", None)
-        for key in politics.DRIFT_KEYS:
-            country.pop(key, None)
-        country.pop("research_funding_slider", None)
-
-    for province in world_state.map_data.values():
-        for unit in province.get("units", []):
-            unit.pop("order", None)
-            unit.pop("air_cargo", None)
+    _strip_spectator_countries(world_state.nation_data)
+    _strip_spectator_provinces(world_state.map_data)
 
 
 def build_tournament_spectator_save(save_dict):
@@ -199,57 +206,12 @@ def build_tournament_spectator_save(save_dict):
         "turn": spectator_save.get("date", {}).get("total_turns", 0), "events": []}
     spectator_save["unit_event_read_turns"] = {}
 
-    nation_data = spectator_save.get("nation_data", {})
-    if isinstance(nation_data, dict):
-        for country in nation_data.values():
-            if not isinstance(country, dict) or "is_playable" not in country:
-                continue
-            country["production_queue"] = []
-            country["manpower_pool"] = 0
-            country["materials_pool"] = 0
-            country["fuel_pool"] = 0
-            country["manpower"] = 0
-            country["materials"] = 0
-            country["fuel"] = 0
-            country["orders"] = []
-            country["current_research"] = None
-            country["research_queue"] = []
-            country["research"] = {}
-            country["inbox"] = []
-            country["pending_diplomacy"] = {}
-            country["diplo_responses"] = {}
-            country.pop("peace_choices", None)
-            country.pop("ai_notebook", None)
-            for key in politics.DRIFT_KEYS:
-                country.pop(key, None)
-            country.pop("research_funding_slider", None)
-
-    for province in spectator_save.get("provinces", {}).values():
-        if not isinstance(province, dict):
-            continue
-        province["building_queue"] = []
-        province["unit_queue"] = []
-        province["orders"] = []
-        for unit in province.get("units", []):
-            if isinstance(unit, dict):
-                unit.pop("order", None)
-                unit.pop("air_cargo", None)
-
+    _strip_spectator_countries(spectator_save.get("nation_data"), for_archive=True)
+    _strip_spectator_provinces(spectator_save.get("provinces"), for_archive=True)
     # A self-contained tournament also includes raw geometry. Older maps may
     # have mutable province fields mixed into that geometry, so scrub the same
     # fields defensively before writing the public projection.
-    raw_map_data = spectator_save.get("_raw_map_data")
-    if isinstance(raw_map_data, dict):
-        for province in raw_map_data.values():
-            if not isinstance(province, dict):
-                continue
-            province["building_queue"] = []
-            province["unit_queue"] = []
-            province["orders"] = []
-            for unit in province.get("units", []):
-                if isinstance(unit, dict):
-                    unit.pop("order", None)
-                    unit.pop("air_cargo", None)
+    _strip_spectator_provinces(spectator_save.get("_raw_map_data"), for_archive=True)
 
     return spectator_save
 
