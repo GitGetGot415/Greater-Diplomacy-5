@@ -305,6 +305,51 @@ class NearbySeaTargetTests(unittest.TestCase):
                          [("WAR_DECLARATION", "B")])
 
 
+class TradePartnerTests(unittest.TestCase):
+    """Who a nation offers trade to, and how many offers it makes a turn."""
+
+    class World(ResourceOfferTests.FakeWorld):
+        def __init__(self, econ, nation_data, nearby):
+            super().__init__(econ, nation_data)
+            self.nearby = nearby
+
+        def war_targets(self, nation):
+            return set(self.nearby.get(nation, ()))
+
+    def offers(self, fuel_income, nearby):
+        """A is long on materials; everyone else on fuel, by `fuel_income`.
+        C, when present, is in A's faction."""
+        game = StubMapScreen(["A"] + sorted(fuel_income), human_players=[])
+        if "C" in fuel_income:
+            game.set_faction("Bloc", "A", "C")
+        econ = {"A": {"total_inc": {"materials": 10000, "fuel": 10, "manpower": 0},
+                      "upkeep": {"materials": 0, "fuel": 0, "manpower": 0}}}
+        for name, fuel in fuel_income.items():
+            econ[name] = {"total_inc": {"materials": 500, "fuel": fuel, "manpower": 0},
+                          "upkeep": {"materials": 0, "fuel": 0, "manpower": 0}}
+        for data in game.world.nation_data.values():
+            data.update(materials=0, fuel=0)
+        world = self.World(econ, game.world.nation_data, nearby)
+        bag = ac.Collector("A", game.world.nation_data["A"]["pending_diplomacy"])
+        ai_diplomacy._offer_trades(bag, game, "A", set(game.world.nation_data), world)
+        return [(choice.action, choice.target) for choice in bag.ranked()]
+
+    def test_a_faction_mate_overseas_is_a_partner(self):
+        # C shares no border or crossing with A, only the faction.
+        self.assertEqual(self.offers({"C": 4000}, nearby={}), [("TRADE", "C")])
+
+    def test_a_nation_across_a_short_crossing_is_a_partner(self):
+        self.assertEqual(self.offers({"B": 4000}, nearby={"A": {"B"}}), [("TRADE", "B")])
+
+    def test_only_the_best_offer_goes_out(self):
+        offers = self.offers({"B": 2000, "C": 4000}, nearby={"A": {"B"}})
+        self.assertEqual(offers, [("TRADE", "C")])
+
+    def test_a_stranger_is_not_offered_trade_however_rich(self):
+        offers = self.offers({"C": 2000, "D": 9000}, nearby={})
+        self.assertEqual(offers, [("TRADE", "C")])
+
+
 class WarRollTests(unittest.TestCase):
     """The declaration chance is a roll a re-run repeats, not module `random`."""
 

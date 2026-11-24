@@ -20,6 +20,7 @@ Stdlib and `data` only.
 import collections
 import hashlib
 
+import data.constants as c
 from map_logic.ai import ai_tuning
 from data import queries
 from data.state_access import world_for
@@ -267,7 +268,7 @@ def resource_offer(world, nation, partner, scenario_settings=None):
         upkeep = float(econ.get("upkeep", {}).get(resource, 0))
         return (income - upkeep) + float(stock.get(resource, 0)) / ai_tuning.AI_TRADE_STOCK_TURNS
 
-    tradeable = ("materials", "fuel")
+    tradeable = c.TRADE_RESOURCE_KEYS
     mine = {r: surplus(econ_a, stock_a, r) for r in tradeable}
     theirs = {r: surplus(econ_b, stock_b, r) for r in tradeable}
 

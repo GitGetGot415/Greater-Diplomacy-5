@@ -3,7 +3,7 @@ from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_director, ai_evaluation,
                           ai_handler, ai_letters, ai_llm_runner, ai_opinion,
-                          ai_personality, ai_politics, ai_prompts, ai_world)
+                          ai_personality, ai_politics, ai_prompts, ai_unit_eval, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
 from data import queries
@@ -1004,15 +1004,41 @@ def _invite_friends_to_faction(bag, context, ai_name, data, active_nations, worl
                 "they are unaligned, we are on good terms, and they would strengthen the bloc"))
 
 
+def _trade_partners(ai_name, world, nation_data):
+    """Countries this nation deals with: across a border or a short sea
+    crossing, in its faction, or its master or subjects.
+
+    Trade has no reach rule of its own, and it used to be land neighbours only,
+    so an island nation or a bloc split by water never traded with its own side.
+    """
+    data = nation_data.get(ai_name, {})
+    partners = set(world.war_targets(ai_name))
+    faction = queries.get_country_faction(ai_name, nation_data)
+    if faction:
+        partners.update(queries.get_faction_members(faction, nation_data))
+    partners.update(data.get("puppets", ()))
+    if data.get("master"):
+        partners.add(data["master"])
+    partners.discard(ai_name)
+    return sorted(partners)
+
+
 def _offer_trades(bag, context, ai_name, active_nations, world):
-    """Section 7: offers a swap to a neighbour whose shortages mirror ours.
+    """Section 7: offers a swap to a partner whose shortages mirror ours.
 
     New. The AI could not propose a trade at all, and would accept one only if
     it gave away literally nothing -- so the entire trade system was inert
     between AI nations.
+
+    One offer a turn, to whichever partner's offer brings in the most at this
+    nation's own prices: with every partner eligible at once, a nation would
+    otherwise write to all of them every time its cooldowns ran out.
     """
     world_state = world_for(context)
-    for other in sorted(world.neighbors.get(ai_name, ())):
+    prices = ai_unit_eval.resource_prices(world.economies.get(ai_name, {}),
+                                          world_state.nation_data.get(ai_name, {}))
+    best = None
+    for other in _trade_partners(ai_name, world, world_state.nation_data):
         if other not in active_nations:
             continue
         if queries.are_at_war(ai_name, other, world_state.nation_data):
@@ -1030,6 +1056,15 @@ def _offer_trades(bag, context, ai_name, active_nations, world):
         if not offer:
             continue
 
+        # The offer is written from our side: "take" is what comes to us.
+        incoming = sum(prices.get(res, 1.0) * offer.get(f"take_{res}", 0)
+                       for res in c.TRADE_RESOURCE_KEYS)
+        # Partners arrive sorted, so a tie keeps the first name.
+        if best is None or incoming > best[0]:
+            best = (incoming, other, offer)
+
+    if best is not None:
+        _incoming, other, offer = best
         bag.add(ai_candidates.make(
             "TRADE", other, ai_tuning.AI_SCORE_TRADE,
             "our spare resources for what we lack",
