@@ -19,6 +19,11 @@ from data import queries
 from map_logic.ai import ai_tech_eval as te, ai_unit_eval as ue
 
 
+def yield_value(stats, prices):
+    """Per-turn output of a building, priced the way unit costs are."""
+    return sum(prices[res] * float(stats.get(f"prod_{res}", 0)) for res in ue.RESOURCES)
+
+
 def prices(materials=1.0, manpower=1.0, fuel=1.0):
     return {"materials": materials, "manpower": manpower, "fuel": fuel}
 
@@ -161,10 +166,10 @@ class EconomyValueTests(unittest.TestCase):
         value = te.economy_gain("factory", 8, cheap_build, self.blib, self.income)
         lvl8 = self.blib["Factory Lvl 8"]
         lvl7 = self.blib["Factory Lvl 7"]
-        gain = (te._yield_value(lvl8, cheap_build) - te._yield_value(lvl7, cheap_build))
+        gain = (yield_value(lvl8, cheap_build) - yield_value(lvl7, cheap_build))
         cost = te._build_cost("Factory Lvl 8", self.blib, cheap_build) / ai_tuning.AI_BUILDING_PAYBACK_TURNS
         self.assertAlmostEqual(value, gain - cost)
-        self.assertLess(value, te._yield_value(lvl8, cheap_build),
+        self.assertLess(value, yield_value(lvl8, cheap_build),
                         "must not be the absolute output")
 
     def test_fuel_refining_is_worth_something_when_fuel_is_scarce(self):

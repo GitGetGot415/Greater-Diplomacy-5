@@ -25,17 +25,17 @@ class MapSaveFormatTests(unittest.TestCase):
         next(iter(context.world.map_data.values())).update(units=[], unit_queue=[])
         context.world.time_manager.get_date_string = lambda: "Fixture date"
         country = context.session.player_country
-        politics.set_value(context.world.nation_data, country, 6)
-        politics.set_drift(context.world.nation_data, country, -1)
+        politics.set_axis_value(context.world.nation_data, country, politics.POLITICAL, 6)
+        politics.set_axis_drift(context.world.nation_data, country, politics.POLITICAL, -1)
         snapshot_history(context)
         context.world.time_manager.total_turns += 1
-        politics.set_economic_value(context.world.nation_data, country, -4)
-        politics.set_economic_drift(context.world.nation_data, country, 1)
+        politics.set_axis_value(context.world.nation_data, country, politics.ECONOMIC, -4)
+        politics.set_axis_drift(context.world.nation_data, country, politics.ECONOMIC, 1)
         snapshot_history(context)
         history_turn = context.world.time_manager.total_turns
         context.world.time_manager.total_turns += 1
-        politics.set_economic_value(context.world.nation_data, country, 3)
-        politics.set_economic_drift(context.world.nation_data, country, -1)
+        politics.set_axis_value(context.world.nation_data, country, politics.ECONOMIC, 3)
+        politics.set_axis_drift(context.world.nation_data, country, politics.ECONOMIC, -1)
         metadata = queries.build_save_dict(context, include_provinces=False)
 
         with tempfile.TemporaryDirectory() as directory, \

@@ -217,26 +217,6 @@ def set_axis_drift(nation_data, nation, axis, direction):
     nation_data.setdefault(nation, {})[AXES_BY_ID[axis]["drift_key"]] = max(-1, min(1, int(direction)))
 
 
-def set_value(nation_data, nation, new_value):
-    """Pins a nation's political position outright. The map editor's starting value."""
-    set_axis_value(nation_data, nation, POLITICAL, new_value)
-
-
-def set_drift(nation_data, nation, direction):
-    """Points a nation at one end of the political axis, or stops it."""
-    set_axis_drift(nation_data, nation, POLITICAL, direction)
-
-
-def set_economic_value(nation_data, nation, new_value):
-    """Set a scenario's starting economic position."""
-    set_axis_value(nation_data, nation, ECONOMIC, new_value)
-
-
-def set_economic_drift(nation_data, nation, direction):
-    """Point a nation toward a planned or market economy, or hold."""
-    set_axis_drift(nation_data, nation, ECONOMIC, direction)
-
-
 def advance(position, direction):
     """Calculate the next position on either axis."""
     return clamp(position + direction * c.POLITICS_STEP)

@@ -190,8 +190,8 @@ class AIWorldParityTests(unittest.TestCase):
 
     def test_relation_matches_the_full_score(self):
         """Compared against the id_to_province form, i.e. claim penalty included."""
-        politics.set_value(self.nation_data, "Avaria", 10)
-        politics.set_value(self.nation_data, "Carrow", -10)
+        politics.set_axis_value(self.nation_data, "Avaria", politics.POLITICAL, 10)
+        politics.set_axis_value(self.nation_data, "Carrow", politics.POLITICAL, -10)
         for a, b in self.pairs():
             self.assertEqual(
                 self.world.relation(a, b),

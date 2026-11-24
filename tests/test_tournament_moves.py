@@ -1032,9 +1032,9 @@ class TournamentMoveTests(unittest.TestCase):
         host = Host()
         player = Host()
         player.session.player_country = "Leader"
-        politics.set_economic_value(host.world.nation_data, "Leader", 4)
-        politics.set_economic_value(player.world.nation_data, "Leader", -6)
-        politics.set_economic_drift(player.world.nation_data, "Leader", -1)
+        politics.set_axis_value(host.world.nation_data, "Leader", politics.ECONOMIC, 4)
+        politics.set_axis_value(player.world.nation_data, "Leader", politics.ECONOMIC, -6)
+        politics.set_axis_drift(player.world.nation_data, "Leader", politics.ECONOMIC, -1)
         politics.set_axis_drift(player.world.nation_data, "Leader", politics.QUALITY, 1)
         politics.set_axis_drift(player.world.nation_data, "Leader", politics.STRATEGY, -1)
         player.world.nation_data["Leader"]["research_funding_slider"] = 0.37
@@ -1056,8 +1056,8 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_older_intents_preserve_the_hosts_economic_state(self):
         host = Host()
-        politics.set_economic_value(host.world.nation_data, "Leader", 4)
-        politics.set_economic_drift(host.world.nation_data, "Leader", -1)
+        politics.set_axis_value(host.world.nation_data, "Leader", politics.ECONOMIC, 4)
+        politics.set_axis_drift(host.world.nation_data, "Leader", politics.ECONOMIC, -1)
         politics.set_axis_drift(host.world.nation_data, "Leader", politics.QUALITY, 1)
         politics.set_axis_drift(host.world.nation_data, "Leader", politics.STRATEGY, -1)
         host.world.nation_data["Leader"]["research_funding_slider"] = 0.2

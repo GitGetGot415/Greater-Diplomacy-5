@@ -89,12 +89,6 @@ def buildings_unlocked_by(tech_key, level, building_library):
     return unlocked
 
 
-def _yield_value(stats, prices, key_prefix="prod_"):
-    """Per-turn output of a building, in the same scarcity terms as unit cost."""
-    return sum(prices[res] * float(stats.get(f"{key_prefix}{res}", 0))
-               for res in ai_unit_eval.RESOURCES)
-
-
 def _replaced_building(name, building_library):
     """The building in the same group this one supersedes, if any.
 

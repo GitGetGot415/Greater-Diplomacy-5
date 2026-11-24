@@ -336,8 +336,8 @@ class PoliticalAffinityTests(unittest.TestCase):
 class EconomicDriftTests(unittest.TestCase):
     def test_reaching_the_economic_edge_stops_only_horizontal_movement(self):
         screen = screen_with(A=(0, -1))
-        politics.set_economic_value(screen.world.nation_data, "A", c.POLITICS_MAX - c.POLITICS_STEP)
-        politics.set_economic_drift(screen.world.nation_data, "A", 1)
+        politics.set_axis_value(screen.world.nation_data, "A", politics.ECONOMIC, c.POLITICS_MAX - c.POLITICS_STEP)
+        politics.set_axis_drift(screen.world.nation_data, "A", politics.ECONOMIC, 1)
         politics.tick(screen)
 
         self.assertEqual(politics.economic_value(screen.world.nation_data, "A"), c.POLITICS_MAX)
@@ -565,14 +565,14 @@ class PolicyTests(unittest.TestCase):
                 with self.subTest(policy=policy_id, economic=economic):
                     screen = self.screen_at(political_value=bound, economic_value=economic)
                     self.assertFalse(politics.requirements_met(screen.world.nation_data, "A", policy_id))
-                    politics.set_value(screen.world.nation_data, "A", eligible)
+                    politics.set_axis_value(screen.world.nation_data, "A", politics.POLITICAL, eligible)
                     self.assertTrue(politics.requirements_met(screen.world.nation_data, "A", policy_id))
 
     def test_losing_a_requirement_cancels_before_the_turn_uses_the_effect(self):
         policy_id = "subsidy_fixture"
         screen = self.screen_at(political_value=-3, economic_value=c.POLITICS_MAX)
         self.activate_and_finish(screen, policy_id)
-        politics.set_drift(screen.world.nation_data, "A", 1)
+        politics.set_axis_drift(screen.world.nation_data, "A", politics.POLITICAL, 1)
 
         politics.tick(screen)
 

@@ -65,7 +65,7 @@ class CountrySummaryTests(unittest.TestCase):
     def test_own_summary_matches_shared_damage_and_economy_rules(self):
         game = world()
         game.world.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
-        politics.set_economic_value(game.world.nation_data, "A", -4)
+        politics.set_axis_value(game.world.nation_data, "A", politics.ECONOMIC, -4)
         game.world.nation_data["A"][politics.POLICY_KEY] = {
             "damage_fixture": {"status": politics.POLICY_ACTIVE}}
         summary = queries.get_country_summary(game, "A")
@@ -92,8 +92,8 @@ class CountrySummaryTests(unittest.TestCase):
 
     def test_only_the_viewers_own_country_shows_its_political_direction(self):
         game = world()
-        politics.set_drift(game.world.nation_data, "A", 1)
-        politics.set_drift(game.world.nation_data, "B", -1)
+        politics.set_axis_drift(game.world.nation_data, "A", politics.POLITICAL, 1)
+        politics.set_axis_drift(game.world.nation_data, "B", politics.POLITICAL, -1)
         self.assertEqual(queries.get_country_summary(game, "A")["politics"]["drift"], 1)
         self.assertIsNone(queries.get_country_summary(game, "B")["politics"]["drift"])
 
