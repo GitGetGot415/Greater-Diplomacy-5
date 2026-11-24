@@ -152,7 +152,7 @@ def resent_departure(nation_data, a, b):
 
 def finalize_create_faction(map_data, nation_data, creator):
 
-    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(queries.world_for(nation_data), "scenario_settings", {})):
+    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, queries.world_for(nation_data).scenario_settings):
         return
 
     master = nation_data.get(creator, {}).get("master", "")
