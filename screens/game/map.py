@@ -721,25 +721,14 @@ class Map(StateAccess, Screen):
             self.session.force_skip_llm = True
             self.session.viewing_ai_moves = True # Prevents PyGame surface edits from background thread
 
+            progress = self.session.progress["multi_turns"]
             for i in range(turns):
-                self.session.progress["multi_turns"].completed = i + 1
                 self.session.loading_status_text = f"Processing Turn {i+1}/{turns}..."
-
-                # Mock the UI prep variables to prevent crashes
-                self.session.progress["proactive_tasks"].total = 1
-                self.session.progress["proactive_tasks"].completed = 1
-                self.session.progress["movement_tasks"].total = 0
-                self.session.progress["movement_tasks"].completed = 0
-                self.session.progress["proactive_llm_tasks"].total = 0
-                self.session.progress["proactive_llm_tasks"].completed = 0
-                self.session.proactive_llm_tasks = []
-                self.session.progress["responsive_tasks"].total = 0
-                self.session.progress["responsive_tasks"].completed = 0
-                self.session.progress["letters"].total = 0
-                self.session.progress["letters"].completed = 0
+                turn_processor.initialize_ai_progress(self, multi_turn=True)
 
                 await turn_processor.prepare_turn(self)
                 await turn_processor.resolve_turn_logic(self)
+                progress.completed += 1
                 # Extra yield so the multi-turn progress bar (map_renderer.py)
                 # gets at least one render between turns even if a turn's own
                 # internal phases all happened to resolve without yielding.
@@ -750,7 +739,7 @@ class Map(StateAccess, Screen):
                 # running when the user clicked Abort finishes normally, and
                 # simply becomes the last one processed.
                 if self.session.multi_turn_abort_requested:
-                    self.session.progress["multi_turns"].total = self.session.progress["multi_turns"].completed
+                    progress.total = progress.completed
                     break
 
         except Exception as e:
