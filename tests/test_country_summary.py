@@ -243,10 +243,10 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
         game.world.nation_data["A"]["puppets"] = ["B"]
         expected = queries.get_country_summary(game, "B")["economy"]
-        tournament_files.strip_sensitive_data_for_player(game, "A")
+        tournament_files.strip_sensitive_data_for_viewer(game, "A")
         with patch.object(queries, "get_economy_projections", side_effect=AssertionError("Stripped economy queried")):
             self.assertEqual(queries.get_country_summary(game, "B")["economy"], expected)
-        tournament_files.strip_sensitive_data_for_tournament_spectator(game)
+        tournament_files.strip_sensitive_data_for_viewer(game, c.TOURNAMENT_SPECTATOR)
         self.assertEqual(game.country_economy_summaries, {})
         self.assertFalse(queries.get_country_summary(game, "B")["economy"]["available"])
 
@@ -259,7 +259,7 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}], materials=500)
         game.world.nation_data["A"].update(materials=700)
         projected = queries.player_snapshot_projection(game, queries.build_save_dict(game), "A")
-        tournament_files.strip_sensitive_data_for_player(game, "A")
+        tournament_files.strip_sensitive_data_for_viewer(game, "A")
         for field in ("inbox", "research_queue", "materials"):
             self.assertNotIn(field, game.world.nation_data["B"])
         self.assertEqual(game.world.nation_data["A"]["materials"], 700)

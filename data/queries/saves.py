@@ -354,6 +354,14 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
     return save_dict
 
 
+# Country fields only the country itself may see. Every multiplayer and spectator view removes them.
+PRIVATE_COUNTRY_FIELDS = (
+    "production_queue", "current_research", "research_queue", "research_progress", "research", "inbox",
+    "pending_diplomacy", "diplo_responses", "draft_lists", "peace_choices", "queued_ai_actions", "ai_notebook",
+    "orders", "armies", "automation", "materials", "manpower", "fuel", "manpower_pool", "materials_pool",
+    "fuel_pool", *politics.DRIFT_KEYS, "research_funding_slider")
+
+
 def strip_private_unit_orders(unit):
     # Hold preferences still classify the visible enemy reserve panels.
     for field in ("order", "lane_target", "repair_trip"):
@@ -379,11 +387,6 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
         if owner == country_id and turn == report["turn"]}
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
         country_id, world_state.map_data, world_state.nation_data, context=context)
-    private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
-        "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists", "peace_choices",
-        "queued_ai_actions", "ai_notebook", "orders", "armies", "automation", "materials",
-        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool", *politics.DRIFT_KEYS,
-        "research_funding_slider")
     # New record fields must not bypass the established country visibility policy.
     result["factions"] = {
         identity: {key: copy.deepcopy(record[key])
@@ -392,7 +395,7 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
     for cid, country in result.get("nation_data", {}).items():
         if cid != country_id and isinstance(country, dict):
             peace = country.get("pending_diplomacy", {}).get(country_id, {})
-            for field in private_fields:
+            for field in PRIVATE_COUNTRY_FIELDS:
                 country.pop(field, None)
             # A recipient needs the delivered offer and its identity to answer it.
             # Keep drafts, escrow, and messages addressed to anybody else private.

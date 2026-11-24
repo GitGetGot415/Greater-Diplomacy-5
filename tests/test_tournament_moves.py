@@ -1207,16 +1207,17 @@ class TournamentMoveTests(unittest.TestCase):
             spectator_entry["enc_session"], c.TOURNAMENT_SPECTATOR_KEY))
         spectator_save = tournament_files.decrypt_dict(
             payload["spectator_game_data"], c.TOURNAMENT_SPECTATOR_KEY)
-        self.assertEqual(spectator_save["nation_data"]["Leader"]["materials"], 0)
-        self.assertNotIn("order", spectator_save["provinces"]["P1"]["units"][0])
+        self.assertNotIn("materials", spectator_save["nation_data"]["Leader"])
+        self.assertTrue(all("order" not in unit for unit in spectator_save["provinces"]["P1"]["units"]))
 
         spectator_map = Host()
         spectator_map.world.map_data = host.world.map_data
-        tournament_files.strip_sensitive_data_for_tournament_spectator(spectator_map)
+        spectator_map.presentation_enabled = False  # The double has no map layers to refresh.
+        tournament_files.strip_sensitive_data_for_viewer(spectator_map, c.TOURNAMENT_SPECTATOR)
         self.assertEqual(spectator_map.session.player_country, c.TOURNAMENT_SPECTATOR)
         self.assertEqual(spectator_map.session.active_players, [c.TOURNAMENT_SPECTATOR])
-        self.assertEqual(spectator_map.world.nation_data["Leader"]["inbox"], [])
-        self.assertNotIn("order", spectator_map.world.map_data[(1, 1)]["units"][0])
+        self.assertNotIn("inbox", spectator_map.world.nation_data["Leader"])
+        self.assertTrue(all("order" not in unit for unit in spectator_map.world.map_data[(1, 1)]["units"]))
 
         visibility_screen = map_double(
             player_country=c.TOURNAMENT_SPECTATOR,

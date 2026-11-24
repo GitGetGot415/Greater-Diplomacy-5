@@ -125,9 +125,9 @@ def _open_tournament_map_steps(app, screen, *, incremental=True):
         game_map.session.multiplayer_keys_dict = keys_dict
     elif role == "PLAYER":
         game_map.multiplayer_player_key = key
-        tournament_files.strip_sensitive_data_for_player(game_map, country_id)
+        tournament_files.strip_sensitive_data_for_viewer(game_map, country_id)
     elif role == c.TOURNAMENT_SPECTATOR_ROLE:
-        tournament_files.strip_sensitive_data_for_tournament_spectator(game_map)
+        tournament_files.strip_sensitive_data_for_viewer(game_map, c.TOURNAMENT_SPECTATOR)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
     game_map.refresh_all_maps()

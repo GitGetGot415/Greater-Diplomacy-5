@@ -52,7 +52,7 @@ class PrepareMapTests(unittest.TestCase):
                     "h2": {"role": "HOST"}, "h3": {"role": "PLAYER", "country_id": "Gone", "enc_session": "e3"}}
         result = (True, "PLAYER", "A", "temp", {"A": "player-key"}, "ok", "session", versions)
         with mock.patch("data.multiplayer.tournament.files.load_tournament", return_value=result), \
-                mock.patch("data.multiplayer.tournament.files.strip_sensitive_data_for_player") as strip, \
+                mock.patch("data.multiplayer.tournament.files.strip_sensitive_data_for_viewer") as strip, \
                 mock.patch("screens.game.map_buttons.render_buttons"), mock.patch("shutil.rmtree") as remove:
             self.assertTrue(map_launch.open_tournament_map(self.app, screen))
         game_map = self.app.states["MAP"]
@@ -130,7 +130,7 @@ class PrepareMapTests(unittest.TestCase):
             self.assertIs(self.app.states["MAP"], old_map)
 
         with mock.patch("data.multiplayer.tournament.files.load_tournament", return_value=result), \
-                mock.patch("data.multiplayer.tournament.files.strip_sensitive_data_for_player", side_effect=strip) as filtered, \
+                mock.patch("data.multiplayer.tournament.files.strip_sensitive_data_for_viewer", side_effect=strip) as filtered, \
                 mock.patch.object(map_launch, "_new_map_steps", side_effect=build), \
                 mock.patch("screens.game.map_buttons.render_buttons"), mock.patch("shutil.rmtree"):
             self.assertTrue(map_launch._finish_steps(map_launch.open_tournament_map_steps(self.app, screen)))

@@ -456,7 +456,7 @@ class UnitEventPersistenceTests(unittest.TestCase):
             self.assertLessEqual(set(projected["unit_event_read_turns"]), {viewer})
             self.assertTrue(all(entry["detail_parts"] == [{"text": entry["details"], "owner": viewer}]
                                 for entry in projected["unit_event_log"]["events"]))
-        spectator = tournament_files.build_tournament_spectator_save(saved)
+        spectator = tournament_files.build_tournament_spectator_save(game, saved)
         self.assertEqual(spectator["unit_event_log"]["events"], [])
         self.assertEqual(spectator["unit_event_read_turns"], {})
         self.assertEqual(len(saved["unit_event_log"]["events"]), 2)

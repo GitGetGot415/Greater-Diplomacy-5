@@ -2729,7 +2729,7 @@ class AirAppSmokeTests(unittest.TestCase):
                 self.assertTrue(result[0])
                 loaded = Map(load_path=result[3], skip_initial_income=True)
                 self.assertEqual(loaded.world.id_to_province[3]["units"][0]["unit_id"], hidden["unit_id"])
-                tournament_files.strip_sensitive_data_for_player(loaded, "A")
+                tournament_files.strip_sensitive_data_for_viewer(loaded, "A")
                 visible, _partial = queries.get_visible_provinces(loaded)
                 self.assertNotIn(3, visible)
                 self.assertEqual(loaded.world.id_to_province[1]["units"][0]["unit_id"], fighter["unit_id"])
