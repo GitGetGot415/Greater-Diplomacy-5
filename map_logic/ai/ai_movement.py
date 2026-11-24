@@ -10,6 +10,7 @@ from map_logic.actions import unit_actions
 from map_logic.ai import ai_supply, ai_unit_eval, ai_world
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.system32 import combat_forecast, combat_rules
+from map_logic.territory import ownership
 
 
 def _health_fraction(unit):
@@ -48,6 +49,30 @@ def _visible_hostiles(context, ai_name, prov):
                                                           prov, nation_data)
             if unit.get("health", 0) > 0
             and queries.are_at_war(ai_name, queries.get_unit_combat_owner(unit), nation_data)]
+
+
+def _factory_objectives(context, country, visible, provinces_by_owner):
+    """Visible completed factories, scored by lost and gained industrial output."""
+    nations = world_for(context).nation_data
+    own = queries.ProvinceProduction(nations, context)
+    foreign = queries.ProvinceProduction({name: {} for name in nations}, context) if visible is not None else own
+    scores = {}
+    for enemy in queries.get_enemies(country, nations):
+        for province in provinces_by_owner.get(enemy, ()):
+            tile = province["id"]
+            if ((visible is not None and tile not in visible) or queries.is_water_province(province)
+                    or not queries.has_basic_factory(province)):
+                continue
+            buildings = [name for name in province.get("buildings", ()) if own.library.get(name, {}).get("group") == "industry"]
+            factory = dict(province, buildings=buildings, building_queue=())
+            recipient = ownership.conquest_owner(context, province, queries.get_faction_core_transfer_target(country, province, nations))
+            loss = foreign.building_output(factory)
+            producer = own if recipient == country else foreign
+            gain = producer.building_output(dict(factory, owner=recipient))
+            value = sum((loss[key] + gain[key]) * price for key, price in c.DEAL_VALUE_RESOURCE_PRICES.items())
+            if value > 0:
+                scores[tile] = (value, recipient)
+    return scores
 
 
 def legal_air_candidates(context, unit, base):
@@ -579,7 +604,7 @@ def _tile_depth(capacity, tile):
     return max(1.0, slots * c.AI_RESERVE_DEPTH)
 
 
-def _tile_pressure(assignments, stacks, tile, capacity=None):
+def _tile_pressure(assignments, stacks, tile, capacity=None, factory_bonus=0):
     """How reluctant we are to send one more unit to `tile`.
 
     A tile holding a full front rank and a full relief rank has nothing to gain
@@ -599,7 +624,7 @@ def _tile_pressure(assignments, stacks, tile, capacity=None):
     at +50) and so cannot answer "is this tile full?" on its own.
     """
     return (1 if stacks.get(tile, 0) >= _tile_depth(capacity, tile) else 0,
-            assignments.get(tile, 0))
+            assignments.get(tile, 0) - factory_bonus)
 
 
 # Bound retained candidate paths per nation. The cache is discarded before
@@ -689,7 +714,7 @@ def _search_target_paths(start_id, target_ids, allowed_prov_ids, id_to_province,
     return tuple(valid_paths)
 
 
-def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None, path_cache=None):
+def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, target_assignments, is_convoy=False, is_ship=False, moving_nation=None, nation_data=None, unit_speed=1.0, water_ids=None, neighbor_ids=None, target_stacks=None, target_capacity=None, path_cache=None, factory_bonuses=None):
     """Finds shortest path using Dijkstra. Returns the path to the target with the least units assigned."""
     if target_stacks is None:
         target_stacks = {}
@@ -719,9 +744,10 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
     # Pick the path pointing to the target with the LEAST assignments, tie-breaking by cost.
     if valid_paths:
         # A cell's head is the tile the path ends on.
+        bonuses = factory_bonuses or {}
         best_cell = min(valid_paths,
                         key=lambda p: _tile_pressure(target_assignments, target_stacks, p[1][0],
-                                                     target_capacity) + (p[0],))[1]
+                                                     target_capacity, bonuses.get(p[1][0], 0)) + (p[0],))[1]
 
         # If the best path is just staying where we are, return an empty array so we don't move
         if best_cell[0] == start_id:
@@ -1204,7 +1230,7 @@ def _reserve_strike_orders(context, ai_name, units_info, ctx, reserved, ground_i
     Here every new fight (_new_fights) is planned with every unit that could
     reach it this turn, and started only with a group the retreat check would
     keep there (_strike_group). The fights that need the fewest units go first,
-    then the land worth most at the peace table, so the army masses on the
+    then productive factories and the land worth most at the peace table, so the army masses on the
     fights it can win before spreading to the rest. Units left over join a
     fight already started, up to what its tile can use.
 
@@ -1249,9 +1275,10 @@ def _reserve_strike_orders(context, ai_name, units_info, ctx, reserved, ground_i
 
     plans = {tile: _strike_group(context, ai_name, tile, fights[tile], routes[tile], reserved, friendly_nations)
              for tile in routes}
+    factory_bonuses = ctx.get("factory_bonuses", {})
     started = {}
     while True:
-        viable = [(len(group), -deal_mod.tile_value(world_state.id_to_province[tile]), str(tile), tile)
+        viable = [(len(group), -factory_bonuses.get(tile, 0), -deal_mod.tile_value(world_state.id_to_province[tile]), str(tile), tile)
                   for tile, group in plans.items() if group]
         if not viable:
             break
@@ -2043,6 +2070,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     supply = ctx.get("supply")
     reserved = ctx.get("reserved_units", set())
     relief = ctx.get("relief_targets", set())
+    factory_bonuses = ctx.get("factory_bonuses", {})
     # Enemy tiles where a fight would start. Only _reserve_strike_orders starts
     # one, with a group it has forecast; no unit here walks into one alone.
     new_fights = ctx.get("new_fights", set())
@@ -2070,7 +2098,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             target_stacks[from_tile] = max(0, target_stacks.get(from_tile, 0) - 1)
 
     def pressure(tile):
-        return _tile_pressure(target_assignments, target_stacks, tile, target_capacity)
+        return _tile_pressure(target_assignments, target_stacks, tile, target_capacity, factory_bonuses.get(tile, 0))
 
     def supplied_pressure(unit, tile):
         readiness, speed = supply.quality(unit, tile) if supply else (1.0, 1)
@@ -2287,7 +2315,8 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
             neighbor_ids=neighbor_ids,
             target_stacks=stacks,
             target_capacity=target_capacity,
-            path_cache=path_cache
+            path_cache=path_cache,
+            factory_bonuses=None if is_naval_combatant else factory_bonuses,
         )
 
         if path:
@@ -2763,6 +2792,8 @@ def _generate_unit_orders(context, *, countries=None):
             continue
 
         visible = world.visible_provinces(ai_name)
+        factories = _factory_objectives(context, ai_name, visible, world.provs_by_owner)
+        best_factory = max((value for value, _ in factories.values()), default=1)
         known_supply = queries.SupplySnapshot(context, visible_to=ai_name, visible_provinces=visible, source=actual_supply)
         with queries.combat_supply(known_supply if visible is None else None):
             _assign_air_orders(context, ai_name, units_info)
@@ -2827,6 +2858,7 @@ def _generate_unit_orders(context, *, countries=None):
 
             ctx = {
                 "supply": supply,
+                "factory_bonuses": {tile: value / best_factory for tile, (value, _) in factories.items()},
                 "relief_targets": relief,
                 "unsafe_waters": unsafe_waters,
                 "friendly_nations": friendly_nations,

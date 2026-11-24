@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 
 import data.constants as c
+from data import queries
 from map_logic.ai import ai_tuning
 from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_movement, ai_world
@@ -638,6 +639,52 @@ class StrikePlannerTests(unittest.TestCase):
         fast = dict(fixture_unit(**self.ATTACKER), speed=2)
         paths = self.run_turn(layout, {1: [fast]}, {2: [fixture_unit("Bruland", **self.DEFENDER)]})
         self.assertEqual(paths, [[3]])
+
+
+class FactoryObjectiveTests(unittest.TestCase):
+    def setUp(self):
+        self.layout = {1: ("Avaria", [2, 3]), 2: ("Bruland", [1]), 3: ("Bruland", [1])}
+        self.screen = GridScreen(self.layout)
+        self.tiles = self.screen.world.id_to_province
+        self.library = {
+            "Basic Factory": {"group": "industry", "prod_materials": 20},
+            "Factory Lvl 1": {"group": "industry", "prod_materials": 80},
+        }
+        self.enterContext(patch.object(queries, "get_building_library", return_value=self.library))
+
+    def chosen_path(self, defended=False):
+        unit = fixture_unit(attack=10, health=200)
+        units = self.screen.place(1, unit)
+        if defended:
+            for tile in (2, 3):
+                self.screen.place(tile, fixture_unit("Bruland", attack=0, health=100))
+        factories = ai_movement._factory_objectives(self.screen, "Avaria", {2, 3}, {"Bruland": [self.tiles[2], self.tiles[3]]})
+        best = max(value for value, _ in factories.values())
+        ctx = empty_ctx(enemy_targets={2, 3}, target_destinations=[2, 3], target_assignments={2: 0, 3: 0},
+                        target_stacks={2: 0, 3: 0}, expedition_targets=set(),
+                        factory_bonuses={tile: value / best for tile, (value, _) in factories.items()})
+        plan_and_assign(self.screen, units, ctx, {tile: neighbors for tile, (_, neighbors) in self.layout.items()})
+        return unit["order"]["path"]
+
+    def test_open_advance_prefers_factory(self):
+        self.tiles[3]["buildings"] = ["Basic Factory"]
+        self.assertEqual(self.chosen_path(), [3])
+
+    def test_equally_viable_defended_targets_favor_higher_factory_output(self):
+        self.tiles[2]["buildings"] = ["Basic Factory"]
+        self.tiles[3]["buildings"] = ["Factory Lvl 1"]
+        self.assertEqual(self.chosen_path(defended=True), [3])
+
+    def test_unsafe_factory_loses_to_open_ground(self):
+        self.tiles[3]["buildings"] = ["Factory Lvl 1"]
+        self.screen.place(3, fixture_unit("Bruland", attack=100000, health=100000))
+        self.assertEqual(self.chosen_path(), [2])
+
+    def test_hidden_and_unfinished_factories_are_excluded(self):
+        self.tiles[2]["building_queue"] = [{"item_name": "Basic Factory"}]
+        self.tiles[3]["buildings"] = ["Factory Lvl 1"]
+        self.assertEqual(ai_movement._factory_objectives(self.screen, "Avaria", {2},
+                         {"Bruland": [self.tiles[2], self.tiles[3]]}), {})
 
 
 class RetreatTileTests(unittest.TestCase):
