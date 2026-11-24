@@ -10,7 +10,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
-from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership
+from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership, faction_records
 from map_logic.system32 import turn_processor
 from map_logic.territory import ownership
 from tests import app_harness
@@ -123,6 +123,9 @@ class SpectatorCountryRemovalTests(unittest.TestCase):
                     release_puppet_queue=[{"core_nation": "Target", "turns_left": 1}],
                     return_queue=[{"to_nation": "Target"}], temp_modifiers={"Target": {"fixture": 1}})
         self.game.nation_data["Child"].update(master="Target", puppet_type=c.PUPPET_TYPE_AUTONOMOUS)
+        queries.set_country_faction(self.game.world.nation_data, "Ally", "Pact")
+        faction_records.set_pre_war_map(self.game.world.nation_data, "Pact", {"2": "Target", "4": "Ally"})
+        # Saved bookkeeping can remain in live country data. Removal must not treat it as a country.
         self.game.nation_data["FACTION_WAR_MAPS"] = {
             "Pact": {"2": "Target", "4": "Ally"}, "at_war_with": [], "manpower": 0}
         self.assertTrue(self.remove())
@@ -132,7 +135,7 @@ class SpectatorCountryRemovalTests(unittest.TestCase):
         self.assertEqual(data["pending_diplomacy"], {})
         self.assertEqual(data["temp_modifiers"], {})
         self.assertEqual(self.game.nation_data["Child"]["master"], "")
-        self.assertEqual(self.game.nation_data["FACTION_WAR_MAPS"]["Pact"], {"4": "Ally"})
+        self.assertEqual(faction_records.pre_war_map(self.game.world.nation_data, "Pact"), {"4": "Ally"})
 
     def test_deleting_a_leader_promotes_a_surviving_member(self):
         self.game.nation_data["Target"].update(faction="Pact", is_faction_leader=True)

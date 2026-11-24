@@ -190,7 +190,7 @@ class Production_Screen(Screen):
 
     def handle_events(self, events):
         # Override to block all interaction
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.btn_back and self.btn_back.rect.collidepoint(event.pos):
@@ -205,7 +205,7 @@ class Production_Screen(Screen):
         """Q. Same as clicking the Units button in the view-mode row; also
         jumps screens when the Keybinds screen's per-key toggle is on -- see
         screens.game.map_input.handle_view_mode_keybind."""
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             return
         map_input.handle_view_mode_keybind(self.map_screen, "UNITS", "ORDERS", origin=self)
 
@@ -213,7 +213,7 @@ class Production_Screen(Screen):
         """W. Same as clicking the Economy button in the view-mode row; also
         jumps screens when the Keybinds screen's per-key toggle is on -- see
         screens.game.map_input.handle_view_mode_keybind."""
-        if self.map_screen.tactical_mode:
+        if self.map_screen.session.tactical_mode:
             return
         map_input.handle_view_mode_keybind(self.map_screen, "ECONOMY", "ECONOMY", origin=self)
 
@@ -288,11 +288,11 @@ class Production_Screen(Screen):
         self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
 
     def _spectator_locked(self):
-        return self.map_screen.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION
+        return self.map_screen.session.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION
 
     def _owner_research(self):
         owner = self.target_province.get("owner")
-        return self.map_screen.nation_data.get(owner, {}).get("research", {})
+        return self.map_screen.world.nation_data.get(owner, {}).get("research", {})
 
     def _add_administrative_row(self, color, text, callback, cost):
         self._add_scroll_button(LIST_X, self._list_y, color, text, callback)
@@ -310,13 +310,13 @@ class Production_Screen(Screen):
     def _add_administrative_rows(self):
         province = self.target_province
         owner = province.get("owner")
-        map_data = self.map_screen.map_data
-        settings = self.map_screen.scenario_settings
+        map_data = self.map_screen.world.map_data
+        settings = self.map_screen.world.scenario_settings
         building_queue = province.get("building_queue", [])
         locked = self._spectator_locked()
 
         # --- BUGFIX: Coring Restrictions ---
-        can_core = queries.province_can_be_cored(owner, province, self.map_screen.id_to_province,
+        can_core = queries.province_can_be_cored(owner, province, self.map_screen.world.id_to_province,
                                                  queries.nation_has_any_core(owner, map_data))
 
         if not queries.has_core(owner, province) and queries.is_administrative_action_enabled("CORE", settings):
@@ -328,7 +328,7 @@ class Production_Screen(Screen):
                 color, text, callback = "grey", "Cannot Core", _no_action
             else:
                 color, text, callback = "purple", "Core Territory", lambda: self.start_coring()
-            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings, self.map_screen.nation_data))
+            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings, self.map_screen.world.nation_data))
 
         # --- REMOVE CORES BUTTON ---
         # Cores are ignored entirely under the "Disable Cores" scenario rule, so
@@ -348,7 +348,7 @@ class Production_Screen(Screen):
                 color, text, callback = "grey", "Remove Cores", _no_action
             else:
                 color, text, callback = "red", "Remove Cores", lambda: self.start_remove_cores()
-            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings, self.map_screen.nation_data))
+            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings, self.map_screen.world.nation_data))
 
     def _next_building_in_group(self, group_id, current_buildings):
         b_list = [b for b, d in self.building_library.items() if d.get("group") == group_id]
@@ -367,8 +367,8 @@ class Production_Screen(Screen):
         owner = province.get("owner")
         research = self._owner_research()
         building_queue = province.get("building_queue", [])
-        factory_multiplier = politics.factory_output_multiplier(self.map_screen.nation_data, owner)
-        non_core_multiplier = politics.axis_effect(self.map_screen.nation_data, owner, "non_core_building_output")
+        factory_multiplier = politics.factory_output_multiplier(self.map_screen.world.nation_data, owner)
+        non_core_multiplier = politics.axis_effect(self.map_screen.world.nation_data, owner, "non_core_building_output")
 
         for group_id in ("industry", "fortification", "recruitment"):
             target = self._next_building_in_group(group_id, province.get("buildings", []))
@@ -376,8 +376,8 @@ class Production_Screen(Screen):
                 continue
 
             # Dynamically calculate the visual cost for the player
-            data = queries.get_building_cost(target, owner, self.map_screen.map_data, self.building_library,
-                                             self.map_screen.nation_data)
+            data = queries.get_building_cost(target, owner, self.map_screen.world.map_data, self.building_library,
+                                             self.map_screen.world.nation_data)
             output = queries.get_province_building_output(
                 {"owner": owner, "cores": province.get("cores", []), "buildings": [target]},
                 research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier,
@@ -618,7 +618,7 @@ class Production_Screen(Screen):
 
         owner_nation = self.target_province.get("owner")
         research = self._owner_research()
-        p_data = self.map_screen.nation_data.get(owner_nation)
+        p_data = self.map_screen.world.nation_data.get(owner_nation)
         owner_valid = p_data is not None
 
         custom_units = p_data.get("custom_production_units", []) if owner_valid else []
@@ -654,12 +654,12 @@ class Production_Screen(Screen):
 
     def _can_start_administrative_action(self, order_type):
         owner = self.target_province.get("owner")
-        viewer = self.map_screen.player_country
-        if (self.map_screen.tactical_mode or
+        viewer = self.map_screen.session.player_country
+        if (self.map_screen.session.tactical_mode or
                 (viewer == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION) or
                 (viewer != "Spectator" and viewer != owner)):
             return False
-        return (queries.is_administrative_action_enabled(order_type, self.map_screen.scenario_settings)
+        return (queries.is_administrative_action_enabled(order_type, self.map_screen.world.scenario_settings)
                 and self.can_edit_realtime())
 
     def start_coring(self):
@@ -698,7 +698,7 @@ class Production_Screen(Screen):
         if not self.map_screen: return
 
         owner_nation = self.target_province.get("owner")
-        p_data = self.map_screen.nation_data.get(owner_nation)
+        p_data = self.map_screen.world.nation_data.get(owner_nation)
         if p_data is None: return
 
         player_research = p_data.get("research", {})
@@ -771,7 +771,7 @@ class Production_Screen(Screen):
             return
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.map_screen.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION:
+            if self.map_screen.session.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION:
                 return
                 
             for rect, index, q_type in self.cancel_hitboxes:
@@ -864,7 +864,7 @@ class Production_Screen(Screen):
 
         # Determine the name to display at the top of the production queue!
         owner_nation = self.target_province.get("owner", "Unclaimed")
-        owner_name = self.map_screen.nation_data.get(owner_nation, {}).get("name", owner_nation).upper()
+        owner_name = self.map_screen.world.nation_data.get(owner_nation, {}).get("name", owner_nation).upper()
         surface.blit(title_font.render(f"{owner_name} PRODUCTION", True, (255, 255, 255)), HEADER_TITLE_POS)
 
         resource_hud.draw_resource_bar(surface, self.map_screen, target_nation=owner_nation,

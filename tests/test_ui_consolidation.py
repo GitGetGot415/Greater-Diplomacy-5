@@ -10,6 +10,7 @@ from unittest import mock
 import pygame
 
 from tests import app_harness
+from tests.stub_map_screen import map_double, mock_map
 
 
 def key(code, text=""):
@@ -191,7 +192,7 @@ class LobbyTests(SharedUiTestCase):
         from screens.multiplayer.realtime_multiplayer import Realtime_Lobby
 
         screen = Realtime_Lobby()
-        screen.server_map = SimpleNamespace(nation_data={})
+        screen.server_map = map_double(nation_data={})
         screen.session = mock.Mock(
             host_id="host", countries=["Alpha"], config=SimpleNamespace(scenario_id="Scenario", max_players=2,
                                                                         max_turns=9, turn_minutes=3),
@@ -237,7 +238,7 @@ class DeclareIndependenceFieldTests(SharedUiTestCase):
     def screen(self):
         from screens.game.declare_independence import Declare_Independence_Screen
 
-        map_screen = mock.Mock(player_country="Alpha", player_unit=None, map_data={},
+        map_screen = mock_map(player_country="Alpha", player_unit=None, map_data={},
                                nation_data={"Core": {"name": "Coreland"}}, top_bar_rect=None)
         return Declare_Independence_Screen(map_screen)
 
@@ -256,20 +257,20 @@ class DeclareIndependenceFieldTests(SharedUiTestCase):
 
         screen = self.screen()
         game = screen.map_screen
-        game.realtime_multiplayer = game.multiplayer_mode = False
-        game.nation_data["Alpha"] = {"manpower": 7, "materials": 7, "fuel": 7, "research": {}}
-        game.player_unit = {"type": "Fixture", "owner": "Alpha", "order": {"type": "MOVE", "path": [2]}}
-        game.active_players = ["Alpha"]
+        game.session.realtime_multiplayer = game.session.multiplayer_mode = False
+        game.world.nation_data["Alpha"] = {"manpower": 7, "materials": 7, "fuel": 7, "research": {}}
+        game.session.player_unit = {"type": "Fixture", "owner": "Alpha", "order": {"type": "MOVE", "path": [2]}}
+        game.session.active_players = ["Alpha"]
         game.nation_colors = {}
         screen.name_field.text = "Breakaway"
         with mock.patch.object(declare_independence.turn_manager, "advance_time"), \
                 mock.patch.object(declare_independence.queries, "set_unit_owner"), \
                 mock.patch.object(declare_independence, "log_global_event"):
             screen.confirm_independence()
-        country = game.nation_data["Breakaway"]
+        country = game.world.nation_data["Breakaway"]
         for resource, amount in c.TACTICAL_INDEPENDENCE_STOCKPILE.items():
             self.assertEqual(country[resource], amount)
-        self.assertEqual(game.player_country, "Breakaway")
+        self.assertEqual(game.session.player_country, "Breakaway")
 
     def test_choosing_a_core_renames_and_enter_confirms(self):
         screen = self.screen()
@@ -286,7 +287,7 @@ class EditorWindowTests(SharedUiTestCase):
         from screens.editors.date_economy_screens import Editor_Date_Screen
 
         time_manager = SimpleNamespace(day=1, month_index=0, year=1900)
-        map_screen = mock.Mock(player_country="Editor", time_manager=time_manager, scenario_settings={})
+        map_screen = mock_map(player_country="Editor", time_manager=time_manager, scenario_settings={})
         screen = Editor_Date_Screen(map_screen)
         self.assertEqual(len(screen.fields), 4)
         for name, text in (("day", "9"), ("month", "3"), ("year", "1941"), ("days_per_turn", "7")):
@@ -295,14 +296,14 @@ class EditorWindowTests(SharedUiTestCase):
                 mock.patch("screens.editors.date_economy_screens.queries.get_scenario_flag", return_value=False):
             button_named(screen, "Apply Date").callback()
         self.assertEqual((time_manager.day, time_manager.month_index, time_manager.year), (9, 2, 1941))
-        self.assertEqual(map_screen.scenario_settings["base_days_per_turn"], 7)
+        self.assertEqual(map_screen.world.scenario_settings["base_days_per_turn"], 7)
         self.assertTrue(screen.done)
 
     def test_form_field_focus_captures_the_keyboard(self):
         from screens.editors.date_economy_screens import Starting_Economy_Edit_Screen
         from ui.navigation.screen import keyboard_input_is_captured
 
-        map_screen = mock.Mock(player_country="Editor", nation_data={"Alpha": {}}, army_editor_state=None)
+        map_screen = mock_map(player_country="Editor", nation_data={"Alpha": {}}, army_editor_state=None)
         screen = Starting_Economy_Edit_Screen(map_screen, "Alpha")
         self.assertFalse(keyboard_input_is_captured(screen))
         next(iter(screen.fields.values())).active = True
@@ -311,7 +312,7 @@ class EditorWindowTests(SharedUiTestCase):
     def test_nation_list_edit_opens_its_edit_screen(self):
         from screens.editors.date_economy_screens import Starting_Economy_Edit_Screen, Starting_Economy_List_Screen
 
-        map_screen = mock.Mock(player_country="Editor", map_data={}, nation_data={"Alpha": {}})
+        map_screen = mock_map(player_country="Editor", map_data={}, nation_data={"Alpha": {}})
         with mock.patch("ui.navigation.screen.queries.get_living_nations", return_value=["Alpha"]):
             screen = Starting_Economy_List_Screen(map_screen)
         with mock.patch("ui.navigation.screen_runner._run_pygame_sub_screen") as run:
@@ -527,7 +528,7 @@ class BackKeySoundTests(SharedUiTestCase):
     def test_leaving_a_text_box_is_silent(self):
         from screens.game.declare_independence import Declare_Independence_Screen
 
-        screen = Declare_Independence_Screen(mock.Mock(player_country="Alpha", player_unit=None, map_data={},
+        screen = Declare_Independence_Screen(mock_map(player_country="Alpha", player_unit=None, map_data={},
                                                        nation_data={}, top_bar_rect=None))
         screen.name_field.active = True
         self.assertEqual(self.back_sounds(screen), [])
@@ -645,7 +646,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
     def test_puppets_plays_its_sound_once_and_opens_the_menu(self):
         from screens.game import map_buttons
 
-        game = SimpleNamespace(is_editor=False, player_country="A", save_map_data=mock.Mock(),
+        game = map_double(is_editor=False, player_country="A", save_map_data=mock.Mock(),
                                change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
         with mock.patch.object(map_buttons.player_diplomacy_actions, "open_puppets_menu") as open_puppets:
             map_buttons._build_left_bar_buttons(game)
@@ -759,7 +760,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 pending = {"B": {"action": "TRADE", "turns": 0}} if has_offer else {}
                 screen = object.__new__(deal_screen.Deal_Screen)
                 screen.kind = deal_screen.deal_mod.KIND_TRADE
-                screen.map_screen = SimpleNamespace(
+                screen.map_screen = map_double(
                     nation_data={"A": {"pending_diplomacy": pending}}, show_feedback=mock.Mock())
                 screen.player, screen.target_nation = "A", "B"
                 screen._clear_draft = mock.Mock()
@@ -800,7 +801,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 with self.subTest(problems=problems, editing=editing):
                     screen = object.__new__(deal_screen.Deal_Screen)
                     screen.kind = deal_screen.deal_mod.KIND_TRADE
-                    screen.map_screen = SimpleNamespace(map_data={}, nation_data={}, show_feedback=mock.Mock())
+                    screen.map_screen = map_double(map_data={}, nation_data={}, show_feedback=mock.Mock())
                     screen.player, screen.target_nation = "A", "B"
                     screen.note = "Fixture note"
                     screen.reach = {}
@@ -826,7 +827,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         from screens.game import map_buttons
 
         for is_editor in (False, True):
-            game = SimpleNamespace(is_editor=is_editor, player_country="A", save_map_data=mock.Mock(),
+            game = map_double(is_editor=is_editor, player_country="A", save_map_data=mock.Mock(),
                                    change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
             with self.subTest(is_editor=is_editor), \
                     mock.patch.object(map_buttons.player_diplomacy_actions, "open_claims_menu") as open_claims, \
@@ -906,7 +907,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         from screens.multiplayer.realtime_multiplayer import Realtime_Lobby
 
         screen = Realtime_Lobby()
-        screen.server_map = SimpleNamespace(nation_data={})
+        screen.server_map = map_double(nation_data={})
         screen.session = mock.Mock(
             host_id="host", countries=[],
             config=SimpleNamespace(scenario_id="Scenario", max_players=2, max_turns=9, turn_minutes=3, port=1),
@@ -1050,7 +1051,7 @@ class KeybindSoundTests(SharedUiTestCase):
         screen = object.__new__(Orders_Screen)
         screen.renaming_unit_index = None
         screen.read_only = False
-        screen.map_screen = mock.Mock(tactical_mode=False)
+        screen.map_screen = mock_map(tactical_mode=False)
         return screen
 
     def test_clear_orders_key_plays_the_cancel_sound_even_with_nothing_to_clear(self):

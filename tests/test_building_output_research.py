@@ -53,7 +53,7 @@ class OutputBonusTests(unittest.TestCase):
 
         province = {"id": 1, "owner": "A", "cores": ["A"],
                     "buildings": ["Basic Factory"]}
-        screen = SimpleNamespace(hovered_province=province, secondary_mode="ECONOMY",
+        screen = map_double(hovered_province=province, secondary_mode="ECONOMY",
                                  _presentation_cache_revision=0, _tooltip_building_stamp=None,
                                  _tooltip_building_yields=[],
                                  nation_data={"A": {"research": {"first": 1}}},

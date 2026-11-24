@@ -9,10 +9,11 @@ import pygame
 from data import constants as c
 from ui.camera import camera_handler
 from ui.camera.camera_handler import MapCamera
+from tests.stub_map_screen import map_double
 
 
 def _map(loop_map):
-    return SimpleNamespace(
+    return map_double(
         loop_map=loop_map,
         map_w=1000,
         map_h=800,

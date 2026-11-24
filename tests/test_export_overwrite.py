@@ -14,6 +14,7 @@ from data.multiplayer.tournament import files as tournament_files
 from ui import dialogs
 from ui.panels import multiplayer_host_panel
 from ui.dialogs import file_exchange
+from tests.stub_map_screen import map_double
 
 
 class ExportOverwriteTests(unittest.TestCase):
@@ -196,7 +197,7 @@ class ExportOverwriteTests(unittest.TestCase):
                 self.assertEqual(self.success.call_count, int(answer))
 
     def test_host_cancel_preserves_pending_keys_and_submissions(self):
-        host = SimpleNamespace(
+        host = map_double(
             time_manager=SimpleNamespace(total_turns=4),
             multiplayer_tournament_dir=str(self.downloads),
             multiplayer_master_key="host-key", multiplayer_keys_dict={"Player": "player-key"},
@@ -218,7 +219,7 @@ class ExportOverwriteTests(unittest.TestCase):
         host.show_feedback.assert_not_called()
 
     def test_host_confirm_runs_export_before_resetting_submissions(self):
-        host = SimpleNamespace(
+        host = map_double(
             time_manager=SimpleNamespace(total_turns=4),
             multiplayer_tournament_dir=str(self.downloads),
             multiplayer_master_key="host-key", multiplayer_keys_dict={"Player": "player-key"},

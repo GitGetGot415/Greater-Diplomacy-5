@@ -3,7 +3,6 @@
 # Constants import these definitions during initialization. Load rule dependencies inside checks so definitions remain available during that import.
 
 
-from types import SimpleNamespace
 
 
 from dataclasses import dataclass
@@ -373,10 +372,6 @@ def availability(context, sender, target, action, *, phase="draft", scripted=Fal
     from data.state_access import world_for
     from map_logic.diplomacy import global_rules
     world = world_for(context)
-    if isinstance(world, dict):
-        # Public helpers also accept standalone country records at input boundaries.
-        world = SimpleNamespace(nation_data=world, scenario_settings={}, global_rules=[])
-        context = world
     nation_data = world.nation_data
     sender_data, target_data = nation_data.get(sender), nation_data.get(target)
     if not isinstance(sender_data, dict) or not isinstance(target_data, dict):
@@ -391,9 +386,7 @@ def availability(context, sender, target, action, *, phase="draft", scripted=Fal
     allowed, reason = definition.legality(context, sender, target, action, nation_data, sender_data, target_data)
     if allowed and action in ("PEACE_TREATY", "CEASEFIRE"):
         from map_logic.diplomacy import peace_scope
-        # Plain nation dictionaries used by compatibility callers have no clock.
-        clock = getattr(world, "time_manager", None)
-        send_turn = clock.total_turns if phase == "send" and clock is not None else None
+        send_turn = world.time_manager.total_turns if phase == "send" else None
         reason = peace_scope.offer_block_reason(sender, target, nation_data, responses=responses, send_turn=send_turn)
         allowed = not reason
     if allowed:

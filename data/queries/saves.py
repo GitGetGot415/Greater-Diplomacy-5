@@ -3,8 +3,7 @@
 import copy
 import data.constants as c
 from data.io import standalone_music
-from types import SimpleNamespace
-from data.state_access import session_for, world_for
+from data.state_access import session_for, world_for, viewer_context
 from map_logic import politics
 from map_logic.diplomacy import faction_records, diplomacy_lifecycle, peace_scope
 from data.queries.content import get_research_years
@@ -374,10 +373,8 @@ def player_snapshot_projection(context, snapshot, country_id, *, player_supply=N
     result["unit_event_read_turns"] = {
         owner: turn for owner, turn in result.get("unit_event_read_turns", {}).items()
         if owner == country_id and turn == report["turn"]}
-    view = SimpleNamespace(player_country=country_id, map_data=world_state.map_data,
-        nation_data=world_state.nation_data,
-        id_to_province={p["id"]: p for p in world_state.map_data.values()},
-        tactical_mode=False, player_unit=None)
+    view = viewer_context(country_id, world_state.map_data, world_state.nation_data,
+                          {p["id"]: p for p in world_state.map_data.values()})
     visible, _partial = queries.get_visible_provinces(view) if country_id in world_state.nation_data else (set(), set())
     fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
                             world_state.scenario_settings)

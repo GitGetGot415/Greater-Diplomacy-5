@@ -622,7 +622,7 @@ def queue_army_defense_orders(context, country_id, army_id, only_idle=False,
 def queue_idle_army_defense_orders(context):
     """Prepare target-area returns for idle units after this turn resolves."""
     world_state = world_for(context)
-    moved_or_ordered = context._units_with_move_order_this_turn
+    moved_or_ordered = context.session._units_with_move_order_this_turn
     queued = 0
     for country_id, country in world_state.nation_data.items():
         if not isinstance(country, dict):
@@ -635,7 +635,7 @@ def queue_idle_army_defense_orders(context):
     # This is turn-local evidence, not saved game state.  Clearing it here
     # makes the next resolution evaluate only the moves actually submitted for
     # that next turn.
-    context._units_with_move_order_this_turn = set()
+    context.session._units_with_move_order_this_turn = set()
     return queued
 
 

@@ -17,9 +17,10 @@ import unittest
 
 
 from map_logic.ai import ai_diplomacy, ai_llm_runner
+from tests.stub_map_screen import MapDouble
 
 
-class FakeScreen:
+class FakeScreen(MapDouble):
     def __init__(self, nations, turn=1):
         self.nation_data = {n: {} for n in nations}
         self.time_manager = type("T", (), {"total_turns": turn})()

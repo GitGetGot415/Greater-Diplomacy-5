@@ -13,5 +13,5 @@ def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
     """
 
     agreement = deal_mod.coerce(peace_type, proposer, target, kind=deal_mod.KIND_PEACE)
-    transfers = deal_mod.tile_transfers(agreement, map_screen.map_data, map_screen.nation_data)
+    transfers = deal_mod.tile_transfers(agreement, map_screen.world.map_data, map_screen.world.nation_data)
     draw_projected_deal_map(surface, map_screen, transfers)

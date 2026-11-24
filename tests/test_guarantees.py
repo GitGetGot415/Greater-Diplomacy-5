@@ -49,7 +49,7 @@ class GuaranteeTests(unittest.TestCase):
     def test_guarantee_resolves_without_an_acceptance(self):
         screen = StubMapScreen(["A", "B"])
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "B", guarantees.ACTION)
+            screen, "A", "B", guarantees.ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
@@ -60,7 +60,7 @@ class GuaranteeTests(unittest.TestCase):
         screen = StubMapScreen(["A", "B"])
         screen.nation_data["A"]["guarantees"] = ["B"]
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "B", guarantees.REVOKE_ACTION)
+            screen, "A", "B", guarantees.REVOKE_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 

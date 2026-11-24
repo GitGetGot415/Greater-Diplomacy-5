@@ -16,6 +16,7 @@ from map_logic.ai import ai_opinion, ai_personality, ai_world
 from map_logic.diplomacy import deal
 
 from tests.test_ai_world import build_world, unit
+from tests.stub_map_screen import MapDouble
 
 
 class PersonalityTests(unittest.TestCase):
@@ -136,11 +137,12 @@ class ModifierDecayTests(unittest.TestCase):
     def decay_once(self, mods):
         from map_logic.diplomacy import diplomacy_processor
 
-        class Screen:
+        class Screen(MapDouble):
             nation_data = {"A": {"temp_modifiers": {"B": mods}, "truces": {},
                                  "war_durations": {}}}
-        diplomacy_processor._decay_modifiers_and_truces(Screen())
-        return Screen.nation_data["A"]["temp_modifiers"]["B"]
+        screen = Screen()
+        diplomacy_processor._decay_modifiers_and_truces(screen)
+        return screen.world.nation_data["A"]["temp_modifiers"]["B"]
 
     def test_an_old_style_int_still_fades_by_exactly_one_a_turn(self):
         mods = self.decay_once({"recent_war": -20})

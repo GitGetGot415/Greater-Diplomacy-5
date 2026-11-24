@@ -23,6 +23,7 @@ import unittest
 
 import data.constants as c
 from map_logic.ai import ai_director, ai_prompts
+from tests.stub_map_screen import MapDouble
 
 
 class VoiceRuleStatedTests(unittest.TestCase):
@@ -288,7 +289,7 @@ class ProactiveWordingTests(unittest.TestCase):
                         "pending_diplomacy": {}, "name": "Austria"},
         }
 
-    class Screen:
+    class Screen(MapDouble):
         class Clock:
             total_turns = 5
         time_manager = Clock()

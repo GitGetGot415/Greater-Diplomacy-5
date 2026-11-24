@@ -62,7 +62,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                         with open(meta_path, "r", encoding="utf-8") as f:
                             old_meta = json.load(f)
                             if "scenario_settings" in old_meta:
-                                temp_map_context.scenario_settings = old_meta["scenario_settings"]
+                                temp_map_context.world.scenario_settings = old_meta["scenario_settings"]
                     except Exception as e:
                         print(f"Error reading meta.json for settings restoration: {e}")
                 # ------------------------------------------------------------------
@@ -76,23 +76,23 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 # template, which would otherwise blank out anything the
                 # Historical Leaders Editor set for this scenario's date.
                 if c.SCENARIOS_HISTORICAL_DIR.replace("\\", "/") in scenario_dir.replace("\\", "/"):
-                    tm = temp_map_context.time_manager
-                    apply_historical_leader_timeline(temp_map_context.nation_data, tm.year, tm.month_index, tm.day)
+                    tm = temp_map_context.world.time_manager
+                    apply_historical_leader_timeline(temp_map_context.world.nation_data, tm.year, tm.month_index, tm.day)
 
                 # Set all playable country resources to 0 before compounding income calculations
                 if options.get("reset_resources", True):
-                    for nation_name, stats in temp_map_context.nation_data.items():
+                    for nation_name, stats in temp_map_context.world.nation_data.items():
                         if nation_name != "GLOBAL_EVENTS" and nation_name not in c.UNPLAYABLE_NATIONS:
                             stats["manpower"] = 0
                             stats["materials"] = 0
                             stats["fuel"] = 0
 
                 # 3. Clean country flags/portraits inside memory before serializing
-                queries.scrub_default_images(temp_map_context.nation_data)
+                queries.scrub_default_images(temp_map_context.world.nation_data)
 
                 # --- BUG FIX: Fix lowercase unit types and custom names ---
                 unit_lib = queries.get_unit_library(context)
-                for prov in temp_map_context.map_data.values():
+                for prov in temp_map_context.world.map_data.values():
                     for unit in prov.get("units", []):
                         u_type = unit.get("type", "")
                         if u_type:
@@ -125,8 +125,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 with open(map_json_path, "w") as f:
                     f.write(history_io.dump_save_text(build_map_data_save(temp_map_context)))
 
-                if hasattr(temp_map_context, 'history'):
-                    history_io.write(scenario_path, temp_map_context.history)
+                history_io.write(scenario_path, temp_map_context.world.history)
 
                 # These overlays are rebuilt from map state when the scenario
                 # loads. Remove any copies left by older refreshes.

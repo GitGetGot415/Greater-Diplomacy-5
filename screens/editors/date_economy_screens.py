@@ -23,8 +23,8 @@ class Editor_Metadata_Screen(EditorFormScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, self.PANEL_WIDTH, self.PANEL_HEIGHT))
-        metadata = queries.normalized_scenario_metadata(map_screen.scenario_metadata)
-        values = (("name", "Scenario Name:", map_screen.editor_scenario_name),
+        metadata = queries.normalized_scenario_metadata(map_screen.world.scenario_metadata)
+        values = (("name", "Scenario Name:", map_screen.session.editor_scenario_name),
                   ("author", "Author:", metadata["author"]),
                   ("description", "Description:", metadata["description"]))
         self.fields = {key: TextField(0, 0, self.PANEL_WIDTH - self.FIELD_LEFT - 30,
@@ -75,8 +75,8 @@ class Editor_Date_Screen(EditorFormScreen):
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 440, 420))
 
-        tm = map_screen.time_manager
-        dpt = queries.get_days_per_turn(map_screen.scenario_settings)
+        tm = map_screen.world.time_manager
+        dpt = queries.get_days_per_turn(map_screen.world.scenario_settings)
         values = (("day", "Day (1-30):", tm.day), ("month", "Month (1-12):", tm.month_index + 1),
                   ("year", "Year:", tm.year), ("days_per_turn", "Days/Turn:", dpt))
         self.fields = {key: TextField(0, 0, 160, 40, str(value), numeric=True, label=label)
@@ -104,16 +104,16 @@ class Editor_Date_Screen(EditorFormScreen):
             dialogs.show_error("Error", "Days per turn must be positive.")
             return
 
-        tm = self.map_screen.time_manager
+        tm = self.map_screen.world.time_manager
         tm.day, tm.month_index, tm.year = d, m, y
-        self.map_screen.scenario_settings["base_days_per_turn"] = b_dpt
-        self.map_screen.scenario_settings["days_per_turn"] = "Default"
-        queries.save_scenario_settings(self.map_screen.scenario_settings)
+        self.map_screen.world.scenario_settings["base_days_per_turn"] = b_dpt
+        self.map_screen.world.scenario_settings["days_per_turn"] = "Default"
+        queries.save_scenario_settings(self.map_screen.world.scenario_settings)
 
         feedback = "Date & Turn Rate set!"
         if queries.get_scenario_flag("force_time_appropriate_research",
                                      c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
-                                     self.map_screen.scenario_settings):
+                                     self.map_screen.world.scenario_settings):
             queries.apply_time_appropriate_research_to_map(self.map_screen, y)
             feedback = f"Date & Turn Rate set! Research re-aligned to {y}."
 
@@ -136,7 +136,7 @@ class Starting_Economy_Edit_Screen(EditorFormScreen):
         super().__init__(map_screen, pygame.Rect(0, 0, 400, 360))
         self.country_id = country_id
 
-        data = map_screen.nation_data.get(country_id, {})
+        data = map_screen.world.nation_data.get(country_id, {})
         self.fields = {}
         for res in c.ECON_RESOURCE_KEYS:
             self.fields[res] = TextField(0, 0, 160, 40, str(int(data.get(res, 0))), numeric=True,
@@ -145,7 +145,7 @@ class Starting_Economy_Edit_Screen(EditorFormScreen):
         self.refresh_ui()
 
     def apply(self):
-        data = self.map_screen.nation_data.get(self.country_id)
+        data = self.map_screen.world.nation_data.get(self.country_id)
         if data:
             for res, field in self.fields.items():
                 try:
@@ -153,11 +153,11 @@ class Starting_Economy_Edit_Screen(EditorFormScreen):
                 except ValueError:
                     pass
             self.map_screen.show_feedback("Saved economy for " + queries.get_country_display_name(
-                self.country_id, self.map_screen.nation_data))
+                self.country_id, self.map_screen.world.nation_data))
         self.done = True
 
     def get_panel_title(self):
-        return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Economy"
+        return queries.get_country_display_name(self.country_id, self.map_screen.world.nation_data) + " Economy"
 
 
 class Starting_Economy_List_Screen(NationListOverlayScreen):
@@ -173,9 +173,9 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
         ]
 
     def country_button(self, country_id, x, y):
-        is_modified = any(self.map_screen.nation_data.get(country_id, {}).get(res, 0) != 0
+        is_modified = any(self.map_screen.world.nation_data.get(country_id, {}).get(res, 0) != 0
                           for res in c.ECON_RESOURCE_KEYS)
-        country_name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        country_name = queries.get_country_display_name(country_id, self.map_screen.world.nation_data)
         label = f"[MODIFIED] {country_name}" if is_modified else country_name
         return Button(x, y, "list_row", "blue", label,
                       lambda cid=country_id: self.edit(cid))
@@ -185,9 +185,9 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
             if not ok:
                 return
             for cid in self.active_countries:
-                if cid in self.map_screen.nation_data:
+                if cid in self.map_screen.world.nation_data:
                     for res in c.ECON_RESOURCE_KEYS:
-                        self.map_screen.nation_data[cid][res] = 0
+                        self.map_screen.world.nation_data[cid][res] = 0
             self.map_screen.show_feedback("Reset starting economy for all nations!")
             self.done = True
 

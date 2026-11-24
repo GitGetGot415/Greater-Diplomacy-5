@@ -142,7 +142,7 @@ class Research_List_Screen(NationListOverlayScreen):
         p = self.panel_rect
         force_time_appropriate_on = queries.get_scenario_flag(
             "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
-            self.map_screen.scenario_settings)
+            self.map_screen.world.scenario_settings)
 
         ftap_btn = Button(p.centerx - 200, p.y + 115, "FTAP", "green", "Force Time-Appropriate Research",
                           self.toggle_force_time_appropriate)
@@ -157,9 +157,9 @@ class Research_List_Screen(NationListOverlayScreen):
     def country_button(self, country_id, x, y):
         # These rows fill the narrower panel instead of the centred default.
         p = self.panel_rect
-        c_res = self.map_screen.nation_data.get(country_id, {}).get("research", {})
+        c_res = self.map_screen.world.nation_data.get(country_id, {}).get("research", {})
         is_diff = any(c_res.get(k, v) != v for k, v in self.default_research.items())
-        name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        name = queries.get_country_display_name(country_id, self.map_screen.world.nation_data)
         label = f"[MODIFIED] {name}" if is_diff else name
         btn = Button(p.x + self.ROW_INSET, y, "list_row", "blue", label, lambda cc=country_id: self.edit_country(cc))
         btn.rect.width = p.width - 2 * self.ROW_INSET
@@ -183,10 +183,10 @@ class Research_List_Screen(NationListOverlayScreen):
         base_data = self.default_research.copy()
 
         def save(new_data):
-            self.map_screen.default_research = new_data.copy()
+            self.map_screen.world.default_research = new_data.copy()
             self.default_research = new_data.copy()
             for cid in self.active_countries:
-                self.map_screen.nation_data[cid].setdefault("research", {}).update(new_data)
+                self.map_screen.world.nation_data[cid].setdefault("research", {}).update(new_data)
             self.map_screen.show_feedback("Saved research for ALL & Set Default")
 
         self._open_editor("ALL COUNTRIES", base_data, save)
@@ -195,14 +195,14 @@ class Research_List_Screen(NationListOverlayScreen):
         base_data = self.default_research.copy()
 
         def save(new_data):
-            self.map_screen.default_research = new_data.copy()
+            self.map_screen.world.default_research = new_data.copy()
             self.default_research = new_data.copy()
             self.map_screen.show_feedback("Updated Map Default Tech")
 
         self._open_editor("MAP DEFAULT", base_data, save)
 
     def toggle_force_time_appropriate(self):
-        settings = self.map_screen.scenario_settings
+        settings = self.map_screen.world.scenario_settings
         default = c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH
         currently_on = queries.get_scenario_flag("force_time_appropriate_research", default, settings)
 
@@ -225,7 +225,7 @@ class Research_List_Screen(NationListOverlayScreen):
             dialogs.ask_yes_no("Force Time-Appropriate Research", off_msg, on_confirm_off)
             return
 
-        current_year = getattr(self.map_screen.time_manager, "year", c.START_YEAR)
+        current_year = getattr(self.map_screen.world.time_manager, "year", c.START_YEAR)
         msg = (
             f"This will turn ON Force Time-Appropriate Research, resetting the research of ALL nations "
             f"on the map to match the time-appropriate research levels for year {current_year} "
@@ -240,7 +240,7 @@ class Research_List_Screen(NationListOverlayScreen):
                 return
             queries.toggle_scenario_flag(settings, "force_time_appropriate_research", default)
             queries.apply_time_appropriate_research_to_map(self.map_screen, current_year)
-            self.default_research = self.map_screen.default_research.copy()
+            self.default_research = self.map_screen.world.default_research.copy()
             self.map_screen.show_feedback(f"Force Time-Appropriate Research: ON ({current_year})")
             self.refresh_ui()
 

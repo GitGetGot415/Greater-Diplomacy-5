@@ -1063,7 +1063,7 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
         command = definition.collect(service, country_id)
         if command is not None:
             commands.append({"type": kind, **command})
-    volunteer_drafts = context.realtime_volunteer_drafts
+    volunteer_drafts = context.session.realtime_volunteer_drafts
     if isinstance(volunteer_drafts, dict):
         volunteer_choices.update(volunteer_drafts)
     for target, units in volunteer_choices.items():

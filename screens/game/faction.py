@@ -47,8 +47,8 @@ class Faction_Screen(Screen):
 
         if not self.map_screen: return
 
-        player_country = self.map_screen.player_country
-        nation_data = self.map_screen.nation_data
+        player_country = self.map_screen.session.player_country
+        nation_data = self.map_screen.world.nation_data
         my_faction = queries.get_country_faction(player_country, nation_data)
 
         if not my_faction:
@@ -107,7 +107,7 @@ class Faction_Screen(Screen):
         only visible symptom is a button that turns on one day is one nobody
         finds.
         """
-        player = self.map_screen.player_country
+        player = self.map_screen.session.player_country
         queued = pending_action == "CLAIM_FACTION_LEADERSHIP"
         text = "Undo Claim" if queued else "Claim Leadership"
         btn = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 220, "medium",
@@ -118,7 +118,7 @@ class Faction_Screen(Screen):
 
         state = faction_leadership.standing(self.map_screen, player)
         if state is None:
-            nation_data = self.map_screen.nation_data
+            nation_data = self.map_screen.world.nation_data
             if nation_data.get(player, {}).get("master", ""):
                 btn.apply_state(enabled=False, text="Puppets Cannot Claim")
             elif not queries.get_faction_leader(
@@ -138,33 +138,33 @@ class Faction_Screen(Screen):
         return btn
 
     def claim_leadership(self):
-        self.queue_diplomacy_action(self.map_screen.player_country,
+        self.queue_diplomacy_action(self.map_screen.session.player_country,
                                     "CLAIM_FACTION_LEADERSHIP")
 
     def leave_faction(self):
-        self.queue_diplomacy_action(self.map_screen.player_country, "LEAVE_FACTION")
+        self.queue_diplomacy_action(self.map_screen.session.player_country, "LEAVE_FACTION")
 
     def disband_faction(self):
-        self.queue_diplomacy_action(self.map_screen.player_country, "DISBAND_FACTION")
+        self.queue_diplomacy_action(self.map_screen.session.player_country, "DISBAND_FACTION")
 
     def view_territories(self):
         self.next_state, self.done = "FACTION_TERRITORIES", True
         
     def start_rename(self):
         """Opens the popup that asks for a new faction name."""
-        player_country = self.map_screen.player_country
-        current_name = queries.get_country_faction(player_country, self.map_screen.nation_data)
+        player_country = self.map_screen.session.player_country
+        current_name = queries.get_country_faction(player_country, self.map_screen.world.nation_data)
         dialogs.ask_string("Rename Faction", f"Enter a new name for {current_name}:", self.confirm_rename,
                            initial=current_name, allow_empty=False, max_length=c.FACTION_NAME_MAX_LENGTH)
 
     def confirm_rename(self, new_name):
         """Applies the popup's answer. Cancel gives None, which changes nothing."""
         if new_name is None or not self.map_screen: return
-        if self.map_screen.realtime_multiplayer:
+        if self.map_screen.session.realtime_multiplayer:
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
-        player_country = self.map_screen.player_country
-        old_name = queries.get_country_faction(player_country, self.map_screen.nation_data)
+        player_country = self.map_screen.session.player_country
+        old_name = queries.get_country_faction(player_country, self.map_screen.world.nation_data)
         new_name = new_name.strip()
 
         if new_name and old_name and new_name != old_name:
@@ -185,8 +185,8 @@ class Faction_Screen(Screen):
     def additional_draw(self, surface):
         if not self.map_screen: return
 
-        player_country = self.map_screen.player_country
-        nation_data = self.map_screen.nation_data
+        player_country = self.map_screen.session.player_country
+        nation_data = self.map_screen.world.nation_data
         my_faction = queries.get_country_faction(player_country, nation_data)
 
         font_heading = fonts.get("heading1")
@@ -271,7 +271,7 @@ class Faction_Screen(Screen):
     def _member_label(self, member, nation_data):
         """Return a player-facing roster label for a faction member."""
         name = queries.get_country_display_name(member, nation_data)
-        if queries.is_government_in_exile(member, self.map_screen.map_data,
+        if queries.is_government_in_exile(member, self.map_screen.world.map_data,
                                           nation_data):
             return f"{name} (Government in Exile)"
         return name

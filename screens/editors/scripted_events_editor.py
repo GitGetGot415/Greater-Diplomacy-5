@@ -195,7 +195,7 @@ class _VariablesScreen(_ModalScreen):
 
     @property
     def variables(self):
-        return self.map_ref.script_variables
+        return self.map_ref.world.script_variables
 
     @property
     def listening_for(self):
@@ -217,7 +217,7 @@ class _VariablesScreen(_ModalScreen):
     def _usage(self, var_name):
         """Every (nation, event) pair that reads or writes this variable."""
         usage = []
-        for nat, ndata in self.map_ref.nation_data.items():
+        for nat, ndata in self.map_ref.world.nation_data.items():
             for ev in ndata.get("scripted_events", []):
                 used = any(cond.get("type") == "Variable" and cond.get("variable") == var_name
                            for cond in ev.get("conditions", []))
@@ -342,8 +342,8 @@ class _VariablesScreen(_ModalScreen):
                 if not ok:
                     return
                 for nat, ev in usage:
-                    if ev in self.map_ref.nation_data[nat].get("scripted_events", []):
-                        self.map_ref.nation_data[nat]["scripted_events"].remove(ev)
+                    if ev in self.map_ref.world.nation_data[nat].get("scripted_events", []):
+                        self.map_ref.world.nation_data[nat]["scripted_events"].remove(ev)
                 _finish()
 
             dialogs.ask_yes_no("Warning", msg, on_confirm)
@@ -449,7 +449,7 @@ class _GlobalRulesScreen(_ModalScreen):
         self.strength = global_rules.STRONG
         self.bypass_scripted_events = True
 
-        nation_data = map_ref.nation_data
+        nation_data = map_ref.world.nation_data
         # Unlike event targets, rules can name countries that do not exist yet,
         # such as a country released partway through the game.
         country_ids = sorted((cid for cid in nation_data if cid not in c.UNPLAYABLE_NATIONS),
@@ -465,7 +465,7 @@ class _GlobalRulesScreen(_ModalScreen):
 
     @property
     def rules(self):
-        return self.map_ref.global_rules
+        return self.map_ref.world.global_rules
 
     def select(self, index):
         self.selected = index
@@ -499,7 +499,7 @@ class _GlobalRulesScreen(_ModalScreen):
 
     def _country_combo(self, y, attr, title):
         country = getattr(self, attr)
-        name = queries.get_country_display_name(country, self.map_ref.nation_data) if country else "-"
+        name = queries.get_country_display_name(country, self.map_ref.world.nation_data) if country else "-"
         return self.combo(self.form_x, y, self.FORM_W, country, self.country_items, title,
                           lambda v: self._assign(attr, v), display_value=name)
 
@@ -524,7 +524,7 @@ class _GlobalRulesScreen(_ModalScreen):
         for i, y in self.pane_rows("rules", len(self.rules), self.list_top, self.list_view_h, row_h=self.ROW_H):
             rule = self.rules[i]
             tags = rule["strength"] if rule["bypass_scripted_events"] else f"{rule['strength']}, Events Can Break"
-            text = f"[{tags}] {global_rules.describe(rule, self.map_ref.nation_data)}"
+            text = f"[{tags}] {global_rules.describe(rule, self.map_ref.world.nation_data)}"
             btn = self.button(self.list_x, y, row_w, "blue", text_utils.truncate_chars(text, row_w // 9),
                               lambda idx=i: self.select(idx), sound_kind="select_sub_category")
             btn.is_selected = i == self.selected
@@ -605,7 +605,7 @@ class _EventEditScreen(_ModalScreen):
 
     def __init__(self, game_state, map_ref, target, event_idx=None):
         verb = "Edit" if event_idx is not None else "Add"
-        target_name = queries.get_country_display_name(target, map_ref.nation_data)
+        target_name = queries.get_country_display_name(target, map_ref.world.nation_data)
         super().__init__(game_state, f"{verb} Event: {target_name}")
         self.map_ref = map_ref
         self.target = target
@@ -614,7 +614,7 @@ class _EventEditScreen(_ModalScreen):
 
         event_data = {}
         if event_idx is not None:
-            event_data = map_ref.nation_data[target]["scripted_events"][event_idx]
+            event_data = map_ref.world.nation_data[target]["scripted_events"][event_idx]
 
         conds_data = event_data.get("conditions") or [{"chain": "AND", "type": "Turn Number",
                                                        "operator": "==", "value": ""}]
@@ -625,7 +625,7 @@ class _EventEditScreen(_ModalScreen):
         self.fire_once = event_data.get("fire_once", True)
         self.trigger_type = event_data.get("trigger_type", "AI Only")
 
-        self.countries = sorted(queries.get_living_nations(map_ref.map_data))
+        self.countries = sorted(queries.get_living_nations(map_ref.world.map_data))
         # The default library lists every unit. The world's active library omits disabled families,
         # which the Spawn Unit picker lists as disabled.
         self.unit_library = queries.get_unit_library()
@@ -643,7 +643,7 @@ class _EventEditScreen(_ModalScreen):
 
     @property
     def variables(self):
-        return self.map_ref.script_variables
+        return self.map_ref.world.script_variables
 
     @property
     def listening_for(self):
@@ -656,8 +656,8 @@ class _EventEditScreen(_ModalScreen):
         nums = re.findall(r'\d+', turns_str)
         if not nums:
             return ""
-        tm = self.map_ref.time_manager
-        dpt = self.map_ref.scenario_settings.get("base_days_per_turn", c.DEFAULT_DAYS_PER_TURN)
+        tm = self.map_ref.world.time_manager
+        dpt = self.map_ref.world.scenario_settings.get("base_days_per_turn", c.DEFAULT_DAYS_PER_TURN)
         out = []
         for num in nums[:2]:  # Max 2 for BETWEEN intervals
             temp_time = TimeHandler(start_year=tm.year)
@@ -745,7 +745,7 @@ class _EventEditScreen(_ModalScreen):
             "fire_once": self.fire_once,
             "trigger_type": self.trigger_type,
         }
-        target_data = self.map_ref.nation_data.setdefault(self.target, {})
+        target_data = self.map_ref.world.nation_data.setdefault(self.target, {})
         events_list = target_data.setdefault("scripted_events", [])
         if self.event_idx is not None:
             events_list[self.event_idx] = new_event
@@ -1037,7 +1037,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
     def __init__(self, map_ref):
         super().__init__(map_ref, "Scripted Events Editor")
         self.map_ref = map_ref
-        self.countries = sorted(queries.get_living_nations(map_ref.map_data))
+        self.countries = sorted(queries.get_living_nations(map_ref.world.map_data))
         self.target = None
         self.selected_event = None
 
@@ -1055,7 +1055,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
     def _events(self):
         if not self.target:
             return []
-        return self.map_ref.nation_data.get(self.target, {}).setdefault("scripted_events", [])
+        return self.map_ref.world.nation_data.get(self.target, {}).setdefault("scripted_events", [])
 
     # -- summaries ------------------------------------------------------ #
 
@@ -1251,13 +1251,10 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
 
 def open_scripted_events_editor(map_screen):
-    active_countries = queries.get_living_nations(map_screen.map_data)
+    active_countries = queries.get_living_nations(map_screen.world.map_data)
     if not active_countries:
         map_screen.show_feedback("No active countries on map!")
         return
-
-    if not hasattr(map_screen, 'script_variables'):
-        map_screen.script_variables = []
 
     _run(Scripted_Events_Editor_Screen(map_screen))
     map_screen.hovered_province = None

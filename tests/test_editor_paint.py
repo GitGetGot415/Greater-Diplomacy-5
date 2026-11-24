@@ -14,7 +14,8 @@ from screens.game import map_buttons
 from tests import app_harness
 from ui.panels import diplomatic_popups
 from screens.game import map_input
-def sample_editor():
+from tests.stub_map_screen import map_double
+def sample_editor_values():
     provinces = [
         {"id": 1, "owner": "A", "cores": ["A", "B"], "neighbors": [2, 4, 99]},
         {"id": 2, "owner": "A", "cores": ["B", "A"], "neighbors": [1, 3, 5]},
@@ -26,7 +27,7 @@ def sample_editor():
     ]
     for province in provinces:
         province.update(map_color=[province["id"], 0, 0], buildings=[], units=[], resources={})
-    return SimpleNamespace(
+    return dict(
         is_editor=True, editor_mode="NATION", editor_selection_tool="PAINT", brush_nation="C",
         id_to_province={p["id"]: p for p in provinces},
         map_data={str(tuple(p["map_color"])): p for p in provinces},
@@ -37,6 +38,10 @@ def sample_editor():
         presentation_enabled=True, editor_history=[], editor_redo_history=[],
         _map_surface_cache=None,
     )
+
+
+def sample_editor():
+    return map_double(**sample_editor_values())
 
 
 class EditorPaintTests(unittest.TestCase):
@@ -145,9 +150,8 @@ class EditorPaintInputTests(unittest.TestCase):
         cls.game = app_harness.boot_map()
 
     def setUp(self):
-        editor = sample_editor()
-        self.provinces = editor.id_to_province
-        values = vars(editor).copy()
+        values = sample_editor_values()
+        self.provinces = values["id_to_province"]
         values.update(selected_province=None, selection_mode=False, secondary_mode="BLANK",
                       last_hovered_id=None, extreme_hidden_provinces=set(),
                       editor_history=[], editor_redo_history=[],

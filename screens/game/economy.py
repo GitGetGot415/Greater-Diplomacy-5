@@ -168,7 +168,7 @@ class Economy_Screen(Screen):
         self.elements.append(btn_expenses)
         
         # Sliders below the resource rows
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data = self.map_screen.world.nation_data[self.map_screen.session.player_country]
         max_conversion = queries.get_max_fuel_conversion(p_data)
         slider_x = c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2
         conscription = Slider(slider_x, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", queries.get_conscription_rate(p_data), self.set_conscription, click_track=True)
@@ -176,18 +176,18 @@ class Economy_Screen(Screen):
         conversion = Slider(slider_x, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", queries.get_fuel_conversion_rate(p_data, max_conversion=max_conversion), self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_conversion, click_track=True)
         funding = Slider(slider_x, RESEARCH_FUNDING_SLIDER_Y, SLIDER_WIDTH, "Research Funding", queries.get_research_funding_rate(p_data), self.set_research_funding, click_track=True)
         for slider in (conscription, conversion, funding):
-            slider.disabled = self.map_screen.tactical_mode
+            slider.disabled = self.map_screen.session.tactical_mode
             slider.click_guard = self.can_edit_realtime
         self.elements.extend((conscription, conversion, funding))
         self.refresh_economy_preview()
 
     def refresh_economy_preview(self):
         """Cache income and slider captions when economy inputs change."""
-        country = self.map_screen.nation_data[self.map_screen.player_country]
+        country = self.map_screen.world.nation_data[self.map_screen.session.player_country]
         self.econ_cache = queries.get_economy_projections(
-            self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
+            self.map_screen.session.player_country, self.map_screen.world.map_data, self.map_screen.world.nation_data, context=self.map_screen)
         spent = queries.get_research_funding_spent(self.econ_cache[2])
-        days = queries.get_days_per_turn(self.map_screen.scenario_settings)
+        days = queries.get_days_per_turn(self.map_screen.world.scenario_settings)
         bonus = queries.get_funded_research_points(country, spent, days)
         if not spent and queries.get_research_funding_rate(country):
             caption = "No Materials income"
@@ -203,7 +203,7 @@ class Economy_Screen(Screen):
 
     def set_conversion(self, val):
         if not self.map_screen: return
-        country = self.map_screen.nation_data[self.map_screen.player_country]
+        country = self.map_screen.world.nation_data[self.map_screen.session.player_country]
         self.set_slider_rate("mat_to_fuel_slider", val, queries.get_max_fuel_conversion(country))
 
     def set_research_funding(self, val):
@@ -211,10 +211,10 @@ class Economy_Screen(Screen):
 
     def set_slider_rate(self, key, val, maximum=1.0):
         """Store one economy slider through the shared validation and refresh path."""
-        if not self.map_screen or self.map_screen.tactical_mode: return
+        if not self.map_screen or self.map_screen.session.tactical_mode: return
         if not self.can_edit_realtime() or not queries.valid_slider_rate(val): return
         # The slider computes its value in floating point and can land just past a research limit.
-        self.map_screen.nation_data[self.map_screen.player_country][key] = min(val, maximum)
+        self.map_screen.world.nation_data[self.map_screen.session.player_country][key] = min(val, maximum)
         self.refresh_economy_preview()
         self.map_screen.invalidate_map_presentation_cache()
 
@@ -289,10 +289,10 @@ class Economy_Screen(Screen):
         if not self.map_screen: return
 
         # Retrieve all currently owned units and the base unit stat library
-        _, units = queries.get_nation_provinces_and_units(self.map_screen.player_country, self.map_screen.map_data)
+        _, units = queries.get_nation_provinces_and_units(self.map_screen.session.player_country, self.map_screen.world.map_data)
         unit_lib = queries.get_unit_library(self.map_screen)
 
-        individual_rows, grouped_rows = expense_table_rows(units, unit_lib, self.map_screen.nation_data)
+        individual_rows, grouped_rows = expense_table_rows(units, unit_lib, self.map_screen.world.nation_data)
 
         screen_runner._run_pygame_sub_screen(self.map_screen,
                                ExpensesTableScreen(self, individual_rows, grouped_rows))

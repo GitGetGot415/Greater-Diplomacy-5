@@ -80,10 +80,10 @@ def draft_context(context, donor, *, always_copy=False):
     world = world_for(context)
     draft = copy.copy(context)
     # State containers already copy country data. Flat compatibility contexts do not.
-    if draft.nation_data is world.nation_data:
-        draft.nation_data = copy.deepcopy(world.nation_data)
-    draft.map_data = copy.deepcopy(world.map_data)
-    draft.id_to_province = {province["id"]: province for province in draft.map_data.values()}
+    if draft.world.nation_data is world.nation_data:
+        draft.world.nation_data = copy.deepcopy(world.nation_data)
+    draft.world.map_data = copy.deepcopy(world.map_data)
+    draft.world.id_to_province = {province["id"]: province for province in draft.world.map_data.values()}
     release_draft_reservations(draft, donor)
     return draft
 

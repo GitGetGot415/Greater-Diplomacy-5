@@ -8,7 +8,7 @@ import pygame
 
 from data import queries
 import data.constants as c
-from tests.stub_map_screen import bare_orders_screen, fill_state_defaults, map_double
+from tests.stub_map_screen import MapDouble, bare_orders_screen, fill_state_defaults, map_double
 from ui.camera import camera_handler
 from ui import sound_effects
 from ui.rendering import overlay_renderer
@@ -191,7 +191,7 @@ class CombatBubbleClickTests(unittest.TestCase):
         self.unit = {"owner": "A"}
         self.tile["units"] = [self.unit]
         self.position = (200, 200)
-        self.game = fill_state_defaults(SimpleNamespace(
+        self.game = fill_state_defaults(map_double(
             id_to_province={1: self.tile}, viewing_ai_moves=False,
             unit_selection_drag=None, secondary_mode="UNITS",
             player_country="A", map_data={"tile": self.tile},
@@ -337,7 +337,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         selected_unit = {"owner": "A", "type": "Infantry"}
         other_selected_unit = {"owner": "A", "type": "Infantry"}
 
-        class MapStub:
+        class MapStub(MapDouble):
             unit_view_buttons = {}
             invalidate_map_presentation_cache = lambda self: None
             def __init__(self):
@@ -401,7 +401,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         first["units"] = [unit_a]
         second["units"] = [unit_b]
 
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "selected_unit_records": lambda self: [(unit_a, first), (unit_b, second)],
         })())
         screen = bare_orders_screen()
@@ -421,7 +421,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         second = {"unit_id": "second", "owner": "A", "type": "Infantry"}
         origin["units"] = [first, second]
 
-        class MapStub:
+        class MapStub(MapDouble):
             unit_view_buttons = {}
             invalidate_map_presentation_cache = lambda self: None
             player_country = "A"
@@ -476,7 +476,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         first["units"] = [unit_a]
         second["units"] = [unit_b]
 
-        class MapStub:
+        class MapStub(MapDouble):
             unit_view_buttons = {}
             invalidate_map_presentation_cache = lambda self: None
             player_country = "A"
@@ -526,7 +526,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         focused["units"] = [focused_unit]
         remote["units"] = [remote_unit]
 
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "player_country": "A",
             "tactical_mode": False,
             "show_feedback": lambda self, _message: None,
@@ -553,7 +553,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         origin["units"] = [first]
         remote["units"] = [second]
         feedback = []
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "player_country": "A",
             "tactical_mode": False,
             "nation_data": {"A": {"materials": 1000, "manpower": 1000,
@@ -702,7 +702,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
 class MapOrderGestureTests(unittest.TestCase):
     def test_province_selection_sound_requires_a_visible_valid_selection(self):
         tile = {"id": 1, "owner": "A", "center": (10, 10)}
-        game = SimpleNamespace(viewing_ai_moves=False, player_country="A",
+        game = map_double(viewing_ai_moves=False, player_country="A",
             extreme_hidden_provinces=set(), camera=None, total_ui_h=0,
             nation_data={}, secondary_mode="BLANK")
         with (patch.object(map_input, "map_ui_bar_at_position", return_value=False),
@@ -721,7 +721,7 @@ class MapOrderGestureTests(unittest.TestCase):
             sound.assert_not_called()
 
     def test_orders_move_release_on_a_map_bar_does_not_target_a_tile(self):
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "top_bar_rect": pygame.Rect(0, 0, 800, 60),
             "bot_bar_rect": pygame.Rect(0, 540, 800, 60),
             "selection_mode": False,
@@ -760,7 +760,7 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.bombarding_unit_province = origin
         screen.exit_screen = Mock()
         screen.refresh_ui = lambda: None
-        screen.map_screen = fill_state_defaults(type("MapStub", (), {
+        screen.map_screen = fill_state_defaults(type("MapStub", (MapDouble,), {
             "player_country": "A",
             "tactical_mode": False,
             "unit_selection_drag": None,
@@ -788,7 +788,7 @@ class MapOrderGestureTests(unittest.TestCase):
     def test_unit_hover_prefers_the_topmost_visible_stack(self):
         lower = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
         upper = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
-        map_stub = fill_state_defaults(type("MapStub", (), {"unit_hover_hitboxes": [lower, upper]})())
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {"unit_hover_hitboxes": [lower, upper]})())
 
         self.assertIs(map_input._unit_stack_at(map_stub, (20, 20)), upper)
         self.assertIsNone(map_input._unit_stack_at(map_stub, (100, 100)))
@@ -797,7 +797,7 @@ class MapOrderGestureTests(unittest.TestCase):
         unit = {"owner": "A", "type": "Infantry"}
         origin = province(1, [])
         origin["units"] = [unit]
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "unit_hover_hitboxes": [{
                 "rect": pygame.Rect(10, 10, 20, 20),
                 "province": origin,
@@ -814,7 +814,7 @@ class MapOrderGestureTests(unittest.TestCase):
         unit = {"owner": "A", "type": "Infantry"}
         destination = province(2, [])
         calls = []
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
@@ -838,7 +838,7 @@ class MapOrderGestureTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry"}
         selected, opened = [], []
         origin = province(1, [])
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [
@@ -896,7 +896,7 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertEqual(opened, [(origin, [unit])])
 
     def test_right_press_cancels_an_unfinished_left_drag_rectangle(self):
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
             "unit_stack_hitboxes": [],
@@ -912,7 +912,7 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertTrue(map_stub._ignore_right_until_release)
 
     def test_middle_press_cancels_a_left_drag_without_selecting_on_release(self):
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
             "_ignore_left_until_release": False,
         })())
@@ -938,7 +938,7 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.exit_screen = Mock()
         screen.return_to_province_menu = False
         screen.entered_from_combat_bubble = True
-        screen.map_screen = fill_state_defaults(type("MapStub", (), {
+        screen.map_screen = fill_state_defaults(type("MapStub", (MapDouble,), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
         })())
@@ -964,7 +964,7 @@ class MapOrderGestureTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry"}
         selected = []
         origin = province(1, [])
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [
                 {"rect": pygame.Rect(20, 20, 20, 20), "province": origin, "units": [first]},
@@ -1003,7 +1003,7 @@ class MapOrderGestureTests(unittest.TestCase):
         origin = province(1, [])
         origin["units"] = [unit]
         focus = Mock()
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [{
                 "rect": pygame.Rect(10, 10, 20, 20),
@@ -1080,7 +1080,7 @@ class MapViewDefaultTests(unittest.TestCase):
     def test_confirming_a_country_applies_the_play_view_defaults(self):
         applied = []
         focused = []
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "pending_selection": "A",
             "active_players": [],
             "tactical_mode": False,
@@ -1106,7 +1106,7 @@ class MapViewDefaultTests(unittest.TestCase):
     def test_confirming_a_tactical_unit_focuses_its_tile_instead_of_its_country(self):
         unit = {"type": "Fixture", "owner": "A", "_is_tactical_ghost": True}
         tile = {"center": (700, 300), "units": [unit]}
-        map_stub = SimpleNamespace(pending_selection="A", pending_unit=unit, selected_province=tile,
+        map_stub = map_double(pending_selection="A", pending_unit=unit, selected_province=tile,
                                    active_players=[], num_players=1, tactical_mode=True,
                                    set_play_view_defaults=Mock(), focus_camera_on_position=Mock(),
                                    focus_camera_on_country=Mock(), show_feedback=Mock(), refresh_map_layers=Mock())
@@ -1123,7 +1123,7 @@ class MapViewDefaultTests(unittest.TestCase):
 
     def test_starting_spectator_applies_the_play_view_defaults(self):
         applied = []
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "active_players": [],
             "selection_mode": True,
             "pending_selection": None,
@@ -1181,7 +1181,7 @@ class MapViewDefaultTests(unittest.TestCase):
             camera, (2500, 1500), c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
             120, 2.1, animate=True)
         expected_target = pygame.Vector2(camera.target_pos)
-        map_stub = fill_state_defaults(type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (MapDouble,), {
             "loop_map": False,
             "map_w": 5000,
             "map_h": 5000,

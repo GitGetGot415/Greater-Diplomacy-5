@@ -15,7 +15,7 @@ from data import constants as c, queries
 from data.queries import relations
 from map_logic import politics
 from map_logic.ai import ai_movement, ai_unit_eval, ai_tech_eval
-from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as messages
+from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as messages, faction_records
 from ui.information import ui_info_popup
 from ui.rendering import refresh_map
 from screens.game import map_input
@@ -303,17 +303,19 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.screen.id_to_province[1]["cores"].append("B")
         self.refresh(refresh_map.refresh_cores_map)
         self.assertIsNot(old, self.screen.cores_map)
-        self.screen.nation_data["A"].update(faction="Pact", is_faction_leader=True)
-        self.screen.nation_data["B"].update(faction="Pact", is_faction_leader=False)
+        nation_data = self.screen.world.nation_data
+        queries.set_country_faction(nation_data, "A", "Pact")
+        queries.set_country_faction(nation_data, "B", "Pact")
+        queries.set_faction_leadership(nation_data, "A", True)
         self.refresh(refresh_map.refresh_factions_map)
         old = self.screen.factions_map
-        self.screen.nation_data["A"]["is_faction_leader"] = False
-        self.screen.nation_data["B"]["is_faction_leader"] = True
+        queries.set_faction_leadership(nation_data, "A", False)
+        queries.set_faction_leadership(nation_data, "B", True)
         self.refresh(refresh_map.refresh_factions_map)
         self.assertIsNot(old, self.screen.factions_map)
         self.refresh(refresh_map.refresh_faction_territories_map)
         old = self.screen.faction_territories_map
-        self.screen.nation_data["FACTION_WAR_MAPS"] = {"Pact": {"1": "B", "2": "A"}}
+        faction_records.set_pre_war_map(nation_data, "Pact", {"1": "B", "2": "A"})
         self.refresh(refresh_map.refresh_faction_territories_map)
         self.assertIsNot(old, self.screen.faction_territories_map)
 

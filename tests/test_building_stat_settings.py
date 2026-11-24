@@ -15,6 +15,7 @@ from data.runtime_rules import RuntimeRules
 from data.state_access import BackendState
 from tests import app_harness
 from tests.air_fixtures import world
+from tests.stub_map_screen import mock_map
 
 
 def building_library():
@@ -358,9 +359,9 @@ class BuildingStatEditorTests(unittest.TestCase):
 
     def test_map_editor_edits_only_the_map_defaults(self):
         from screens.editors.unit_stats_editor import MapUnitBuildingStatsScreen
-        map_screen = mock.Mock()
-        map_screen.map_data = {}
-        map_screen.scenario_settings = {"building_stat_overrides": PLAYER_STATS}
+        map_screen = mock_map()
+        map_screen.world.map_data = {}
+        map_screen.world.scenario_settings = {"building_stat_overrides": PLAYER_STATS}
         with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=map_screen):
             screen = MapUnitBuildingStatsScreen(map_screen)
         self.assertEqual([key for key, _label in screen.CATEGORIES], list(queries.EDITOR_CATEGORY_SETTINGS))
@@ -370,23 +371,23 @@ class BuildingStatEditorTests(unittest.TestCase):
         self.fields(screen, "Fixture Factory")["cost_materials_per_level"].text = "150"
         self.fields(screen, "Fixture Fort")["cost_materials"].text = "700"
         # Back leaves the map without a defaults block.
-        self.assertNotIn("map_defaults", map_screen.scenario_settings)
+        self.assertNotIn("map_defaults", map_screen.world.scenario_settings)
         with mock.patch("screens.editors.unit_stats_editor.rebuild") as rebuild, \
                 mock.patch.object(queries, "save_scenario_settings") as save:
             screen.save_all()
         save.assert_not_called()
         rebuild.assert_called_once_with(map_screen)
-        self.assertEqual(map_screen.scenario_settings["building_stat_overrides"], PLAYER_STATS)
-        self.assertEqual(map_screen.scenario_settings["map_defaults"]["building_stat_overrides"],
+        self.assertEqual(map_screen.world.scenario_settings["building_stat_overrides"], PLAYER_STATS)
+        self.assertEqual(map_screen.world.scenario_settings["map_defaults"]["building_stat_overrides"],
                          {"Fixture Factory": {"cost_materials_per_level": 150},
                           "Fixture Fort": {"cost_materials": 700}})
-        self.assertNotIn("use_default_buildings", map_screen.scenario_settings["map_defaults"])
+        self.assertNotIn("use_default_buildings", map_screen.world.scenario_settings["map_defaults"])
         with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=map_screen):
             screen = MapUnitBuildingStatsScreen(map_screen)
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(True)), \
                 mock.patch("screens.editors.unit_stats_editor.rebuild"):
             screen.reset_to_defaults()
-        self.assertEqual(map_screen.scenario_settings["map_defaults"]["building_stat_overrides"], {})
+        self.assertEqual(map_screen.world.scenario_settings["map_defaults"]["building_stat_overrides"], {})
 
 
 if __name__ == "__main__":

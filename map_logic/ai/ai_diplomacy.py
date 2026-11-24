@@ -1267,7 +1267,7 @@ def _run_basic_proactive_ai(context):
         # upkeep above still applies to every nation -- this used to `return`
         # from inside the loop, which skipped that upkeep for every nation
         # after the first and left the loading bar stuck below its total.
-        if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, context.scenario_settings):
+        if queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, context.world.scenario_settings):
             session_state.proactive_tasks_completed += 1
             continue
 

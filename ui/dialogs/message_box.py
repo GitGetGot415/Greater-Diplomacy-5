@@ -374,7 +374,7 @@ class _NavigationIntroPopup:
 
     def _prepare_categories(self, source_topic_index):
         """Filter cached content when Help opens or the map's play mode changes."""
-        self._tactical_mode = self.map_screen.tactical_mode
+        self._tactical_mode = self.map_screen.session.tactical_mode
         self.dont_show_again = not settings_schema.read_setting(queries.get_settings(), settings_schema.intro_popup_setting(self._tactical_mode))
         mode = "tactical" if self._tactical_mode else "strategic"
         self.categories = []
@@ -409,7 +409,7 @@ class _NavigationIntroPopup:
         self.select_topic(selected)
 
     def _refresh_mode(self):
-        if self._tactical_mode != self.map_screen.tactical_mode:
+        if self._tactical_mode != self.map_screen.session.tactical_mode:
             source_index = (None if self.topic_index is None
                             else self._source_topic_indices[self.topic_index])
             self._prepare_categories(source_index)

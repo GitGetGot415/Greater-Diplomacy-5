@@ -19,7 +19,7 @@ from unittest.mock import patch
 
 import data.constants as c
 from map_logic.ai import ai_tuning
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_movement
 
 
@@ -35,7 +35,7 @@ def province(pid, units=(), owner="Avaria", neighbors=(), industry=False):
             "terrain": "plains", "is_coastal": False}
 
 
-class Screen:
+class Screen(MapDouble):
     def __init__(self, provs, at_war=("Borland",)):
         self.map_data = {str(p["id"]): p for p in provs}
         self.id_to_province = {p["id"]: p for p in provs}

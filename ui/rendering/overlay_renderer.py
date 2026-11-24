@@ -129,8 +129,8 @@ class _UnitRenderIndex:
         if not hasattr(cam, "pos"):
             candidates = []
             for province in self.occupied_provinces:
-                offsets = ([0, -map_screen.map_w, map_screen.map_w]
-                           if map_screen.loop_map and map_screen.map_w else [0])
+                offsets = ([0, -map_screen.world.map_w, map_screen.world.map_w]
+                           if map_screen.world.loop_map and map_screen.world.map_w else [0])
                 positions = [queries.world_to_screen(
                     province["center"], map_screen, offset)
                     for offset in offsets]
@@ -152,11 +152,11 @@ class _UnitRenderIndex:
             & (screen_y > -CULL_MARGIN)
             & (screen_y < surface.get_height() + CULL_MARGIN)
         )
-        if map_screen.loop_map and map_screen.map_w:
+        if map_screen.world.loop_map and map_screen.world.map_w:
             # The overlay later draws the copies at x +/- map_w. Include a
             # province when any copy is on screen, especially on narrow looped
             # maps where the viewport can straddle the seam.
-            wrapped_screen_x = map_screen.map_w * cam.zoom
+            wrapped_screen_x = map_screen.world.map_w * cam.zoom
             for offset_x in (-wrapped_screen_x, wrapped_screen_x):
                 copy_x = screen_x + offset_x
                 visible |= (
@@ -179,20 +179,20 @@ def _unit_render_index(map_screen):
     revision = map_screen._presentation_cache_revision
     # Compatibility for render tools and test doubles predating view filters.
     view_filter = map_screen.unit_view_filter
-    player_country = map_screen.player_country
-    viewing_ai_moves = map_screen.viewing_ai_moves
+    player_country = map_screen.session.player_country
+    viewing_ai_moves = map_screen.session.viewing_ai_moves
     # A real Map owns explicit invalidation boundaries.  Small test/editor
     # doubles do not, so rebuild for them and reflect direct list mutations
     # rather than retaining stale unit references.
     if revision is None:
-        return _UnitRenderIndex(map_screen.map_data, view_filter, player_country, viewing_ai_moves)
+        return _UnitRenderIndex(map_screen.world.map_data, view_filter, player_country, viewing_ai_moves)
 
     cached = map_screen._unit_render_index_cache
     cache_key = (revision, view_filter, player_country, viewing_ai_moves)
     if cached is not None and cached[0] == cache_key:
         return cached[1]
 
-    index = _UnitRenderIndex(map_screen.map_data, view_filter, player_country, viewing_ai_moves)
+    index = _UnitRenderIndex(map_screen.world.map_data, view_filter, player_country, viewing_ai_moves)
     map_screen._unit_render_index_cache = (cache_key, index)
     return index
 
@@ -323,10 +323,10 @@ def combat_outlook_color(sides, nation_data, friendly_nations,
 
 
 def _combat_friendly_nations(map_screen):
-    player = map_screen.player_country
-    if player in (None, "", "Spectator", "Editor") or map_screen.is_editor:
+    player = map_screen.session.player_country
+    if player in (None, "", "Spectator", "Editor") or map_screen.session.is_editor:
         return set()
-    return queries.get_all_friendly_nations(player, map_screen.nation_data)
+    return queries.get_all_friendly_nations(player, map_screen.world.nation_data)
 
 
 def _combat_is_visible(map_screen, province_ids, *, own_unit=False):
@@ -396,7 +396,7 @@ def combat_bubble_records(map_screen):
     revision = map_screen._presentation_cache_revision
     cache_key = None
     if revision is not None:
-        cache_key = (revision, map_screen.player_country,
+        cache_key = (revision, map_screen.session.player_country,
                      id(map_screen.visible_provinces),
                      id(map_screen.partial_visible_provinces),
                      c.BATTLE_DISPLAY_MODE)
@@ -404,7 +404,7 @@ def combat_bubble_records(map_screen):
         if cached is not None and cached[0] == cache_key:
             return _combat_records_for_unit_view(map_screen, cached[1])
 
-    player = map_screen.player_country
+    player = map_screen.session.player_country
     friendly = _combat_friendly_nations(map_screen)
     records = []
 
@@ -412,22 +412,22 @@ def combat_bubble_records(map_screen):
         if prediction["type"] == "meeting":
             continue
 
-        province = map_screen.id_to_province[prediction["loc"]]
+        province = map_screen.world.id_to_province[prediction["loc"]]
         if not _combat_is_visible(map_screen, [province["id"]]):
             continue
         sides = [[unit for units in prediction["forces"].values() for unit in units]]
         current_unit_ids = {id(unit) for unit in province.get("units", [])}
         battle_unit_ids = {id(unit) for side in sides for unit in side}
         actual_battle = queries.is_province_in_active_combat(
-            province, map_screen.nation_data)
+            province, map_screen.world.nation_data)
         with queries.combat_supply(queries.presentation_supply(map_screen)):
-            combat_estimate = _simulate_combat(sides, map_screen.nation_data, province=province)
+            combat_estimate = _simulate_combat(sides, map_screen.world.nation_data, province=province)
         information_available = _combat_information_available(
             map_screen, province["id"])
         winner_nation = combat_estimate["winner_nation"]
         category = (
             queries.get_combat_location_category(
-                province, player, map_screen.nation_data, sides[0])
+                province, player, map_screen.world.nation_data, sides[0])
             if information_available else queries.COMBAT_LOCATION_GENERIC)
         records.append({
             "kind": "province",
@@ -436,7 +436,7 @@ def combat_bubble_records(map_screen):
             "category": category,
             "winner_nation": winner_nation,
             "color": combat_outlook_color(
-                sides, map_screen.nation_data, friendly, player,
+                sides, map_screen.world.nation_data, friendly, player,
                 province=province,
                 information_available=information_available,
                 capture_owner=winner_nation),
@@ -562,7 +562,7 @@ def _combat_bubble_instances(map_screen, record):
         return
     bubble = map_utils.apply_tilt(bubble, map_screen.camera.tilt_factor,
                                   c.APPLY_TILT_TO_OVERLAYS)
-    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
     for offset in offsets:
         sx, sy = queries.world_to_screen(record["center"], map_screen, offset)
         yield bubble, bubble.get_rect(center=(int(sx), int(sy)))
@@ -598,7 +598,7 @@ def combat_bubble_at_screen_pos(map_screen, screen_pos):
     zoom and tilt transforms used for drawing.  In particular, transparent
     corners of the source PNG are not clickable.
     """
-    if (map_screen.viewing_ai_moves
+    if (map_screen.session.viewing_ai_moves
             or map_screen.secondary_mode != "UNITS"
             or not combat_bubbles_are_visible(map_screen)):
         return None
@@ -633,9 +633,9 @@ def status_icon(map_screen, name):
 
 def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0, is_justifying=False):
     """Draws a highlighted ellipse over a province for diplomatic or contextual screens."""
-    prov = map_screen.id_to_province.get(pid)
+    prov = map_screen.world.id_to_province.get(pid)
     if not prov: return
-    for offset in [0, -map_screen.map_w, map_screen.map_w]:
+    for offset in [0, -map_screen.world.map_w, map_screen.world.map_w]:
         sx, sy = queries.world_to_screen(prov["center"], map_screen, offset)
         if -100 < sx < c.SCREEN_WIDTH + 100:
             radius_x = max(2, int(base_radius * map_screen.camera.zoom))
@@ -661,7 +661,7 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
     reads the direction on its own. The sprite depends on the gun's reach, so a
     long-range shot is distinguishable from a short one at a glance.
     """
-    target_prov = map_screen.id_to_province.get(target_id)
+    target_prov = map_screen.world.id_to_province.get(target_id)
     if not target_prov: return
 
     # --- FOG OF WAR VISIBILITY CHECK ---
@@ -679,9 +679,9 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
     p2 = list(target_prov["center"])
 
     # Account for map wrap to get the shortest continuous distance
-    p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
+    p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.world.map_w, map_screen.world.loop_map)
 
-    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
 
     for offset in offsets:
         start_pos = queries.world_to_screen(p1, map_screen, offset)
@@ -722,21 +722,21 @@ def _midpoint_meetings(map_screen):
     if not strategic_detail_markers_are_visible(map_screen):
         return []
 
-    player = map_screen.player_country
-    full_board = (map_screen.viewing_ai_moves
+    player = map_screen.session.player_country
+    full_board = (map_screen.session.viewing_ai_moves
                   or player in ("Spectator", "Editor")
-                  or map_screen.is_editor)
+                  or map_screen.session.is_editor)
     visible_to = None if full_board else {player}
-    records = [(unit, province) for province in map_screen.map_data.values()
+    records = [(unit, province) for province in map_screen.world.map_data.values()
                for unit in province.get("units", [])
                if visible_to is None or unit.get("owner") in visible_to]
     with queries.combat_supply(queries.presentation_supply(map_screen)):
         pinned = queries.find_movement_pins(map_screen, records)
     meetings = []
     for pair in combat_rules.find_meeting_pairs(
-            map_screen.map_data, map_screen.nation_data, visible_to):
+            map_screen.world.map_data, map_screen.world.nation_data, visible_to):
         prov_a, prov_b, side_a, side_b = combat_rules.meeting_sides(
-            map_screen.id_to_province, pair, visible_to)
+            map_screen.world.id_to_province, pair, visible_to)
         side_a = [unit for unit in side_a if id(unit) not in pinned]
         side_b = [unit for unit in side_b if id(unit) not in pinned]
         if side_a and side_b:
@@ -769,7 +769,7 @@ def midpoint_bounce_outcomes(map_screen):
             continue
         with queries.combat_supply(queries.presentation_supply(map_screen)):
             estimate = estimated_combat_outcome(
-                [side_a, side_b], map_screen.nation_data,
+                [side_a, side_b], map_screen.world.nation_data,
                 grounded_sides={index for index, province in enumerate((prov_a, prov_b))
                                 if not queries.is_water_province(province)})
         winner_side = estimate.get("winner_side")
@@ -798,9 +798,9 @@ def draw_midpoint_bounces(map_screen, surface):
     keeps the art aligned with the actual edge even when the map loops
     horizontally.
     """
-    if not map_screen.viewing_ai_moves and not (
-            map_screen.player_country in ("Spectator", "Editor")
-            or map_screen.is_editor):
+    if not map_screen.session.viewing_ai_moves and not (
+            map_screen.session.player_country in ("Spectator", "Editor")
+            or map_screen.session.is_editor):
         return
 
     outcomes = midpoint_bounce_outcomes(map_screen)
@@ -815,10 +815,10 @@ def draw_midpoint_bounces(map_screen, surface):
         partial = map_screen.partial_visible_provinces or set()
         allowed = visible_provinces.union(partial)
 
-    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
     for outcome in outcomes:
-        start_province = map_screen.id_to_province.get(outcome["origin_id"])
-        end_province = map_screen.id_to_province.get(outcome["target_id"])
+        start_province = map_screen.world.id_to_province.get(outcome["origin_id"])
+        end_province = map_screen.world.id_to_province.get(outcome["target_id"])
         if not start_province or not end_province:
             continue
 
@@ -838,7 +838,7 @@ def draw_midpoint_bounces(map_screen, surface):
         p1 = list(start_province["center"])
         p2 = list(end_province["center"])
         p2[0] = queries.get_wrapped_x(
-            p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
+            p1[0], p2[0], map_screen.world.map_w, map_screen.world.loop_map)
 
         for offset in offsets:
             start_pos = queries.world_to_screen(p1, map_screen, offset)
@@ -870,7 +870,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
     # Build an ordered list of all nodes in the path
     nodes = [start_province]
     for step_id in path_ids:
-        target_node = map_screen.id_to_province.get(step_id)
+        target_node = map_screen.world.id_to_province.get(step_id)
         if target_node:
             nodes.append(target_node)
 
@@ -890,7 +890,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
     circle_img = symbol_loader.get_symbol("Circle", cam.zoom * 1, color)
     triangle_img = symbol_loader.get_symbol("Triangle", cam.zoom * 1, color)
 
-    offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+    offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
 
     # PASS 1: Draw all lines FIRST so they render underneath the shapes
     for i in range(len(nodes) - 1):
@@ -905,7 +905,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
         p2 = list(n2["center"])
 
         # Account for map wrap to get the shortest continuous distance
-        p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
+        p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.world.map_w, map_screen.world.loop_map)
 
         for offset in offsets:
             # 1. Get the actual tilted screen coordinates for final placement
@@ -965,7 +965,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
         is_last = (i == len(nodes) - 1)
 
         # Apply the exact same map wrap logic to the endpoints
-        p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.map_w, map_screen.loop_map)
+        p2[0] = queries.get_wrapped_x(p1[0], p2[0], map_screen.world.map_w, map_screen.world.loop_map)
 
         for offset in offsets:
             start_pos = queries.world_to_screen(p1, map_screen, offset)
@@ -1027,14 +1027,14 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     organized_unit_ids = {
         unit_id
         for army in queries.get_armies(
-            map_screen.player_country, map_screen.nation_data, map_screen.map_data)
+            map_screen.session.player_country, map_screen.world.nation_data, map_screen.world.map_data)
         for unit_id in army.get("unit_ids", [])
         if isinstance(unit_id, str)
     }
     organized_unit_object_ids = {
         id(unit)
         for unit, _province in unit_index.records
-        if (unit.get("owner") == map_screen.player_country
+        if (unit.get("owner") == map_screen.session.player_country
             and unit.get("unit_id") in organized_unit_ids)
     }
     area_groups = compact_area_unit_groups(
@@ -1055,7 +1055,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
     else:
         render_candidates = (
             (province, None, None)
-            for province in map_screen.map_data.values()
+            for province in map_screen.world.map_data.values()
         )
 
     for province, culled_sx, culled_sy in render_candidates:
@@ -1070,7 +1070,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                 is_vis = False
                 is_partial = True
             else:
-                fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
+                fog_strength = map_screen.world.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
                 if fog_strength == "lite":
                     is_vis = False
                     is_partial = True
@@ -1081,7 +1081,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
 
         # Wrapping logic for screen coordinates.  For the common non-looping
         # unit view, the vectorized cull already calculated the screen centre.
-        offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+        offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
         
         for offset in offsets:
             if culled_sx is not None and not offset:
@@ -1110,8 +1110,8 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     # province visibility and per-submarine visibility are
                     # separate layers.
                     visible_units = [unit for unit in queries.filter_visible_units(
-                        unit_index.view_units_by_province.get(id(province), ()), map_screen.player_country,
-                        province, map_screen.nation_data)
+                        unit_index.view_units_by_province.get(id(province), ()), map_screen.session.player_country,
+                        province, map_screen.world.nation_data)
                         if id(unit) not in combat_unit_ids]
                     display_units = [unit for unit in visible_units
                                      if id(unit) not in compact_unit_object_ids]
@@ -1436,7 +1436,7 @@ def _space_compact_groups(groups):
 
 def uses_compact_army_icons(map_screen):
     """Whether the current strategic zoom replaces army stacks with icons."""
-    return (not map_screen.tactical_mode
+    return (not map_screen.session.tactical_mode
             and map_screen.camera.zoom <= ARMY_GROUP_ICON_MAX_ZOOM)
 
 
@@ -1745,8 +1745,8 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size, count,
 def _army_average_center(records, map_screen):
     """Return the average world position of an army's live unit records."""
     return queries.get_average_province_center(
-        [province for _unit, province in records], map_screen.loop_map,
-        map_screen.map_w)
+        [province for _unit, province in records], map_screen.world.loop_map,
+        map_screen.world.map_w)
 
 
 def compact_army_groups(map_screen, combat_unit_ids):
@@ -1760,8 +1760,8 @@ def compact_army_groups(map_screen, combat_unit_ids):
     if not uses_compact_army_icons(map_screen):
         return []
 
-    player_country = map_screen.player_country
-    armies = queries.get_armies(player_country, map_screen.nation_data, map_screen.map_data)
+    player_country = map_screen.session.player_country
+    armies = queries.get_armies(player_country, map_screen.world.nation_data, map_screen.world.map_data)
     if not armies:
         return []
     unit_index = _unit_render_index(map_screen)
@@ -1823,11 +1823,11 @@ def _province_is_fully_visible(map_screen, province):
 def _area_group_distance(first, second, map_screen):
     """Return map distance while taking a looping map's seam into account."""
     delta_x = second[0] - first[0]
-    if map_screen.loop_map:
-        if delta_x > map_screen.map_w / 2:
-            delta_x -= map_screen.map_w
-        elif delta_x < -map_screen.map_w / 2:
-            delta_x += map_screen.map_w
+    if map_screen.world.loop_map:
+        if delta_x > map_screen.world.map_w / 2:
+            delta_x -= map_screen.world.map_w
+        elif delta_x < -map_screen.world.map_w / 2:
+            delta_x += map_screen.world.map_w
     return math.hypot(delta_x, second[1] - first[1])
 
 
@@ -1868,7 +1868,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
     if not uses_compact_army_icons(map_screen):
         return []
 
-    player_country = map_screen.player_country
+    player_country = map_screen.session.player_country
     is_selected = map_screen.is_unit_selected
     scaled_w, scaled_h, _display_scale = unit_box_size(map_screen)
     box_size = (scaled_w, scaled_h)
@@ -1881,7 +1881,7 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
             continue
         for unit in queries.filter_visible_units(
                 unit_index.view_units_by_province.get(id(province), ()), player_country, province,
-                map_screen.nation_data):
+                map_screen.world.nation_data):
             if id(unit) in combat_unit_ids or id(unit) in organized_unit_object_ids:
                 continue
             owner = unit.get("owner")
@@ -1925,14 +1925,14 @@ def compact_area_unit_groups(map_screen, combat_unit_ids, organized_unit_object_
 def _interpolate_army_position(start, target, progress, map_screen):
     """Move between two world positions, taking the short path across a seam."""
     delta_x = target[0] - start[0]
-    if map_screen.loop_map:
-        if delta_x > map_screen.map_w / 2:
-            delta_x -= map_screen.map_w
-        elif delta_x < -map_screen.map_w / 2:
-            delta_x += map_screen.map_w
+    if map_screen.world.loop_map:
+        if delta_x > map_screen.world.map_w / 2:
+            delta_x -= map_screen.world.map_w
+        elif delta_x < -map_screen.world.map_w / 2:
+            delta_x += map_screen.world.map_w
     x = start[0] + (delta_x * progress)
-    if map_screen.loop_map:
-        x %= map_screen.map_w
+    if map_screen.world.loop_map:
+        x %= map_screen.world.map_w
     return x, start[1] + ((target[1] - start[1]) * progress)
 
 
@@ -1951,7 +1951,7 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     if states is None:
         states = {}
         map_screen.army_group_transition_states = states
-    viewer = (map_screen.player_country, map_screen.viewing_ai_moves)
+    viewer = (map_screen.session.player_country, map_screen.session.viewing_ai_moves)
     if getattr(map_screen, "_army_group_viewer", viewer) != viewer:
         states.clear()
     map_screen._army_group_viewer = viewer
@@ -2117,7 +2117,7 @@ def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner
         pygame.draw.rect(surface, (130, 220, 255), rect.inflate(4, 4),
                          max(2, int(2 * display_scale)), border_radius=3)
 
-    if owner != map_screen.player_country:
+    if owner != map_screen.session.player_country:
         return
     map_screen.unit_stack_hitboxes.append({"rect": pygame.Rect(rect),
                                             "province": province,
@@ -2143,8 +2143,8 @@ def _publish_unit_stack_hitbox(map_screen, surface, rect, province, units, owner
 def draw_compact_army_groups(map_screen, surface, groups):
     """Draw strategic army markers at the average positions of their units."""
     _scaled_w, _scaled_h, display_scale = unit_box_size(map_screen)
-    offsets = ([0, -map_screen.map_w, map_screen.map_w]
-               if map_screen.loop_map else [0])
+    offsets = ([0, -map_screen.world.map_w, map_screen.world.map_w]
+               if map_screen.world.loop_map else [0])
     for group in groups:
         icon = group["icon"]
         alpha = group.get("alpha", 255)
@@ -2163,13 +2163,13 @@ def draw_compact_army_groups(map_screen, surface, groups):
             surface.blit(icon, rect)
             _publish_unit_stack_hitbox(
                 map_screen, surface, rect, group["province"], group["units"],
-                map_screen.player_country, display_scale)
+                map_screen.session.player_country, display_scale)
 
 
 def draw_army_group_transition_units(map_screen, surface, transition_units):
     """Draw individual units travelling between their stacks and army marker."""
-    offsets = ([0, -map_screen.map_w, map_screen.map_w]
-               if map_screen.loop_map else [0])
+    offsets = ([0, -map_screen.world.map_w, map_screen.world.map_w]
+               if map_screen.world.loop_map else [0])
     for record in transition_units:
         for offset in offsets:
             sx, sy = queries.world_to_screen(record["position"], map_screen, offset)
@@ -2202,7 +2202,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         units = [unit for unit in units if id(unit) in allowed]
     if not units_are_visible:
         units = queries.filter_visible_units(
-            units, map_screen.player_country, province, map_screen.nation_data)
+            units, map_screen.session.player_country, province, map_screen.world.nation_data)
     if not units:
         return
 
@@ -2236,11 +2236,11 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     # private information even when their units happen to be visible.
     unit_stacks = []
     for owner, owner_units in units_by_owner.items():
-        if owner == map_screen.player_country:
+        if owner == map_screen.session.player_country:
             unit_stacks.extend((owner, army, army_units)
                                for army, army_units in
                                queries.group_units_by_army(owner_units,
-                                                            map_screen.nation_data))
+                                                            map_screen.world.nation_data))
         else:
             unit_stacks.append((owner, None, owner_units))
 
@@ -2254,11 +2254,11 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         # During tactical play only the player's one division is drawn apart;
         # every other division stays in its normal stack. Before play starts
         # (selection_mode) the unit picker needs the normal stacks unchanged.
-        if map_screen.tactical_mode and not map_screen.selection_mode:
-            if any(unit is map_screen.player_unit for unit in stack_units):
-                split_stacks.append((owner, army, [map_screen.player_unit]))
+        if map_screen.session.tactical_mode and not map_screen.session.selection_mode:
+            if any(unit is map_screen.session.player_unit for unit in stack_units):
+                split_stacks.append((owner, army, [map_screen.session.player_unit]))
                 stack_units = [unit for unit in stack_units
-                               if unit is not map_screen.player_unit]
+                               if unit is not map_screen.session.player_unit]
                 if not stack_units:
                     continue
         for _key, records in _split_display_records(((unit, province) for unit in stack_units),
@@ -2285,8 +2285,8 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
 
     # Sort selected stacks above their unselected neighbours, while keeping a
     # tactical player's one controllable division above everything else.
-    is_tactical = map_screen.tactical_mode
-    player_unit = map_screen.player_unit
+    is_tactical = map_screen.session.tactical_mode
+    player_unit = map_screen.session.player_unit
     
     def get_stack_sort_weight(stack):
         _owner, _army, owner_units = stack
@@ -2311,7 +2311,7 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
         owner_color = map_screen.nation_colors.get(owner, (200, 200, 200))
 
         # --- TACTICAL MODE INVERSION ---
-        is_player_tactical = map_screen.tactical_mode and map_screen.player_unit is best_unit
+        is_player_tactical = map_screen.session.tactical_mode and map_screen.session.player_unit is best_unit
 
         final_surf = unit_box(unit_symbol_name(best_unit), owner_color, unit_count,
                               is_player_tactical, (scaled_w, scaled_h), owner=owner)
@@ -2321,16 +2321,16 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
             local_rect = final_surf.get_rect()
             icon_surface.blit(final_surf, local_rect)
             indicator_left = draw_army_unit_bands(
-                icon_surface, owner_units, owner, map_screen.player_country,
-                map_screen.nation_data, local_rect, scaled_w, army=army)
+                icon_surface, owner_units, owner, map_screen.session.player_country,
+                map_screen.world.nation_data, local_rect, scaled_w, army=army)
             draw_army_emblem(icon_surface, army, local_rect, indicator_left, scaled_h)
             icon_surface.set_alpha(alpha)
             surface.blit(icon_surface, rect)
         else:
             surface.blit(final_surf, rect)
             indicator_left = draw_army_unit_bands(
-                surface, owner_units, owner, map_screen.player_country,
-                map_screen.nation_data, rect, scaled_w, army=army)
+                surface, owner_units, owner, map_screen.session.player_country,
+                map_screen.world.nation_data, rect, scaled_w, army=army)
             draw_army_emblem(surface, army, rect, indicator_left, scaled_h)
 
         if not compact:
@@ -2360,5 +2360,5 @@ def draw_split_movement_path(surface, map_screen, start_prov, path, speed, base_
         
     if queued_path:
         bright_color = (min(255, base_color[0] + 150), min(255, base_color[1] + 150), min(255, base_color[2] + 150))
-        q_start = map_screen.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
+        q_start = map_screen.world.id_to_province.get(immediate_path[-1]) if immediate_path else start_prov
         draw_movement_path(surface, map_screen, q_start, queued_path, color=bright_color, alpha=120, force_visible=force_visible)

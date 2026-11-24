@@ -54,10 +54,10 @@ def _preview_session():
 
 
 def _set_armies(game_map, count):
-    queries.ensure_unit_ids(game_map.map_data)
-    unit_ids = [unit["unit_id"] for province in game_map.map_data.values()
+    queries.ensure_unit_ids(game_map.world.map_data)
+    unit_ids = [unit["unit_id"] for province in game_map.world.map_data.values()
                 for unit in province.get("units", [])
-                if unit.get("owner") == game_map.player_country]
+                if unit.get("owner") == game_map.session.player_country]
     armies = []
     emblems = queries.army_symbol_choices()
     for index in range(count):
@@ -71,19 +71,19 @@ def _set_armies(game_map, count):
                        "symbol_color": [80 + (index * 37) % 150,
                                         80 + (index * 67) % 150,
                                         80 + (index * 97) % 150]})
-    game_map.nation_data[game_map.player_country]["armies"] = armies
+    game_map.world.nation_data[game_map.session.player_country]["armies"] = armies
 
 
 def _battle_preview_orders(game_map, player_country):
     """Build a live embedded battle inspector for the layout-only preview."""
     from screens.game.orders import Orders_Screen
 
-    opponent = next(country for country in game_map.nation_data
+    opponent = next(country for country in game_map.world.nation_data
                     if country != player_country
-                    and queries.is_playable(country, game_map.nation_data))
-    game_map.nation_data[player_country]["at_war_with"] = [opponent]
-    game_map.nation_data[opponent]["at_war_with"] = [player_country]
-    province = next(province for province in game_map.map_data.values()
+                    and queries.is_playable(country, game_map.world.nation_data))
+    game_map.world.nation_data[player_country]["at_war_with"] = [opponent]
+    game_map.world.nation_data[opponent]["at_war_with"] = [player_country]
+    province = next(province for province in game_map.world.map_data.values()
                     if not queries.is_water_province(province))
     library = queries.get_unit_library()
     province["units"] = [
@@ -127,14 +127,14 @@ def main():
     # Pick the country with the largest starting force so every preview mode
     # has real stack art and a selected army to display.
     playable_country = max(
-        queries.get_living_nations(game_map.map_data),
-        key=lambda country: sum(1 for province in game_map.map_data.values()
+        queries.get_living_nations(game_map.world.map_data),
+        key=lambda country: sum(1 for province in game_map.world.map_data.values()
                                 for unit in province.get("units", [])
                                 if unit.get("owner") == country))
-    game_map.player_country = playable_country
-    game_map.active_players = [playable_country]
-    game_map.selection_mode = False
-    game_map.is_editor = False
+    game_map.session.player_country = playable_country
+    game_map.session.active_players = [playable_country]
+    game_map.session.selection_mode = False
+    game_map.session.is_editor = False
     game_map.navigation_intro_popup = None
     # The preview never connects to a real-time server, but the live toolbar
     # still binds these callbacks while drawing its real-time state.
@@ -173,15 +173,15 @@ def main():
             standalone_menu.update()
             standalone_menu.draw(surface)
         else:
-            game_map.realtime_multiplayer = mode in (2, 3)
-            game_map.multiplayer_mode = mode in (5, 6)
+            game_map.session.realtime_multiplayer = mode in (2, 3)
+            game_map.session.multiplayer_mode = mode in (5, 6)
             game_map.multiplayer_host_mode = mode == 6
-            game_map.player_country = "Spectator" if mode in (4, 6) else playable_country
-            game_map.active_players = ([playable_country] if mode != 6
+            game_map.session.player_country = "Spectator" if mode in (4, 6) else playable_country
+            game_map.session.active_players = ([playable_country] if mode != 6
                                        else [playable_country, "Germany"])
-            if game_map.realtime_multiplayer:
+            if game_map.session.realtime_multiplayer:
                 game_map.realtime_session = _preview_session()
-                game_map.realtime_session.players["preview"].country_id = game_map.player_country
+                game_map.realtime_session.players["preview"].country_id = game_map.session.player_country
                 game_map.realtime_player_id = "preview"
                 game_map.realtime_connection_error = ""
             army_count = {1: 2, 2: 5, 3: 30, 5: 2}.get(mode, 0)
@@ -189,7 +189,7 @@ def main():
                 _set_armies(game_map, army_count)
             game_map.selected_province = None
             if army_count:
-                first_army = game_map.nation_data[game_map.player_country]["armies"][0]
+                first_army = game_map.world.nation_data[game_map.session.player_country]["armies"][0]
                 game_map.selected_unit_ids = set(first_army["unit_ids"])
             else:
                 game_map.selected_unit_ids = set()

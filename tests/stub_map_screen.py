@@ -11,6 +11,7 @@ import os
 import sys
 from dataclasses import fields
 from types import FunctionType, SimpleNamespace
+from unittest import mock
 
 # Import the game package from the repo root regardless of where tests run from
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,9 +71,60 @@ def fill_state_defaults(target):
     return target
 
 
+WORLD_FIELDS = frozenset(item.name for item in fields(WorldState))
+SESSION_FIELDS = frozenset(item.name for item in fields(SessionState))
+
+
+def state_owner(double, name):
+    """The world or session object that owns `name` on a map double, or None."""
+    if name in WORLD_FIELDS:
+        return double.world
+    if name in SESSION_FIELDS:
+        return double.session
+    return None
+
+
+class MapDouble(StateAccess):
+    """A pygame-free map double that owns world and session state like a live Map.
+
+    Keyword arguments and class attributes named after world or session fields
+    are stored on the double's world or session, where game code reads them.
+    """
+    _state_defaults = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        defaults = dict(cls._state_defaults)
+        for name in [name for name in vars(cls) if name in WORLD_FIELDS or name in SESSION_FIELDS]:
+            defaults[name] = vars(cls)[name]
+            delattr(cls, name)
+        cls._state_defaults = defaults
+
+    def __new__(cls, *args, **kwargs):
+        double = super().__new__(cls)
+        for name, value in cls._state_defaults.items():
+            setattr(state_owner(double, name), name, value)
+        return double
+
+    def __init__(self, **attributes):
+        for name, value in attributes.items():
+            owner = state_owner(self, name)
+            setattr(self if owner is None else owner, name, value)
+
+
 def map_double(**attributes):
-    """Return a SimpleNamespace map double with live Map field defaults."""
-    return fill_state_defaults(SimpleNamespace(**attributes))
+    """Return a map double with live Map field defaults."""
+    return fill_state_defaults(MapDouble(**attributes))
+
+
+def mock_map(**attributes):
+    """A Mock map screen with real world and session state, for screens that call arbitrary map methods."""
+    double = mock.Mock()
+    double.world, double.session = WorldState(), SessionState()
+    for name, value in attributes.items():
+        owner = state_owner(double, name)
+        setattr(double if owner is None else owner, name, value)
+    return double
 
 
 def bare_orders_screen():
@@ -130,7 +182,7 @@ class StubTimeManager:
         return f"Turn {self.total_turns}"
 
 
-class StubMapScreen:
+class StubMapScreen(MapDouble):
     """Minimal map_screen for the diplomacy engine."""
 
     def __init__(self, nations, human_players=("A",)):
@@ -317,7 +369,7 @@ class StubMapScreen:
         """Queues an outgoing proposal exactly as the player's buttons would."""
         from map_logic.diplomacy import diplomacy_processor
         return diplomacy_processor.toggle_diplomacy_action(
-            self.nation_data, sender, target, action, message, parameters=parameters)
+            self, sender, target, action, message, parameters=parameters)
 
     def answer(self, responder, sender, verdict, action, message=""):
         """Queues an answer to an incoming proposal."""

@@ -349,13 +349,15 @@ class TradeTests(VerdictTestCase):
 
     def test_countries_at_war_can_send_a_trade(self):
         from map_logic.diplomacy.action_definitions import availability
-        self.assertTrue(availability(self.nation_data, "Borland", "Avaria", "TRADE").allowed)
+        from tests.stub_map_screen import map_double
+        context = map_double(nation_data=self.nation_data)
+        self.assertTrue(availability(context, "Borland", "Avaria", "TRADE").allowed)
         for a, b in (("Avaria", "Borland"), ("Borland", "Avaria")):
             self.nation_data[a]["at_war_with"] = [b]
         for sender, target in (("Borland", "Avaria"), ("Avaria", "Borland")):
             for phase in ("draft", "send"):
                 with self.subTest(sender=sender, phase=phase):
-                    self.assertTrue(availability(self.nation_data, sender, target, "TRADE", phase=phase).allowed)
+                    self.assertTrue(availability(context, sender, target, "TRADE", phase=phase).allowed)
 
     def test_an_even_swap_is_refused(self):
         """The AI accepts a trade only if it gives literally nothing, which is

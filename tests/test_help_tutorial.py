@@ -13,6 +13,7 @@ import pygame
 import data.constants as c
 from ui.dialogs import message_box
 from ui.dialogs.message_box import _NavigationIntroPopup
+from tests.stub_map_screen import map_double
 
 ROOT = Path(__file__).resolve().parents[1]
 SHIPPED_PATH = str(ROOT / message_box.TUTORIAL_PATH)
@@ -116,7 +117,7 @@ class HelpPopupTests(unittest.TestCase):
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         self.addCleanup(setattr, _NavigationIntroPopup, "last_topic_index",
                         _NavigationIntroPopup.last_topic_index)
-        self.map_stub = SimpleNamespace(navigation_intro_popup=None, tactical_mode=False)
+        self.map_stub = map_double(navigation_intro_popup=None, tactical_mode=False)
         settings = mock.patch.object(message_box.queries, "get_settings", return_value={})
         self.saved_settings = settings.start()
         self.addCleanup(settings.stop)

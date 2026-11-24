@@ -34,10 +34,9 @@ peace decisions. A country sees its own side exactly, sees enemy units on tiles
 it can see, and guesses the rest from public land. See perceived_military.
 """
 
-from data.state_access import world_for, session_for
+from data.state_access import world_for, session_for, viewer_context
 import collections
 import random
-from types import SimpleNamespace
 
 import data.constants as c
 from map_logic.ai import ai_tuning
@@ -52,10 +51,7 @@ def visible_to(map_data, nation_data, id_to_province, viewer):
     None means the viewer sees everything. This builds the same view a
     player's map uses, so the AI sees no more and no less than a player would.
     """
-    view = SimpleNamespace(player_country=viewer, map_data=map_data,
-                           nation_data=nation_data, id_to_province=id_to_province,
-                           tactical_mode=False, player_unit=None)
-    visible, _partial = queries.get_visible_provinces(view)
+    visible, _partial = queries.get_visible_provinces(viewer_context(viewer, map_data, nation_data, id_to_province))
     return visible
 
 

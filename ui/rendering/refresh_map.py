@@ -268,7 +268,7 @@ def _map_surface_inputs(map_screen, get_owner_and_color):
     No rule queries or map sweeps are added to frame rendering.
     """
     inputs = []
-    for color_key, data in map_screen.map_data.items():
+    for color_key, data in map_screen.world.map_data.items():
         terrain_type = data.get("terrain", "plains")
 
         if terrain_type in VISUAL_WATER_MAPPING:
@@ -383,12 +383,12 @@ RELATIONS_VIEWPOINT_COLOR = (0, 0, 255)
 
 def _hovered_relations_viewpoint(map_screen):
     province = map_screen._relations_hovered_province
-    if (map_screen.map_mode == "RELATIONS" and not map_screen.selection_mode
-            and not map_screen.viewing_ai_moves and province and not queries.is_water_province(province)):
+    if (map_screen.map_mode == "RELATIONS" and not map_screen.session.selection_mode
+            and not map_screen.session.viewing_ai_moves and province and not queries.is_water_province(province)):
         owner = province.get("owner")
-        if owner in map_screen.nation_data and owner not in c.UNPLAYABLE_NATIONS and owner not in c.UNOWNED_LAND_OWNERS:
+        if owner in map_screen.world.nation_data and owner not in c.UNPLAYABLE_NATIONS and owner not in c.UNOWNED_LAND_OWNERS:
             return owner
-    return map_screen.player_country
+    return map_screen.session.player_country
 
 
 def refresh_relations_map(map_screen):
@@ -396,11 +396,11 @@ def refresh_relations_map(map_screen):
     viewpoint = _hovered_relations_viewpoint(map_screen)
     # The score depends only on who owns the tile, so score each owner once,
     # and all of them in one walk over the provinces.
-    rated = {data.get("owner", "Unclaimed") for data in map_screen.map_data.values()
+    rated = {data.get("owner", "Unclaimed") for data in map_screen.world.map_data.values()
              if data.get("terrain", "plains") not in VISUAL_WATER_MAPPING}
     rated.difference_update(c.UNOWNED_LAND_OWNERS)
     scores = queries.get_relation_scores_from(
-        viewpoint, rated, map_screen.nation_data, map_screen.id_to_province)
+        viewpoint, rated, map_screen.world.nation_data, map_screen.world.id_to_province)
 
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
@@ -455,7 +455,7 @@ def refresh_factions_map(map_screen):
         
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
-        fac = queries.get_country_faction(owner, map_screen.nation_data)
+        fac = queries.get_country_faction(owner, map_screen.world.nation_data)
         
         if owner in c.UNOWNED_LAND_OWNERS:
             color = UNOWNED_COLOR
@@ -466,7 +466,7 @@ def refresh_factions_map(map_screen):
             # Resolve leaders once per faction, not once per province, even
             # when unchanged pixels let the whole surface be reused.
             if fac not in faction_colors:
-                leader = queries.get_faction_leader(fac, map_screen.nation_data)
+                leader = queries.get_faction_leader(fac, map_screen.world.nation_data)
                 faction_colors[fac] = (map_screen.nation_colors[leader]
                                       if leader and leader in map_screen.nation_colors
                                       else get_faction_color(fac))
@@ -477,9 +477,9 @@ def refresh_factions_map(map_screen):
 
 def refresh_faction_territories_map(map_screen):
     """Rebuilds the map showing pre-war faction borders, or current borders if at peace."""
-    player_fac = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
-    members = queries.get_faction_members(player_fac, map_screen.nation_data) if player_fac else []
-    pre_war_map = faction_records.pre_war_map(map_screen.nation_data, player_fac) or {}
+    player_fac = queries.get_country_faction(map_screen.session.player_country, map_screen.world.nation_data)
+    members = queries.get_faction_members(player_fac, map_screen.world.nation_data) if player_fac else []
+    pre_war_map = faction_records.pre_war_map(map_screen.world.nation_data, player_fac) or {}
     is_at_war = bool(pre_war_map)
     
     def get_data(data):
@@ -571,7 +571,7 @@ def refresh_fog_map(map_screen):
     timer = pygame.time.get_ticks()
     
     # Turn off the fog entirely if disabled in constants OR if the player is currently selecting a country
-    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.scenario_settings) or map_screen.selection_mode:
+    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, map_screen.world.scenario_settings) or map_screen.session.selection_mode:
         map_screen.fog_map = None
         map_screen.visible_provinces = None
         map_screen.partial_visible_provinces = None
@@ -579,8 +579,8 @@ def refresh_fog_map(map_screen):
 
     # --- THE FIX: Blanket the entire map in fog during the AI viewing phase in multiplayer ---
     # Prevents hotseat players from seeing Player 1's vision before the next turn starts
-    is_multiplayer = len(map_screen.active_players) > 1
-    if map_screen.viewing_ai_moves and is_multiplayer:
+    is_multiplayer = len(map_screen.session.active_players) > 1
+    if map_screen.session.viewing_ai_moves and is_multiplayer:
         map_screen.visible_provinces = set() # Return an empty set so nothing is visible
         map_screen.partial_visible_provinces = set()
     else:
@@ -594,11 +594,11 @@ def refresh_fog_map(map_screen):
             
         map_screen.visible_provinces, map_screen.partial_visible_provinces = vis_result
 
-    fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
+    fog_strength = map_screen.world.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
     extreme_hidden = set()
     
     if fog_strength == "extreme":
-        for p_id, p_data in map_screen.id_to_province.items():
+        for p_id, p_data in map_screen.world.id_to_province.items():
             if p_id not in map_screen.visible_provinces and p_id not in map_screen.partial_visible_provinces:
                 # check neighbors
                 neighbors = p_data.get("neighbors", [])
@@ -615,7 +615,7 @@ def refresh_fog_map(map_screen):
     # including hotseat handoffs and client projections. Only the unchanged
     # pixel surface is reused; visibility is never inferred from a cache hit.
     inputs = []
-    for color_key, data in map_screen.map_data.items():
+    for color_key, data in map_screen.world.map_data.items():
         p_id = data["id"]
         alpha = FOG_OF_WAR_ALPHA
         if p_id in map_screen.visible_provinces:

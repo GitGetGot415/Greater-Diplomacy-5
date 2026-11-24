@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from tests import app_harness
+from tests.stub_map_screen import map_double
 
 
 def _blob(owner):
@@ -18,7 +19,7 @@ class CountryNameLabelTests(unittest.TestCase):
         from ui.rendering import country_names
         self.pygame = pygame
         self.country_names = country_names
-        self.game = SimpleNamespace(
+        self.game = map_double(
             show_country_names=True, tactical_mode=False, selection_mode=False, base_layer="POLITICAL",
             loop_map=False, map_w=100,
             nation_data={"OWNER": {"name": "Owner", "faction": "Pact"}, "PLAIN": {"name": "Plain"},

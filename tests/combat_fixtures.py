@@ -3,7 +3,7 @@
 from unittest import mock
 
 import data.constants as c
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 
 
 def neutral_territory():
@@ -26,7 +26,7 @@ def install_neutral_territory(module_globals):
     module_globals["tearDownModule"] = patcher.stop
 
 
-class StubBattleMap:
+class StubBattleMap(MapDouble):
     """Just enough of map_screen to run movement, combat, and capture passes standalone."""
 
     def __init__(self, terrain="hills"):

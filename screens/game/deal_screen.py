@@ -156,9 +156,9 @@ class Deal_Screen(MapOverlayScreen):
         self.kind = kind
 
         self.role = peace_scope.negotiation_role(self.player, target_nation,
-                                                 map_screen.nation_data)
+                                                 map_screen.world.nation_data)
         self.my_side, self.their_side = peace_scope.deal_sides(
-            self.player, target_nation, map_screen.nation_data, self.role)
+            self.player, target_nation, map_screen.world.nation_data, self.role)
 
         # One snapshot for the whole session. The map cannot change while this
         # screen is open, and building one per keystroke to re-price the deal
@@ -166,7 +166,7 @@ class Deal_Screen(MapOverlayScreen):
         self.world = ai_world.for_screen(map_screen)
         # Same reasoning, and the same lifetime: who can get where is a fact
         # about the map, and the map does not move while this screen is up.
-        self.reach = reach.index(map_screen.map_data)
+        self.reach = reach.index(map_screen.world.map_data)
         self._baseline = None
 
         # {province id: the nation the player chose for it, or None for Auto}.
@@ -216,12 +216,12 @@ class Deal_Screen(MapOverlayScreen):
         if self._baseline is None:
             self._baseline = deal_mod.baseline_owners(
                 deal_mod.new(self.kind, self.my_side, self.their_side, []),
-                self.map_screen.map_data, self.map_screen.nation_data)
+                self.map_screen.world.map_data, self.map_screen.world.nation_data)
         return self._baseline
 
     def _load_existing_offer(self):
         """Reopens an offer already queued, so editing it starts from its terms."""
-        pending = diplomacy_messages.get_pending(self.map_screen.nation_data,
+        pending = diplomacy_messages.get_pending(self.map_screen.world.nation_data,
                                                  self.player, self.target_nation)
         self.is_editing = pending.get("action") in ("PEACE_TREATY", "CEASEFIRE", "TRADE")
         if not self.is_editing:
@@ -275,7 +275,7 @@ class Deal_Screen(MapOverlayScreen):
         return drafts
 
     def _turn(self):
-        return queries.get_total_turns(self.map_screen.time_manager)
+        return queries.get_total_turns(self.map_screen.world.time_manager)
 
     def _save_draft(self):
         """Written on every change rather than on the way out, so it survives
@@ -432,7 +432,7 @@ class Deal_Screen(MapOverlayScreen):
 
         grouped = {}
         for prov_id, chosen in picks.items():
-            prov = self.map_screen.id_to_province.get(int(prov_id))
+            prov = self.map_screen.world.id_to_province.get(int(prov_id))
             if not prov:
                 continue
             # Land goes home where it can: a province that belonged to a member
@@ -501,7 +501,7 @@ class Deal_Screen(MapOverlayScreen):
 
         ours, theirs = set(self.my_side), set(self.their_side)
         baseline = self.baseline_owners()
-        return {prov["id"] for prov in self.map_screen.map_data.values()
+        return {prov["id"] for prov in self.map_screen.world.map_data.values()
                 if prov.get("owner") in ours
                 and baseline.get(int(prov["id"])) in theirs}
 
@@ -526,12 +526,12 @@ class Deal_Screen(MapOverlayScreen):
             # click names the whole clump, and reach is judged on the clump.
             by_receiver = {}
             for prov_id in occupied:
-                prov = self.map_screen.id_to_province.get(int(prov_id))
+                prov = self.map_screen.world.id_to_province.get(int(prov_id))
                 if prov:
                     by_receiver.setdefault(self.would_receive(prov, TAKE), set()).add(int(prov_id))
 
             for prov_id in occupied:
-                prov = self.map_screen.id_to_province.get(int(prov_id))
+                prov = self.map_screen.world.id_to_province.get(int(prov_id))
                 if not prov:
                     continue
                 receiver = self.would_receive(prov, TAKE)
@@ -622,7 +622,7 @@ class Deal_Screen(MapOverlayScreen):
         """
         ids = set()
         for prov_id in self.picks_for(side):
-            prov = self.map_screen.id_to_province.get(int(prov_id))
+            prov = self.map_screen.world.id_to_province.get(int(prov_id))
             if prov and self.would_receive(prov, side) == receiver:
                 ids.add(int(prov_id))
         return ids
@@ -657,7 +657,7 @@ class Deal_Screen(MapOverlayScreen):
         pending = self._pending_ids(self.picking, receiver)
         if (prov["id"] not in self.picks_for(self.picking)
                 and not self.reach.reachable(receiver, prov, pending=pending)):
-            receiver_name = queries.get_country_display_name(receiver, self.map_screen.nation_data)
+            receiver_name = queries.get_country_display_name(receiver, self.map_screen.world.nation_data)
             whose = "your" if receiver == self.player else f"{receiver_name}'s"
             self.map_screen.show_feedback(
                 f"Out of reach: it borders none of {whose} land and no water {whose} coast is on.")
@@ -824,8 +824,8 @@ class Deal_Screen(MapOverlayScreen):
 
     def _build_clause_toggles(self):
         """The terms that are on or off rather than a number."""
-        their_data = self.map_screen.nation_data.get(self.target_nation, {})
-        my_data = self.map_screen.nation_data.get(self.player, {})
+        their_data = self.map_screen.world.nation_data.get(self.target_nation, {})
+        my_data = self.map_screen.world.nation_data.get(self.player, {})
         can_vassalize = not (their_data.get("master") or my_data.get("master"))
 
         toggles = [("Vassalize Them", "vassalize", can_vassalize)]
@@ -860,14 +860,14 @@ class Deal_Screen(MapOverlayScreen):
         self.balance_reading = ""
 
         agreement = self.build_deal()
-        self.problems = deal_mod.validate(agreement, self.map_screen.map_data,
-                                          self.map_screen.nation_data,
+        self.problems = deal_mod.validate(agreement, self.map_screen.world.map_data,
+                                          self.map_screen.world.nation_data,
                                           reach_index=self.reach)
         self.bound = peace_scope.bound_members(self.my_side, self.player)
         self.moot = self.moot_picks()
         self.reverting = len(self.occupied_of_theirs() - set(self.take_ids))
-        self.transfers = deal_mod.tile_transfers(agreement, self.map_screen.map_data,
-                                                 self.map_screen.nation_data)
+        self.transfers = deal_mod.tile_transfers(agreement, self.map_screen.world.map_data,
+                                                 self.map_screen.world.nation_data)
 
         # A verdict is read out in five steps rather than two. The old line said
         # ACCEPT or REFUSE and nothing else, which made the whole negotiation a
@@ -879,15 +879,15 @@ class Deal_Screen(MapOverlayScreen):
         self.verdict_slack = None
         if not self.is_peace:
             self.balance_terms = self._balance_terms(agreement)
-        if self.target_nation in self.map_screen.active_players:
+        if self.target_nation in self.map_screen.session.active_players:
             self.verdict_text = "Another player decides this one for themselves."
             self.verdict_color = c.UI_TEXT_MUTED
             return
 
-        if (self.map_screen.nation_data[self.target_nation].get("scripted_events")
+        if (self.map_screen.world.nation_data[self.target_nation].get("scripted_events")
                 and queries.get_scenario_flag(
                     "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
-                    self.map_screen.scenario_settings)):
+                    self.map_screen.world.scenario_settings)):
 
             action = "PEACE_TREATY" if self.is_peace else "TRADE"
             scripted_response = scripted_event_response_preview(
@@ -911,7 +911,7 @@ class Deal_Screen(MapOverlayScreen):
         # predicting the opposite of what happened.
         judge = ai_opinion.peace_verdict if self.is_peace else ai_opinion.trade_verdict
         verdict = judge(self.world, self.target_nation, self.player, agreement,
-                        self.map_screen.scenario_settings)
+                        self.map_screen.world.scenario_settings)
 
         if not self.is_peace:
             self.balance_reading = self._balance_reading(agreement)
@@ -961,15 +961,15 @@ class Deal_Screen(MapOverlayScreen):
         """
         gained, lost = ai_opinion.trade_balance(
             self.world, self.target_nation, self.player, agreement,
-            self.map_screen.scenario_settings)
+            self.map_screen.world.scenario_settings)
 
         if gained <= 0 and lost <= 0:
             return "Nothing is on the table yet."
         if lost <= 0:
-            return queries.get_country_display_name(self.target_nation, self.map_screen.nation_data) + " is being asked for nothing in return."
+            return queries.get_country_display_name(self.target_nation, self.map_screen.world.nation_data) + " is being asked for nothing in return."
         if gained <= 0:
-            return queries.get_country_display_name(self.target_nation, self.map_screen.nation_data) + " is being offered nothing for it."
-        return (queries.get_country_display_name(self.target_nation, self.map_screen.nation_data) + " rates what you offer at "
+            return queries.get_country_display_name(self.target_nation, self.map_screen.world.nation_data) + " is being offered nothing for it."
+        return (queries.get_country_display_name(self.target_nation, self.map_screen.world.nation_data) + " rates what you offer at "
                 f"{ai_opinion.times_phrase(gained / lost)} what it would give up.")
 
     # ------------------------------------------------------------------ #
@@ -978,8 +978,8 @@ class Deal_Screen(MapOverlayScreen):
 
     def confirm(self):
         agreement = self.build_deal()
-        problems = deal_mod.validate(agreement, self.map_screen.map_data,
-                                     self.map_screen.nation_data,
+        problems = deal_mod.validate(agreement, self.map_screen.world.map_data,
+                                     self.map_screen.world.nation_data,
                                      reach_index=self.reach)
         if problems:
             self.map_screen.show_feedback(problems[0])
@@ -999,10 +999,10 @@ class Deal_Screen(MapOverlayScreen):
         # whatever the player wrote, and is what the model is shown as their
         # government's own words.
         diplomacy_messages.set_pending(
-            self.map_screen.nation_data, self.player, self.target_nation, action,
+            self.map_screen.world.nation_data, self.player, self.target_nation, action,
             parameters=agreement, note=self.note.strip(),
             message="\n".join(deal_mod.describe(agreement, viewer=self.player,
-                                                nation_data=self.map_screen.nation_data)))
+                                                nation_data=self.map_screen.world.nation_data)))
 
         self._clear_draft()
         self.map_screen.show_feedback("Offer Updated!" if self.is_editing else "Offer Sent!")
@@ -1012,7 +1012,7 @@ class Deal_Screen(MapOverlayScreen):
 
     def revoke_offer(self):
         removed = diplomacy_messages.clear_pending(
-            self.map_screen.nation_data, self.player, self.target_nation,
+            self.map_screen.world.nation_data, self.player, self.target_nation,
             only_actions=["PEACE_TREATY", "CEASEFIRE", "TRADE"])
         self._clear_draft()
         self.map_screen.show_feedback("Offer Cancelled.")
@@ -1035,21 +1035,21 @@ class Deal_Screen(MapOverlayScreen):
         """
         if not self.is_peace:
             return "Trade Agreement: " + queries.get_country_display_name(
-                self.target_nation, self.map_screen.nation_data)
+                self.target_nation, self.map_screen.world.nation_data)
         if peace_scope.is_member_separate_peace(self.role):
-            mine = _bloc_name(self.map_screen.nation_data, self.my_side)
-            theirs = _bloc_name(self.map_screen.nation_data, self.their_side)
+            mine = _bloc_name(self.map_screen.world.nation_data, self.my_side)
+            theirs = _bloc_name(self.map_screen.world.nation_data, self.their_side)
             return f"Separate Peace: {mine} vs {theirs} (member only)"
         if peace_scope.binds_whole_bloc(self.role) and len(self.my_side) > 1:
-            mine = _bloc_name(self.map_screen.nation_data, self.my_side)
-            theirs = _bloc_name(self.map_screen.nation_data, self.their_side)
+            mine = _bloc_name(self.map_screen.world.nation_data, self.my_side)
+            theirs = _bloc_name(self.map_screen.world.nation_data, self.their_side)
             count = len(self.my_side) + len(self.their_side)
             return f"Peace: {mine} vs {theirs} ({count} nations)"
         if peace_scope.costs_membership(self.role):
             return "Separate Peace: " + queries.get_country_display_name(
-                self.target_nation, self.map_screen.nation_data) + " (leaves your faction)"
+                self.target_nation, self.map_screen.world.nation_data) + " (leaves your faction)"
         return "Peace Terms: " + queries.get_country_display_name(
-            self.target_nation, self.map_screen.nation_data)
+            self.target_nation, self.map_screen.world.nation_data)
 
     def preview_map(self):
         """The map this deal starts from: the parties in color, the rest grey.

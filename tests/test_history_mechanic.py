@@ -11,11 +11,12 @@ from data import queries
 from data.map import history_io, load_map
 from map_logic.system32.turn_processor import snapshot_history
 from screens.menus import load_game
+from tests.stub_map_screen import map_double
 
 
 class HistoryMechanicTests(unittest.TestCase):
     def setUp(self):
-        self.map_screen = SimpleNamespace(
+        self.map_screen = map_double(
             history={},
             time_manager=SimpleNamespace(
                 total_turns=7,

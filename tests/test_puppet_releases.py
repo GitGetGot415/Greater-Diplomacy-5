@@ -27,7 +27,7 @@ from ui.navigation import modal_stack
 def release_map(player="Master"):
     def country(name, **fields):
         data = dict(name=name, adjective="", color=[30, 50, 70], is_playable=True,
-                    puppets=[], master="", puppet_type="", faction="", at_war_with=[],
+                    puppets=[], master="", puppet_type="", faction="", is_faction_leader=False, at_war_with=[],
                     pending_diplomacy={}, research={})
         data.update(fields)
         return data

@@ -24,7 +24,7 @@ import unittest
 
 import data.constants as c
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, treaty_effects, war_calls
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import MapDouble, StubMapScreen
 
 
 def nation(**over):
@@ -146,7 +146,7 @@ class BackstopTests(unittest.TestCase):
     it waits -- so the check has to be at acceptance, not only at sending.
     """
 
-    class Host:
+    class Host(MapDouble):
         pass
 
     def host(self, nd):

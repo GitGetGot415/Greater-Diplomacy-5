@@ -23,7 +23,7 @@ def army_tray_rect(map_screen, army_count=0):
     """Content-sized army tray below all active top-right consumers."""
     top = c.TOP_UI_HEIGHT + PANEL_GAP
     details = map_screen.btn_realtime_details
-    if map_screen.realtime_multiplayer:
+    if map_screen.session.realtime_multiplayer:
         connection_error = bool(map_screen.realtime_connection_error)
         status = realtime_status_rect(connection_error)
         top = max(top, status.bottom + PANEL_GAP)

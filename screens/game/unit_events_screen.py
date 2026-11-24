@@ -30,7 +30,7 @@ class UnitEventsScreen(TableScreen):
         self.available_event_types = {row["event"] for row in self.all_rows}
         owners = {row["owner"] for row in self.all_rows}
         owners.update(part["owner"] for row in self.all_rows for part in row.get("detail_parts", []) if "owner" in part)
-        self.flags = {owner: flag_icons.flag_surface(owner, map_screen.nation_data) for owner in owners}
+        self.flags = {owner: flag_icons.flag_surface(owner, map_screen.world.nation_data) for owner in owners}
         self.event_filter = unit_events.event_filter_for(map_screen)
         rows = self.filtered_rows()
         available = c.SCREEN_WIDTH - 2 * TABLE_MARGIN

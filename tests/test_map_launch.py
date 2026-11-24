@@ -11,6 +11,7 @@ from screens.game import map_launch
 from tests import app_harness
 from ui.navigation import screen_runner, modal_stack
 from data.platform import LoadingSteps
+from tests.stub_map_screen import mock_map
 
 
 class PrepareMapTests(unittest.TestCase):
@@ -58,7 +59,7 @@ class PrepareMapTests(unittest.TestCase):
         strip.assert_called_once_with(game_map, "A")
         remove.assert_called_once_with("temp", ignore_errors=True)
         self.assertEqual(game_map.multiplayer_player_key, "key")
-        self.assertEqual(game_map.multiplayer_player_enc_cache, {"A": ("player-key", "h1", "e1")})
+        self.assertEqual(game_map.session.multiplayer_player_enc_cache, {"A": ("player-key", "h1", "e1")})
 
     def test_the_host_keeps_a_separate_board_from_the_server_map(self):
         player = SimpleNamespace(player_id="host", country_id="A")
@@ -265,8 +266,8 @@ class ScreenHookTests(unittest.TestCase):
         from screens.multiplayer import multiplayer_new
 
         source = SimpleNamespace(go_to=mock.Mock())
-        game = mock.Mock(nation_data={"A": {"is_playable": True}})
-        game.time_manager.total_turns = 4
+        game = mock_map(nation_data={"A": {"is_playable": True}})
+        game.world.time_manager.total_turns = 4
 
         def build(**settings):
             yield "stage"
@@ -290,7 +291,7 @@ class ScreenHookTests(unittest.TestCase):
             turn = map_launch._finish_steps(loading.call_args.args[0])
             export.assert_called_once()
             self.assertTrue(game.multiplayer_host_mode)
-            self.assertEqual(game.multiplayer_master_key, "secret-key")
+            self.assertEqual(game.session.multiplayer_master_key, "secret-key")
             self.assertEqual(export.call_args.args[1], os.path.join("chosen-tournament", "Turn_4_Host.gd5tour"))
             success.assert_not_called()
             loading.call_args.kwargs["on_done"](turn)

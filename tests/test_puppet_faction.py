@@ -18,10 +18,10 @@ import unittest
 import data.constants as c
 from data import queries
 from data.map import load_map
-from map_logic.diplomacy import faction_actions, puppet_actions, treaty_effects
+from map_logic.diplomacy import faction_actions, faction_records, puppet_actions, treaty_effects
 from map_logic.territory import ownership as own
 from map_logic.system32 import movement_processor
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 
 
 def nation(**over):
@@ -33,7 +33,7 @@ def nation(**over):
     return base
 
 
-class Screen:
+class Screen(MapDouble):
     """Enough of a map screen for ownership changes. ai_is_thinking short-circuits
     every repaint, so nothing here needs a display surface."""
 
@@ -159,7 +159,9 @@ class RetireLandlessTests(unittest.TestCase):
         }
         self.map_data = {"1": province(1, "Empire", cores=["Empire", "Doomed"]),
                          "2": province(2, "Empire", cores=["Doomed"])}
-        return Screen(self.nation_data, self.map_data)
+        screen = Screen(self.nation_data, self.map_data)
+        self.nation_data = screen.world.nation_data
+        return screen
 
     def test_map_editor_can_paint_integrated_puppet_territory(self):
         screen = self.build(puppet_type=c.PUPPET_TYPE_INTEGRATED)
@@ -282,11 +284,12 @@ class RetireLandlessTests(unittest.TestCase):
         map_data["1"]["units"] = [{"owner": "Victim", "type": "Infantry"},
                                  {"owner": "Already Exiled", "type": "Infantry"}]
         screen = Screen(nation_data, map_data)
+        nation_data = screen.world.nation_data
         own.conquer_province(screen, map_data["1"], "Taker")
 
         self.assertEqual(nation_data["Victim"]["faction"], "")
         self.assertEqual(nation_data["Already Exiled"]["faction"], "")
-        self.assertNotIn("Pact", nation_data["FACTION_WAR_MAPS"])
+        self.assertIsNone(faction_records.pre_war_map(nation_data, "Pact"))
         self.assertEqual(nation_data["Taker"]["at_war_with"], [])
         self.assertNotIn("Victim", queries.get_politically_active_nations(
             map_data, nation_data))

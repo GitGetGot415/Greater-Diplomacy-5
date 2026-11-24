@@ -12,7 +12,7 @@ import unittest
 
 
 import data.constants as c
-from tests.stub_map_screen import fill_state_defaults, map_double
+from tests.stub_map_screen import MapDouble, fill_state_defaults, map_double
 from data import queries
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import treaty_effects
@@ -135,7 +135,7 @@ class RefusalWordingTests(unittest.TestCase):
     truthfully and entirely unhelpfully, that it could not declare war.
     """
 
-    class Screen:
+    class Screen(MapDouble):
         def __init__(self, nation_data, player, target):
             self.nation_data = nation_data
             self.player_country = player

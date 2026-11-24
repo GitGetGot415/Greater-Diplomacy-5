@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 from map_logic.actions import production_actions
 from map_logic.ai import ai_construction, ai_unit_eval
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 
 
 def value(name, score, time=1, role=ai_unit_eval.ROLE_LINE):
@@ -61,7 +61,7 @@ class PanicUnitChoiceTests(unittest.TestCase):
         self.assertEqual(self.pick(candidates, ("Boat", "Plane", "Militia")), "Militia")
 
 
-class Screen:
+class Screen(MapDouble):
     def __init__(self):
         home = {"id": 1, "json_key": "1", "owner": "Avaria", "cores": ["Avaria"],
                 "neighbors": [2], "units": [], "unit_queue": [], "building_queue": [],

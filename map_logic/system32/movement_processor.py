@@ -366,7 +366,7 @@ def process_movement(context):
     # Defense areas only reassign units that began this turn idle.  Keep this
     # evidence on the live map controller rather than unit dictionaries so it
     # can never leak into a save or a multiplayer unit snapshot.
-    context._units_with_move_order_this_turn = set()
+    context.session._units_with_move_order_this_turn = set()
     for province in world_state.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
@@ -388,7 +388,7 @@ def process_movement(context):
                         unit["order"] = {"type": "MOVE", "path": []}
                         units_to_keep.append(unit)
                         continue
-                context._units_with_move_order_this_turn.add(id(unit))
+                context.session._units_with_move_order_this_turn.add(id(unit))
                 unit["_current_province_id"] = province["id"]
                 unit["_skip_remaining_steps"] = False
                 moving_units.append(unit)

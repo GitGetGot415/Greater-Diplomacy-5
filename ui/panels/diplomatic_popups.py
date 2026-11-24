@@ -117,19 +117,19 @@ def spawn_popups_for_player(map_screen):
     if not hasattr(map_screen, 'diplomatic_popups'):
         map_screen.diplomatic_popups = []
 
-    if map_screen.player_country in ["None", "Spectator", "Editor"]:
+    if map_screen.session.player_country in ["None", "Spectator", "Editor"]:
         return
 
-    if map_screen.tactical_mode:
+    if map_screen.session.tactical_mode:
         # Runs every frame the player is in control, so this also takes down any
         # alert that was already up when the mode changed.
         map_screen.diplomatic_popups = []
-        for msg in map_screen.nation_data.get(map_screen.player_country, {}).get("inbox", []):
+        for msg in map_screen.world.nation_data.get(map_screen.session.player_country, {}).get("inbox", []):
             if msg.get("type") == "DIPLOMACY":
                 msg["popup_shown"] = True
         return
 
-    p_data = map_screen.nation_data.get(map_screen.player_country, {})
+    p_data = map_screen.world.nation_data.get(map_screen.session.player_country, {})
     inbox = p_data.get("inbox", [])
 
     for msg in inbox:
@@ -138,27 +138,27 @@ def spawn_popups_for_player(map_screen):
             if not msg.get("sender", "").startswith("To: "):
                 idx = len(map_screen.diplomatic_popups)
                 is_system = diplomacy_messages.is_system_notice(msg)
-                content = diplomacy_messages.conversation_message_text(msg, map_screen.player_country, map_screen.nation_data)
+                content = diplomacy_messages.conversation_message_text(msg, map_screen.session.player_country, map_screen.world.nation_data)
                 sender_id = msg.get("sender", "Unknown")
-                sender = diplomacy_messages.SYSTEM_NOTICE_AUTHOR if is_system else queries.get_country_display_name(sender_id, map_screen.nation_data)
+                sender = diplomacy_messages.SYSTEM_NOTICE_AUTHOR if is_system else queries.get_country_display_name(sender_id, map_screen.world.nation_data)
 
                 forwarded = diplomacy_messages.forwarded_details(msg)
                 if forwarded:
                     content = (
                         ">> FORWARDED MESSAGE\n"
                         "Originally sent by " + queries.get_country_display_name(
-                            forwarded["original_sender"], map_screen.nation_data) + " to "
+                            forwarded["original_sender"], map_screen.world.nation_data) + " to "
                         + queries.get_country_display_name(
-                            forwarded["original_receiver"], map_screen.nation_data)
+                            forwarded["original_receiver"], map_screen.world.nation_data)
                         + f" on {forwarded['original_date']}\n"
                         + "Forwarded by " + queries.get_country_display_name(
-                            forwarded["forwarded_by"], map_screen.nation_data)
+                            forwarded["forwarded_by"], map_screen.world.nation_data)
                         + f" on {forwarded['forwarded_at']}\n" + content
                     )
 
                 # Dynamically append instructions if action requires a bilateral response
                 incoming_action, incoming_turns = queries.get_diplomatic_status(
-                    sender_id, map_screen.player_country, map_screen.nation_data)
+                    sender_id, map_screen.session.player_country, map_screen.world.nation_data)
                 if not is_system and incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
                     content += "\n(See Messages to accept or decline)"
 
@@ -190,10 +190,10 @@ def is_spent(map_screen, popup):
 
     # Was this announcing a request, and has that request been dealt with?
     action, turns = queries.get_diplomatic_status(
-        sender, map_screen.player_country, map_screen.nation_data)
+        sender, map_screen.session.player_country, map_screen.world.nation_data)
     if turns > 0 and action in c.BILATERAL_ACTIONS:
         answered, _ = diplomacy_messages.get_response_status(
-            map_screen.nation_data, map_screen.player_country, sender)
+            map_screen.world.nation_data, map_screen.session.player_country, sender)
         return bool(answered)
     return False
 
@@ -215,11 +215,11 @@ def map_message_popups_visible(map_screen):
     """
     return not any((
         map_screen.selected_province,
-        map_screen.selection_mode,
+        map_screen.session.selection_mode,
         map_screen.show_player_ready_screen,
         map_screen.show_exit_confirmation,
-        map_screen.is_saving,
-        map_screen.thread_error,
+        map_screen.session.is_saving,
+        map_screen.session.thread_error,
     ))
 
 def handle_events(map_screen, event):

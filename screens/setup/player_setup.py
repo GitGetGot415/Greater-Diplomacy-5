@@ -12,7 +12,7 @@ TILE_CAPTURE_LAYERS = ("political", "relations", "factions", "cores", "faction_t
 
 def select_player_country(map_screen, province):
     owner = province.get("owner", "Unclaimed")
-    if owner in map_screen.nation_data and map_screen.nation_data[owner].get("is_playable"):
+    if owner in map_screen.world.nation_data and map_screen.world.nation_data[owner].get("is_playable"):
         map_screen.pending_selection = owner
         map_screen.selected_province = province 
         sound_effects.play_ui_sound("click_province")
@@ -37,7 +37,7 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         if owner in c.UNPLAYABLE_NATIONS:
             map_screen.show_feedback("Cannot spawn in unplayable territory!")
             return
-        nation_data = map_screen.nation_data.get(owner, {})
+        nation_data = map_screen.world.nation_data.get(owner, {})
         unit_type = queries.get_highest_infantry(nation_data, queries.get_tech_tree(map_screen), queries.get_unit_library(map_screen), allow_fuel_units=False, context=map_screen)
 
         if unit_type is None:
@@ -49,10 +49,10 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         if infantry_years and unit_type == f"Infantry Type {infantry_years[0]}":
             unit_type = f"Infantry Type {c.TACTICAL_DEFAULT_YEAR}"
 
-        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library(map_screen), map_screen.nation_data)
+        new_unit = queries.create_unit_dict(unit_type, owner, queries.get_unit_library(map_screen), map_screen.world.nation_data)
         new_unit["_is_tactical_ghost"] = True # Tag it so we can delete it if they cancel
         
-        active_counters = queries.build_active_unit_counters(map_screen.map_data, context=map_screen)
+        active_counters = queries.build_active_unit_counters(map_screen.world.map_data, context=map_screen)
         new_unit["custom_name"] = queries.generate_unit_custom_name(new_unit, active_counters, context=map_screen)
         
         province.setdefault("units", []).append(new_unit)
@@ -82,42 +82,42 @@ def _stage_tactical_selection(map_screen, unit, province):
 
 def confirm_player_country(map_screen):
     if map_screen.pending_selection:
-        if map_screen.tactical_mode:
+        if map_screen.session.tactical_mode:
             unit = map_screen.pending_unit
             if not unit or not tactical_battle.tactical_unit_eligible(unit.get("type"), queries.get_unit_library(map_screen)):
                 map_screen.show_feedback("No eligible division to control")
                 return
-        map_screen.active_players.append(map_screen.pending_selection)
+        map_screen.session.active_players.append(map_screen.pending_selection)
         
         # --- TACTICAL UNIT LOCK-IN ---
-        if map_screen.tactical_mode and hasattr(map_screen, 'pending_unit'):
+        if map_screen.session.tactical_mode and hasattr(map_screen, 'pending_unit'):
             if map_screen.pending_unit:
                 map_screen.pending_unit.pop("_is_tactical_ghost", None) # Remove the tag, it's a real unit now
-            map_screen.player_unit = map_screen.pending_unit
+            map_screen.session.player_unit = map_screen.pending_unit
 
         starting_province = map_screen.selected_province
         map_screen.selected_province = None 
         map_screen.hovered_province = None
         map_screen.hover_glow_surf = None
         
-        if len(map_screen.active_players) < map_screen.num_players:
-            map_screen.show_feedback(f"Player {len(map_screen.active_players) + 1}, pick a country!")
+        if len(map_screen.session.active_players) < map_screen.session.num_players:
+            map_screen.show_feedback(f"Player {len(map_screen.session.active_players) + 1}, pick a country!")
             map_screen.pending_selection = None
             map_screen.pending_unit = None
         else:
             # Everyone picked, start with Player 1
-            map_screen.current_player_index = 0
-            map_screen.player_country = map_screen.active_players[0]
-            map_screen.selection_mode = False
+            map_screen.session.current_player_index = 0
+            map_screen.session.player_country = map_screen.session.active_players[0]
+            map_screen.session.selection_mode = False
             map_screen.pending_selection = None
             map_screen.pending_unit = None
             map_screen.set_play_view_defaults()
-            if map_screen.tactical_mode:
+            if map_screen.session.tactical_mode:
                 map_screen.focus_camera_on_position(starting_province["center"], animate=True)
             else:
-                map_screen.focus_camera_on_country(map_screen.player_country, animate=True)
+                map_screen.focus_camera_on_country(map_screen.session.player_country, animate=True)
             
-            map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
+            map_screen.show_feedback(f"Now playing as {map_screen.session.player_country}")
             from screens.game import map_buttons
             map_buttons.render_buttons(map_screen)
             map_screen.refresh_map_layers("relations")
@@ -127,8 +127,8 @@ def start_as_country(map_screen, country):
 
     A country that cannot start a game here leaves the map in country selection.
     """
-    if country not in queries.playable_start_countries(map_screen.map_data, map_screen.nation_data):
-        map_screen.show_feedback(f"{queries.get_country_display_name(country, map_screen.nation_data)} cannot be played. Pick a country!")
+    if country not in queries.playable_start_countries(map_screen.world.map_data, map_screen.world.nation_data):
+        map_screen.show_feedback(f"{queries.get_country_display_name(country, map_screen.world.nation_data)} cannot be played. Pick a country!")
         return
     map_screen.pending_selection = country
     map_screen.selected_province = None
@@ -136,7 +136,7 @@ def start_as_country(map_screen, country):
 
 def cancel_selection(map_screen):
     # Clean up ghost units
-    if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
+    if map_screen.session.tactical_mode and getattr(map_screen, 'pending_unit', None):
         if map_screen.pending_unit.get("_is_tactical_ghost"):
             if map_screen.selected_province:
                 units = map_screen.selected_province.get("units", [])
@@ -149,7 +149,7 @@ def cancel_selection(map_screen):
 
 def settle_tactical_tile(map_screen, province):
     """After a tactical encounter changed a tile's units, update armies, captures, and the map."""
-    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
+    queries.normalize_armies(map_screen.world.nation_data, map_screen.world.map_data)
     # Whoever is left standing on the tile takes it, as after any campaign combat.
     owner_before = province.get("owner")
     combat_processor.check_for_post_combat_captures(map_screen)
@@ -162,12 +162,12 @@ def settle_tactical_tile(map_screen, province):
 
 def lose_tactical_unit(map_screen, province):
     """The tactical division died: remove it, end tactical play, and watch as a spectator."""
-    unit = map_screen.player_unit
+    unit = map_screen.session.player_unit
     if unit in province.get("units", []):
         province["units"].remove(unit)
-    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
-    map_screen.player_unit = None
-    map_screen.tactical_mode = False
+    queries.normalize_armies(map_screen.world.nation_data, map_screen.world.map_data)
+    map_screen.session.player_unit = None
+    map_screen.session.tactical_mode = False
     map_screen.clear_map_unit_selection()
     map_screen.invalidate_map_presentation_cache()
     start_spectator(map_screen)
@@ -176,10 +176,10 @@ def lose_tactical_unit(map_screen, province):
 
 def start_spectator(map_screen):
     """Initializes spectator mode, giving the player global vision and no direct control."""
-    map_screen.active_players = ["Spectator"]
-    map_screen.current_player_index = 0
-    map_screen.player_country = "Spectator"
-    map_screen.selection_mode = False
+    map_screen.session.active_players = ["Spectator"]
+    map_screen.session.current_player_index = 0
+    map_screen.session.player_country = "Spectator"
+    map_screen.session.selection_mode = False
     map_screen.pending_selection = None
     map_screen.pending_unit = None
     map_screen.selected_province = None

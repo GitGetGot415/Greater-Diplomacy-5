@@ -81,7 +81,7 @@ class GlobalRuleTests(unittest.TestCase):
         self.game.set_faction("X", "C", "D")
         self.game.global_rules = [rule("A", global_rules.SHARE_FACTION, "B")]
         self.assertTrue(self.allowed("A", "C", "JOIN_FACTION_REQ"))
-        self.game.nation_data["B"]["faction"] = "X"
+        queries.set_country_faction(self.game.world.nation_data, "B", "X")
 
         outcome = treaty_effects.apply_treaty_effect(self.game, "JOIN_FACTION_REQ", "A", "C")
 

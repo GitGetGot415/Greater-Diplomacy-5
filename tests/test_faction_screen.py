@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pygame
 
 import data.constants as c
+from data import queries
 from map_logic.diplomacy import faction_leadership
 from screens.game.faction import Faction_Screen
 from tests.stub_map_screen import StubMapScreen
@@ -27,7 +28,7 @@ class FactionScreenTests(unittest.TestCase):
     def test_leaderless_faction_is_repaired_instead_of_calling_members_puppets(self):
         game, nations = self.make_game()
         for nation in nations:
-            game.nation_data[nation]["is_faction_leader"] = False
+            queries.set_faction_leadership(game.world.nation_data, nation, False)
 
         self.assertEqual(faction_leadership.repair_leaderless_factions(game), ["The Pact"])
         self.assertTrue(any(game.nation_data[nation]["is_faction_leader"]
@@ -37,9 +38,9 @@ class FactionScreenTests(unittest.TestCase):
         # transient state between frames.
         screen = Faction_Screen()
         screen.start_faction(game)
-        game.nation_data[nations[0]]["is_faction_leader"] = False
+        queries.set_faction_leadership(game.world.nation_data, nations[0], False)
         for nation in nations[1:]:
-            game.nation_data[nation]["is_faction_leader"] = False
+            queries.set_faction_leadership(game.world.nation_data, nation, False)
         self.assertEqual(screen._claim_button("").text, "Faction Needs A Leader")
 
     def open_rename(self, screen):

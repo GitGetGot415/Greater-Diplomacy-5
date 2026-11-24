@@ -221,8 +221,8 @@ class BulkEditTests(unittest.TestCase):
         game.editor_history = ["old"]
         game.editor_redo_history = ["old"]
         queries.reset_editor_diplomacy(game)
-        self.assertEqual(game.factions, {})
-        self.assertEqual(game.faction_membership, {})
+        self.assertEqual(game.world.factions, {})
+        self.assertEqual(game.world.faction_membership, {})
         self.assertNotIn("FACTION_WAR_MAPS", game.nation_data)
         self.assertNotIn("WAR_PRE_MAPS", game.nation_data)
         for country in ("A", "B"):

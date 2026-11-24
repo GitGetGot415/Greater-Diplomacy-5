@@ -17,6 +17,7 @@ from map_logic import battle_terrain
 from screens.game import custom_battle as battle_screen
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import Slider
+from tests.stub_map_screen import map_double
 
 
 def unit_stats(family="Fixture Infantry", *, tier=1, health=100, attack=40,
@@ -1916,7 +1917,7 @@ class TacticalSelectionTests(unittest.TestCase):
         self.setup = player_setup
         self.library = fixture_library()
         self.units = [queries.create_unit_dict(name, "Fixture A", self.library) for name in self.library]
-        self.map = SimpleNamespace(show_feedback=Mock(), pending_unit=None, pending_selection=None,
+        self.map = map_double(show_feedback=Mock(), pending_unit=None, pending_selection=None,
                                    selected_province=None, active_players=[], tactical_mode=True)
         self.province = {"owner": "Fixture A", "units": self.units}
         self.enterContext(patch.object(queries, "get_unit_library", return_value=self.library))
@@ -1999,7 +2000,7 @@ class TacticalSelectionTests(unittest.TestCase):
                 self.map.pending_selection = "Fixture A"
                 self.setup.confirm_player_country(self.map)
                 self.assertEqual(self.map.active_players, [])
-                self.assertFalse(hasattr(self.map, "player_unit"))
+                self.assertIsNone(self.map.session.player_unit)
 
 
 class CustomBattleScreenTests(unittest.TestCase):
@@ -2932,7 +2933,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
         foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
         province = {"id": 1, "units": [player, foe]}
-        fake = SimpleNamespace(
+        fake = map_double(
             tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
             _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
             map_data={"key": province}, nation_data=nations, tactical_battle_request=None, go_to=Mock())
@@ -2942,8 +2943,9 @@ class CustomBattleScreenTests(unittest.TestCase):
         fake.go_to.assert_called_once_with("CUSTOM_BATTLE")
         self.assertEqual(fake.tactical_battle_request[0], province)
         self.assertIs(fake.tactical_battle_request[1][0]["type"], player["type"])
-        foe_free = SimpleNamespace(**{**vars(fake), "go_to": Mock(), "_tactical_battle_turn": None,
-                                      "map_data": {"key": {"id": 1, "units": [player]}}})
+        foe_free = copy.copy(fake)
+        foe_free.go_to, foe_free._tactical_battle_turn = Mock(), None
+        foe_free.world.map_data = {"key": {"id": 1, "units": [player]}}
         with patch("data.queries.get_unit_library", return_value=self.library):
             Map.open_tactical_battle(foe_free)
         foe_free.go_to.assert_not_called()
@@ -2958,7 +2960,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         neutral = queries.create_unit_dict("Fixture I", "Neutral", self.library)
         nations["Neutral"] = {"at_war_with": []}
         province = {"id": 1, "units": [player, gun, plane, ship, neutral]}
-        fake = SimpleNamespace(
+        fake = map_double(
             tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
             _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
             map_data={"key": province}, nation_data=nations, tactical_battle_request=None, go_to=Mock())

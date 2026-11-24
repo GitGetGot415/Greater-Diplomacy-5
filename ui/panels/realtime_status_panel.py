@@ -56,7 +56,7 @@ class _MatchDetails(TableScreen):
                 "Submitted" if player.submitted else "Not submitted")
             values.append({
                 "player": str(player.name),
-                "country": (queries.get_country_display_name(player.country_id, map_screen.nation_data)
+                "country": (queries.get_country_display_name(player.country_id, map_screen.world.nation_data)
                             if player.country_id else "No country"),
                 "turn": turn,
                 "connection": "Connected" if player.connected else "Disconnected",
@@ -80,8 +80,8 @@ class _MatchDetails(TableScreen):
             rows.append({**values,
                          "cells": {key: font.render(values[key], True, color)
                                    for key, _label, _width in MATCH_DETAIL_COLUMNS},
-                         "flag": (flag_surface(country_id, map_screen.nation_data)
-                                  if country_id and country_id in map_screen.nation_data else None)})
+                         "flag": (flag_surface(country_id, map_screen.world.nation_data)
+                                  if country_id and country_id in map_screen.world.nation_data else None)})
         return rows
 
     def sort_by(self, col):
@@ -106,7 +106,7 @@ def show_details(map_screen):
 
 
 def draw(map_screen, surface):
-    if not map_screen.realtime_multiplayer:
+    if not map_screen.session.realtime_multiplayer:
         return
     session = map_screen.realtime_session
     player = getattr(session, "players", {}).get(map_screen.realtime_player_id)
@@ -146,13 +146,13 @@ def draw(map_screen, surface):
         surface.blit(heading, heading.get_rect(midtop=(overlay.centerx, overlay.y + 16)))
         standings = []
         for item in session.players.values():
-            provinces = sum(1 for province in map_screen.map_data.values()
+            provinces = sum(1 for province in map_screen.world.map_data.values()
                             if province.get("owner") == item.country_id)
-            units = sum(1 for province in map_screen.map_data.values()
+            units = sum(1 for province in map_screen.world.map_data.values()
                         for unit in province.get("units", []) if unit.get("owner") == item.country_id)
             standings.append((provinces, units, item.name, item.country_id))
         for index, (provinces, units, name, country) in enumerate(sorted(standings, reverse=True)):
-            country_name = (queries.get_country_display_name(country, map_screen.nation_data)
+            country_name = (queries.get_country_display_name(country, map_screen.world.nation_data)
                             if country else "No country")
             row = f"{index + 1}. {name} ({country_name}) — {provinces} provinces, {units} units"
             surface.blit(font.render(row, True, (240, 240, 245)), (overlay.x + 20, overlay.y + 62 + index * 21))

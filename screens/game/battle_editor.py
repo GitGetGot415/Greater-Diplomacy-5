@@ -105,7 +105,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.map_screen = overview.map_screen
         self.province = overview.province
         self.player = overview.player
-        self.opened_turn = self.map_screen.time_manager.total_turns
+        self.opened_turn = self.map_screen.world.time_manager.total_turns
         self.selected_lane = overview.selected_lane
         self.done = False
         self.flipped = False
@@ -230,7 +230,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 # including when input arrives before the next frame update.
                 self.cancel_drag()
                 self.front_slots = None
-                self.province = self.map_screen.id_to_province.get(self.province['id'], self.province)
+                self.province = self.map_screen.world.id_to_province.get(self.province['id'], self.province)
                 self._observed_state = stamp
             self.overview.province = self.province
         for pane in self.regions:
@@ -286,14 +286,14 @@ class BattleEditorScreen(ScrollPanes, Screen):
         # Own and allied units are always visible; this hides only the hidden
         # submarines a viewer outside the battle may not see.
         near_reserve = queries.filter_visible_units(
-            near.reserve, self.player, self.province, self.map_screen.nation_data)
+            near.reserve, self.player, self.province, self.map_screen.world.nation_data)
         reserves = [unit for unit in near_reserve if unit.get('combat_stance') != 'RESERVE']
         held = [unit for unit in near_reserve if unit.get('combat_stance') == 'RESERVE']
         seated = self.seated()
         enemies = [unit for unit in self.province.get('units', [])
                    if queries.get_unit_combat_owner(unit) in far.nations and id(unit) not in seated]
         enemies = queries.filter_visible_units(
-            enemies, self.player, self.province, self.map_screen.nation_data)
+            enemies, self.player, self.province, self.map_screen.world.nation_data)
         enemy_reserves = [unit for unit in enemies if unit.get('combat_stance') != 'RESERVE']
         enemy_held = [unit for unit in enemies if unit.get('combat_stance') == 'RESERVE']
         self._card_grid(PANE_ENEMY_RESERVE, enemy_reserves)
@@ -344,7 +344,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 sides = sides[::-1]
             for side, _count in sides:
                 owner = self.overview.side_display_nations(side)[0]
-                x = flag_icons.draw_flag_centered(label, owner, self.map_screen.nation_data,
+                x = flag_icons.draw_flag_centered(label, owner, self.map_screen.world.nation_data,
                                                   x, 0, LANE_ROW_H) + GAP
             tally = font.render(f"{sides[0][1]} v {sides[1][1]}", True, c.UI_TEXT_LIGHT)
             label.blit(tally, (label.get_width() - tally.get_width() - 5, 12))
@@ -424,7 +424,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                              gradient_strength=style['gradient_strength'])
         row = self.overview.combat_row_data[id(unit)]
         font = fonts.get('small')
-        x = flag_icons.draw_flag_centered(surface, unit.get('owner'), self.map_screen.nation_data,
+        x = flag_icons.draw_flag_centered(surface, unit.get('owner'), self.map_screen.world.nation_data,
                                           5, 3, font.get_height())
         health = font.render(queries.format_health_percent(row['profile']), True, c.UI_TEXT_MUTED)
         name = unit.get('custom_name') or queries.get_condensed_unit_name(unit.get('type', 'Unit'))
@@ -507,7 +507,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def side_role(self, side):
         """A caption for a side in a battle the player is not fighting in."""
         defends = queries.combat_side_defends_tile(
-            self.province, side.nations, self.map_screen.nation_data)
+            self.province, side.nations, self.map_screen.world.nation_data)
         return "DEFENDER" if defends else "ATTACKER"
 
     def _paint_cards(self, pane):
@@ -542,20 +542,20 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.draw_foreground(surface)
 
     def can_edit_now(self):
-        return (self.overview is not None and self.map_screen.player_country == self.player
-                and self.map_screen.time_manager.total_turns == self.opened_turn
-                and self.map_screen.id_to_province.get(self.province['id']) is self.province
+        return (self.overview is not None and self.map_screen.session.player_country == self.player
+                and self.map_screen.world.time_manager.total_turns == self.opened_turn
+                and self.map_screen.world.id_to_province.get(self.province['id']) is self.province
                 and queries.is_province_visible(self.map_screen, self.province['id'])
                 and self.map_screen.can_select_map_units()
                 and bool(self.my_units()))
 
     def _source_stamp(self):
         map_ref = self.map_screen
-        stamp = (id(map_ref.id_to_province.get(self.province['id'])),
-                 map_ref._presentation_cache_revision, map_ref.player_country,
-                 map_ref.time_manager.total_turns, map_ref.tactical_mode,
-                 id(map_ref.player_unit))
-        if map_ref.realtime_multiplayer:
+        stamp = (id(map_ref.world.id_to_province.get(self.province['id'])),
+                 map_ref._presentation_cache_revision, map_ref.session.player_country,
+                 map_ref.world.time_manager.total_turns, map_ref.session.tactical_mode,
+                 id(map_ref.session.player_unit))
+        if map_ref.session.realtime_multiplayer:
             session = map_ref.realtime_session
             player = session.players.get(map_ref.realtime_player_id) if session else None
             stamp += (session.phase if session else None,
@@ -643,7 +643,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
             if nation not in near.nations:
                 return False
             target = next((enemy for enemy in far.nations if queries.are_at_war(
-                nation, enemy, self.map_screen.nation_data)), None)
+                nation, enemy, self.map_screen.world.nation_data)), None)
             if target is None:
                 return False
             slots = self.front_slots[lane.index]
@@ -756,9 +756,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def update(self):
         if self.overview is None:
             return
-        if (self.map_screen.player_country != self.player
-                or self.map_screen.time_manager.total_turns != self.opened_turn
-                or self.province['id'] not in self.map_screen.id_to_province):
+        if (self.map_screen.session.player_country != self.player
+                or self.map_screen.world.time_manager.total_turns != self.opened_turn
+                or self.province['id'] not in self.map_screen.world.id_to_province):
             self._finish_exit()
             return
         stamp = self._source_stamp()

@@ -716,7 +716,7 @@ def prepare_presentation_supply(context):
     projection = getattr(context, "player_supply_projection", None)
     context._supply_presentation = {}
     context._movement_speed_presentation = {}
-    if getattr(context, "is_editor", False):
+    if context.session.is_editor:
         return
     if projection is not None:
         # The host sends per-resource coverage. The local upkeep rules supply the weights.

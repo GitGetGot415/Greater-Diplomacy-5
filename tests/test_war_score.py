@@ -13,7 +13,8 @@ homeland can only ever help.
 import unittest
 
 
-from map_logic.diplomacy import war_score
+from data import queries
+from map_logic.diplomacy import faction_records, war_score
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -87,7 +88,8 @@ class OccupationTests(unittest.TestCase):
         A recovering it is not counted as A occupying B."""
         contested = self.theirs[0]
         contested["owner"] = "A"
-        self.game.nation_data["FACTION_WAR_MAPS"] = {"X": {str(contested["id"]): "A"}}
+        queries.set_country_faction(self.game.world.nation_data, "A", "X")
+        faction_records.set_pre_war_map(self.game.world.nation_data, "X", {str(contested["id"]): "A"})
 
         occ_a, _ = war_score.occupation(self.game, ["A"], ["B"])
         self.assertEqual(occ_a, 0.0)

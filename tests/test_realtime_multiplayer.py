@@ -39,7 +39,7 @@ import data.constants as c
 from tests.politics_fixtures import policy_fixtures
 from tests.research_fixtures import research_lock_cases
 import json
-from data import migrations
+from data import migrations, queries
 from data.runtime_rules import RuntimeRules
 from data.multiplayer.realtime.relay import (
     RelayHostTransport,
@@ -549,7 +549,7 @@ class RealtimeExitTests(unittest.TestCase):
         """A remote player may disconnect, but cannot shut down the host match."""
         client = SimpleNamespace(close=mock.Mock())
         session = SimpleNamespace(phase="TURN", host_id="host", end_match=mock.Mock())
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             realtime_multiplayer=True,
             realtime_session=session,
             realtime_player_id="guest",
@@ -577,7 +577,7 @@ class RealtimeExitTests(unittest.TestCase):
             session.phase = "GAME_OVER"
 
         session.end_match = end_match
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             realtime_multiplayer=True,
             realtime_session=session,
             realtime_player_id="host",
@@ -599,7 +599,7 @@ class RealtimeExitTests(unittest.TestCase):
     def test_map_hud_button_click_does_not_fall_through_to_a_tile(self):
         pygame.font.init()
         button = Button(100, 100, "small", "blue", "Details", lambda: None)
-        map_ref = SimpleNamespace(thread_error=None, elements=[button], unit_view_buttons={})
+        map_ref = map_double(thread_error=None, elements=[button], unit_view_buttons={})
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(110, 110))
         with mock.patch("screens.game.map.map_input.handle_map_events") as handle:
             Map.additional_events(map_ref, event)
@@ -1282,7 +1282,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                   "revoke_queue": [], "return_queue": [], "puppets": ["P"],
                   "release_puppet_queue": [], "faction": "Old Pact", "is_faction_leader": True,
                   "pending_ratification": {"terms": {}}, "research_queue": []},
-            "B": {"name": "B", "color": [4, 5, 6], "claims": [1], "faction": "Old Pact"},
+            "B": {"name": "B", "color": [4, 5, 6], "claims": [1], "faction": "Old Pact", "is_faction_leader": False},
             "P": {"name": "P", "color": [7, 8, 9], "puppet_type": c.PUPPET_TYPE_INTEGRATED,
                   "siphon_rates": {"manpower": 0, "materials": 0, "fuel": 0}},
         }
@@ -1376,7 +1376,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         driver = MapRealtimeDriver(map_ref)
 
         self.assertFalse(driver.is_eliminated("A"))
-        map_ref.nation_data["A"]["faction"] = ""
+        queries.set_country_faction(map_ref.world.nation_data, "A", "")
         self.assertTrue(driver.is_eliminated("A"))
 
     def test_army_roster_is_collected_and_server_validated(self):

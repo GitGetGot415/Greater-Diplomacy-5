@@ -55,7 +55,7 @@ class Puppets_Screen(Screen):
     def __init__(self, map_screen):
         super().__init__()
         self.map_screen = map_screen
-        self.player = map_screen.player_country
+        self.player = map_screen.session.player_country
         self.back_state = "MAP"
         self.bg_color = (25, 30, 40)
         self.panel_rect = pygame.Rect((0, 0), self.PANEL_SIZE)
@@ -75,17 +75,17 @@ class Puppets_Screen(Screen):
         self.refresh_ui()
 
     def subjects(self):
-        return self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
+        return self.map_screen.world.nation_data.get(self.player, {}).get("puppets", [])
 
     def owns_subject(self, subject, integrated=False):
-        data = self.map_screen.nation_data.get(subject, {})
-        return (self.player == self.map_screen.player_country
+        data = self.map_screen.world.nation_data.get(subject, {})
+        return (self.player == self.map_screen.session.player_country
                 and subject in self.subjects() and data.get("master") == self.player
                 and (not integrated or data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED))
 
     def can_edit_realtime(self):
-        return (not (self.map_screen.is_editor or self.map_screen.tactical_mode)
-                and self.player == self.map_screen.player_country
+        return (not (self.map_screen.session.is_editor or self.map_screen.session.tactical_mode)
+                and self.player == self.map_screen.session.player_country
                 and queries.require_realtime_turn_open(self.map_screen, "subjects"))
 
     def can_edit_subject(self, subject, integrated=False):
@@ -105,17 +105,17 @@ class Puppets_Screen(Screen):
         create = Button(p.right - self.PADDING - self.CREATE_BUTTON_WIDTH, header_y,
                         (self.CREATE_BUTTON_WIDTH, self.CONTROL_HEIGHT),
                         "blue", "Create Nation", self.open_create_puppet)
-        editable = (not (self.map_screen.is_editor or self.map_screen.tactical_mode)
-                    and self.player == self.map_screen.player_country
+        editable = (not (self.map_screen.session.is_editor or self.map_screen.session.tactical_mode)
+                    and self.player == self.map_screen.session.player_country
                     and queries.realtime_turn_open(self.map_screen))
         create.apply_state(enabled=editable and queries.can_release_nations_for(self.map_screen, self.player), color="blue")
         self.elements.append(create)
         self.master_label = None
-        player_data = self.map_screen.nation_data.get(self.player, {})
+        player_data = self.map_screen.world.nation_data.get(self.player, {})
         master = player_data.get("master", "")
         if master:
             font = fonts.get("normal")
-            name = queries.get_country_display_name(master, self.map_screen.nation_data)
+            name = queries.get_country_display_name(master, self.map_screen.world.nation_data)
             text = f"{player_data.get('puppet_type', c.PUPPET_TYPE_AUTONOMOUS)} subject of: {name}"
             self.master_label = font.render(fit_text(text, font, p.width - 2 * self.PADDING),
                                             True, c.UI_TEXT_MUTED)
@@ -133,14 +133,14 @@ class Puppets_Screen(Screen):
             y = self.list_rect.top + index * self.ROW_HEIGHT + self.scroll_y
             if y + self.ROW_HEIGHT <= self.list_rect.top or y >= self.list_rect.bottom:
                 continue
-            data = self.map_screen.nation_data.get(subject, {})
-            name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+            data = self.map_screen.world.nation_data.get(subject, {})
+            name = queries.get_country_display_name(subject, self.map_screen.world.nation_data)
             text_width = row_width - self.ROW_TEXT_PADDING - self.ROW_FLAG_SIZE[0] - self.ROW_FLAG_GAP
             label = fit_text(name, font, text_width)
             label += "\n" + data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
             button = Button(self.list_rect.left, y, (row_width, self.ROW_HEIGHT - self.ROW_GAP),
                             "blue", label, lambda nation=subject: self.select_subject(nation), font_preset="normal",
-                            image=flag_icons.flag_surface(subject, self.map_screen.nation_data, self.ROW_FLAG_SIZE),
+                            image=flag_icons.flag_surface(subject, self.map_screen.world.nation_data, self.ROW_FLAG_SIZE),
                             sound_kind="select_category")
             button.text_align = "left"
             button.is_selected = subject == self.selected_subject
@@ -173,11 +173,11 @@ class Puppets_Screen(Screen):
             self.detail_surface.blit(text, (0, 0))
             return
 
-        data = self.map_screen.nation_data[subject]
+        data = self.map_screen.world.nation_data[subject]
         integrated = data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED
-        name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+        name = queries.get_country_display_name(subject, self.map_screen.world.nation_data)
         heading = fonts.get("heading2")
-        flag = flag_icons.flag_surface(subject, self.map_screen.nation_data, self.HEADER_FLAG_SIZE)
+        flag = flag_icons.flag_surface(subject, self.map_screen.world.nation_data, self.HEADER_FLAG_SIZE)
         self.detail_surface.blit(flag, (0, (self.NAME_HEIGHT - flag.get_height()) // 2))
         name_x = self.HEADER_FLAG_SIZE[0] + self.HEADER_FLAG_GAP
         name_width = detail.width - name_x
@@ -192,7 +192,7 @@ class Puppets_Screen(Screen):
         info = f"{data.get('puppet_type', c.PUPPET_TYPE_AUTONOMOUS)} | Subjects: {subject_count}"
         self.detail_surface.blit(font.render(info, True, c.COLOR_GOLD_HIGHLIGHT if integrated else c.UI_TEXT_LIGHT),
                                  (0, self.NAME_HEIGHT))
-        pending, turns = queries.get_diplomatic_status(self.player, subject, self.map_screen.nation_data)
+        pending, turns = queries.get_diplomatic_status(self.player, subject, self.map_screen.world.nation_data)
         if pending:
             status = "Pending: " + pending.replace("_", " ").title()
             if turns:
@@ -232,7 +232,7 @@ class Puppets_Screen(Screen):
         # The modal pauses map processing. Selection, slider input, and return from release invalidate this cache.
         if self._projection is None:
             self._projection = queries.get_economy_projections(
-                self.selected_subject, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
+                self.selected_subject, self.map_screen.world.map_data, self.map_screen.world.nation_data, context=self.map_screen)
         _, _, breakdown = self._projection
         font = fonts.get("normal")
         width = self.detail_rect.width - self.SLIDER_WIDTH - self.RESOURCE_TOTAL_GAP
@@ -244,7 +244,7 @@ class Puppets_Screen(Screen):
         if (not self.can_edit_subject(puppet, integrated=True)
                 or res not in c.ECON_RESOURCE_KEYS or not 0 <= slider_val <= c.MAX_PUPPET_SIPHON):
             return
-        queries.get_siphon_rates(self.map_screen.nation_data[puppet])[res] = slider_val
+        queries.get_siphon_rates(self.map_screen.world.nation_data[puppet])[res] = slider_val
         self._projection = None
         self._prepare_resource_totals()
 
@@ -280,7 +280,7 @@ class Puppets_Screen(Screen):
 
     def queue_take_puppets(self, puppet):
         if (not self.can_edit_subject(puppet, integrated=True)
-                or not self.map_screen.nation_data[puppet].get("puppets")):
+                or not self.map_screen.world.nation_data[puppet].get("puppets")):
             return
         self.queue_diplomacy_action(puppet, "TAKE_PUPPETS")
 
@@ -349,7 +349,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
 
     def get_panel_title(self):
         return "Create Nation: " + queries.get_country_display_name(
-            self.releasing_country, self.map_screen.nation_data)
+            self.releasing_country, self.map_screen.world.nation_data)
 
     def can_edit_realtime(self):
         if not queries.can_release_nations_for(self.map_screen, self.releasing_country):
@@ -392,9 +392,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + self.CONTENT_TOP,
                                                self.panel_rect.width - 10,
                                                self.panel_rect.height - self.CONTENT_TOP - self.CONTENT_BOTTOM_GAP)
-        queue = self.map_screen.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
+        queue = self.map_screen.world.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
         queued = {entry["core_nation"]: entry for entry in queue}
-        self.valid_subjects = sorted({core for province in self.map_screen.map_data.values()
+        self.valid_subjects = sorted({core for province in self.map_screen.world.map_data.values()
                                       if province.get("owner") == self.releasing_country
                                       and not queries.is_water_province(province)
                                       for core in province.get("cores", [])
@@ -404,12 +404,12 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.release_row_surfaces = []
         row_font = fonts.get("normal")
         for index, subject in enumerate(self.valid_subjects):
-            name = queries.get_country_display_name(subject, self.map_screen.nation_data)
-            if subject not in self.map_screen.nation_data:
+            name = queries.get_country_display_name(subject, self.map_screen.world.nation_data)
+            if subject not in self.map_screen.world.nation_data:
                 name = country_io.get_country_stats(subject).get("name", name)
             entry = queued.get(subject)
             available = queries.get_puppet_release_provinces(
-                self.releasing_country, subject, self.map_screen.map_data, self.keep_cores, queue)
+                self.releasing_country, subject, self.map_screen.world.map_data, self.keep_cores, queue)
             status = f" ({entry['release_type']} queued)" if entry else ""
             self.release_rows.append((name + status, entry is not None))
             row_text = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
@@ -435,7 +435,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         prior = []
         for index, entry in enumerate(queue):
             provinces = queries.get_puppet_release_provinces(
-                self.releasing_country, entry["core_nation"], self.map_screen.map_data,
+                self.releasing_country, entry["core_nation"], self.map_screen.world.map_data,
                 entry.get("keep_cores", False), prior)
             self.queued_highlights.extend((province["id"], colors[index % len(colors)]) for province in provinces)
             prior.append(entry)
@@ -450,26 +450,26 @@ class Create_Puppet_Screen(MapOverlayScreen):
     def queue_creation(self, subject):
         if not self.can_edit_realtime():
             return
-        country = self.map_screen.nation_data[self.releasing_country]
+        country = self.map_screen.world.nation_data[self.releasing_country]
         queue = country.get("release_puppet_queue", [])
         requested = queue + [{"core_nation": subject, "keep_cores": self.keep_cores,
                               "release_type": self.release_type}]
         try:
-            canonical = canonical_puppet_release_queue(self.map_screen.map_data, self.map_screen.nation_data,
+            canonical = canonical_puppet_release_queue(self.map_screen.world.map_data, self.map_screen.world.nation_data,
                                                         self.releasing_country, requested, queue)
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
             self.refresh_ui()
             return
         country.setdefault("release_puppet_queue", [])[:] = canonical
-        name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+        name = queries.get_country_display_name(subject, self.map_screen.world.nation_data)
         self.map_screen.show_feedback(f"Creation of {name} ({self.release_type}) queued (1 turn).")
         self.refresh_ui()
 
     def cancel_queue(self, subject):
         if not self.can_edit_realtime():
             return
-        queue = self.map_screen.nation_data[self.releasing_country].get("release_puppet_queue", [])
+        queue = self.map_screen.world.nation_data[self.releasing_country].get("release_puppet_queue", [])
         queue[:] = [entry for entry in queue if entry["core_nation"] != subject]
         self.refresh_ui()
 
@@ -496,10 +496,10 @@ Create_Integrated_Puppet_Screen = Create_Puppet_Screen
 
 
 def open_puppets_menu(map_screen):
-    if map_screen.player_country == "Spectator":
-        if (map_screen.multiplayer_mode
-                or map_screen.realtime_multiplayer
-                or map_screen.is_editor or map_screen.tactical_mode):
+    if map_screen.session.player_country == "Spectator":
+        if (map_screen.session.multiplayer_mode
+                or map_screen.session.realtime_multiplayer
+                or map_screen.session.is_editor or map_screen.session.tactical_mode):
             map_screen.show_feedback("Spectators can create nations only in a local strategic game.")
             return
 
@@ -507,9 +507,9 @@ def open_puppets_menu(map_screen):
             if queries.can_release_nations_for(map_screen, country_id):
                 _run_pygame_sub_screen(map_screen, Create_Puppet_Screen(map_screen, country_id))
 
-        countries = sorted(queries.get_living_nations(map_screen.map_data))
+        countries = sorted(queries.get_living_nations(map_screen.world.map_data))
         pickers.open_listbox_selector(map_screen, "Create Nation", "Choose a country to create a nation from:",
-                                      queries.country_picker_items(countries, map_screen.nation_data), selected,
+                                      queries.country_picker_items(countries, map_screen.world.nation_data), selected,
                                       close_on_select=False)
         return
     _run_pygame_sub_screen(map_screen, Puppets_Screen(map_screen))

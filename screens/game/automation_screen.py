@@ -40,14 +40,14 @@ class Automation_Screen(Screen):
         # Dark red background
         self.bg_color = (60, 20, 20)
         self.map_screen = map_screen
-        self.player = map_screen.player_country
+        self.player = map_screen.session.player_country
         self.panel_rect = pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200)
 
-        self.is_valid_player = self.player in self.map_screen.nation_data and self.player not in ["Spectator", "None", "Editor"]
+        self.is_valid_player = self.player in self.map_screen.world.nation_data and self.player not in ["Spectator", "None", "Editor"]
 
         # Initialize automation state if not exists
         if self.is_valid_player:
-            p_data = self.map_screen.nation_data[self.player]
+            p_data = self.map_screen.world.nation_data[self.player]
             if "automation" not in p_data:
                 p_data["automation"] = {"construction": False, "movement": False, "research": False}
 
@@ -61,7 +61,7 @@ class Automation_Screen(Screen):
 
         y_pos = self.panel_rect.y + 100
         for name, key, auto_func, clear_func in AUTOMATION_OPTIONS:
-            is_checked = self.map_screen.nation_data[self.player]["automation"].get(key, False)
+            is_checked = self.map_screen.world.nation_data[self.player]["automation"].get(key, False)
             chk_col = "green" if is_checked else "grey"
             btn_chk = Button(self.panel_rect.x + 50, y_pos, "automation_option", chk_col, "Automate Next Turn", lambda k=key: self.toggle_automation(k), font_preset="normal")
 
@@ -74,9 +74,9 @@ class Automation_Screen(Screen):
 
     def toggle_automation(self, key):
         if self.can_edit_realtime():
-            val = self.map_screen.nation_data[self.player]["automation"].get(key, False)
-            self.map_screen.nation_data[self.player]["automation"][key] = not val
-            if self.map_screen.realtime_multiplayer:
+            val = self.map_screen.world.nation_data[self.player]["automation"].get(key, False)
+            self.map_screen.world.nation_data[self.player]["automation"][key] = not val
+            if self.map_screen.session.realtime_multiplayer:
                 # The map's regular draft sync runs every frame, but clearing
                 # its fingerprint here makes this visible preference update
                 # send on the very next frame even if the screen was opened
@@ -99,7 +99,7 @@ class Automation_Screen(Screen):
             if confirmed and self.can_edit_realtime():
                 clearing_orders = action is clear_player_movement and any(
                     unit.get("owner") == self.player and unit.get("order")
-                    for province in self.map_screen.map_data.values()
+                    for province in self.map_screen.world.map_data.values()
                     for unit in province.get("units", []))
                 action(self.map_screen)
                 if action in (clear_player_construction, automate_player_construction):

@@ -23,7 +23,7 @@ pygame.init()
 pygame.display.set_mode((800, 600))
 
 import data.constants as c
-from tests.stub_map_screen import fill_state_defaults, map_double
+from tests.stub_map_screen import MapDouble, fill_state_defaults, map_double
 from map_logic.diplomacy import diplomacy_messages as dm
 from ui.panels import diplomatic_popups
 
@@ -34,7 +34,7 @@ class Clock:
         return "1 January 1939"
 
 
-class Screen:
+class Screen(MapDouble):
     time_manager = Clock()
     player_country = "Player"
 
@@ -63,6 +63,7 @@ class PopupLifetimeTests(unittest.TestCase):
                            "parameters": {"give_materials": 500, "take_fuel": 100}}}),
         }
         self.screen = Screen(self.nation_data)
+        self.nation_data = self.screen.world.nation_data
         diplomatic_popups.spawn_popups_for_player(self.screen)
 
     def test_an_incoming_request_raises_a_popup(self):

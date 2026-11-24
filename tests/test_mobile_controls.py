@@ -272,7 +272,7 @@ class TouchGestureTests(unittest.TestCase):
         self.assertFalse(dialog.done)
 
     def test_dragging_over_skip_does_not_cancel_ai_processing(self):
-        game = SimpleNamespace(show_player_ready_screen=False, show_exit_confirmation=False,
+        game = map_double(show_player_ready_screen=False, show_exit_confirmation=False,
             is_saving=False, ai_is_thinking=True, force_skip_llm=False,
             force_skip_btn_rect=pygame.Rect(450, 275, 100, 50))
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,

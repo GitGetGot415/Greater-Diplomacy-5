@@ -32,9 +32,9 @@ class Declare_Independence_Screen(MapOverlayScreen):
         self.selected_core = None
         self.available_cores = []
 
-        if self.map_screen.player_unit:
-            for prov in self.map_screen.map_data.values():
-                if self.map_screen.player_unit in prov.get("units", []):
+        if self.map_screen.session.player_unit:
+            for prov in self.map_screen.world.map_data.values():
+                if self.map_screen.session.player_unit in prov.get("units", []):
                     self.available_cores = [core for core in prov.get("cores", []) if core not in c.UNPLAYABLE_NATIONS]
                     break
 
@@ -49,7 +49,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         if core_tag is None:
             self.name_field.text = "Free Republic"
         else:
-            core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
+            core_name = self.map_screen.world.nation_data.get(core_tag, {}).get("name", core_tag)
             self.name_field.text = f"Free {core_name}"
         self.refresh_ui()
 
@@ -68,7 +68,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
                                                 lambda: self.select_core(None)))
         
         for i, core_tag in enumerate(self.available_cores):
-            core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
+            core_name = self.map_screen.world.nation_data.get(core_tag, {}).get("name", core_tag)
             display_name = text_utils.truncate_chars(core_name, CORE_NAME_MAX_CHARS)
             self.elements.append(make_choice_button(btn_x, btn_y + 60 * (i + 1), "medium", display_name,
                                                     self.selected_core == core_tag,
@@ -87,30 +87,30 @@ class Declare_Independence_Screen(MapOverlayScreen):
         # locally would create an unsendable tournament move (or a client-only
         # real-time mutation).  Keep the action visibly unavailable rather
         # than letting either mode appear to accept an ignored command.
-        if (self.map_screen.realtime_multiplayer
-                or self.map_screen.multiplayer_mode):
+        if (self.map_screen.session.realtime_multiplayer
+                or self.map_screen.session.multiplayer_mode):
             self.map_screen.show_feedback("Tactical independence is unavailable in multiplayer.")
             return
         if not self.name_field.text.strip():
             self.map_screen.show_feedback("Please enter a name!")
             return
             
-        unit = self.map_screen.player_unit
+        unit = self.map_screen.session.player_unit
         if not unit:
             self.map_screen.show_feedback("Error: No tactical unit found.")
             return
             
-        old_tag = self.map_screen.player_country
+        old_tag = self.map_screen.session.player_country
         
         # 1. Create new tag safely avoiding duplicates
         base_tag = self.name_field.text.strip()
         new_tag = base_tag
         suffix = 1
-        while new_tag in self.map_screen.nation_data:
+        while new_tag in self.map_screen.world.nation_data:
             new_tag = f"{base_tag} {suffix}"
             suffix += 1
             
-        old_data = self.map_screen.nation_data.get(old_tag, {})
+        old_data = self.map_screen.world.nation_data.get(old_tag, {})
         new_data = {
             "name": base_tag,
             "color": self.new_country_color,
@@ -130,15 +130,15 @@ class Declare_Independence_Screen(MapOverlayScreen):
             "is_faction_leader": False,
             **c.TACTICAL_INDEPENDENCE_STOCKPILE,
         }
-        self.map_screen.nation_data[new_tag] = new_data
+        self.map_screen.world.nation_data[new_tag] = new_data
         
         # Force bidirectional war
         if old_tag not in c.UNPLAYABLE_NATIONS:
-            self.map_screen.nation_data[old_tag].setdefault("at_war_with", []).append(new_tag)
+            self.map_screen.world.nation_data[old_tag].setdefault("at_war_with", []).append(new_tag)
             
         # 2. Grant the tile the unit is currently standing on
         unit_prov = None
-        for prov in self.map_screen.map_data.values():
+        for prov in self.map_screen.world.map_data.values():
             if unit in prov.get("units", []):
                 unit_prov = prov
                 break
@@ -150,7 +150,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
                 ownership.add_claim(self.map_screen, unit_prov, old_tag)
                 
             if self.selected_core:
-                for prov in self.map_screen.map_data.values():
+                for prov in self.map_screen.world.map_data.values():
                     if self.selected_core in prov.get("cores", []) and prov != unit_prov:
                         if new_tag not in prov.setdefault("cores", []):
                             prov["cores"].insert(0, new_tag)
@@ -164,14 +164,14 @@ class Declare_Independence_Screen(MapOverlayScreen):
             unit["order"]["path"] = []
             
         # 5. Escalate to strategic mode as the new leader
-        self.map_screen.tactical_mode = False
-        self.map_screen.player_country = new_tag
+        self.map_screen.session.tactical_mode = False
+        self.map_screen.session.player_country = new_tag
         
-        if old_tag in self.map_screen.active_players:
-            idx = self.map_screen.active_players.index(old_tag)
-            self.map_screen.active_players[idx] = new_tag
+        if old_tag in self.map_screen.session.active_players:
+            idx = self.map_screen.session.active_players.index(old_tag)
+            self.map_screen.session.active_players[idx] = new_tag
             
-        log_global_event(self.map_screen.nation_data, f"{base_tag} has declared its independence from {old_tag}!")
+        log_global_event(self.map_screen.world.nation_data, f"{base_tag} has declared its independence from {old_tag}!")
         
         self.map_screen.nation_colors[new_tag] = tuple(self.new_country_color)
         

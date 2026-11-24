@@ -17,7 +17,7 @@ from screens.editors import menus as editor_menus
 from screens.editors import standalone_export
 from screens.editors.date_economy_screens import Editor_Metadata_Screen
 from screens.editors.standalone_export import Standalone_Export_Screen
-from tests.stub_map_screen import map_double
+from tests.stub_map_screen import mock_map, map_double
 
 
 def editor():
@@ -440,7 +440,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         from screens.game import map_buttons
         from screens.editors import menus
 
-        game = mock.Mock(is_editor=True, player_country="Editor")
+        game = mock_map(is_editor=True, player_country="Editor")
         def button(_x, _y, _size, _color, text, callback, **_appearance):
             return SimpleNamespace(text=text, callback=callback)
         with mock.patch.object(map_buttons, "Button", side_effect=button), \
@@ -450,11 +450,11 @@ class ScenarioMetadataTests(unittest.TestCase):
                 mock.patch.object(menus, "open_spectator_messages") as messages:
             game.btn_gp_msgs.callback()
             metadata.assert_called_once_with(game)
-            game.is_editor = False
-            game.player_country = "Spectator"
+            game.session.is_editor = False
+            game.session.player_country = "Spectator"
             game.btn_gp_msgs.callback()
             messages.assert_called_once_with(game)
-            game.player_country = "A"
+            game.session.player_country = "A"
             game.btn_gp_msgs.callback()
             game.change_state.assert_called_once_with("MESSAGES")
 

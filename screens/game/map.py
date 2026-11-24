@@ -161,13 +161,13 @@ class Map(StateAccess, Screen):
         self._refresh_resource_hud_economy()
 
     def _refresh_resource_hud_economy(self):
-        if self.is_editor or self.tactical_mode or self.player_country not in self.nation_data:
+        if self.session.is_editor or self.session.tactical_mode or self.session.player_country not in self.world.nation_data:
             self.econ_cache = None
             self._resource_hud_economy_key = None
             return
-        key = (self.player_country, self.time_manager.total_turns, self._presentation_cache_revision)
+        key = (self.session.player_country, self.world.time_manager.total_turns, self._presentation_cache_revision)
         if key != self._resource_hud_economy_key:
-            self.econ_cache = queries.get_economy_projections(self.player_country, self.map_data, self.nation_data, context=self)
+            self.econ_cache = queries.get_economy_projections(self.session.player_country, self.world.map_data, self.world.nation_data, context=self)
             self._resource_hud_economy_key = key
 
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
@@ -203,7 +203,7 @@ class Map(StateAccess, Screen):
         self.presentation_enabled = True
 
         self.history_turn = history_turn
-        self.num_players = num_players
+        self.session.num_players = num_players
         self._init_session_state()
         self._init_view_mode(load_path, is_scenario, force_editor)
 
@@ -211,7 +211,7 @@ class Map(StateAccess, Screen):
         if is_random and random_settings:
             self.random_settings = random_settings
             yield from load_map.load_map_asset_steps(self, random_settings["map_path"], scenario_settings=map_settings)
-            self.time_manager.year = random_settings["year"]
+            self.world.time_manager.year = random_settings["year"]
         else:
             yield from load_map.load_map_asset_steps(self, load_path, scenario_settings=map_settings)
 
@@ -236,13 +236,13 @@ class Map(StateAccess, Screen):
         yield "Preparing Game Controls..."
         map_buttons.render_buttons(self)
 
-        diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
+        diplomacy_lifecycle.normalize_diplomacy_channels(self.world.nation_data)
 
         # A loaded save may have been written immediately before a faction join
         # or war was resolved. Reconcile once on load so its UI never advertises
         # a guarantee or military-access grant that is no longer valid.
-        guarantees.reconcile(self.nation_data)
-        war_actions.reconcile_military_access(self.nation_data)
+        guarantees.reconcile(self.world.nation_data)
+        war_actions.reconcile_military_access(self.world.nation_data)
 
         yield "Preparing Country Labels..."
         self.update_country_centers()
@@ -260,11 +260,11 @@ class Map(StateAccess, Screen):
         self.country_actions_scroll_y = 0
         self.country_actions_scroll_max = 0
 
-        self.active_players = [] # Usually empty on boot unless loaded from save
-        self.current_player_index = 0
+        self.session.active_players = [] # Usually empty on boot unless loaded from save
+        self.session.current_player_index = 0
         self.show_player_ready_screen = False
-        self.unit_event_log = {"turn": 0, "events": []}
-        self.unit_event_read_turns = {}
+        self.world.unit_event_log = {"turn": 0, "events": []}
+        self.session.unit_event_read_turns = {}
         # Local display preferences reset after each completed turn.
         self.unit_event_filter = None
         self.unit_event_filter_turn = None
@@ -303,45 +303,45 @@ class Map(StateAccess, Screen):
         self.random_settings = None
 
         # --- BACKGROUND PROCESSING FLAGS ---
-        self.ai_is_thinking = False
-        self.ai_processing_complete = False
-        self.is_refreshing = False
-        self.is_saving = False
-        self.save_progress_completed = 0
-        self.save_progress_total = 5
-        self.thread_error = None
-        self.force_skip_llm = False
+        self.session.ai_is_thinking = False
+        self.session.ai_processing_complete = False
+        self.session.is_refreshing = False
+        self.session.is_saving = False
+        self.session.save_progress_completed = 0
+        self.session.save_progress_total = 5
+        self.session.thread_error = None
+        self.session.force_skip_llm = False
 
         # --- TACTICAL MODE STATE ---
-        self.tactical_mode = False
-        self.player_unit = None
+        self.session.tactical_mode = False
+        self.session.player_unit = None
         # (province, friendly roster, enemy roster) handed to the tactical preview, and the
         # last turn whose battle was offered, so one turn opens at most one preview.
         self.tactical_battle_request = None
         self._tactical_battle_turn = None
 
         # --- MULTI-TURN FLAGS ---
-        self.multi_turn_processing_complete = False
-        self.multi_turns_total = 0
-        self.multi_turns_completed = 0
-        self.multi_turn_abort_requested = False
+        self.session.multi_turn_processing_complete = False
+        self.session.multi_turns_total = 0
+        self.session.multi_turns_completed = 0
+        self.session.multi_turn_abort_requested = False
 
         # --- NEW PROGRESS BAR TRACKERS ---
-        self.loading_status_text = "Waiting..."
-        self.proactive_tasks_total = 0
-        self.proactive_tasks_completed = 0
-        self.movement_tasks_total = 0
-        self.movement_tasks_completed = 0
-        self.proactive_llm_tasks_total = 0
-        self.proactive_llm_tasks_completed = 0
-        self.proactive_llm_tasks = []
+        self.session.loading_status_text = "Waiting..."
+        self.session.proactive_tasks_total = 0
+        self.session.proactive_tasks_completed = 0
+        self.session.movement_tasks_total = 0
+        self.session.movement_tasks_completed = 0
+        self.session.proactive_llm_tasks_total = 0
+        self.session.proactive_llm_tasks_completed = 0
+        self.session.proactive_llm_tasks = []
         # Each AI nation's menu of legal moves, held between the proactive
         # pass that builds it and the director pass that picks from it.
-        self.proactive_choices = []
-        self.responsive_tasks_total = 0
-        self.responsive_tasks_completed = 0
-        self.letters_total = 0
-        self.letters_completed = 0
+        self.session.proactive_choices = []
+        self.session.responsive_tasks_total = 0
+        self.session.responsive_tasks_completed = 0
+        self.session.letters_total = 0
+        self.session.letters_completed = 0
         self.diplomatic_popups = []
 
         # Per-turn AI map snapshot (map_logic/ai/ai_world.py). Only ever set
@@ -363,8 +363,8 @@ class Map(StateAccess, Screen):
         self.mail_input_active = False
 
         # --- NEW REFRESH TRACKERS ---
-        self.refresh_tasks_total = 0
-        self.refresh_tasks_completed = 0
+        self.session.refresh_tasks_total = 0
+        self.session.refresh_tasks_completed = 0
         self.loading_spinner_angle = 0
 
         self.brush_building = "None"
@@ -378,9 +378,9 @@ class Map(StateAccess, Screen):
     def _init_view_mode(self, load_path, is_scenario, force_editor):
         # --- 1. Basic State Variables ---
         self.camera_tilt_slider_val = 0.0 # Starts fully top-down
-        self.selection_mode = is_scenario
+        self.session.selection_mode = is_scenario
         self.pending_selection = None
-        self.player_country = "None"
+        self.session.player_country = "None"
 
         self.secondary_modes = ["UNITS", "ECONOMY", "BLANK"]
         self.sec_idx = 0
@@ -389,16 +389,16 @@ class Map(StateAccess, Screen):
         self.base_layer = "POLITICAL"
         self.load_path = load_path
 
-        self.is_editor = force_editor or (self.load_path is None and not is_scenario)
-        if self.is_editor:
-            self.player_country = "Editor"
-            self.selection_mode = False
+        self.session.is_editor = force_editor or (self.load_path is None and not is_scenario)
+        if self.session.is_editor:
+            self.session.player_country = "Editor"
+            self.session.selection_mode = False
         else:
             self.show_navigation_intro_when_ready = True
 
-        if self.selection_mode:
+        if self.session.selection_mode:
             self.set_country_selection_view_defaults()
-        elif self.load_path and not self.is_editor:
+        elif self.load_path and not self.session.is_editor:
             # A resumed game is already operational; it should not reopen in
             # the country-selection presentation.
             self.set_play_view_defaults()
@@ -406,8 +406,8 @@ class Map(StateAccess, Screen):
         self.painting_active = False
         self.editor_selection_tool = "BRUSH"
         self.brush_nation = "Unclaimed"
-        self.viewing_ai_moves = False
-        self.skip_ai_view = False
+        self.session.viewing_ai_moves = False
+        self.session.skip_ai_view = False
 
     def _init_ui_layout(self):
         # --- 3. Visuals & UI Setup ---
@@ -424,11 +424,11 @@ class Map(StateAccess, Screen):
         self.raised_rect = pygame.Rect(0, 0, c.UI_LEFT_OFFSET, c.SCREEN_HEIGHT)
         self.ui_background_rect = pygame.Rect(0, c.SCREEN_HEIGHT - self.total_ui_h, 270, self.total_ui_h)
 
-        self.map_w, self.map_h = self.id_map.get_size()
-        self.min_zoom = (c.SCREEN_HEIGHT - self.total_ui_h) / self.map_h
+        self.world.map_w, self.world.map_h = self.id_map.get_size()
+        self.min_zoom = (c.SCREEN_HEIGHT - self.total_ui_h) / self.world.map_h
         self.camera = MapCamera(self.min_zoom)
-        if self.load_path and not self.selection_mode and not self.is_editor:
-            self.focus_camera_on_country(self.player_country)
+        if self.load_path and not self.session.selection_mode and not self.session.is_editor:
+            self.focus_camera_on_country(self.session.player_country)
 
         self.active_map = self.political_map if self.base_layer == "POLITICAL" else self.terrain_map
         self.map_mode = self.base_layer
@@ -464,8 +464,8 @@ class Map(StateAccess, Screen):
         self.unassigned_army_country = None
         self._ignore_left_until_release = False
         self._ignore_right_until_release = False
-        self._unit_selection_turn = self.time_manager.total_turns
-        self._unit_selection_player = self.player_country
+        self._unit_selection_turn = self.world.time_manager.total_turns
+        self._unit_selection_player = self.session.player_country
         self.feedback_text = ""
         self.feedback_timer = 0
 
@@ -477,21 +477,21 @@ class Map(StateAccess, Screen):
 
         Hostile artillery alone cannot fight back: the player wins at once without a battle.
         """
-        if (not self.tactical_mode or self.player_unit is None or self.multiplayer_mode
-                or self.realtime_multiplayer
-                or self._tactical_battle_turn == self.time_manager.total_turns):
+        if (not self.session.tactical_mode or self.session.player_unit is None or self.session.multiplayer_mode
+                or self.session.realtime_multiplayer
+                or self._tactical_battle_turn == self.world.time_manager.total_turns):
             return
-        self._tactical_battle_turn = self.time_manager.total_turns
-        province = next((tile for tile in self.map_data.values()
-                         if any(unit is self.player_unit for unit in tile.get("units", []))), None)
+        self._tactical_battle_turn = self.world.time_manager.total_turns
+        province = next((tile for tile in self.world.map_data.values()
+                         if any(unit is self.session.player_unit for unit in tile.get("units", []))), None)
         if province is None:
             return
         library = queries.get_unit_library(self)
-        forces = tactical_battle.campaign_forces(self.player_unit, province, self.nation_data, library)
+        forces = tactical_battle.campaign_forces(self.session.player_unit, province, self.world.nation_data, library)
         if forces is None:
             return
         if not forces[1]:
-            tactical_battle.win_against_artillery(self.player_unit, province, self.nation_data, library)
+            tactical_battle.win_against_artillery(self.session.player_unit, province, self.world.nation_data, library)
             player_setup.settle_tactical_tile(self, province)
             return
         self.tactical_battle_request = (province, *forces)
@@ -533,18 +533,18 @@ class Map(StateAccess, Screen):
 
     @property
     def player_manpower(self):
-        return self.nation_data.get(self.player_country, {}).get("manpower", 0)
+        return self.world.nation_data.get(self.session.player_country, {}).get("manpower", 0)
     @player_manpower.setter
     def player_manpower(self, value):
-        if self.player_country in self.nation_data: self.nation_data[self.player_country]["manpower"] = value
+        if self.session.player_country in self.world.nation_data: self.world.nation_data[self.session.player_country]["manpower"] = value
 
     @property
     def player_materials(self):
-        return self.nation_data.get(self.player_country, {}).get("materials", 0)
+        return self.world.nation_data.get(self.session.player_country, {}).get("materials", 0)
 
     @property
     def player_fuel(self):
-        return self.nation_data.get(self.player_country, {}).get("fuel", 0)
+        return self.world.nation_data.get(self.session.player_country, {}).get("fuel", 0)
 
     def set_camera_tilt(self, val):
         """Callback for the manual camera tilt slider."""
@@ -583,8 +583,8 @@ class Map(StateAccess, Screen):
         self.show_feedback(f"Country Names: {'ON' if self.show_country_names else 'OFF'}")
 
     def toggle_skip_ai(self):
-        self.skip_ai_view = not self.skip_ai_view
-        self.show_feedback(f"Skip AI View: {'ON' if self.skip_ai_view else 'OFF'}")
+        self.session.skip_ai_view = not self.session.skip_ai_view
+        self.show_feedback(f"Skip AI View: {'ON' if self.session.skip_ai_view else 'OFF'}")
         map_buttons.update_button_states(self)
 
     def set_view_mode(self, mode):
@@ -671,7 +671,7 @@ class Map(StateAccess, Screen):
     def focus_camera_on_country(self, country_id, animate=False):
         """Frame a country's core-territory center at the unit-visible zoom."""
         center = queries.get_country_map_center(
-            country_id, self.map_data, self.loop_map, self.map_w)
+            country_id, self.world.map_data, self.world.loop_map, self.world.map_w)
         if center is None:
             return False
 
@@ -692,7 +692,7 @@ class Map(StateAccess, Screen):
     def focus_camera_on_army(self, records):
         """Frame an explicitly selected army at the centre of its live units."""
         center = queries.get_average_province_center(
-            [province for _unit, province in records], self.loop_map, self.map_w)
+            [province for _unit, province in records], self.world.loop_map, self.world.map_w)
         if center is None:
             return False
         camera_handler.center_camera_on_province(
@@ -704,11 +704,11 @@ class Map(StateAccess, Screen):
 
         def on_turns(turns):
             if turns:
-                self.multi_turns_total = turns
-                self.multi_turns_completed = 0
-                self.multi_turn_abort_requested = False
-                self.ai_is_thinking = True
-                self.loading_status_text = f"Skipping {turns} Turns..."
+                self.session.multi_turns_total = turns
+                self.session.multi_turns_completed = 0
+                self.session.multi_turn_abort_requested = False
+                self.session.ai_is_thinking = True
+                self.session.loading_status_text = f"Skipping {turns} Turns..."
                 run_background(self._run_multi_turn_thread, turns)
 
         dialogs.ask_integer("Process Multiple Turns", "How many turns to process at once?",
@@ -718,25 +718,25 @@ class Map(StateAccess, Screen):
 
         try:
             ai_handler.FORCE_SKIP = True
-            self.force_skip_llm = True
-            self.viewing_ai_moves = True # Prevents PyGame surface edits from background thread
+            self.session.force_skip_llm = True
+            self.session.viewing_ai_moves = True # Prevents PyGame surface edits from background thread
 
             for i in range(turns):
-                self.multi_turns_completed = i + 1
-                self.loading_status_text = f"Processing Turn {i+1}/{turns}..."
+                self.session.multi_turns_completed = i + 1
+                self.session.loading_status_text = f"Processing Turn {i+1}/{turns}..."
 
                 # Mock the UI prep variables to prevent crashes
-                self.proactive_tasks_total = 1
-                self.proactive_tasks_completed = 1
-                self.movement_tasks_total = 0
-                self.movement_tasks_completed = 0
-                self.proactive_llm_tasks_total = 0
-                self.proactive_llm_tasks_completed = 0
-                self.proactive_llm_tasks = []
-                self.responsive_tasks_total = 0
-                self.responsive_tasks_completed = 0
-                self.letters_total = 0
-                self.letters_completed = 0
+                self.session.proactive_tasks_total = 1
+                self.session.proactive_tasks_completed = 1
+                self.session.movement_tasks_total = 0
+                self.session.movement_tasks_completed = 0
+                self.session.proactive_llm_tasks_total = 0
+                self.session.proactive_llm_tasks_completed = 0
+                self.session.proactive_llm_tasks = []
+                self.session.responsive_tasks_total = 0
+                self.session.responsive_tasks_completed = 0
+                self.session.letters_total = 0
+                self.session.letters_completed = 0
 
                 await turn_processor.prepare_turn(self)
                 await turn_processor.resolve_turn_logic(self)
@@ -749,18 +749,18 @@ class Map(StateAccess, Screen):
                 # Can't interrupt a turn mid-computation, so the turn that was
                 # running when the user clicked Abort finishes normally, and
                 # simply becomes the last one processed.
-                if self.multi_turn_abort_requested:
-                    self.multi_turns_total = self.multi_turns_completed
+                if self.session.multi_turn_abort_requested:
+                    self.session.multi_turns_total = self.session.multi_turns_completed
                     break
 
         except Exception as e:
-            self.thread_error = traceback.format_exc()
-            print(f"MULTI-TURN CRASH CAUGHT:\n{self.thread_error}")
+            self.session.thread_error = traceback.format_exc()
+            print(f"MULTI-TURN CRASH CAUGHT:\n{self.session.thread_error}")
         finally:
             ai_handler.FORCE_SKIP = False
-            self.force_skip_llm = False
-            self.multi_turn_abort_requested = False
-            self.multi_turn_processing_complete = True
+            self.session.force_skip_llm = False
+            self.session.multi_turn_abort_requested = False
+            self.session.multi_turn_processing_complete = True
 
     def update_country_centers(self):
         """Calculates new label centers and text blobs for the map."""
@@ -790,7 +790,7 @@ class Map(StateAccess, Screen):
 
     # --- Screen Transitions ---
     def change_state(self, next_state):
-        if (self.realtime_multiplayer
+        if (self.session.realtime_multiplayer
                 and next_state in {"PRODUCTION", "ORDERS", "TACTICAL_ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
                                   "MESSAGES", "FACTION", "FACTION_TERRITORIES", "POLITICS",
                                   "AUTOMATION", "PUPPETS", "CLAIMS", "DECLARE_INDEPENDENCE"}):
@@ -806,7 +806,7 @@ class Map(StateAccess, Screen):
         if self.selected_province:
             owner = self.selected_province.get("owner")
             # Allow the spectator to bypass ownership checks
-            if owner == self.player_country or self.player_country == "Spectator":
+            if owner == self.session.player_country or self.session.player_country == "Spectator":
                 if requires_land and queries.is_water_province(self.selected_province):
                     return
                 self.change_state(next_state)
@@ -814,13 +814,13 @@ class Map(StateAccess, Screen):
     def deselect_province(self):
         if self.selected_province:
             owner = self.selected_province.get("owner")
-            is_foreign = queries.is_foreign_playable(owner, self.player_country, self.nation_data)
+            is_foreign = queries.is_foreign_playable(owner, self.session.player_country, self.world.nation_data)
             if is_foreign:
                 draft = self.mail_draft_text.strip()
                 if draft:
-                    diplomacy_messages.queue_text_message(self.nation_data, self.player_country, owner, draft)
+                    diplomacy_messages.queue_text_message(self.world.nation_data, self.session.player_country, owner, draft)
                 else:
-                    diplomacy_messages.cancel_text_message(self.nation_data, self.player_country, owner)
+                    diplomacy_messages.cancel_text_message(self.world.nation_data, self.session.player_country, owner)
                 self.mail_input_active = False
 
         self.selected_province = None
@@ -836,9 +836,9 @@ class Map(StateAccess, Screen):
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self, save_name=None, *, overwrite=False, save_path=None):
-        if self.is_saving:
+        if self.session.is_saving:
             return # Already saving, ignore duplicate clicks
-        if self.realtime_multiplayer:
+        if self.session.realtime_multiplayer:
             session = self.realtime_session
             if session.phase != "GAME_OVER":
                 self.show_feedback("Real-time matches can be saved after they end.")
@@ -856,14 +856,14 @@ class Map(StateAccess, Screen):
             # instance while the match runs. Persisting that internal ``None``
             # country made an opened result feel broken. Completed matches are
             # offline spectator replays instead, never resumable sessions.
-            authoritative_map.player_country = "Spectator"
-            authoritative_map.active_players = []
-            authoritative_map.current_player_index = 0
+            authoritative_map.session.player_country = "Spectator"
+            authoritative_map.session.active_players = []
+            authoritative_map.session.current_player_index = 0
             authoritative_map.show_feedback = self.show_feedback
             if authoritative_map is not self:
                 authoritative_map.save_map_data(save_name, overwrite=overwrite, save_path=save_path)
                 return
-        if self.is_editor:
+        if self.session.is_editor:
             if not queries.can_bulk_edit_map(self):
                 return
             if save_name is None and save_path is None:
@@ -876,10 +876,10 @@ class Map(StateAccess, Screen):
                 lambda path, replace: self.save_map_data(overwrite=replace, save_path=path),
                 game_state=self, title="Save Game", directory=True)
             return
-        self.is_saving = True
-        self.loading_status_text = "Saving Game..."
-        self.save_progress_completed = 0
-        self.save_progress_total = 5
+        self.session.is_saving = True
+        self.session.loading_status_text = "Saving Game..."
+        self.session.save_progress_completed = 0
+        self.session.save_progress_total = 5
 
         # Force the loading screen to actually appear before run_background either
         # spawns a thread (desktop) or, on web, blocks the frame running synchronously.
@@ -997,7 +997,7 @@ class Map(StateAccess, Screen):
 
         def on_confirm(confirm):
             if confirm:
-                for province in self.map_data.values():
+                for province in self.world.map_data.values():
                     owner = province.get("owner", "Unclaimed")
                     province["cores"] = [owner] if owner not in c.OWNERLESS_OWNERS else []
                 self.show_feedback("Auto-assigned all cores!")
@@ -1014,7 +1014,7 @@ class Map(StateAccess, Screen):
         )
 
     def exit_to_menu(self):
-        if self.realtime_multiplayer:
+        if self.session.realtime_multiplayer:
             session = self.realtime_session
             is_host = (self.realtime_player_id == getattr(session, "host_id", None))
             if not is_host:
@@ -1094,12 +1094,12 @@ class Map(StateAccess, Screen):
 
     def additional_events(self, event):
         # Intercept inputs if the game has crashed
-        if self.thread_error:
+        if self.session.thread_error:
             if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                     and not getattr(event, "mobile_drag", False)):
                 btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
                 if btn_rect.collidepoint(event.pos):
-                    if pickers.copy_to_clipboard(self.thread_error):
+                    if pickers.copy_to_clipboard(self.session.thread_error):
                         self.error_copied = True
             return # Block all other map events!
 
@@ -1118,8 +1118,8 @@ class Map(StateAccess, Screen):
         map_input.handle_map_events(self, event)
 
     def touch_map_at(self, position):
-        if (self.thread_error or self.show_player_ready_screen or self.show_exit_confirmation
-                or self.is_saving or self.ai_is_thinking
+        if (self.session.thread_error or self.show_player_ready_screen or self.show_exit_confirmation
+                or self.session.is_saving or self.session.ai_is_thinking
                 or map_input._map_position_is_on_ui(self, position)
                 or army_panel.blocks_map_touch(self, position)):
             return None
@@ -1170,11 +1170,11 @@ class Map(StateAccess, Screen):
     # --- Map-level unit selection and movement ---------------------------------
 
     def can_select_map_units(self):
-        if (self.selection_mode or self.is_editor or self.viewing_ai_moves
-                or self.ai_is_thinking or self.player_country in (
+        if (self.session.selection_mode or self.session.is_editor or self.session.viewing_ai_moves
+                or self.session.ai_is_thinking or self.session.player_country in (
                     "None", "Spectator", c.TOURNAMENT_SPECTATOR)):
             return False
-        if self.realtime_multiplayer:
+        if self.session.realtime_multiplayer:
             player = self.realtime_session.players.get(self.realtime_player_id)
             if (self.realtime_session.phase != "TURN" or not player
                     or player.submitted or player.eliminated):
@@ -1202,12 +1202,12 @@ class Map(StateAccess, Screen):
         if not self.can_select_map_units():
             return
         previous_selection = self.selected_unit_ids.copy()
-        eligible = [unit for unit in units if unit.get("owner") == self.player_country]
-        if self.tactical_mode:
-            eligible = [unit for unit in eligible if unit is self.player_unit]
+        eligible = [unit for unit in units if unit.get("owner") == self.session.player_country]
+        if self.session.tactical_mode:
+            eligible = [unit for unit in eligible if unit is self.session.player_unit]
         if not additive:
             self.selected_unit_ids.clear()
-        queries.ensure_unit_ids(self.map_data)
+        queries.ensure_unit_ids(self.world.map_data)
         self.selected_unit_ids.update(unit["unit_id"] for unit in eligible)
         if eligible and self.selected_unit_ids != previous_selection and sound_kind is not None:
             sound_effects.play_ui_sound(sound_kind)
@@ -1223,9 +1223,9 @@ class Map(StateAccess, Screen):
         """
         if not self.can_select_map_units():
             return False
-        eligible = [unit for unit in units if unit.get("owner") == self.player_country]
-        if self.tactical_mode:
-            eligible = [unit for unit in eligible if unit is self.player_unit]
+        eligible = [unit for unit in units if unit.get("owner") == self.session.player_country]
+        if self.session.tactical_mode:
+            eligible = [unit for unit in eligible if unit is self.session.player_unit]
         if not eligible:
             return False
 
@@ -1247,13 +1247,13 @@ class Map(StateAccess, Screen):
     def selected_unit_records(self):
         """Return selected units with their current provinces, pruning stale IDs."""
         records, live_ids = [], set()
-        for province in self.map_data.values():
+        for province in self.world.map_data.values():
             for unit in province.get("units", []):
                 unit_id = unit.get("unit_id")
                 legacy_id = id(unit)
                 if unit_id in self.selected_unit_ids or legacy_id in self.selected_unit_ids:
                     live_ids.update((unit_id, legacy_id))
-                    if unit.get("owner") == self.player_country:
+                    if unit.get("owner") == self.session.player_country:
                         records.append((unit, province))
         self.selected_unit_ids.intersection_update(live_ids)
         return records
@@ -1270,7 +1270,7 @@ class Map(StateAccess, Screen):
         except ValueError as exc:
             self.show_feedback(str(exc))
             return False
-        unit_actions.apply_batch(self, self.player_country, choices)
+        unit_actions.apply_batch(self, self.session.player_country, choices)
         self.invalidate_map_presentation_cache()
         self.show_feedback(f"{len(choices)} unit{'s' if len(choices) != 1 else ''} routed to province {destination['id']}")
         return True
@@ -1283,9 +1283,9 @@ class Map(StateAccess, Screen):
             choices = queries.plan_unit_move_orders(self, self.selected_unit_records(), destination, append)
             prepared = []
             for unit, origin, order in choices:
-                if not unit_actions.unit_permission(self, self.player_country, unit):
+                if not unit_actions.unit_permission(self, self.session.player_country, unit):
                     return False
-                prepared.append(unit_actions.prepare_action(self, self.player_country, origin, unit, order))
+                prepared.append(unit_actions.prepare_action(self, self.session.player_country, origin, unit, order))
         except ValueError:
             return False
         return any(result.changed for result in prepared)
@@ -1298,8 +1298,8 @@ class Map(StateAccess, Screen):
     def create_army_from_selection(self):
         if not self.can_select_map_units():
             return None
-        army = queries.create_army(self.player_country, self.selected_map_unit_ids(),
-                                   self.nation_data, self.map_data)
+        army = queries.create_army(self.session.player_country, self.selected_map_unit_ids(),
+                                   self.world.nation_data, self.world.map_data)
         if army:
             sound_effects.play_ui_sound("create_army")
             self.invalidate_map_presentation_cache()
@@ -1310,8 +1310,8 @@ class Map(StateAccess, Screen):
         if not self.can_select_map_units():
             return False
         changed = queries.assign_units_to_army(
-            self.player_country, army_id, self.selected_map_unit_ids(),
-            self.nation_data, self.map_data)
+            self.session.player_country, army_id, self.selected_map_unit_ids(),
+            self.world.nation_data, self.world.map_data)
         if changed:
             self.invalidate_map_presentation_cache()
             self.show_feedback("Selected units assigned to army")
@@ -1320,9 +1320,9 @@ class Map(StateAccess, Screen):
     def ungroup_selection(self):
         if not self.can_select_map_units():
             return False
-        changed = queries.ungroup_units(self.player_country,
+        changed = queries.ungroup_units(self.session.player_country,
                                         self.selected_map_unit_ids(),
-                                        self.nation_data, self.map_data)
+                                        self.world.nation_data, self.world.map_data)
         if changed:
             self.invalidate_map_presentation_cache()
             self.show_feedback("Selected units removed from their armies")
@@ -1333,22 +1333,22 @@ class Map(StateAccess, Screen):
         if not self.can_select_map_units():
             return False
         if army_id == c.UNASSIGNED_ARMY_ID:
-            army = queries.get_unassigned_army(self.player_country, self.nation_data, self.map_data)
+            army = queries.get_unassigned_army(self.session.player_country, self.world.nation_data, self.world.map_data)
         else:
-            armies = queries.get_armies(self.player_country, self.nation_data, self.map_data)
+            armies = queries.get_armies(self.session.player_country, self.world.nation_data, self.world.map_data)
             army = next((item for item in armies if item.get("id") == army_id), None)
         if army is None:
             return False
         records_by_id = {
             unit.get("unit_id"): (unit, province)
-            for province in self.map_data.values()
+            for province in self.world.map_data.values()
             for unit in province.get("units", [])
-            if unit.get("owner") == self.player_country
+            if unit.get("owner") == self.session.player_country
         }
         records = [records_by_id[unit_id] for unit_id in army.get("unit_ids", [])
                    if unit_id in records_by_id]
         if not records:
-            queries.normalize_armies(self.nation_data, self.map_data)
+            queries.normalize_armies(self.world.nation_data, self.world.map_data)
             return False
         self.select_map_units([unit for unit, _province in records])
         self.selected_province = records[0][1]
@@ -1376,7 +1376,7 @@ class Map(StateAccess, Screen):
         updated_count = 0
         removed_count = 0
 
-        for province in self.map_data.values():
+        for province in self.world.map_data.values():
             # 1. Clean Units
             units_to_keep = []
             for unit in province.get("units", []):
@@ -1391,7 +1391,7 @@ class Map(StateAccess, Screen):
 
                 # Check if the unit is still valid
                 if base_type in unit_library or base_type in ["Convoy", "Truck"]:
-                    if queries.apply_library_stats(unit, unit_library, self.nation_data):
+                    if queries.apply_library_stats(unit, unit_library, self.world.nation_data):
                         updated_count += 1
                     units_to_keep.append(unit)
                 else:
@@ -1442,7 +1442,7 @@ class Map(StateAccess, Screen):
         Not gated on owning anything here: both screens read a province you have
         no units in, and refuse to edit units you do not command.
         """
-        if self.selection_mode or self.player_country == c.TOURNAMENT_SPECTATOR:
+        if self.session.selection_mode or self.session.player_country == c.TOURNAMENT_SPECTATOR:
             return
         map_input.handle_view_mode_keybind(self, "UNITS", "ORDERS")
 
@@ -1452,7 +1452,7 @@ class Map(StateAccess, Screen):
         Keybinds screen's "change screen with this keybind" toggle is on for
         this key -- see handle_orders_key.
         """
-        if self.selection_mode or self.player_country == c.TOURNAMENT_SPECTATOR:
+        if self.session.selection_mode or self.session.player_country == c.TOURNAMENT_SPECTATOR:
             return
         map_input.handle_view_mode_keybind(self, "ECONOMY", "ECONOMY")
 
@@ -1515,8 +1515,8 @@ class Map(StateAccess, Screen):
     def draw(self, surface):
         super().draw(surface)
         map_renderer.draw_badges(self, surface)
-        if not (self.show_exit_confirmation or self.show_player_ready_screen or self.viewing_ai_moves
-                or self.ai_is_thinking or self.is_refreshing or self.is_saving):
+        if not (self.show_exit_confirmation or self.show_player_ready_screen or self.session.viewing_ai_moves
+                or self.session.ai_is_thinking or self.session.is_refreshing or self.session.is_saving):
             ui_info_popup.draw_relation_indicators(self, surface)
 
         realtime_status_panel.draw(self, surface)
@@ -1528,12 +1528,12 @@ class Map(StateAccess, Screen):
         if popup is not None and diplomatic_popups.map_message_popups_visible(self):
             popup.draw(surface)
 
-        if self.thread_error:
+        if self.session.thread_error:
             surface.fill((150, 0, 0))
             title = fonts.get("heading1").render("FATAL THREAD ERROR", True, (255, 255, 255))
             surface.blit(title, (20, 20))
             y_offset = 80
-            for line in self.thread_error.split('\n'):
+            for line in self.session.thread_error.split('\n'):
                 surface.blit(fonts.get("small").render(line, True, (255, 200, 200)), (20, y_offset))
                 y_offset += 25
 
@@ -1574,29 +1574,29 @@ class Map(StateAccess, Screen):
         updated_count = 0
 
         for country, data in new_data.items():
-            if country not in self.nation_data:
-                self.nation_data[country] = data
+            if country not in self.world.nation_data:
+                self.world.nation_data[country] = data
                 added_count += 1
             else:
                 # SYNC FIX: Merge any missing top-level keys from the base template
                 for base_key, base_val in data.items():
-                    if base_key not in self.nation_data[country]:
-                        self.nation_data[country][base_key] = base_val
+                    if base_key not in self.world.nation_data[country]:
+                        self.world.nation_data[country][base_key] = base_val
 
-                if "color" in data and options.get("reset_colors", True) and self.nation_data[country].get("color") != data["color"]:
-                    self.nation_data[country]["color"] = data["color"]
+                if "color" in data and options.get("reset_colors", True) and self.world.nation_data[country].get("color") != data["color"]:
+                    self.world.nation_data[country]["color"] = data["color"]
                     updated_count += 1
                 if "name" in data and options.get("reset_names", True):
-                    self.nation_data[country]["name"] = data["name"]
+                    self.world.nation_data[country]["name"] = data["name"]
                 if "adjective" in data and options.get("reset_adjectives", True):
-                    self.nation_data[country]["adjective"] = data["adjective"]
+                    self.world.nation_data[country]["adjective"] = data["adjective"]
                 if "leader" in data and options.get("reset_leaders", True):
-                    self.nation_data[country]["leader"] = data["leader"]
+                    self.world.nation_data[country]["leader"] = data["leader"]
                 if "leader_title" in data and options.get("reset_leaders", True):
-                    self.nation_data[country]["leader_title"] = data["leader_title"]
+                    self.world.nation_data[country]["leader_title"] = data["leader_title"]
 
                 if "research" in data:
-                    current_res = self.nation_data[country].setdefault("research", {})
+                    current_res = self.world.nation_data[country].setdefault("research", {})
                     for tech_key, start_val in data["research"].items():
                         if tech_key not in current_res:
                             current_res[tech_key] = start_val
@@ -1606,13 +1606,13 @@ class Map(StateAccess, Screen):
         if options.get("reset_flags", True):
             # By setting to DEFAULT, we force the rendering engine to search the disk again.
             queries.clear_image_cache()
-            for c_name, n_data in self.nation_data.items():
+            for c_name, n_data in self.world.nation_data.items():
                 n_data["flag_data"] = "DEFAULT"
                 n_data["portrait_data"] = "DEFAULT"
 
             # Clean up obsolete research for EVERY nation currently on the map
         tech_tree = queries.get_tech_tree(self)
-        for country, data in self.nation_data.items():
+        for country, data in self.world.nation_data.items():
             if "research" in data:
                 obsolete_keys = [k for k in data["research"].keys() if k not in tech_tree]
                 for k in obsolete_keys:
@@ -1620,13 +1620,13 @@ class Map(StateAccess, Screen):
                     updated_count += 1
 
         # --- NEW: Scrub the map's default template too! ---
-        if self.default_research is not None:
-            obsolete_defaults = [k for k in self.default_research.keys() if k not in tech_tree]
+        if self.world.default_research is not None:
+            obsolete_defaults = [k for k in self.world.default_research.keys() if k not in tech_tree]
             for k in obsolete_defaults:
-                del self.default_research[k]
+                del self.world.default_research[k]
                 updated_count += 1
 
-        self.nation_colors = country_io.nation_colors_from(self.nation_data)
+        self.nation_colors = country_io.nation_colors_from(self.world.nation_data)
         self.refresh_map_layers("political", "relations")
 
         # Merge the unit sync into this function
@@ -1636,7 +1636,7 @@ class Map(StateAccess, Screen):
 
     def set_editor_selection_tool(self, tool):
         """Select the local territory and core painting tool."""
-        if not self.is_editor or self.editor_mode not in ("NATION", "CORE"):
+        if not self.session.is_editor or self.editor_mode not in ("NATION", "CORE"):
             return
         if tool not in ("BRUSH", "PAINT"):
             raise ValueError("Unknown editor selection tool.")
@@ -1663,12 +1663,12 @@ class Map(StateAccess, Screen):
 
     def update(self):
         self._advance_unit_view_animation()
-        if (self._unit_selection_turn != self.time_manager.total_turns
-                or self._unit_selection_player != self.player_country):
+        if (self._unit_selection_turn != self.world.time_manager.total_turns
+                or self._unit_selection_player != self.session.player_country):
             self.clear_map_unit_selection()
-            self._unit_selection_turn = self.time_manager.total_turns
-            self._unit_selection_player = self.player_country
-        if self.realtime_multiplayer:
+            self._unit_selection_turn = self.world.time_manager.total_turns
+            self._unit_selection_player = self.session.player_country
+        if self.session.realtime_multiplayer:
             self._apply_host_realtime_snapshot()
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
@@ -1682,7 +1682,7 @@ class Map(StateAccess, Screen):
                 # every frame made an idle planning turn do map-wide work just
                 # to rediscover an unchanged draft.
                 from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
-                commands = collect_map_commands(self, self.player_country)
+                commands = collect_map_commands(self, self.session.player_country)
                 fingerprint = f"{turn}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
                 if fingerprint != self._realtime_draft_fingerprint:
                     try:
@@ -1691,7 +1691,7 @@ class Map(StateAccess, Screen):
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
                 self._realtime_draft_dirty = False
-        if self.realtime_multiplayer and self.realtime_client:
+        if self.session.realtime_multiplayer and self.realtime_client:
             from data.multiplayer.realtime.session import apply_realtime_turn_snapshot
             events = self.realtime_client.poll()
             # A socket close can be queued next to the host's explicit
@@ -1735,14 +1735,14 @@ class Map(StateAccess, Screen):
         if self.centers_need_update and not editor_stroke_active:
             self.update_country_centers()
             self.centers_need_update = False
-        if self.is_editor and not editor_stroke_active:
+        if self.session.is_editor and not editor_stroke_active:
             self.flush_editor_visual_refresh()
 
         # Only spawn popups when the player is fully in control of the current turn
-        is_playing = not self.viewing_ai_moves and \
-                     not self.ai_is_thinking and \
+        is_playing = not self.session.viewing_ai_moves and \
+                     not self.session.ai_is_thinking and \
                      not self.show_player_ready_screen and \
-                     not self.selection_mode
+                     not self.session.selection_mode
 
         if is_playing:
             self._refresh_resource_hud_economy()
@@ -1754,46 +1754,46 @@ class Map(StateAccess, Screen):
 
         if self.show_navigation_intro_when_ready and is_playing:
             self.show_navigation_intro_when_ready = False
-            if settings_schema.read_setting(queries.get_settings(), settings_schema.intro_popup_setting(self.tactical_mode)):
+            if settings_schema.read_setting(queries.get_settings(), settings_schema.intro_popup_setting(self.session.tactical_mode)):
                 dialogs.show_navigation_intro(self)
 
         if self.show_player_ready_screen:
             for el in self.elements: el.visible = False
             return
 
-        if is_playing and not self.is_refreshing:
+        if is_playing and not self.session.is_refreshing:
             self.open_tactical_battle()
 
-        if self.multi_turn_processing_complete:
-            self.multi_turn_processing_complete = False
-            self.multi_turns_total = 0
-            self.ai_is_thinking = False
+        if self.session.multi_turn_processing_complete:
+            self.session.multi_turn_processing_complete = False
+            self.session.multi_turns_total = 0
+            self.session.ai_is_thinking = False
 
-            if self.thread_error: return
+            if self.session.thread_error: return
 
             self.refresh_map_layers(*self.ALL_MAP_LAYERS)
             self.update_country_centers()
 
-            self.viewing_ai_moves = False # Safely unlock PyGame UI rendering
+            self.session.viewing_ai_moves = False # Safely unlock PyGame UI rendering
 
             map_buttons.update_button_states(self)
             self.show_feedback(f"Multi-Turn Processing Complete!")
             return
 
-        if self.ai_processing_complete:
-            self.ai_processing_complete = False
-            self.ai_is_thinking = False
+        if self.session.ai_processing_complete:
+            self.session.ai_processing_complete = False
+            self.session.ai_is_thinking = False
 
-            if self.thread_error: return
+            if self.session.thread_error: return
 
-            if self.skip_ai_view:
-                self.viewing_ai_moves = True
+            if self.session.skip_ai_view:
+                self.session.viewing_ai_moves = True
                 turn_manager.advance_time(self)
             else:
-                self.viewing_ai_moves = True
+                self.session.viewing_ai_moves = True
                 self.refresh_map_layers("political", "relations", "fog")
                 map_buttons.render_buttons(self)
-                elapsed_seconds = (pygame.time.get_ticks() - self.turn_start_time) / 1000.0
+                elapsed_seconds = (pygame.time.get_ticks() - self.session.turn_start_time) / 1000.0
                 self.show_feedback(f"AI Strategy generated in {elapsed_seconds:.2f}s")
                 print(f"[PERFORMANCE] Phase 1 completed in {elapsed_seconds:.2f} seconds.")
 

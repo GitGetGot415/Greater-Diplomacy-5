@@ -138,3 +138,9 @@ class BackendState(StateAccess):
     def show_feedback(self, message):
         if self.feedback is not None:
             self.feedback(message)
+
+
+def viewer_context(viewer, map_data, nation_data, id_to_province):
+    """A backend context that sees the given world as `viewer` outside tactical play, for fog queries."""
+    return BackendState(WorldState(map_data=map_data, nation_data=nation_data, id_to_province=id_to_province),
+                        SessionState(player_country=viewer))

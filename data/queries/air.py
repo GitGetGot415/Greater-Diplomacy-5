@@ -4,7 +4,6 @@ import collections
 import copy
 import data.constants as c
 import pygame
-from types import SimpleNamespace
 from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.geometry import is_water_province
@@ -155,9 +154,9 @@ def apply_air_transport_commands(context, country_id, commands):
         raise ValueError("Invalid transport commands.")
     if not commands:
         return []
-    data = copy.deepcopy(world_state.map_data)
-    draft = SimpleNamespace(map_data=data, id_to_province={p["id"]: p for p in data.values()},
-                            nation_data=world_state.nation_data, tactical_mode=False, player_unit=None)
+    draft = copy.copy(context)
+    draft.world.map_data = copy.deepcopy(world_state.map_data)
+    draft.world.id_to_province = {p["id"]: p for p in draft.world.map_data.values()}
     seen, assigned, canonical = set(), set(), []
     for command in commands:
         if not isinstance(command, dict) or not isinstance(command.get("plane_id"), str):
@@ -202,8 +201,8 @@ def air_transport_draft(context, country_id, commands):
     """Create a transport projection for order validation without changing state."""
     world_state = world_for(context)
     draft = copy.copy(context)
-    draft.map_data = copy.deepcopy(world_state.map_data)
-    draft.id_to_province = {p["id"]: p for p in draft.map_data.values()}
+    draft.world.map_data = copy.deepcopy(world_state.map_data)
+    draft.world.id_to_province = {p["id"]: p for p in draft.world.map_data.values()}
     canonical = apply_air_transport_commands(draft, country_id, commands)
     return draft, canonical
 

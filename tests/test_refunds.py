@@ -15,6 +15,7 @@ import unittest
 
 from data import queries
 from map_logic.ai import automation_logic
+from tests.stub_map_screen import MapDouble
 
 
 def nation(materials=0, manpower=0, fuel=0):
@@ -63,7 +64,7 @@ class RefundQueueItemTests(unittest.TestCase):
         self.assertEqual(data["materials"], 5)
 
 
-class StubMap:
+class StubMap(MapDouble):
     """Just enough map for clear_player_construction."""
 
     def __init__(self, provinces, player="A"):

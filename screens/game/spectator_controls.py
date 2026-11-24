@@ -20,7 +20,7 @@ def _selected_country_for_removal(map_screen):
     if not queries.can_use_spectator_country_actions(map_screen):
         return None
     country = (map_screen.selected_province or {}).get("owner")
-    return country if queries.is_playable(country, map_screen.nation_data) else None
+    return country if queries.is_playable(country, map_screen.world.nation_data) else None
 
 
 def _refresh_country_removal(map_screen):
@@ -36,29 +36,29 @@ def spec_annex_country(map_screen):
     source = _selected_country_for_removal(map_screen)
     if source is None:
         return
-    source_name = queries.get_country_display_name(source, map_screen.nation_data)
-    candidates = sorted(country for country in queries.get_living_nations(map_screen.map_data)
-                        if country != source and queries.is_playable(country, map_screen.nation_data))
+    source_name = queries.get_country_display_name(source, map_screen.world.nation_data)
+    candidates = sorted(country for country in queries.get_living_nations(map_screen.world.map_data)
+                        if country != source and queries.is_playable(country, map_screen.world.nation_data))
 
     def selected(target):
         if (_selected_country_for_removal(map_screen) != source
-                or target not in queries.get_living_nations(map_screen.map_data)):
+                or target not in queries.get_living_nations(map_screen.world.map_data)):
             return
-        target_name = queries.get_country_display_name(target, map_screen.nation_data)
+        target_name = queries.get_country_display_name(target, map_screen.world.nation_data)
         if finalize_spectator_country_removal(map_screen, target, source):
             _refresh_country_removal(map_screen)
             map_screen.show_feedback(f"{source_name} annexed {target_name}.")
 
     pickers.open_listbox_selector(
         map_screen, f"Annex for {source_name}", "Select a country to annex immediately:",
-        queries.country_picker_items(candidates, map_screen.nation_data), selected)
+        queries.country_picker_items(candidates, map_screen.world.nation_data), selected)
 
 
 def spec_delete_country(map_screen):
     country = _selected_country_for_removal(map_screen)
     if country is None:
         return
-    name = queries.get_country_display_name(country, map_screen.nation_data)
+    name = queries.get_country_display_name(country, map_screen.world.nation_data)
 
     def confirmed(accepted):
         if not accepted or _selected_country_for_removal(map_screen) != country:
@@ -83,11 +83,11 @@ def _spec_faction_action(map_screen, fn, verb, wants_map_data=False):
     if not map_screen.selected_province: return
     source_nation = map_screen.selected_province.get("owner")
     if wants_map_data:
-        fn(map_screen.map_data, map_screen.nation_data, source_nation)
+        fn(map_screen.world.map_data, map_screen.world.nation_data, source_nation)
     else:
-        fn(map_screen.nation_data, source_nation)
+        fn(map_screen.world.nation_data, source_nation)
     map_screen.show_feedback(f"{verb} Faction: " + queries.get_country_display_name(
-        source_nation, map_screen.nation_data))
+        source_nation, map_screen.world.nation_data))
     map_screen.refresh_diplomacy_maps()
 
 def spec_create_faction(map_screen):
@@ -113,32 +113,32 @@ SpectatorAction = namedtuple("SpectatorAction", "candidates apply feedback")
 
 
 def _enemies_of(map_screen, nation):
-    return map_screen.nation_data[nation].get("at_war_with", [])
+    return map_screen.world.nation_data[nation].get("at_war_with", [])
 
 
 SPECTATOR_ACTIONS = {
     "WAR": SpectatorAction(
         lambda ms, src, living: sorted(
-            n for n, d in ms.nation_data.items()
+            n for n, d in ms.world.nation_data.items()
             if d.get("is_playable") and n != src and n in living
             and n not in _enemies_of(ms, src)),
-        lambda ms, src, tgt: war_actions.finalize_war(ms.map_data, ms.nation_data, src, tgt),
+        lambda ms, src, tgt: war_actions.finalize_war(ms.world.map_data, ms.world.nation_data, src, tgt),
         "Forced War: {src} vs {tgt}"),
     "PEACE": SpectatorAction(
         lambda ms, src, living: sorted(n for n in _enemies_of(ms, src) if n in living),
-        lambda ms, src, tgt: war_actions.finalize_neutral(ms.nation_data, src, tgt),
+        lambda ms, src, tgt: war_actions.finalize_neutral(ms.world.nation_data, src, tgt),
         "Forced Peace: {src} & {tgt}"),
     "JOIN_FACTION": SpectatorAction(
         lambda ms, src, living: sorted(
-            n for n in ms.nation_data
-            if queries.is_faction_leader(n, ms.nation_data) and n != src),
-        lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.map_data, ms.nation_data, tgt, src),
+            n for n in ms.world.nation_data
+            if queries.is_faction_leader(n, ms.world.nation_data) and n != src),
+        lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.world.map_data, ms.world.nation_data, tgt, src),
         "Forced Join: {src} joined {tgt}"),
     "INVITE_FACTION": SpectatorAction(
         lambda ms, src, living: sorted(
-            n for n, d in ms.nation_data.items()
-            if d.get("is_playable") and not queries.get_country_faction(n, ms.nation_data) and n != src),
-        lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.map_data, ms.nation_data, src, tgt),
+            n for n, d in ms.world.nation_data.items()
+            if d.get("is_playable") and not queries.get_country_faction(n, ms.world.nation_data) and n != src),
+        lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.world.map_data, ms.world.nation_data, src, tgt),
         "Forced Invite: {tgt} joined {src}"),
 }
 
@@ -146,7 +146,7 @@ SPECTATOR_ACTIONS = {
 #: which is what the old ladders' `else` branch amounted to.
 _UNKNOWN_ACTION = SpectatorAction(
     lambda ms, src, living: sorted(
-        n for n, d in ms.nation_data.items() if d.get("is_playable") and n != src),
+        n for n, d in ms.world.nation_data.items() if d.get("is_playable") and n != src),
     None, None)
 
 
@@ -157,31 +157,31 @@ def open_spectator_action_menu(map_screen, action_type):
 
     if action_type == "INVITE_FACTION":
         leadership_error = queries.faction_request_leadership_error(
-            source_nation, "", "FACTION_INVITE", map_screen.nation_data)
+            source_nation, "", "FACTION_INVITE", map_screen.world.nation_data)
         if leadership_error:
             map_screen.show_feedback(leadership_error)
             return
 
     action = SPECTATOR_ACTIONS.get(action_type, _UNKNOWN_ACTION)
-    living_nations = queries.get_living_nations(map_screen.map_data)
+    living_nations = queries.get_living_nations(map_screen.world.map_data)
     items = action.candidates(map_screen, source_nation, living_nations)
 
     def cb(target_nation):
         if action_type == "INVITE_FACTION":
             leadership_error = queries.faction_request_leadership_error(
-                source_nation, target_nation, "FACTION_INVITE", map_screen.nation_data)
+                source_nation, target_nation, "FACTION_INVITE", map_screen.world.nation_data)
             if leadership_error:
                 map_screen.show_feedback(leadership_error)
                 return
         if action.apply:
             action.apply(map_screen, source_nation, target_nation)
             map_screen.show_feedback(action.feedback.format(
-                src=queries.get_country_display_name(source_nation, map_screen.nation_data),
-                tgt=queries.get_country_display_name(target_nation, map_screen.nation_data)))
+                src=queries.get_country_display_name(source_nation, map_screen.world.nation_data),
+                tgt=queries.get_country_display_name(target_nation, map_screen.world.nation_data)))
         map_screen.refresh_diplomacy_maps()
 
     pickers.open_listbox_selector(
         map_screen,
-        f"{action_type} for " + queries.get_country_display_name(source_nation, map_screen.nation_data),
+        f"{action_type} for " + queries.get_country_display_name(source_nation, map_screen.world.nation_data),
         f"Select Target for {action_type}:",
-        queries.country_picker_items(items, map_screen.nation_data), cb)
+        queries.country_picker_items(items, map_screen.world.nation_data), cb)

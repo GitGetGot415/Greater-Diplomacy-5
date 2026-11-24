@@ -36,7 +36,7 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
             if self.is_editor:
                 queries.validated_scenario_name(save_name)
             os.makedirs(save_path, exist_ok=overwrite)
-        elif self.is_editor:
+        elif self.session.is_editor:
             if not save_name:
                 save_name = session_for(self).editor_scenario_name or (
                     "MapExport_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -50,42 +50,41 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
             save_path = os.path.join(c.SAVES_DIR, save_name)
             os.makedirs(save_path, exist_ok=True)
 
-        queries.scrub_default_images(self.nation_data)
+        queries.scrub_default_images(self.world.nation_data)
 
         # 1. Consolidated Data Structure
         # map_data.json now carries the full current province state. Keep the
         # separate meta.json province block only in multiplayer snapshots.
         save_dict = queries.build_save_dict(
             self, include_provinces=False, compact_nations=True, include_local_preferences=True)
-        self.save_progress_completed = 1
+        self.session.save_progress_completed = 1
         await asyncio.sleep(0)
 
         # Indented JSON makes saves and scenario exports easy to inspect and
         # diff. Short lists and objects stay on one line to keep files smaller.
         with open(os.path.join(save_path, "meta.json"), "w") as f:
             f.write(history_io.dump_save_text(save_dict))
-        self.save_progress_completed = 2
+        self.session.save_progress_completed = 2
         await asyncio.sleep(0)
 
         # Structural map and current province state, so the save is self-contained.
         with open(os.path.join(save_path, "map_data.json"), "w") as f:
             f.write(history_io.dump_save_text(queries.build_map_data_save(self)))
-        self.save_progress_completed = 3
+        self.session.save_progress_completed = 3
         await asyncio.sleep(0)
 
         # History
-        if hasattr(self, 'history'):
-            # Scrub images from history snapshots before writing (they were
-            # skipped at snapshot time for speed). Each snapshot is scrubbed
-            # once and flagged: the work is identical every time, and redoing
-            # it for all 130 turns on every save was most of the save's cost.
-            for turn_snap in self.history.values():
-                nd = turn_snap.get("nation_data")
-                if nd and not turn_snap.get(c.HISTORY_SCRUBBED_KEY):
-                    queries.scrub_default_images(nd)
-                    turn_snap[c.HISTORY_SCRUBBED_KEY] = True
-            history_io.write(save_path, self.history)
-        self.save_progress_completed = 4
+        # Scrub images from history snapshots before writing (they were
+        # skipped at snapshot time for speed). Each snapshot is scrubbed
+        # once and flagged: the work is identical every time, and redoing
+        # it for all 130 turns on every save was most of the save's cost.
+        for turn_snap in self.world.history.values():
+            nd = turn_snap.get("nation_data")
+            if nd and not turn_snap.get(c.HISTORY_SCRUBBED_KEY):
+                queries.scrub_default_images(nd)
+                turn_snap[c.HISTORY_SCRUBBED_KEY] = True
+        history_io.write(save_path, self.world.history)
+        self.session.save_progress_completed = 4
         await asyncio.sleep(0)
 
         # Political and cores surfaces are derived from map/province data and
@@ -94,17 +93,17 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
         remove_optional_layer_files(save_path)
         pygame.image.save(self.terrain_map, os.path.join(save_path, "terrain.png"))
         pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
-        self.save_progress_completed = 5
+        self.session.save_progress_completed = 5
 
         # Web builds restore both saved games and custom scenarios at startup.
-        sync_persisted_dir(c.SCENARIOS_CUSTOM_DIR if self.is_editor else c.SAVES_DIR)
-        if self.is_editor:
+        sync_persisted_dir(c.SCENARIOS_CUSTOM_DIR if self.session.is_editor else c.SAVES_DIR)
+        if self.session.is_editor:
             session_for(self).editor_scenario_name = os.path.basename(save_path)
 
-        self.show_feedback(f"Exported: {save_name} to {save_path}" if self.is_editor else f"Saved: {save_name} to {save_path}")
+        self.show_feedback(f"Exported: {save_name} to {save_path}" if self.session.is_editor else f"Saved: {save_name} to {save_path}")
         return save_path
     except Exception as e:
         print(f"SAVE FAILED:\n{traceback.format_exc()}")
         self.show_feedback(f"Save failed: {e}")
     finally:
-        self.is_saving = False
+        self.session.is_saving = False

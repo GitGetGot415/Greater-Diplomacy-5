@@ -286,10 +286,10 @@ class SharedActionTests(unittest.TestCase):
         context = game()
         queries.set_country_faction(context.nation_data, "A", "Pact")
         queries.set_faction_leadership(context.nation_data, "A", True)
-        diplomacy_processor.toggle_diplomacy_action(context.nation_data, "A", "B", "FACTION_INVITE")
+        diplomacy_processor.toggle_diplomacy_action(context, "A", "B", "FACTION_INVITE")
         queries.set_faction_leadership(context.nation_data, "A", False)
         self.assertFalse(availability(context, "A", "B", "FACTION_INVITE").allowed)
-        diplomacy_processor.toggle_diplomacy_action(context.nation_data, "A", "B", "FACTION_INVITE")
+        diplomacy_processor.toggle_diplomacy_action(context, "A", "B", "FACTION_INVITE")
         self.assertNotIn("B", context.nation_data["A"]["pending_diplomacy"])
 
     def test_queue_refund_can_pay_for_repair_before_domain_application(self):

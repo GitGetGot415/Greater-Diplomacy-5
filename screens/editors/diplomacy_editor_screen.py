@@ -47,7 +47,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 1240, 660))
 
-        self.countries = sorted(queries.get_living_nations(map_screen.map_data))
+        self.countries = sorted(queries.get_living_nations(map_screen.world.map_data))
         self.target = None
         self.others = []
         self.wars = set()
@@ -110,26 +110,26 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
 
     def select_nation(self, cid):
         """Loads a nation into the right-hand side, discarding unsaved edits."""
-        data = self.map_screen.nation_data.get(cid, {})
+        data = self.map_screen.world.nation_data.get(cid, {})
         self.target = cid
         self.others = [n for n in self.countries if n != cid]
 
         self.wars = {n for n in data.get("at_war_with", []) if n in self.others}
-        self.guarantees = {n for n in guarantees.guaranteed_targets(cid, self.map_screen.nation_data)
+        self.guarantees = {n for n in guarantees.guaranteed_targets(cid, self.map_screen.world.nation_data)
                            if n in self.others}
-        self.attaches = {n for n in military_attaches.hosts_for(cid, self.map_screen.nation_data)
+        self.attaches = {n for n in military_attaches.hosts_for(cid, self.map_screen.world.nation_data)
                          if n in self.others}
         self.access = {n for n in self.others
-                       if cid in self.map_screen.nation_data.get(n, {}).get("military_access", [])}
-        self.is_leader = queries.is_faction_leader(cid, self.map_screen.nation_data)
+                       if cid in self.map_screen.world.nation_data.get(n, {}).get("military_access", [])}
+        self.is_leader = queries.is_faction_leader(cid, self.map_screen.world.nation_data)
         self.master = data.get("master", "") or "None"
         self.puppet_type = data.get("puppet_type", "") or c.PUPPET_TYPE_AUTONOMOUS
 
-        faction = queries.get_country_faction(cid, self.map_screen.nation_data)
+        faction = queries.get_country_faction(cid, self.map_screen.world.nation_data)
         self.faction_field.text = faction
         self.faction_field.active = False
         self.members = {n for n in self.others
-                        if faction and queries.get_country_faction(n, self.map_screen.nation_data) == faction}
+                        if faction and queries.get_country_faction(n, self.map_screen.world.nation_data) == faction}
 
         for name in self.REGIONS:
             setattr(self, f"_scroll_{name}", 0)
@@ -160,7 +160,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
         if not self.target:
             return
 
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         target = self.target
         data = nation_data.get(target, {})
 
@@ -205,7 +205,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                 nation_data[old_master]["puppets"].remove(target)
 
         if self.master and self.master != "None" and self.master != target:
-            assign_puppet(self.map_screen.map_data, nation_data, self.master, target, self.puppet_type)
+            assign_puppet(self.map_screen.world.map_data, nation_data, self.master, target, self.puppet_type)
         else:
             data["master"] = ""
             data["puppet_type"] = ""

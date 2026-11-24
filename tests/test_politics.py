@@ -33,12 +33,12 @@ from map_logic import politics
 from map_logic.system32 import combat_processor, combat_rules, turn_processor
 from data.state_access import BackendState
 
-from tests.stub_map_screen import map_double
+from tests.stub_map_screen import MapDouble, map_double
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 from tests.politics_fixtures import policy_fixtures
 
 
-class StubTurnScreen:
+class StubTurnScreen(MapDouble):
     """Just the two attributes politics.tick reaches for."""
 
     def __init__(self, nation_data):
@@ -1061,7 +1061,7 @@ class ResearchTests(unittest.TestCase):
     def points_after_one_turn(self, political_value, economic_value=c.POLITICS_MAX):
         from map_logic.system32 import research_processor
 
-        class Screen:
+        class Screen(MapDouble):
             pass
 
         screen = Screen()
@@ -1129,7 +1129,7 @@ class AircraftRangeTests(unittest.TestCase):
             listed = {kind: queries.air_order_radius(bomber, kind) for kind in ("AIR_ATTACK", "AIR_REPOSITION")}
             for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
                 with self.subTest(strategy=strategy):
-                    context = SimpleNamespace(nation_data={"A": {politics.STRATEGY_VALUE_KEY: strategy}})
+                    context = map_double(nation_data={"A": {politics.STRATEGY_VALUE_KEY: strategy}})
                     for kind, radius in listed.items():
                         self.assertAlmostEqual(queries.air_order_radius(bomber, kind, context=context),
                                                radius * politics.effect_at("aircraft_range", strategy))
@@ -1173,7 +1173,7 @@ class FactionResearchTests(unittest.TestCase):
     def test_resolver_applies_the_shared_research_multiplier(self):
         from map_logic.system32 import research_processor
 
-        class Screen:
+        class Screen(MapDouble):
             pass
 
         def points_spent(with_partner):

@@ -16,7 +16,7 @@ import unittest
 
 import data.constants as c
 from map_logic.ai import ai_tuning
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_construction, ai_unit_eval
 
 
@@ -53,7 +53,7 @@ def unit(u_type, owner="Avaria"):
             "order": {"type": "MOVE", "path": []}}
 
 
-class Screen:
+class Screen(MapDouble):
     """Two owned provinces, plus one next door that can be given an enemy."""
 
     def __init__(self, provs, at_war=("Borland",)):

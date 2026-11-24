@@ -17,6 +17,7 @@ import data.constants as c
 from tests import app_harness
 from screens.game import map_input
 from ui.information import ui_info_popup
+from tests.stub_map_screen import map_double
 def wheel(y, pos):
     pygame.mouse.get_pos = lambda: pos
     return pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=y, flipped=False,
@@ -194,7 +195,7 @@ class RelationIndicatorTests(unittest.TestCase):
         pygame.font.init()
         player_tile = {"id": 1, "owner": "A", "cores": ["B"]}
         foreign_tile = {"id": 2, "owner": "B", "center": (20, 30)}
-        game = SimpleNamespace(
+        game = map_double(
             selected_province=None, player_country="A", selection_mode=False,
             viewing_ai_moves=False, extreme_hidden_provinces=set(), camera=None, total_ui_h=0,
             _presentation_cache_revision=0, _relation_indicator_cache=None,

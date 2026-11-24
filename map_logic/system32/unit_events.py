@@ -172,7 +172,7 @@ class _TurnRecorder:
     def add(self, unit, event, tile=None, amount=0, details="", detail_parts=None):
         # Queue deployments also receive stable IDs before their first report.
         if not unit.get("unit_id"):
-            queries.ensure_unit_ids(self.context.map_data)
+            queries.ensure_unit_ids(self.context.world.map_data)
         row = {"owner": unit.get("owner", ""), "unit_id": unit.get("unit_id", ""),
                           "unit_name": unit_name(unit), "event": event,
                           "tile_id": self.tile(unit) if tile is None else tile,
@@ -185,17 +185,17 @@ class _TurnRecorder:
         tile = self.tile(unit)
         if unit.get("owner") != viewer:
             if viewer not in self.visibility:
-                tactical = self.context.tactical_mode and viewer == self.context.player_country
-                view = SimpleNamespace(player_country=viewer, map_data=self.context.map_data,
-                    nation_data=self.context.nation_data, id_to_province=self.context.id_to_province,
-                    tactical_mode=tactical, player_unit=self.context.player_unit if tactical else None)
+                tactical = self.context.session.tactical_mode and viewer == self.context.session.player_country
+                view = SimpleNamespace(player_country=viewer, map_data=self.context.world.map_data,
+                    nation_data=self.context.world.nation_data, id_to_province=self.context.world.id_to_province,
+                    tactical_mode=tactical, player_unit=self.context.session.player_unit if tactical else None)
                 self.visibility[viewer] = queries.get_visible_provinces(view)[0]
             visible = self.visibility[viewer]
-            province = self.context.id_to_province.get(tile)
+            province = self.context.world.id_to_province.get(tile)
             fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                                           self.context.scenario_settings)
+                                           self.context.world.scenario_settings)
             if (province is None or fog and visible is not None and tile not in visible
-                    or not queries.is_unit_visible_to(unit, viewer, province, self.context.nation_data)):
+                    or not queries.is_unit_visible_to(unit, viewer, province, self.context.world.nation_data)):
                 tile = "???"
         return {"text": f"{unit_name(unit)} (tile {tile})", "owner": unit["owner"]}
 

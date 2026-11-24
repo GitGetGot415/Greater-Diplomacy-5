@@ -9,7 +9,7 @@ from unittest import mock
 
 
 import data.constants as c
-from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
+from tests.stub_map_screen import MapDouble, fill_state_defaults, map_double, state_owner, synchronous_progress
 from tests.research_fixtures import research_lock_cases
 from tests.migration_fixtures import malformed_records
 from tests.politics_fixtures import policy_fixtures
@@ -20,6 +20,7 @@ from ui.dialogs import pickers
 from data.multiplayer.tournament import files as tournament_files
 from map_logic import politics
 from map_logic.actions import production_actions
+from map_logic.diplomacy import faction_records
 
 
 class Time:
@@ -59,7 +60,7 @@ def nation(faction="", leader=False, master="", puppet_type="", name=None,
     }
 
 
-class Host:
+class Host(MapDouble):
     def __init__(self):
         self.time_manager = Time()
         self.multiplayer_session_key = "test-session"
@@ -649,7 +650,8 @@ class TournamentMoveTests(unittest.TestCase):
 
         for flags in ({}, {"multiplayer_host_mode": True, "realtime_multiplayer": True}):
             host = Host()
-            host.__dict__.update(flags)
+            for name, value in flags.items():
+                setattr(state_owner(host, name) or host, name, value)
             host.show_feedback = mock.Mock()
             completed = mock.Mock()
             with mock.patch.object(pickers, "open_file_browser") as browser:
@@ -827,8 +829,8 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.nation_data["Leader"]["faction"], "New Pact")
         self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
         self.assertTrue(host.nation_data["Leader"]["is_faction_leader"])
-        self.assertIn("New Pact", host.nation_data["FACTION_WAR_MAPS"])
-        self.assertNotIn("Old Pact", host.nation_data["FACTION_WAR_MAPS"])
+        self.assertIn("New Pact", faction_records.pre_war_maps(host.world.nation_data))
+        self.assertNotIn("Old Pact", faction_records.pre_war_maps(host.world.nation_data))
 
     def test_only_host_faction_leaders_can_send_imported_invitations(self):
         from tests.stub_map_screen import StubMapScreen

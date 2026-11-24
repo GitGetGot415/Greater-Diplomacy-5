@@ -40,7 +40,7 @@ def draw_top_text(map_screen, surface, show_country=True):
         surface.blit(surf_text, (x, y))
 
     # 1. Draw Date (Centered)
-    date_str = map_screen.time_manager.get_date_string()
+    date_str = map_screen.world.time_manager.get_date_string()
     date_surf = fonts.get("date_bar").render(date_str, True, (255, 255, 255))
     draw_with_bg(date_surf, DATE_X, c.BOTTOM_BAR_UI_CENTER_Y + DATE_Y_OFFSET)
 
@@ -48,20 +48,20 @@ def draw_top_text(map_screen, surface, show_country=True):
         return
 
     # 2. Draw "Playing As" Name / Selected Province Owner / Tactical Unit Name
-    if map_screen.tactical_mode and map_screen.player_unit:
+    if map_screen.session.tactical_mode and map_screen.session.player_unit:
         if map_screen.selected_province:
             display_id = map_screen.selected_province.get("owner", "Unclaimed")
-            player_display = map_screen.nation_data.get(display_id, {}).get("name", display_id)
+            player_display = map_screen.world.nation_data.get(display_id, {}).get("name", display_id)
         else:
-            player_display = map_screen.player_unit.get("custom_name", map_screen.player_unit.get("type", "Unknown Unit"))
+            player_display = map_screen.session.player_unit.get("custom_name", map_screen.session.player_unit.get("type", "Unknown Unit"))
     else:
         # Check if we have a province selected first, otherwise default to the player country
         if map_screen.selected_province:
             display_id = map_screen.selected_province.get("owner", "Unclaimed")
         else:
-            display_id = map_screen.player_country
+            display_id = map_screen.session.player_country
             
-        player_display = map_screen.nation_data.get(display_id, {}).get("name", display_id)
+        player_display = map_screen.world.nation_data.get(display_id, {}).get("name", display_id)
     
     # Grab our new dedicated top bar font preset
     big_font = fonts.get("top_bar_country")

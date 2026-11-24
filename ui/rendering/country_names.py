@@ -76,7 +76,7 @@ def _transformed_name_surfaces(map_screen, surf, shadow, blob):
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Keep tactical unit selection clear; active games follow the Names toggle.
-    if map_screen.show_country_names and not (map_screen.tactical_mode and map_screen.selection_mode):
+    if map_screen.show_country_names and not (map_screen.session.tactical_mode and map_screen.session.selection_mode):
 
         # 2 & 3. Draw the names at full opacity whenever the player has
         # enabled them.  Zoom changes their scale, never their visibility.
@@ -95,7 +95,7 @@ def draw_country_names(map_screen, surface):
                 # Use your biggest font preset for maximum resolution before scaling down
                 name_font = fonts.get("country_name_display")
                 for c_id in placed:
-                    data = map_screen.nation_data.get(c_id)
+                    data = map_screen.world.nation_data.get(c_id)
                     if data is None:
                         continue
                     # Cache normal country name
@@ -105,7 +105,7 @@ def draw_country_names(map_screen, surface):
                     map_screen.country_name_surfs[c_id] = (surf, shadow)
 
                     # Cache faction name
-                    fac = queries.get_country_faction(c_id, map_screen.nation_data).upper()
+                    fac = queries.get_country_faction(c_id, map_screen.world.nation_data).upper()
                     if fac:
                         f_surf = name_font.render(fac, True, (255, 255, 255)).convert_alpha()
                         f_shadow = name_font.render(fac, True, (20, 20, 20)).convert_alpha()
@@ -137,7 +137,7 @@ def draw_country_names(map_screen, surface):
                 # Check which mode we are in to swap the lookup table
                 if map_screen.base_layer == "FACTIONS":
                     # If we are in Faction mode, skip countries without factions
-                    fac_name = queries.get_country_faction(country, map_screen.nation_data).upper()
+                    fac_name = queries.get_country_faction(country, map_screen.world.nation_data).upper()
                     if not fac_name:
                         continue
                     
@@ -167,7 +167,7 @@ def draw_country_names(map_screen, surface):
                 cx, cy = blob["cx"], blob["cy"]
                 
                 # Wrap logic for looped maps
-                offsets = [0, -map_screen.map_w, map_screen.map_w] if map_screen.loop_map else [0]
+                offsets = [0, -map_screen.world.map_w, map_screen.world.map_w] if map_screen.world.loop_map else [0]
                 for offset in offsets:
                     sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
 
@@ -186,7 +186,7 @@ def draw_country_names(map_screen, surface):
                             # Record that this text block has successfully been drawn
                             drawn_countries.add(country)
                             if map_screen.base_layer == "FACTIONS":
-                                fac_name = queries.get_country_faction(country, map_screen.nation_data).upper()
+                                fac_name = queries.get_country_faction(country, map_screen.world.nation_data).upper()
                                 drawn_factions.add(fac_name)
 
 def update_country_centers(map_screen):
@@ -202,7 +202,7 @@ def update_country_centers(map_screen):
         visited = set()
         
         # Iterate through every province by ID
-        for prov_id, prov in map_screen.id_to_province.items():
+        for prov_id, prov in map_screen.world.id_to_province.items():
             if prov_id in map_screen.extreme_hidden_provinces:
                 continue
                 
@@ -225,18 +225,18 @@ def update_country_centers(map_screen):
                     
                     for n_id in curr.get("neighbors", []):
                         if n_id not in visited:
-                            n_prov = map_screen.id_to_province.get(n_id)
+                            n_prov = map_screen.world.id_to_province.get(n_id)
                             if n_prov and grouping_key_func(n_prov) == group_val:
                                 visited.add(n_id)
                                 
                                 n_cx, n_cy = n_prov["center"]
-                                dx = n_cx - (uw_x % map_screen.map_w)
+                                dx = n_cx - (uw_x % map_screen.world.map_w)
                                 
-                                if map_screen.loop_map:
-                                    if dx > map_screen.map_w / 2:
-                                        dx -= map_screen.map_w
-                                    elif dx < -map_screen.map_w / 2:
-                                        dx += map_screen.map_w
+                                if map_screen.world.loop_map:
+                                    if dx > map_screen.world.map_w / 2:
+                                        dx -= map_screen.world.map_w
+                                    elif dx < -map_screen.world.map_w / 2:
+                                        dx += map_screen.world.map_w
                                         
                                 next_uw_x = uw_x + dx
                                 
@@ -273,7 +273,7 @@ def update_country_centers(map_screen):
                 
                 blobs.append({
                     "owner": group_val, # Reusing "owner" key so the renderer accepts it generically
-                    "cx": avg_x % map_screen.map_w if map_screen.loop_map else avg_x,
+                    "cx": avg_x % map_screen.world.map_w if map_screen.world.loop_map else avg_x,
                     "cy": avg_y,
                     "length": country_length,
                     "thickness": country_thickness,

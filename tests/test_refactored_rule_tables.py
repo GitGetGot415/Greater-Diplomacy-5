@@ -8,6 +8,7 @@ import data.constants as c
 from data import queries
 from map_logic.ai import ai_movement
 from map_logic.diplomacy import action_definitions, diplomacy_messages, diplomacy_processor
+from tests.stub_map_screen import mock_map, map_double
 
 
 class DiplomaticActionTableTests(unittest.TestCase):
@@ -55,7 +56,7 @@ class FastUnitPathTests(unittest.TestCase):
             4: {"neighbors": [2], "owner": "Closed"},
             5: {"neighbors": [3], "owner": "Open"},
         }
-        self.world = SimpleNamespace(id_to_province=provinces, nation_data={})
+        self.world = map_double(id_to_province=provinces, nation_data={})
 
     def extend(self, speed, can_push, can_step=True):
         unit = {"speed": speed}
@@ -85,7 +86,7 @@ class RealtimeMapEntryTests(unittest.TestCase):
         from screens.game import map_launch
         self.session = SimpleNamespace(players={"p1": SimpleNamespace(country_id="A"), "p2": SimpleNamespace(country_id=None),
                                                 "p3": SimpleNamespace(country_id="B")})
-        self.board = Mock(selection_mode=True, pending_selection="X", show_player_ready_screen=True)
+        self.board = mock_map(selection_mode=True, pending_selection="X", show_player_ready_screen=True)
         self.controller = SimpleNamespace(states={})
 
     def enter(self, after_layers=None):
@@ -95,13 +96,13 @@ class RealtimeMapEntryTests(unittest.TestCase):
 
     def test_entry_skips_country_selection_and_binds_the_player(self):
         self.enter()
-        self.assertFalse(self.board.selection_mode)
+        self.assertFalse(self.board.session.selection_mode)
         self.assertIsNone(self.board.pending_selection)
         self.assertFalse(self.board.show_player_ready_screen)
-        self.assertTrue(self.board.realtime_multiplayer)
+        self.assertTrue(self.board.session.realtime_multiplayer)
         self.assertIs(self.board.realtime_session, self.session)
-        self.assertEqual((self.board.realtime_player_id, self.board.player_country), ("p1", "A"))
-        self.assertEqual(self.board.active_players, ["A", "B"])
+        self.assertEqual((self.board.realtime_player_id, self.board.session.player_country), ("p1", "A"))
+        self.assertEqual(self.board.session.active_players, ["A", "B"])
         self.board.set_play_view_defaults.assert_called_once_with()
         self.board.refresh_map_layers.assert_called_once_with("relations", "faction_territories", "fog")
         self.assertIs(self.controller.states["MAP"], self.board)

@@ -43,7 +43,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, *self.PANEL_SIZE))
         self.country_id = country_id
-        self.values = {axis["id"]: politics.axis_value(map_screen.nation_data, country_id, axis["id"])
+        self.values = {axis["id"]: politics.axis_value(map_screen.world.nation_data, country_id, axis["id"])
                        for axis in politics.AXES}
         self.refresh_ui()
 
@@ -56,10 +56,10 @@ class Politics_Edit_Screen(EditorSliderScreen):
         return self.values[politics.ECONOMIC]
 
     def can_edit(self):
-        return (self.country_id in self.map_screen.nation_data
+        return (self.country_id in self.map_screen.world.nation_data
                 and (queries.can_bulk_edit_map(self.map_screen)
                      or queries.can_use_spectator_country_actions(self.map_screen))
-                and self.country_id in queries.get_living_nations(self.map_screen.map_data))
+                and self.country_id in queries.get_living_nations(self.map_screen.world.map_data))
 
     def _reading(self, axis):
         value = self.values[axis["id"]]
@@ -102,7 +102,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
     def save(self):
         if not self.can_edit():
             return
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         quality_changed = self.values[politics.QUALITY] != politics.axis_value(nation_data, self.country_id, politics.QUALITY)
         stat_policies = politics.unit_stat_policies(nation_data, self.country_id)
         for axis in politics.AXES:
@@ -111,7 +111,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
             politics.set_axis_drift(nation_data, self.country_id, axis["id"], 0)
         politics.reconcile_policy(nation_data, self.country_id)
         if quality_changed:
-            queries.refresh_unit_stats(self.map_screen.map_data, nation_data, queries.get_unit_library(self.map_screen),
+            queries.refresh_unit_stats(self.map_screen.world.map_data, nation_data, queries.get_unit_library(self.map_screen),
                                        owners={self.country_id})
         else:
             queries.refresh_policy_unit_stats(self.map_screen, self.country_id, stat_policies)
@@ -124,7 +124,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
 
     def get_panel_title(self):
         return "%s Politics" % queries.get_country_display_name(
-            self.country_id, self.map_screen.nation_data)
+            self.country_id, self.map_screen.world.nation_data)
 
     def _refresh_preview(self):
         self._preview = pygame.Surface(self.panel_rect.size, pygame.SRCALPHA)
@@ -155,7 +155,7 @@ class Politics_List_Screen(NationListOverlayScreen):
     EDIT_SCREEN = Politics_Edit_Screen
 
     def country_button(self, country_id, x, y):
-        nation_data = self.map_screen.nation_data
+        nation_data = self.map_screen.world.nation_data
         country_name = queries.get_country_display_name(country_id, nation_data)
         positions = "  |  ".join(
             f"{politics.axis_label(axis['id'], value)} {value:+d}"

@@ -12,7 +12,7 @@ def show_move_rejection(map_ref, rejection, on_result=None):
 
     file_name = os.path.basename(rejection["file_path"])
     cid = rejection["country_id"]
-    country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
+    country = queries.get_country_display_name(cid, map_ref.world.nation_data) if cid else "Unknown country"
     message = f"Rejected {file_name}\nCountry: {country}\n\n{rejection['reason']}"
     dialogs.show_message(
         "Tournament move rejected", message, kind="warning", on_result=on_result,
@@ -24,7 +24,7 @@ def load_multiplayer_moves(map_ref, on_result):
 
     def can_import():
         return (map_ref.multiplayer_host_mode
-                and not map_ref.realtime_multiplayer)
+                and not map_ref.session.realtime_multiplayer)
 
     if not can_import():
         map_ref.show_feedback("Only the tournament host can import move files.")
@@ -41,7 +41,7 @@ def load_multiplayer_moves(map_ref, on_result):
             return
 
         summary = tournament_files.load_move_files(
-            map_ref, files, map_ref.multiplayer_keys_dict)
+            map_ref, files, map_ref.session.multiplayer_keys_dict)
         pending = iter(summary["rejections"])
 
         def finish():
@@ -66,7 +66,7 @@ def load_multiplayer_moves(map_ref, on_result):
             """Show one rejection and offer to convert a supported older move."""
             file_name = os.path.basename(rejection["file_path"])
             cid = rejection["country_id"]
-            country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
+            country = queries.get_country_display_name(cid, map_ref.world.nation_data) if cid else "Unknown country"
 
             def after_details():
                 if not rejection["overridable"] or not can_import():
@@ -78,7 +78,7 @@ def load_multiplayer_moves(map_ref, on_result):
                         # Read and validate again. The file or host turn may have changed.
                         retry = tournament_files.load_move_files(
                             map_ref, [rejection["file_path"]],
-                            map_ref.multiplayer_keys_dict,
+                            map_ref.session.multiplayer_keys_dict,
                             accept_older_versions=True,
                             loaded_countries=summary["loaded_countries"])
                         if retry["loaded"]:
@@ -109,17 +109,17 @@ def load_multiplayer_moves(map_ref, on_result):
                               mode="open_files", extensions=[".gd5move"], on_result=_on_files)
 
 def export_next_turn(map_ref):
-    turn = map_ref.time_manager.total_turns
+    turn = map_ref.world.time_manager.total_turns
 
-    tour_dir = map_ref.multiplayer_tournament_dir
+    tour_dir = map_ref.session.multiplayer_tournament_dir
     if not tour_dir and hasattr(map_ref, 'loaded_tournament_path') and map_ref.loaded_tournament_path:
         tour_dir = os.path.dirname(map_ref.loaded_tournament_path)
     if not tour_dir:
         tour_dir = c.TOURNAMENT_SAVES_DIR
 
     export_path = os.path.join(tour_dir, f"Turn_{turn}_Host.gd5tour")
-    master_key = map_ref.multiplayer_master_key
-    keys_dict = map_ref.multiplayer_keys_dict
+    master_key = map_ref.session.multiplayer_master_key
+    keys_dict = map_ref.session.multiplayer_keys_dict
 
     if not master_key or not keys_dict:
         map_ref.show_feedback("Error: Host keys missing. Did you init multiplayer?")
@@ -135,8 +135,8 @@ def export_next_turn(map_ref):
             return
 
         # Reset protected countries only after the export completes.
-        map_ref.multiplayer_protected_countries = set()
-        map_ref.submitted_moves = set()
+        map_ref.session.multiplayer_protected_countries = set()
+        map_ref.session.submitted_moves = set()
         map_ref.show_feedback(f"Tournament exported to {path}")
 
     file_exchange.choose_save_destination(export_path, export, game_state=map_ref,
@@ -144,8 +144,8 @@ def export_next_turn(map_ref):
 
 def _playable_countries(map_ref):
     """Every playable nation still on the map, ordered by display name."""
-    countries = queries.get_active_playable_nations(map_ref.map_data, map_ref.nation_data)
-    countries.sort(key=lambda cid: queries.get_country_display_name(cid, map_ref.nation_data))
+    countries = queries.get_active_playable_nations(map_ref.world.map_data, map_ref.world.nation_data)
+    countries.sort(key=lambda cid: queries.get_country_display_name(cid, map_ref.world.nation_data))
     return countries
 
 
@@ -159,11 +159,11 @@ def manage_players_panel(map_ref):
     def build_rows():
         rows = []
         countries = _playable_countries(map_ref)
-        labels = _country_labels(countries, map_ref.nation_data)
+        labels = _country_labels(countries, map_ref.world.nation_data)
         for cid in countries:
-            has_move = cid in map_ref.submitted_moves
+            has_move = cid in map_ref.session.submitted_moves
             rows.append(CheckboxItem(cid, labels[cid],
-                                     checked=cid in map_ref.multiplayer_protected_countries,
+                                     checked=cid in map_ref.session.multiplayer_protected_countries,
                                      note="[SUBMITTED]" if has_move else "[WAITING]",
                                      note_color=(120, 230, 120) if has_move else (190, 190, 190)))
         return rows
@@ -175,9 +175,9 @@ def manage_players_panel(map_ref):
         if skipped is None:
             return
 
-        map_ref.multiplayer_protected_countries = set(skipped)
+        map_ref.session.multiplayer_protected_countries = set(skipped)
         skipped_ai_count = len(skipped)
-        submitted_count = len(map_ref.submitted_moves)
+        submitted_count = len(map_ref.session.submitted_moves)
 
         if submitted_count > 0 and skipped_ai_count > 0:
             map_ref.show_feedback(f"{submitted_count} player move(s) loaded; {skipped_ai_count} country/countries set to skip AI.")
@@ -196,16 +196,16 @@ def manage_players_panel(map_ref):
 def manage_keys_panel(map_ref):
     """Queues which countries get a fresh player key on the next export."""
     countries = _playable_countries(map_ref)
-    labels = _country_labels(countries, map_ref.nation_data)
+    labels = _country_labels(countries, map_ref.world.nation_data)
     rows = [CheckboxItem(cid, labels[cid],
-                         checked=cid in map_ref.multiplayer_pending_key_regen)
+                         checked=cid in map_ref.session.multiplayer_pending_key_regen)
             for cid in countries]
 
     def on_queued(queued):
         if queued is None:
             return
 
-        map_ref.multiplayer_pending_key_regen = set(queued)
+        map_ref.session.multiplayer_pending_key_regen = set(queued)
         map_ref.show_feedback(f"{len(queued)} country key(s) queued for regeneration upon export.")
 
     pickers.open_checkbox_list(

@@ -4,7 +4,7 @@ from data import queries
 
 def draw_province_select(map_screen, surface):
     cx, cy = map_screen.selected_province["center"]
-    for offset in [0, -map_screen.map_w, map_screen.map_w]:
+    for offset in [0, -map_screen.world.map_w, map_screen.world.map_w]:
         sx, sy = queries.world_to_screen((cx, cy), map_screen, offset)
         if -100 < sx < c.SCREEN_WIDTH + 100:
             radius_x = max(2, int(4 * map_screen.camera.zoom))

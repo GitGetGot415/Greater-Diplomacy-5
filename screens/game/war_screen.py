@@ -19,20 +19,20 @@ class Declare_War_Screen(MapOverlayScreen):
         super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 250, c.SCREEN_HEIGHT//2 - 160, 500, 320))
         self.target_nation = target_nation
 
-        has_wg = queries.has_wargoal(map_screen.player_country, target_nation, map_screen.nation_data, map_screen.map_data)
+        has_wg = queries.has_wargoal(map_screen.session.player_country, target_nation, map_screen.world.nation_data, map_screen.world.map_data)
 
-        cb_required = queries.get_scenario_flag("casus_belli_required", c.DEFAULT_CASUS_BELLI, map_screen.scenario_settings)
+        cb_required = queries.get_scenario_flag("casus_belli_required", c.DEFAULT_CASUS_BELLI, map_screen.world.scenario_settings)
 
         # Spectator / Override catch: if it's the spectator, let them force it anyway
-        if map_screen.player_country == "Spectator":
+        if map_screen.session.player_country == "Spectator":
             has_wg = True
             cb_required = False
 
-        my_master = map_screen.nation_data.get(map_screen.player_country, {}).get("master", "")
-        their_master = map_screen.nation_data.get(target_nation, {}).get("master", "")
+        my_master = map_screen.world.nation_data.get(map_screen.session.player_country, {}).get("master", "")
+        their_master = map_screen.world.nation_data.get(target_nation, {}).get("master", "")
 
         is_independence = (my_master == target_nation)
-        is_preemptive = (their_master == map_screen.player_country)
+        is_preemptive = (their_master == map_screen.session.player_country)
 
         if is_independence:
             puppet_cb_label = c.WARGOAL_INDEPENDENCE
@@ -55,7 +55,7 @@ class Declare_War_Screen(MapOverlayScreen):
         self.justifying = []
 
         # Check if a war declaration is already queued
-        pending = diplomacy_messages.get_pending(map_screen.nation_data, map_screen.player_country, target_nation)
+        pending = diplomacy_messages.get_pending(map_screen.world.nation_data, map_screen.session.player_country, target_nation)
         self.is_editing = pending.get("action") == "WAR_DECLARATION"
 
         if self.is_editing:
@@ -109,15 +109,15 @@ class Declare_War_Screen(MapOverlayScreen):
     def _reread_wargoals(self):
         """A claim fabricated just now may have unlocked Take Claims -- a core
         matures the same turn, ordinary land takes CLAIM_TURN_NON_CORE."""
-        has_wg = queries.has_wargoal(self.map_screen.player_country, self.target_nation,
-                                     self.map_screen.nation_data, self.map_screen.map_data)
-        if self.map_screen.player_country == "Spectator":
+        has_wg = queries.has_wargoal(self.map_screen.session.player_country, self.target_nation,
+                                     self.map_screen.world.nation_data, self.map_screen.world.map_data)
+        if self.map_screen.session.player_country == "Spectator":
             has_wg = True
         self.wargoal_options[0]["enabled"] = has_wg
 
-        queued = self.map_screen.nation_data.get(self.map_screen.player_country, {}).get("claim_queue", [])
+        queued = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {}).get("claim_queue", [])
         self.justifying = [q for q in queued
-                           if (self.map_screen.id_to_province.get(q.get("prov_id"), {}) or {})
+                           if (self.map_screen.world.id_to_province.get(q.get("prov_id"), {}) or {})
                            .get("owner") == self.target_nation]
 
     def select_wg(self, idx):
@@ -129,10 +129,10 @@ class Declare_War_Screen(MapOverlayScreen):
         wg = self.wargoal_options[self.selected_wargoal_idx]["label"]
 
         if wg == "Don't Declare War":
-            diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country,
+            diplomacy_messages.clear_pending(self.map_screen.world.nation_data, self.map_screen.session.player_country,
                                              self.target_nation, only_actions=["WAR_DECLARATION"])
 
-            p_data = self.map_screen.nation_data[self.map_screen.player_country]
+            p_data = self.map_screen.world.nation_data[self.map_screen.session.player_country]
             draft_lists = p_data.get("draft_lists", {})
             if self.target_nation in draft_lists:
                 wg_labels = [opt["label"] for opt in self.wargoal_options]
@@ -144,14 +144,14 @@ class Declare_War_Screen(MapOverlayScreen):
             self.done = True
         else:
             # Overwrites any existing declaration without triggering the toggle/delete logic
-            diplomacy_messages.set_pending(self.map_screen.nation_data, self.map_screen.player_country,
+            diplomacy_messages.set_pending(self.map_screen.world.nation_data, self.map_screen.session.player_country,
                                            self.target_nation, "WAR_DECLARATION", message=wg)
             self.map_screen.show_feedback("War Declaration Queued!" if not self.is_editing else "War Declaration Updated!")
             self.done = True
 
     def get_panel_title(self):
         return "Declare War: " + queries.get_country_display_name(
-            self.target_nation, self.map_screen.nation_data)
+            self.target_nation, self.map_screen.world.nation_data)
 
     def draw_content(self, surface):
         self.draw_panel(surface)

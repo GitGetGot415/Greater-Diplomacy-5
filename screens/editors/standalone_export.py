@@ -105,7 +105,7 @@ class Standalone_Export_Screen(Screen):
         self.refresh_ui()
 
     def settings(self):
-        return queries.normalized_standalone_export_settings(self.map_screen.standalone_export_settings)
+        return queries.normalized_standalone_export_settings(self.map_screen.world.standalone_export_settings)
 
     def refresh_ui(self):
         panel_x = PANEL_X
@@ -188,7 +188,7 @@ class Standalone_Export_Screen(Screen):
             x = left_x
             setting_button(x, y, RANK_COLORS[entry["rank"]], RANK_LABELS[entry["rank"]], lambda country=country, rank=other_rank: self.update_country(country, rank=rank), size=(RANK_WIDTH, height), row=True)
             x += RANK_WIDTH + BUTTON_GAP
-            name = queries.get_country_display_name(country, self.map_screen.nation_data)
+            name = queries.get_country_display_name(country, self.map_screen.world.nation_data)
             self.row_labels.append((text_utils.fit_text(name, name_font, NAME_WIDTH), (x, y + height // 2)))
             x += NAME_WIDTH + BUTTON_GAP
             description = text_utils.truncate_chars(entry["description"], DESCRIPTION_LABEL_CHARS) or "Set Description"
@@ -215,7 +215,7 @@ class Standalone_Export_Screen(Screen):
                     self._music_icon = None
             self.music_icon_surface = self._music_icon
         self.music_icon_rect = pygame.Rect(self.music_panel.right - PANEL_PADDING - MUSIC_ICON_SIZE[0], MUSIC_ICON_Y + 2, *MUSIC_ICON_SIZE)
-        name = music["album_name"] or self.map_screen.editor_scenario_name or "Set Album Name"
+        name = music["album_name"] or self.map_screen.session.editor_scenario_name or "Set Album Name"
         setting_button(music_x, MUSIC_NAME_Y + 26, "blue", name, self.choose_album_name, size=(MUSIC_PANEL_WIDTH - 2 * PANEL_PADDING, 30))
         for index, album in enumerate(c.UNDELETABLE_ALBUMS):
             column, row = index % 2, index // 2
@@ -289,7 +289,7 @@ class Standalone_Export_Screen(Screen):
                 return
             try:
                 name = queries.validated_scenario_name(name, label="Album Name")
-                standalone_music.album_name(dict(self.settings()["music"], album_name=name), self.map_screen.editor_scenario_name)
+                standalone_music.album_name(dict(self.settings()["music"], album_name=name), self.map_screen.session.editor_scenario_name)
                 self.change_music(album_name=name)
             except ValueError as error:
                 dialogs.show_error("Standalone Music", str(error))
@@ -409,13 +409,13 @@ class Standalone_Export_Screen(Screen):
     def available_countries(self, settings):
         """Playable starting countries that are not interesting countries yet."""
         listed = {entry["country"] for entry in settings["interesting_countries"]}
-        return [country for country in queries.playable_start_countries(self.map_screen.map_data,
-                                                                         self.map_screen.nation_data)
+        return [country for country in queries.playable_start_countries(self.map_screen.world.map_data,
+                                                                         self.map_screen.world.nation_data)
                 if country not in listed]
 
     def add_country(self, rank):
         settings = self.settings()
-        items = queries.country_picker_items(self.available_countries(settings), self.map_screen.nation_data)
+        items = queries.country_picker_items(self.available_countries(settings), self.map_screen.world.nation_data)
 
         def chosen(country):
             entry = {"country": country, "rank": rank, "description": ""}
@@ -439,14 +439,14 @@ class Standalone_Export_Screen(Screen):
             if text is not None:
                 self.update_country(country, description=text)
 
-        dialogs.ask_string("Country Description", queries.get_country_display_name(country, self.map_screen.nation_data),
+        dialogs.ask_string("Country Description", queries.get_country_display_name(country, self.map_screen.world.nation_data),
                            answered, initial=entry["description"], max_length=DESCRIPTION_MAX_LENGTH)
 
     def preview(self):
         """Browse the standalone menu screens without starting or loading a game."""
         settings = self.settings()
-        entries = country_select.interesting_countries(settings, self.map_screen.map_data, self.map_screen.nation_data)
-        screen_runner.run_screen(Standalone_Menu_Preview(self.map_screen.editor_scenario_name, settings, self.controller, self.map_screen.nation_data, entries))
+        entries = country_select.interesting_countries(settings, self.map_screen.world.map_data, self.map_screen.world.nation_data)
+        screen_runner.run_screen(Standalone_Menu_Preview(self.map_screen.session.editor_scenario_name, settings, self.controller, self.map_screen.world.nation_data, entries))
 
     def export(self):
         """Export the saved copy of this scenario as a standalone game in exports/<scenario name>/.
@@ -456,7 +456,7 @@ class Standalone_Export_Screen(Screen):
         if not queries.can_bulk_edit_map(self.map_screen):
             return
         try:
-            name = queries.validated_scenario_name(self.map_screen.editor_scenario_name)
+            name = queries.validated_scenario_name(self.map_screen.session.editor_scenario_name)
             scenario_dir = save_map.editor_save_path(name) if name else None
         except ValueError as error:
             dialogs.show_error("Standalone Export", str(error))

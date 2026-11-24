@@ -35,7 +35,7 @@ class VolunteerTests(unittest.TestCase):
         details, error = volunteers.create_offer(game, "A", "B", [(home, home["units"][0])])
         self.assertFalse(error)
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.ACTION,
+            game, "A", "B", volunteers.ACTION,
             f"We offer {details['count']} volunteer divisions. They arrive in {details['travel_turns']} turns.",
             parameters=details)
         return details
@@ -105,7 +105,7 @@ class VolunteerTests(unittest.TestCase):
                 game, "A", host, [(home, home["units"][0])])
             self.assertFalse(error)
             diplomacy_processor.toggle_diplomacy_action(
-                game.nation_data, "A", host, volunteers.ACTION,
+                game, "A", host, volunteers.ACTION,
                 "We offer volunteer divisions.", parameters=details)
 
         game.run_turn()  # Both offers travel.
@@ -130,7 +130,7 @@ class VolunteerTests(unittest.TestCase):
         game.nation_data["A"]["volunteer_missions"] = {
             "B": {"state": volunteers.DEPLOYED, "travel_turns": 1, "held_units": []}}
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "B", "A", volunteers.SEND_HOME_ACTION)
+            game, "B", "A", volunteers.SEND_HOME_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(game)
 
@@ -161,11 +161,11 @@ class VolunteerTests(unittest.TestCase):
         game.run_turn()
         game.run_turn()
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.RECALL_ACTION,
+            game, "A", "B", volunteers.RECALL_ACTION,
             "We are recalling our volunteer divisions.")
         self.assertEqual(game.pending_action("A", "B"), volunteers.RECALL_ACTION)
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.RECALL_ACTION)
+            game, "A", "B", volunteers.RECALL_ACTION)
         self.assertEqual(volunteers.mission_state(game.nation_data, "A", "B"), volunteers.DEPLOYED)
         self.assertFalse(game.pending_action("A", "B"))
 
@@ -248,7 +248,7 @@ class VolunteerTests(unittest.TestCase):
             game, "A", "B", [(home, home["units"][0])])
         self.assertFalse(error)
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", volunteers.ACTION,
+            game, "A", "B", volunteers.ACTION,
             "We offer a volunteer division.", parameters=details)
         game.run_turn()
         game.run_turn()

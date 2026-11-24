@@ -34,12 +34,13 @@ from map_logic.territory import ownership
 from map_logic.diplomacy.puppet_actions import finalize_create_puppet
 
 
-def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
+def toggle_diplomacy_action(context, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
     """Queues (or cancels) an OUTGOING proposal aimed at target_name.
 
     Answers to their proposals are a separate channel entirely -- see
     toggle_diplomatic_response -- so the two can never overwrite each other.
     """
+    nation_data = context.world.nation_data
     pending = nation_data[player_name].setdefault("pending_diplomacy", {})
     current_action = get_pending_action(nation_data, player_name, target_name)
 
@@ -71,7 +72,7 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
             return "A diplomatic action is already pending with this nation!"
 
     # Cancelling an unsent request above needs no leadership check.
-    available = availability(nation_data, player_name, target_name, action_type)
+    available = availability(context, player_name, target_name, action_type)
     if not available.allowed:
         return available.reason
     leadership_error = queries.faction_request_leadership_error(

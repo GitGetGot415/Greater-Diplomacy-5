@@ -14,11 +14,11 @@ from unittest.mock import patch
 
 import data.constants as c
 from map_logic.ai import ai_tuning
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_movement, ai_world
 
 
-class FakeScreen:
+class FakeScreen(MapDouble):
     def __init__(self, units):
         self.map_data = {
             "p1": {"id": 1, "json_key": "p1", "owner": "Avaria", "neighbors": [],
@@ -78,7 +78,7 @@ class OrderResetTests(unittest.TestCase):
             self.assertIn(kind, c.ORDERS_BLOCKING_MOVEMENT)
 
 
-class BombardmentScreen:
+class BombardmentScreen(MapDouble):
     """Three tiles in a row: home - near - far."""
 
     def __init__(self, near_units=(), far_units=()):
@@ -311,7 +311,7 @@ def fixture_unit(owner="Avaria", attack=100, health=100, max_health=None, defens
             "order": {"type": "MOVE", "path": []}}
 
 
-class GridScreen:
+class GridScreen(MapDouble):
     """Provinces from {id: (owner, neighbors)}; Avaria and Bruland at war."""
 
     def __init__(self, layout, scenario_settings=None):

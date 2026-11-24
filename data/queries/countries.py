@@ -384,8 +384,8 @@ def get_active_ai_nations(context):
     # Cross-reference with nations that actually own territory
     living_nations = queries.get_living_nations(world_state.map_data)
     
-    submitted = context.submitted_moves
-    protected = context.multiplayer_protected_countries
+    submitted = context.session.submitted_moves
+    protected = context.session.multiplayer_protected_countries
 
     for name, data in world_state.nation_data.items():
         if (submitted and name in submitted) or (protected and name in protected):

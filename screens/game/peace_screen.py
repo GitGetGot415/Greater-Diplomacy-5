@@ -43,34 +43,34 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
     def __init__(self, map_screen, proposer, kind=deal_mod.KIND_PEACE, *, params=_LOOK_UP_OFFER):
         super().__init__(map_screen)
         self.proposer = proposer
-        self.target = map_screen.player_country
+        self.target = map_screen.session.player_country
         self.kind = kind
 
         if params is _LOOK_UP_OFFER:
             # Callers that only supply a country retain the original lookup.
             # Messages passes the terms from the specific offer button.
-            asked = ratification.pending_for(map_screen.nation_data, self.target)
+            asked = ratification.pending_for(map_screen.world.nation_data, self.target)
             if (kind == deal_mod.KIND_PEACE and asked.get("signatory") == proposer
                     and deal_mod.is_deal(asked.get("deal"))):
                 params = asked["deal"]
             else:
-                pending = diplomacy_messages.get_pending(map_screen.nation_data, proposer, self.target)
+                pending = diplomacy_messages.get_pending(map_screen.world.nation_data, proposer, self.target)
                 fallback = c.PEACE_WHITE_PEACE if kind == deal_mod.KIND_PEACE else {}
                 params = pending.get("parameters", pending.get("message", fallback))
 
         self.deal = deal_mod.coerce(params, proposer, self.target, kind=kind)
-        self.transfers = deal_mod.tile_transfers(self.deal, map_screen.map_data,
-                                                 map_screen.nation_data)
+        self.transfers = deal_mod.tile_transfers(self.deal, map_screen.world.map_data,
+                                                 map_screen.world.nation_data)
         # What the map reverts to underneath the treaty's own transfers. Without
         # it a peace with no land terms previewed as the current front line,
         # when what it actually restores is the pre-war border.
-        self.baseline = deal_mod.baseline_owners(self.deal, map_screen.map_data,
-                                                 map_screen.nation_data)
+        self.baseline = deal_mod.baseline_owners(self.deal, map_screen.world.map_data,
+                                                 map_screen.world.nation_data)
         # The modal pauses map updates. Camera movement draws the same surface
         # from a different position, and reopening reads the current offer and map.
         self.preview = refresh_map.build_deal_preview_map(map_screen, deal_mod.parties(self.deal), self.transfers, self.baseline)
         self.terms = deal_mod.describe(self.deal, viewer=self.target,
-                                       nation_data=map_screen.nation_data)
+                                       nation_data=map_screen.world.nation_data)
 
         # Wrapped once, here, rather than every frame -- and the panel is sized
         # from the result so that panel_rect is the box the player can actually
@@ -97,7 +97,7 @@ class View_Peace_Treaty_Screen(MapOverlayScreen):
         document = "Trade Deal" if self.kind == deal_mod.KIND_TRADE else "Treaty"
         ui_bars.draw_centered_title(
             surface, f"Projected Map: {document} from " + queries.get_country_display_name(
-                self.proposer, self.map_screen.nation_data), 30)
+                self.proposer, self.map_screen.world.nation_data), 30)
         self._draw_terms(surface)
 
     def _wrapped(self):
@@ -162,7 +162,7 @@ def draw_projected_deal_map(surface, map_screen, transfers, parties=(), baseline
 
 
     for prov_id, new_owner in transfers.items():
-        prov = map_screen.id_to_province.get(int(prov_id))
+        prov = map_screen.world.id_to_province.get(int(prov_id))
         if prov is None or prov.get("owner") == new_owner:
             continue
         color = map_screen.nation_colors.get(new_owner, (255, 255, 255))

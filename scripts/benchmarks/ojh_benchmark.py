@@ -132,10 +132,10 @@ def boot(scenario, window):
     app_harness.SCENARIO_PATH = scenario
     controller, surface = app_harness.boot()
     map_screen = app_harness.boot_map()
-    map_screen.player_country = "Spectator"
-    map_screen.active_players = []
-    map_screen.selection_mode = False
-    map_screen.skip_ai_view = True
+    map_screen.session.player_country = "Spectator"
+    map_screen.session.active_players = []
+    map_screen.session.selection_mode = False
+    map_screen.session.skip_ai_view = True
     return controller, surface, map_screen
 
 
@@ -143,7 +143,7 @@ def skip_model_diplomacy(map_screen):
     """What the Force Skip button does. trigger_ai_thread() clears both flags at
     the start of every turn, so this runs after it, every turn."""
     from map_logic.ai import ai_handler
-    map_screen.force_skip_llm = True
+    map_screen.session.force_skip_llm = True
     ai_handler.FORCE_SKIP = True
 
 
@@ -182,8 +182,8 @@ async def play_turn(map_screen):
         seconds = time.perf_counter() - started
     finally:
         turn_manager.run_background = background
-    if map_screen.thread_error:
-        raise RuntimeError(f"turn failed inside Greater Diplomacy 5:\n{map_screen.thread_error}")
+    if map_screen.session.thread_error:
+        raise RuntimeError(f"turn failed inside Greater Diplomacy 5:\n{map_screen.session.thread_error}")
     return seconds
 
 
@@ -194,7 +194,7 @@ def run_turns(args):
         from data import queries
         players = len(queries.get_active_ai_nations(map_screen))
     say(f"OJH players {players}")
-    say(f"OJH regions {len(map_screen.map_data)} provinces")
+    say(f"OJH regions {len(map_screen.world.map_data)} provinces")
     say("OJH ready")
 
     async def play():
@@ -337,8 +337,8 @@ def run_fps(args):
 def largest_nation(map_screen):
     """The nation holding the most provinces, the busiest research screen."""
     from data import queries
-    living = sorted(queries.get_living_nations(map_screen.map_data))
-    return max(living, key=lambda nation: len(queries.get_nation_provinces_and_units(nation, map_screen.map_data)[0]))
+    living = sorted(queries.get_living_nations(map_screen.world.map_data))
+    return max(living, key=lambda nation: len(queries.get_nation_provinces_and_units(nation, map_screen.world.map_data)[0]))
 
 
 def run_research_scene(controller, map_screen, surface, seconds):
@@ -374,14 +374,14 @@ def run_end_turn_scene(map_screen, surface):
         now = time.perf_counter()
         frames.append(now - last)
         last = now
-        busy = map_screen.ai_is_thinking or map_screen.is_refreshing or map_screen.viewing_ai_moves
-        if not busy or map_screen.thread_error:
+        busy = map_screen.session.ai_is_thinking or map_screen.session.is_refreshing or map_screen.session.viewing_ai_moves
+        if not busy or map_screen.session.thread_error:
             break
         if now - started > TURN_TIMEOUT_SECONDS:
             say(f"OJH noscene end-turn the turn did not finish within {TURN_TIMEOUT_SECONDS:.0f} s")
             return
-    if map_screen.thread_error:
-        raise RuntimeError(f"turn failed inside Greater Diplomacy 5:\n{map_screen.thread_error}")
+    if map_screen.session.thread_error:
+        raise RuntimeError(f"turn failed inside Greater Diplomacy 5:\n{map_screen.session.thread_error}")
     report_scene("end-turn", frames)
 
 

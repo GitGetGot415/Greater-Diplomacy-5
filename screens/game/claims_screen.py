@@ -43,7 +43,7 @@ class Claims_Screen(MapOverlayScreen):
         self.is_picker = target_nation is not None
 
         # Determine if we have global viewing privileges
-        self.is_global_viewer = (map_screen.is_editor or self.player in ["Spectator", "None"]) \
+        self.is_global_viewer = (map_screen.session.is_editor or self.player in ["Spectator", "None"]) \
             and not self.is_picker
         self.view_mode = "YOURS" if self.is_picker else (
             "GLOBAL" if self.is_global_viewer else "YOURS")
@@ -82,7 +82,7 @@ class Claims_Screen(MapOverlayScreen):
         refresh_ui() (on init, view-mode switch, or a claim/queue mutation) rather
         than every frame, since none of this data changes while the screen is open
         except through those actions."""
-        data = self.map_screen.nation_data.get(self.player, {})
+        data = self.map_screen.world.nation_data.get(self.player, {})
         self.claims = data.get("claims", [])
         self.queue = data.get("claim_queue", [])
         self.revoke_queue = data.get("revoke_queue", [])
@@ -97,24 +97,24 @@ class Claims_Screen(MapOverlayScreen):
         self.display_claims = []
 
         if self.view_mode == "YOURS":
-            self.core_ids = [prov["id"] for prov in self.map_screen.map_data.values()
+            self.core_ids = [prov["id"] for prov in self.map_screen.world.map_data.values()
                               if self.player in prov.get("cores", [])
                               and prov.get("owner") != self.player
                               and prov.get("owner") not in c.UNPLAYABLE_NATIONS]
             self.display_claims = self.claims + [c_id for c_id in self.core_ids if c_id not in self.claims]
 
         elif self.view_mode == "THEIRS":
-            for n, d in self.map_screen.nation_data.items():
+            for n, d in self.map_screen.world.nation_data.items():
                 if n == self.player or n in c.UNPLAYABLE_NATIONS: continue
 
                 for pid in d.get("claims", []):
-                    prov = self.map_screen.id_to_province.get(pid)
+                    prov = self.map_screen.world.id_to_province.get(pid)
                     if prov and prov.get("owner") == self.player:
                         info = {"nation": n, "type": "CLAIM", "turns": 0, "prov_id": pid}
                         self.foreign_claims_list.append(info)
                         self.foreign_claims_map.setdefault(pid, []).append(info)
 
-                for prov in self.map_screen.map_data.values():
+                for prov in self.map_screen.world.map_data.values():
                     if prov.get("owner") == self.player and n in prov.get("cores", []) and prov["id"] not in d.get("claims", []):
                         info = {"nation": n, "type": "CORE", "turns": 0, "prov_id": prov["id"]}
                         self.foreign_claims_list.append(info)
@@ -123,7 +123,7 @@ class Claims_Screen(MapOverlayScreen):
                 for q in d.get("claim_queue", []):
                     if q.get("turns_left", 0) < c.CLAIM_TURN_NON_CORE: # Don't show if made this turn
                         pid = q["prov_id"]
-                        prov = self.map_screen.id_to_province.get(pid)
+                        prov = self.map_screen.world.id_to_province.get(pid)
                         if prov and prov.get("owner") == self.player:
                             info = {"nation": n, "type": "QUEUE", "turns": q["turns_left"], "prov_id": pid}
                             self.foreign_claims_list.append(info)
@@ -132,7 +132,7 @@ class Claims_Screen(MapOverlayScreen):
             self.foreign_claims_list.sort(key=lambda x: (x["prov_id"], x["nation"]))
 
         elif self.view_mode == "GLOBAL":
-            for n, d in self.map_screen.nation_data.items():
+            for n, d in self.map_screen.world.nation_data.items():
                 if n in c.UNPLAYABLE_NATIONS and n != "None": continue
                 for pid in d.get("claims", []):
                     self.global_claims_list.append({"nation": n, "prov_id": pid})
@@ -142,7 +142,7 @@ class Claims_Screen(MapOverlayScreen):
         super().additional_events(event)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not self.is_over_ui():
-            if self.map_screen.tactical_mode:
+            if self.map_screen.session.tactical_mode:
                 self.map_screen.show_feedback("Tactical Mode: Cannot modify claims.")
                 return
 
@@ -159,7 +159,7 @@ class Claims_Screen(MapOverlayScreen):
                 else:
                     self.map_screen.show_feedback(
                         "Pick territory held by " + queries.get_country_display_name(
-                            self.target_nation, self.map_screen.nation_data) + ".")
+                            self.target_nation, self.map_screen.world.nation_data) + ".")
             elif self.view_mode == "YOURS" and dest.get("owner") != self.player:
                 self.toggle_claim(dest)
             elif self.view_mode == "THEIRS" and dest.get("owner") == self.player:
@@ -169,7 +169,7 @@ class Claims_Screen(MapOverlayScreen):
         if not self.can_edit_realtime():
             return
         pid = dest["id"]
-        data = self.map_screen.nation_data.get(self.player)
+        data = self.map_screen.world.nation_data.get(self.player)
         if not data: return
 
         is_core = self.player in dest.get("cores", [])
@@ -212,12 +212,12 @@ class Claims_Screen(MapOverlayScreen):
         if not self.can_edit_realtime():
             return
         pid = dest["id"]
-        data = self.map_screen.nation_data.get(self.player)
+        data = self.map_screen.world.nation_data.get(self.player)
         if not data: return
 
         # Find valid recipients who have a claim or core on this tile
         valid_recipients = []
-        for n_name, n_data in self.map_screen.nation_data.items():
+        for n_name, n_data in self.map_screen.world.nation_data.items():
             if n_name == self.player or n_name in c.UNPLAYABLE_NATIONS:
                 continue
 
@@ -259,11 +259,11 @@ class Claims_Screen(MapOverlayScreen):
 
     def get_panel_title(self):
         if self.is_picker:
-            return "Justify: " + queries.get_country_display_name(self.target_nation, self.map_screen.nation_data)
+            return "Justify: " + queries.get_country_display_name(self.target_nation, self.map_screen.world.nation_data)
         return "Territory Claims"
 
     def _nation_label(self, tag):
-        return self.map_screen.nation_data.get(tag, {}).get("name", tag)
+        return self.map_screen.world.nation_data.get(tag, {}).get("name", tag)
 
     def _nation_color(self, tag):
         return self.map_screen.nation_colors.get(tag, (255, 255, 255))
@@ -286,14 +286,14 @@ class Claims_Screen(MapOverlayScreen):
         if self.view_mode == "YOURS":
             queued = []
             for q in self.queue:
-                prov = self.map_screen.id_to_province.get(q["prov_id"])
+                prov = self.map_screen.world.id_to_province.get(q["prov_id"])
                 owner = prov.get("owner", "Unknown") if prov else "Unknown"
                 queued.append((f"- Prov {q['prov_id']} ({self._nation_label(owner)}): "
                                f"{q['turns_left']} turns left", c.UI_TEXT_LIGHT))
 
             active = []
             for pid in self.display_claims:
-                prov = self.map_screen.id_to_province.get(pid)
+                prov = self.map_screen.world.id_to_province.get(pid)
                 owner = prov.get("owner", "Unknown") if prov else "Unknown"
 
                 revoke_item = next((r for r in self.revoke_queue if r["prov_id"] == pid), None)
@@ -413,7 +413,7 @@ class Claims_Screen(MapOverlayScreen):
         if self.is_picker:
             hint = fonts.get("small").render(
                 "Click " + queries.get_country_display_name(
-                    self.target_nation, self.map_screen.nation_data) + "'s provinces to build a case.",
+                    self.target_nation, self.map_screen.world.nation_data) + "'s provinces to build a case.",
                 True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(hint, (self.panel_rect.centerx - hint.get_width() // 2,
                                 self.panel_rect.y + 48))

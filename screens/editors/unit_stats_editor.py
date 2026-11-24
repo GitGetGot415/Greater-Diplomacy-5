@@ -715,7 +715,7 @@ class MapUnitBuildingStatsScreen(UnitStatsEditorScreen):
     RESET_MESSAGE = "Reset this map's unit and building defaults to the library values?"
 
     def __init__(self, map_screen):
-        defaults = map_screen.scenario_settings.get(queries.MAP_DEFAULTS_KEY)
+        defaults = map_screen.world.scenario_settings.get(queries.MAP_DEFAULTS_KEY)
         # A new block joins the map only when it is saved, so Back leaves the map unchanged.
         super().__init__(settings=defaults if isinstance(defaults, dict) else {},
                          persist=False, game_state=map_screen)
@@ -724,7 +724,7 @@ class MapUnitBuildingStatsScreen(UnitStatsEditorScreen):
         """Ask before disabling a unit family that has units on the map."""
         units = []
         if group == "unit" and name not in self.turn_tabs[group]["disabled_set"]:
-            units = queries.find_units_of_families(self.map_screen.map_data, {name})
+            units = queries.find_units_of_families(self.map_screen.world.map_data, {name})
         if not units:
             super().toggle_disabled(group, name)
             return
@@ -744,7 +744,7 @@ class MapUnitBuildingStatsScreen(UnitStatsEditorScreen):
         lines = [f"Disabling {family} deletes {_unit_count(len(units))} from the map when you save:"]
         for province_id, count in list(counts.items())[:MAX_WARNING_PROVINCES]:
             province = provinces[province_id]
-            owner = queries.get_country_display_name(province.get("owner", "None"), self.map_screen.nation_data)
+            owner = queries.get_country_display_name(province.get("owner", "None"), self.map_screen.world.nation_data)
             x, y = province.get("center") or (0, 0)
             lines.append(f"Province {province['id']} ({owner}) at {round(x)}, {round(y)}: {_unit_count(count)}")
         hidden = len(counts) - MAX_WARNING_PROVINCES
@@ -754,10 +754,10 @@ class MapUnitBuildingStatsScreen(UnitStatsEditorScreen):
         return "\n".join(lines)
 
     def after_save(self):
-        self.map_screen.scenario_settings[queries.MAP_DEFAULTS_KEY] = self.target_settings
+        self.map_screen.world.scenario_settings[queries.MAP_DEFAULTS_KEY] = self.target_settings
         disabled = set(self.target_settings.get("unit_disabled", []))
-        removed = len(queries.find_units_of_families(self.map_screen.map_data, disabled))
-        for province in self.map_screen.map_data.values():
+        removed = len(queries.find_units_of_families(self.map_screen.world.map_data, disabled))
+        for province in self.map_screen.world.map_data.values():
             queries.remove_units_of_families(province, disabled)
         rebuild(self.map_screen)
         if removed:

@@ -6,7 +6,7 @@ import unittest
 from data import queries
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import (diplomacy_processor, military_attaches, treaty_effects, volunteers, war_actions)
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import MapDouble, StubMapScreen
 
 
 def nation(**extra):
@@ -62,7 +62,7 @@ class MilitaryAttacheTests(unittest.TestCase):
         screen.set_war("B", "C")
         screen.nation_data["A"]["military_attaches"] = ["B"]
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "B", military_attaches.WITHDRAW_ACTION)
+            screen, "A", "B", military_attaches.WITHDRAW_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
@@ -100,9 +100,9 @@ class MilitaryAttacheTests(unittest.TestCase):
         screen = StubMapScreen(["A", "B", "C"])
         screen.set_war("B", "C")
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "B", military_attaches.ACTION)
+            screen, "A", "B", military_attaches.ACTION)
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "A", "C", military_attaches.ACTION)
+            screen, "A", "C", military_attaches.ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)  # Requests travel.
         diplomacy_processor.process_diplomacy_turn(screen)  # Both AI hosts accept.
@@ -135,14 +135,14 @@ class MilitaryAttacheTests(unittest.TestCase):
         screen.set_war("B", "C")
         screen.nation_data["A"]["military_attaches"] = ["B"]
         diplomacy_processor.toggle_diplomacy_action(
-            screen.nation_data, "B", "A", military_attaches.REVOKE_ACTION)
+            screen, "B", "A", military_attaches.REVOKE_ACTION)
 
         diplomacy_processor.process_diplomacy_turn(screen)
 
         self.assertEqual(military_attaches.hosts_for("A", screen.nation_data), [])
 
     def test_attache_adds_the_host_s_unit_vision(self):
-        class VisionMap:
+        class VisionMap(MapDouble):
             player_country = "A"
             tactical_mode = False
             player_unit = None

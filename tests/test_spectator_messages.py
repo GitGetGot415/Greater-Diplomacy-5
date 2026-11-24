@@ -552,7 +552,7 @@ class WarDeclarationTests(unittest.TestCase):
         from map_logic.diplomacy import diplomacy_processor
         game = StubMapScreen(["A", "B"], human_players=["A"])
         diplomacy_processor.toggle_diplomacy_action(
-            game.nation_data, "A", "B", "WAR_DECLARATION", custom_msg=c.WARGOAL_TAKE_CLAIMS)
+            game, "A", "B", "WAR_DECLARATION", custom_msg=c.WARGOAL_TAKE_CLAIMS)
         diplomacy_processor._process_pass1_immediate_actions(game)
         msg = next(m for m in game.nation_data["B"]["inbox"]
                    if not str(m.get("sender", "")).startswith("To:"))

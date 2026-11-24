@@ -222,7 +222,7 @@ class CountrySummaryTests(unittest.TestCase):
         game.country_economy_summaries = filtered["country_economy_summaries"]
         with patch.object(queries, "calculate_all_economies", side_effect=AssertionError("Client recalculated totals")):
             self.assertEqual(queries.get_country_summary(game, "B")["economy"], expected)
-        game.nation_data["B"]["faction"] = ""
+        queries.set_country_faction(game.world.nation_data, "B", "")
         self.assertFalse(queries.get_country_summary(game, "B")["economy"]["available"])
 
     def test_shared_network_economy_stays_private_without_authoritative_totals(self):
