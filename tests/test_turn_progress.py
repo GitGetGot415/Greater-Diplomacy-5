@@ -6,10 +6,60 @@ from types import SimpleNamespace
 import unittest
 from unittest import mock
 
+from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
 from data.state_access import BackendState
+from map_logic.actions.player_actions import PlayerActionError
 from map_logic.ai import ai_letters, ai_movement
 from map_logic.system32 import turn_manager, turn_processor
 from ui.panels import turn_progress
+
+
+class LocalEndTurnCheckTests(unittest.TestCase):
+    """Ending a local turn uses the draft validator that multiplayer submissions use."""
+
+    def context(self, **session):
+        feedback = []
+        context = BackendState(feedback=feedback.append)
+        context.world.nation_data["A"] = {"materials": 0, "manpower": 0, "fuel": 0, "research": {}, "at_war_with": []}
+        context.world.nation_data["The Rot"] = dict(context.world.nation_data["A"])
+        province = {"id": 1, "json_key": "1", "owner": "A", "cores": ["A"], "neighbors": [],
+                    "units": [], "building_queue": [], "unit_queue": [], "buildings": []}
+        context.world.map_data["1"] = province
+        context.world.id_to_province[1] = province
+        context.session.player_country = "A"
+        for name, value in session.items():
+            setattr(context.session, name, value)
+        return context, feedback
+
+    def end_turn(self, context, *, rejection=None):
+        validate = mock.patch.object(turn_manager.PlayerActions, "validate_draft",
+                                     side_effect=rejection, autospec=True)
+        with validate as check, mock.patch.object(turn_manager, "trigger_ai_thread") as trigger:
+            turn_manager.advance_time(context)
+        return check, trigger
+
+    def test_a_rejected_local_draft_keeps_the_turn_open(self):
+        context, feedback = self.context()
+        check, trigger = self.end_turn(context, rejection=PlayerActionError("Fixture refusal."))
+        check.assert_called_once()
+        trigger.assert_not_called()
+        self.assertEqual(feedback, ["Order update rejected: Fixture refusal."])
+
+    def test_a_valid_local_draft_ends_the_turn(self):
+        context, feedback = self.context()
+        with mock.patch.object(turn_manager, "trigger_ai_thread") as trigger:
+            turn_manager.advance_time(context)
+        trigger.assert_called_once_with(context)
+        self.assertEqual(feedback, [])
+
+    def test_networked_tactical_and_countryless_turns_skip_the_local_check(self):
+        for session in ({"mode": TOURNAMENT}, {"mode": REALTIME}, {"tactical_mode": True},
+                        {"player_country": "Spectator"}, {"player_country": "The Rot"}):
+            with self.subTest(session=session):
+                context, _feedback = self.context(**session)
+                check, trigger = self.end_turn(context, rejection=PlayerActionError("Fixture refusal."))
+                check.assert_not_called()
+                trigger.assert_called_once_with(context)
 
 
 class ProgressValuesTests(unittest.TestCase):

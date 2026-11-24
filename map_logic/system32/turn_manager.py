@@ -6,12 +6,16 @@ from map_logic.system32 import turn_processor
 from ui.panels import diplomatic_popups
 from map_logic.ai import ai_handler
 from data import queries
+from data.session_state import LOCAL_PLAY
+from map_logic.actions.player_actions import PlayerActions, PlayerActionError, collect_map_commands
 import data.constants as c
 
 import traceback
 
 def advance_time(context):
     session_state = session_for(context)
+    if not session_state.viewing_ai_moves and not local_orders_are_valid(context):
+        return
     diplomatic_popups.clear_popups(context)
 
     session_state.turn_start_time = pygame.time.get_ticks()
@@ -47,6 +51,26 @@ def advance_time(context):
     else:
         trigger_ai_thread(context)
         
+def local_orders_are_valid(context):
+    """Check the planning player's orders with the validator that multiplayer submissions use.
+
+    Local play applies orders directly, so this only reports a draft that a host or
+    server would refuse. The turn does not end until the player corrects it.
+    """
+    session_state = session_for(context)
+    country = session_state.player_country
+    # Unplayable countries never hold a seat, so no player submits their orders.
+    if (session_state.mode != LOCAL_PLAY or session_state.tactical_mode
+            or country in c.UNPLAYABLE_NATIONS or country not in world_for(context).nation_data):
+        return True
+    try:
+        PlayerActions(context).validate_draft(country, collect_map_commands(context, country))
+    except PlayerActionError as error:
+        context.show_feedback(f"Order update rejected: {error}")
+        return False
+    return True
+
+
 def trigger_ai_thread(context):
     """Helper to lock the UI and start the background thread."""
     session_state = session_for(context)
