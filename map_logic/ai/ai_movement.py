@@ -1153,14 +1153,26 @@ def _strike_depth(context, ai_name, tile):
     return int(_tile_depth(capacity, tile))
 
 
+def strike_forecast_turns():
+    """How many exchanges ahead a new fight must hold: the retreat horizon, plus one.
+
+    The attack's first exchange is fought in the turn it is ordered, and the
+    next turn's tile_is_lost looks AI_RETREAT_FORECAST_TURNS further on from
+    there. Holding only that many from the start let a fight lost on the
+    exchange after pass here and be abandoned a turn later.
+    """
+    return ai_tuning.AI_RETREAT_FORECAST_TURNS + 1
+
+
 def _strike_group(context, ai_name, tile, hostiles, routes, reserved, friendly_nations):
     """The fewest of `routes` that make a new fight on `tile` one we do not lose.
 
     "Not lost" is the bar tile_is_lost holds a fight by: the shared forecast
-    does not have the enemy wipe us out within AI_RETREAT_FORECAST_TURNS. A
-    fight the planner starts is therefore one the retreat check will not order
-    abandoned next turn. Strongest units first, and no more than the tile can
-    use (_tile_depth). None when even that many would lose.
+    does not have the enemy wipe us out within the horizon it will look at
+    next turn (strike_forecast_turns). A fight the planner starts is therefore
+    one the retreat check will not order abandoned next turn, unless the enemy
+    reinforces it. Strongest units first, and no more than the tile can use
+    (_tile_depth). None when even that many would lose.
     """
     world_state = world_for(context)
     prov = world_state.id_to_province[tile]
@@ -1174,7 +1186,7 @@ def _strike_group(context, ai_name, tile, hostiles, routes, reserved, friendly_n
         group = candidates[:size]
         outcome = combat_forecast.estimated_combat_outcome(
             [allies + [unit for unit, _, _ in group], hostiles], world_state.nation_data,
-            province=prov, max_turns=ai_tuning.AI_RETREAT_FORECAST_TURNS)
+            province=prov, max_turns=strike_forecast_turns())
         if outcome["winner_side"] != 1:
             return tuple(group)
     return None

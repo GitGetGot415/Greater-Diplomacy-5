@@ -573,7 +573,7 @@ class StrikePlannerTests(unittest.TestCase):
             [[fixture_unit(**self.ATTACKER) for _ in range(attackers)],
              [fixture_unit("Bruland", **self.DEFENDER)]],
             screen.world.nation_data, province=screen.world.id_to_province[2],
-            max_turns=ai_tuning.AI_RETREAT_FORECAST_TURNS)
+            max_turns=ai_movement.strike_forecast_turns())
 
     def test_premise_one_attacker_loses_but_survives_the_first_exchange(self):
         self.assertEqual(self.outcome(1)["winner_side"], 1)
@@ -586,6 +586,21 @@ class StrikePlannerTests(unittest.TestCase):
         paths = self.run_turn({1: ("Avaria", [2]), 2: ("Bruland", [1])},
                               {1: [fixture_unit(**self.ATTACKER)]},
                               {2: [fixture_unit("Bruland", **self.DEFENDER)]})
+        self.assertEqual(paths, [[]])
+
+    def test_a_fight_lost_just_past_the_retreat_horizon_is_not_started(self):
+        """The attack's first exchange happens this turn, so next turn's retreat
+        check sees one exchange further than a plan that stopped at its horizon."""
+        enemy_attack = 100
+        health = enemy_attack * (ai_tuning.AI_RETREAT_FORECAST_TURNS + 0.5)
+        attacker = fixture_unit(attack=1, health=health)
+        defender = fixture_unit("Bruland", attack=enemy_attack, health=100000)
+        screen = GridScreen({1: ("Avaria", [2]), 2: ("Bruland", [1])})
+        within_horizon = combat_forecast.estimated_combat_outcome(
+            [[dict(attacker)], [dict(defender)]], screen.world.nation_data,
+            province=screen.world.id_to_province[2], max_turns=ai_tuning.AI_RETREAT_FORECAST_TURNS)
+        self.assertNotEqual(within_horizon["winner_side"], 1, "premise: it survives the horizon itself")
+        paths = self.run_turn({1: ("Avaria", [2]), 2: ("Bruland", [1])}, {1: [attacker]}, {2: [defender]})
         self.assertEqual(paths, [[]])
 
     def test_two_units_that_lose_alone_attack_together(self):

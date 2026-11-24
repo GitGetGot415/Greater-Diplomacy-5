@@ -406,8 +406,8 @@ AI_MAX_REPAIR_TRIP_SHARE = 0.15
 
 # How many exchanges ahead the AI looks when deciding a battle is lost (see
 # ai_movement.tile_is_lost), and so whether a new fight is worth starting: the
-# strike planner only starts one this check would not call lost
-# (ai_movement._strike_group). The forecast is the shared one Manage Battle
+# strike planner only starts one this check would not call lost next turn
+# (ai_movement.strike_forecast_turns). The forecast is the shared one Manage Battle
 # shows. Longer sees a slow defeat sooner but also gives up fights a
 # reinforcement could still have turned, and starts fewer.
 AI_RETREAT_FORECAST_TURNS = 3
