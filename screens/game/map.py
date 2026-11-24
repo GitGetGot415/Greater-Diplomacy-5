@@ -954,6 +954,19 @@ class Map(StateAccess, Screen):
         callers no longer need six nearly identical forwarding methods.
         """
         self.invalidate_map_presentation_cache()
+        self.rebuild_map_layers(*layers)
+
+    def rebuild_map_layers(self, *layers):
+        """Rebuilds layer images after the caller invalidated presentation once.
+
+        For a sequence of one-layer steps that yield frames between them, such
+        as the turn-end refresh: invalidate_map_presentation_cache re-derives
+        supply, armies and the selected roster from game state, so running it
+        once before the first step gives what running it before every step
+        gave. Each step still drops the scaled pixels a frame may have cached
+        from the old image.
+        """
+        map_renderer.clear_viewport_scale_cache(self)
         for layer in layers:
             try:
                 self.MAP_LAYER_REFRESHERS[layer](self)

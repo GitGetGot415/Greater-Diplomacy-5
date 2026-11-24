@@ -13,6 +13,9 @@ any province whose owner had changed, silently; now the deal is re-validated and
 the dropped terms are reported back so the players can be told.
 """
 
+from contextlib import contextmanager
+from contextvars import ContextVar
+
 from data.state_access import world_for, session_for
 import data.constants as c
 from map_logic.diplomacy import deal as deal_mod
@@ -24,6 +27,9 @@ from map_logic.diplomacy import reach as reach_mod
 from map_logic.diplomacy.faction_actions import finalize_faction_leave
 from map_logic.diplomacy.puppet_actions import assign_puppet
 from map_logic.diplomacy.war_actions import finalize_neutral, remove_enemy
+
+
+_TURN_ECONOMIES = ContextVar("turn_economies", default=None)
 
 
 def _hand_over_the_land_only(context, prov, receiver):
@@ -60,15 +66,30 @@ def _provinces_by_id(context):
     return {prov["id"]: prov for prov in world_state.map_data.values()}
 
 
+@contextmanager
+def turn_economies():
+    """Share one economy sweep across every deal settled inside this block.
+
+    process_diplomacy_turn holds every escrow and treaty of a turn's diplomacy
+    to the first sweep any of them asks for, as combat_supply holds a combat
+    phase to one supply snapshot. A deal settled later in the same pass reads
+    income from before earlier deals moved provinces or subjects.
+    """
+    token = _TURN_ECONOMIES.set({})
+    try:
+        yield
+    finally:
+        _TURN_ECONOMIES.reset(token)
+
+
 def economies_for(context):
     """This turn's economy snapshot, for deal.resource_cap.
 
-    Three sources in order of how much they cost. One already computed and
+    Four sources in order of how much they cost. One already computed and
     hung on the screen wins; then the AI's per-turn cache, because prepare_turn
     has usually already built it and a treaty executes inside that same turn;
-    then a fresh sweep, which is affordable here in a way it is not on the
-    builder screen -- executing a deal happens once, re-pricing one happens per
-    keystroke.
+    then the diplomacy pass's shared sweep (see turn_economies); then a fresh
+    sweep for a deal executed on its own, outside a diplomacy pass.
 
     None when there is nothing to read. resource_cap takes that as "no ceiling"
     rather than a ceiling of zero, so a caller that cannot know what a nation
@@ -87,7 +108,12 @@ def economies_for(context):
     map_data = world_state.map_data
     if not map_data:
         return None
-    return queries.calculate_all_economies(map_data, world_state.nation_data, context=context)
+    shared = _TURN_ECONOMIES.get()
+    if shared is None:
+        return queries.calculate_all_economies(map_data, world_state.nation_data, context=context)
+    if "economies" not in shared:
+        shared["economies"] = queries.calculate_all_economies(map_data, world_state.nation_data, context=context)
+    return shared["economies"]
 
 
 def _provinces(count):

@@ -1822,6 +1822,11 @@ def _schedule_conflicting_ai_volunteer_send_homes(context):
 
 
 def process_diplomacy_turn(context):
+    with deal_effects.turn_economies():
+        _process_diplomacy_turn(context)
+
+
+def _process_diplomacy_turn(context):
     world_state = world_for(context)
     lifecycle.normalize_diplomacy_channels(world_state.nation_data)
     treaty_effects.expire_obsolete_peace(world_state.nation_data)

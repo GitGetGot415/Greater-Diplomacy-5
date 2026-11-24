@@ -205,6 +205,10 @@ class SupplySnapshot:
             self.occupied = tuple(key for key, province in self.provinces.items() if province.get("units"))
             self.yields = {}
             self.production = queries.ProvinceProduction(self.nations, context)
+            self.land_access = {}
+            self.country_enemies = {}
+            self.allies = {}
+            self.members = {}
         else:
             self.provinces = source.provinces
             self.water = source.water
@@ -214,6 +218,12 @@ class SupplySnapshot:
             self.occupied = source.occupied
             self.yields = source.yields
             self.production = source.production
+            # Access, enemies and supply-sharing groups read only diplomacy,
+            # which fog does not hide, so every view of one phase shares them.
+            self.land_access = source.land_access
+            self.country_enemies = source.country_enemies
+            self.allies = source.allies
+            self.members = source.members
         self.occupants = {}
         self.visible_units = {}
         self.estimated_output = {}
@@ -223,10 +233,6 @@ class SupplySnapshot:
         self.networks = {}
         self.domestic_networks = {}
         self.accessible = {}
-        self.land_access = {}
-        self.country_enemies = {}
-        self.allies = {}
-        self.members = {}
         self.share_sources = {}
         self.route_projections = {}
         self.topologies = {}

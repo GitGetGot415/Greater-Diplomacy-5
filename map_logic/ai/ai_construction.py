@@ -853,6 +853,9 @@ def process_ai_economy_decisions(context, *, countries=None):
     building_library = queries.get_building_library(context)
 
     tech_tree = queries.get_tech_tree(context)
+    # Parsed once for the pass, as process_ai_research does. The library does
+    # not change while nations decide, so each one need not re-check it.
+    research_index = queries.get_unit_research_index(unit_library)
 
     all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
 
@@ -893,7 +896,7 @@ def process_ai_economy_decisions(context, *, countries=None):
         # Existing unit types are valued alongside the buildable ones purely so
         # the tally below can bucket them by the same rule; only the buildable
         # set is ever purchased from.
-        candidates = ai_unit_eval.buildable_units(data.get("research", {}), unit_library)
+        candidates = ai_unit_eval.buildable_units(data.get("research", {}), unit_library, research_index=research_index)
         owned_types = {u.get("type", "") for p in my_provs
                        for u in queries.units_with_air_cargo(p.get("units", []))
                        if u.get("owner") == ai_name}

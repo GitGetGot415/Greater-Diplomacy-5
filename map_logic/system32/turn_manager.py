@@ -117,18 +117,21 @@ async def _resolve_turn_and_refresh(context):
         is_last_multi = not is_multi or (session_state.multi_turns_completed >= session_state.multi_turns_total - 1)
 
         # 2. Define Refresh Tasks
+        # Presentation is invalidated once below, before the first layer rebuild.
         refresh_steps = [
-            ("Refreshing Political Map...", lambda: context.refresh_map_layers("political")),
-            ("Refreshing Relations Map...", lambda: context.refresh_map_layers("relations")),
-            ("Refreshing Factions Map...", lambda: context.refresh_map_layers("factions")),
-            ("Refreshing Core Map...", lambda: context.refresh_map_layers("cores")),
-            ("Refreshing Territories...", lambda: context.refresh_map_layers("faction_territories")),
-            ("Refreshing Fog of War...", lambda: context.refresh_map_layers("fog")),
+            ("Refreshing Political Map...", lambda: context.rebuild_map_layers("political")),
+            ("Refreshing Relations Map...", lambda: context.rebuild_map_layers("relations")),
+            ("Refreshing Factions Map...", lambda: context.rebuild_map_layers("factions")),
+            ("Refreshing Core Map...", lambda: context.rebuild_map_layers("cores")),
+            ("Refreshing Territories...", lambda: context.rebuild_map_layers("faction_territories")),
+            ("Refreshing Fog of War...", lambda: context.rebuild_map_layers("fog")),
             ("Updating Map Labels...", context.update_country_centers)
         ]
 
         session_state.refresh_tasks_total = len(refresh_steps)
         session_state.refresh_tasks_completed = 0
+        if not is_multi or is_last_multi:
+            context.invalidate_map_presentation_cache()
 
         # 3. Process each refresh step, yielding a frame to the render loop after each
         for label, func in refresh_steps:
