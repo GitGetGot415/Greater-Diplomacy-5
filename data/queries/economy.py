@@ -41,6 +41,12 @@ def has_turn_economy(name, economies):
     return name in economies and name not in c.UNPLAYABLE_NATIONS
 
 
+def _add_province_income(breakdown, province_breakdown):
+    for category, yields in province_breakdown.items():
+        for resource, amount in yields.items():
+            breakdown[resource][category] += amount
+
+
 def get_unit_upkeep(stats, nation_data=None, owner=None, *, unit=None):
     """Calculates dynamically modified unit upkeep costs.
 
@@ -94,6 +100,27 @@ def get_research_funding_cost(rate, gross_materials):
     """Materials a funding rate takes from gross Materials income, like fuel conversion."""
     # Truncate like the other slider conversions in the economy breakdown.
     return int(max(0, gross_materials) * rate)
+
+
+def _slider_conversion(income, rate, ratio):
+    divisor = max(1, int(1 / ratio) if ratio > 0 else 1)
+    if rate <= 0 or income < divisor:
+        return 0, 0
+    spent = (int(income * rate) // divisor) * divisor
+    return -spent, int(spent * ratio)
+
+
+def _apply_income_conversions(breakdown, country):
+    # Conscription contributes Materials before fuel conversion and research funding take their shares.
+    gross_manpower = sum(breakdown["manpower"].values())
+    manpower, materials = _slider_conversion(gross_manpower, 1.0 - get_conscription_rate(country), c.CONSCRIPTION_RATIO)
+    breakdown["manpower"]["conscription"] = manpower
+    breakdown["materials"]["conscription"] = materials
+    gross_materials = sum(breakdown["materials"].values())
+    materials, fuel = _slider_conversion(gross_materials, get_fuel_conversion_rate(country), c.FUEL_CONVERSION_RATIO)
+    breakdown["materials"]["conversion"] = materials
+    breakdown["fuel"]["conversion"] = fuel
+    return gross_materials
 
 
 def get_funded_research_points(country, materials_spent, days_per_turn):
@@ -801,6 +828,8 @@ class ProvinceProduction:
         self.countries = {}
         self.buildings = {}
         self.country_buildings = {}
+        self.province_breakdowns = {}
+        self.totals = {}
 
     def country(self, owner):
         if owner not in self.countries:
@@ -834,6 +863,46 @@ class ProvinceProduction:
 
         return {"core" if is_core else "non_core": yields, "resources": deposits, "buildings": self.building_output(province)}
 
+    def _cached_breakdown(self, province):
+        key = province["id"], province["owner"]
+        if key not in self.province_breakdowns:
+            self.province_breakdowns[key] = self.breakdown(province)
+        return self.province_breakdowns[key]
+
+    def total_output(self, province):
+        key = province["id"], province["owner"]
+        if key not in self.totals:
+            breakdown = self._cached_breakdown(province)
+            self.totals[key] = {resource: sum(output[resource] for output in breakdown.values()) for resource in c.ECON_RESOURCE_KEYS}
+        return self.totals[key]
+
+    def fuel_conversion_by_province(self, owner, provinces):
+        """Attribute the national conversion to material sources before checking supply routes."""
+        country = self.nation_data.get(owner, {})
+        if owner in c.UNPLAYABLE_NATIONS or get_fuel_conversion_rate(country) <= 0:
+            return {}
+        breakdown = empty_income_breakdown()
+        for resource in ("manpower", "materials"):
+            breakdown[resource]["base"] = c.COUNTRY_BASE_YIELDS[resource]
+        land_materials = {}
+        for province in provinces:
+            _add_province_income(breakdown, self._cached_breakdown(province))
+            if not is_water_province(province):
+                land_materials[province["id"]] = self.total_output(province)["materials"]
+        if not land_materials:
+            return {}
+        gross_materials = _apply_income_conversions(breakdown, country)
+        materials = breakdown["materials"]["conversion"]
+        fuel = breakdown["fuel"]["conversion"]
+        if not materials:
+            return {}
+        # Base income and conscription have no local supply source. Spread their
+        # fuel across owned land and charge local supply only for local materials.
+        national_share = max(0, gross_materials - fsum(land_materials.values())) / len(land_materials)
+        return {key: {"materials": materials * amount / gross_materials,
+                      "fuel": fuel * (amount + national_share) / gross_materials}
+                for key, amount in land_materials.items()}
+
     def building_output(self, province):
         owner = province["owner"]
         economy = self.country(owner)
@@ -864,10 +933,7 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
     for province in map_data.values():
         owner = province.get("owner")
         if owner in econ_data and owner not in c.UNPLAYABLE_NATIONS:
-            breakdown = econ_data[owner]["breakdown"]
-            for category, yields in production.breakdown(province).items():
-                for resource, amount in yields.items():
-                    breakdown[resource][category] += amount
+            _add_province_income(econ_data[owner]["breakdown"], production.breakdown(province))
 
         for unit in units_with_air_cargo(province.get("units", [])):
             owner = unit.get("owner")
@@ -875,25 +941,10 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
                 for resource, amount in get_live_unit_upkeep(unit, unit_library, nation_data).items():
                     econ_data[owner]["upkeep"][resource] += amount
 
-    # Helper for converting one resource to another via the dynamic sliders
-    def _process_conversion(data, src, tgt, tag, rate, ratio):
-        raw_inc = sum(data["breakdown"][src].values())
-        divisor = max(1, int(1 / ratio) if ratio > 0 else 1)
-        if rate > 0 and raw_inc >= divisor:
-            convert_amount = int(raw_inc * rate)
-            convert_amount = (convert_amount // divisor) * divisor
-            data["breakdown"][src][tag] = -convert_amount
-            data["breakdown"][tgt][tag] = int(convert_amount * ratio)
-
     # Finalize totals and calculate conversions
     for name, data in econ_data.items():
         n_data = nation_data.get(name, {})
-        
-        # Conscription (1.0 = keep all, 0.0 = convert all)
-        _process_conversion(data, "manpower", "materials", "conscription", 1.0 - get_conscription_rate(n_data), c.CONSCRIPTION_RATIO)
-        # Fuel conversion and research funding take their shares of the same gross Materials income.
-        data["gross_materials"] = sum(data["breakdown"]["materials"].values())
-        _process_conversion(data, "materials", "fuel", "conversion", get_fuel_conversion_rate(n_data), c.FUEL_CONVERSION_RATIO)
+        data["gross_materials"] = _apply_income_conversions(data["breakdown"], n_data)
         data["breakdown"]["materials"]["research_funding"] = -get_research_funding_cost(get_research_funding_rate(n_data), data["gross_materials"])
 
         for res in c.ECON_RESOURCE_KEYS:

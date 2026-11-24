@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from copy import copy
 from dataclasses import dataclass, field, replace
+from math import isclose
 
 import data.constants as c
 from data import queries
@@ -26,17 +27,12 @@ def _add_resources(total, amounts, scale=1):
         total[resource] += amounts[resource] * scale
 
 
-def _province_resources(producer, province):
-    output = _resources()
-    for amounts in producer.breakdown(province).values():
-        _add_resources(output, amounts)
-    return output
-
-
 def supply_fractions(production, demand, unit_demand):
-    return tuple(min(1.0, max(0.0, production[resource] / demand[resource]))
-                 if unit_demand[resource] > 0 and demand[resource] > 0 else 1.0
-                 for resource in c.ECON_RESOURCE_KEYS)
+    manpower, materials, fuel = (min(1.0, max(0.0, production[resource] / demand[resource]))
+                                 if unit_demand[resource] > 0 and demand[resource] > 0 else 1.0
+                                 for resource in c.ECON_RESOURCE_KEYS)
+    # Summing proportional conversion output can land just below a full fuel allotment.
+    return manpower, materials, 1.0 if isclose(fuel, 1.0, rel_tol=1e-12) else fuel
 
 
 def supply_fraction(fractions, unit_demand):
@@ -194,10 +190,13 @@ class SupplySnapshot:
             self.provinces = {province["id"]: province for province in world.map_data.values() if "id" in province}
             self.water = {key for key, province in self.provinces.items() if queries.is_water_province(province)}
             self.sea = {key for key in self.water if self.provinces[key].get("terrain") in c.OCEAN_TERRAINS}
+            self.owned_provinces = defaultdict(list)
             self.owned_land = defaultdict(list)
             for key, province in self.provinces.items():
+                owner = province.get("owner")
+                self.owned_provinces[owner].append(key)
                 if key not in self.water:
-                    self.owned_land[province.get("owner")].append(key)
+                    self.owned_land[owner].append(key)
             self.neighbors = {
                 key: tuple(neighbor for neighbor in province.get("neighbors", ()) if neighbor in self.provinces
                            and ((key in self.water) == (neighbor in self.water)
@@ -205,8 +204,8 @@ class SupplySnapshot:
                 for key, province in self.provinces.items()
             }
             self.occupied = tuple(key for key, province in self.provinces.items() if province.get("units"))
-            self.yields = {}
             self.production = queries.ProvinceProduction(self.nations, context)
+            self.fuel_conversions = {}
             self.land_access = {}
             self.country_enemies = {}
             self.allies = {}
@@ -217,11 +216,12 @@ class SupplySnapshot:
             self.provinces = source.provinces
             self.water = source.water
             self.sea = source.sea
+            self.owned_provinces = source.owned_provinces
             self.owned_land = source.owned_land
             self.neighbors = source.neighbors
             self.occupied = source.occupied
-            self.yields = source.yields
             self.production = source.production
+            self.fuel_conversions = source.fuel_conversions
             # Access, enemies and supply-sharing groups read only diplomacy,
             # which fog does not hide, so every view of one phase shares them.
             self.land_access = source.land_access
@@ -310,10 +310,15 @@ class SupplySnapshot:
         self.unit_facts[key] = entry
         return entry[1], entry[2]
 
-    def province_output(self, key):
-        if key not in self.yields:
-            self.yields[key] = _province_resources(self.production, self.provinces[key])
-        return self.yields[key]
+    def fuel_conversion_for(self, country, recaptured=None):
+        owned = self.owned_provinces.get(country, ())
+        if recaptured and any(owner == country or self.provinces[key]["owner"] == country for key, owner in recaptured.items()):
+            provinces = [self.provinces[key] for key in owned if key not in recaptured]
+            provinces.extend(dict(self.provinces[key], owner=owner) for key, owner in recaptured.items() if owner == country)
+            return self.production.fuel_conversion_by_province(country, provinces)
+        if country not in self.fuel_conversions:
+            self.fuel_conversions[country] = self.production.fuel_conversion_by_province(country, (self.provinces[key] for key in owned))
+        return self.fuel_conversions[country]
 
     def _permitted_land_owners(self, country):
         if country not in self.land_access:
@@ -577,7 +582,7 @@ class SupplySnapshot:
         if key not in self.visible_provinces:
             return c.BASE_YIELDS
         if key not in self.estimated_output:
-            self.estimated_output[key] = _province_resources(self._foreign_production(), self.provinces[key])
+            self.estimated_output[key] = self._foreign_production().total_output(self.provinces[key])
         return self.estimated_output[key]
 
     def _foreign_production(self):
@@ -619,20 +624,27 @@ class SupplySnapshot:
         province_area, anchors = self._province_areas(accessible)
         network = SupplyNetwork(province_area=province_area, areas={key: SupplyArea() for key in anchors})
         estimated = self.visible_provinces is not None and country != self.visible_to
-        output = self._estimate_province_output if estimated else self.province_output
+        # A fog-limited view estimates foreign production without private conversion rates.
+        conversions = {} if estimated else self.fuel_conversion_for(country, recaptured)
         land_units = self.land_units.get(country, {})
-        for key in self.owned_land.get(country, ()):
-            if (area_id := province_area.get(key)) is not None and (not recaptured or key not in recaptured):
-                production = network.production_tiles[key] = output(key)
-                _add_resources(network.areas[area_id].production, production)
-        for key, owner in (recaptured or {}).items():
-            if owner != country or (area_id := province_area.get(key)) is None:
+        recaptured = recaptured or {}
+        producing = [key for key in self.owned_land.get(country, ()) if key not in recaptured]
+        producing.extend(key for key, owner in recaptured.items() if owner == country)
+        for key in producing:
+            if (area_id := province_area.get(key)) is None:
                 continue
-            if estimated and key not in self.visible_provinces:
-                production = c.BASE_YIELDS
+            province = self.provinces[key]
+            if key in recaptured:
+                if estimated and key not in self.visible_provinces:
+                    production = c.BASE_YIELDS
+                else:
+                    producer = self._foreign_production() if estimated else self.production
+                    production = producer.total_output(dict(province, owner=country))
             else:
-                producer = self._foreign_production() if estimated else self.production
-                production = _province_resources(producer, dict(self.provinces[key], owner=owner))
+                production = self._estimate_province_output(key) if estimated else self.production.total_output(province)
+            if (conversion := conversions.get(key)) is not None:
+                production = {**production, "materials": production["materials"] + conversion["materials"],
+                              "fuel": production["fuel"] + conversion["fuel"]}
             network.production_tiles[key] = production
             _add_resources(network.areas[area_id].production, production)
         for key, identities in land_units.items():
