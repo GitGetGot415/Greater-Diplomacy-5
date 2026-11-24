@@ -1,6 +1,7 @@
 # --- START OF FILE CHANGES ---
 from data.state_access import world_for, session_for
 from collections import defaultdict, deque
+from itertools import combinations, product
 import heapq
 import data.constants as c
 from map_logic.ai import ai_tuning
@@ -894,6 +895,175 @@ def _operational_paths(context, unit, origin, tiles, limit, stops=frozenset(), i
     return paths
 
 
+def _book_reserved_land_order(supply, ctx, unit, origin, path):
+    if not path:
+        return
+    supply.book(unit, path)
+    for tile, delta in ((origin["id"], -1), (path[-1], 1)):
+        if tile in ctx["target_assignments"]:
+            ctx["target_stacks"][tile] += delta
+            ctx["target_assignments"][tile] += delta
+
+
+def _land_cut_cost(context, supply, tile, orders, defenders, counter):
+    """Price a reachable occupation with the shared combat forecast and supply rules."""
+    nations = world_for(context).nation_data
+    units = [unit for unit, _, _ in orders]
+    health = sum(unit["health"] for unit in units)
+    cost = health * ai_tuning.AI_SUPPLY_CUT_COMMITMENT_COST
+    for unit, _, path in orders:
+        if not path:
+            continue
+        current, _ = supply.current(unit)
+        readiness, _ = supply.quality(unit, tile["id"])
+        if readiness <= 0:
+            return None
+        cost += unit["health"] * max(0, current - readiness)
+    survivors = units
+    if defenders:
+        forecast = combat_forecast.simulate_combat(
+            [units, defenders], nations, province=tile, max_turns=ai_tuning.AI_SUPPLY_CUT_MAX_VOLLEYS)
+        if forecast["winner_side"] != 0:
+            return None
+        survivors = forecast["sides"][0]
+        cost += health - sum(unit["health"] for unit in survivors)
+    if counter is not None:
+        battle = combat_rules.build_battle([survivors, [counter]], nations,
+                                           terrain=tile.get("terrain"), tiles=(tile, tile))
+        incoming = combat_rules.projected_incoming_damage(battle, nations, defense_bonus_fn=lambda unit:
+                                                           queries.get_fort_defense_bonus(tile, unit, nations, combat_active=True))
+        losses = sum(min(unit["health"], incoming.get(id(unit), 0)) for unit in survivors)
+        if losses >= sum(unit["health"] for unit in survivors):
+            return None
+        cost += losses
+    return cost
+
+
+def _reserve_land_supply_orders(context, ai_name, units_info, supply, ctx, reserved):
+    """Reserve legal forces for a supply cut before ordinary frontier movement."""
+    known = supply.known
+    if not supply.enemies.intersection(known.land_units) or not supply.network.unit_area:
+        return
+    provinces = known.provinces
+    ground = supply.network.province_area.keys() - known.water
+    hostile_land = {tile for owner in supply.enemies for tile in known.owned_land.get(owner, ())}
+    hostile_units = {tile: [u for u in units if queries.get_unit_combat_owner(u) in supply.enemies]
+                     for tile, units in known.visible_units.items() if known.occupants[tile] & supply.enemies}
+    claims = {enemy: set(known.nations[enemy].get("claims", ())) for enemy in supply.enemies if enemy in known.nations}
+    threatened = {}
+    targets = set()
+    for tile in ground:
+        enemy_neighbors = {near for near in provinces[tile].get("neighbors", ()) if near in hostile_land}
+        if enemy_neighbors:
+            targets.update(enemy_neighbors)
+            # Capture gives the former owner a claim. Use claims and cores to
+            # recognize territory that could restore a recently cut route.
+            retakers = {provinces[near]["owner"] for near in enemy_neighbors}
+            retakers = {owner for owner in retakers if tile in claims.get(owner, ()) or owner in provinces[tile].get("cores", ())}
+            if retakers:
+                threatened[tile] = tuple(sorted(retakers))
+    if not targets:
+        return
+
+    protected = supply.critical | (ctx["peace_borders"] - ctx["war_borders"])
+    available = {}
+    for tile, group in known.land_units[ai_name].items():
+        orders = (known.unit_data[key].unit.get("order") or {} for key in group)
+        available[tile] = sum(not order.get("path") and order.get("type") not in ("CONVERT", "DISBAND") for order in orders)
+    stops = hostile_land | hostile_units.keys()
+    allowed = ground | targets
+    destinations = targets | threatened.keys()
+    routes = defaultdict(list)
+    for unit, origin in units_info:
+        tile = origin["id"]
+        if (id(unit) in reserved or queries.supply_unit_key(unit) not in supply.network.unit_area or tile not in ground
+                or tile in stops or tile in ctx["lost_battles"] or tile in ctx["active_battles"] or _is_wounded(unit)):
+            continue
+        speed = queries.unit_movement_speed(unit)
+        paths = _operational_paths(context, unit, origin, allowed, speed, stops)
+        for target in destinations & paths.keys():
+            path = paths[target]
+            if path and tile in protected and available.get(tile, 0) <= 1:
+                continue
+            routes[target].append((unit, origin, path))
+    if not routes:
+        return
+
+    cuts, holds = supply.land_supply_objectives(
+        targets & routes.keys(), {tile: owners for tile, owners in threatened.items() if tile in routes},
+        can_coordinate=sum(len(group) for group in known.land_units[ai_name].values()) >= 2)
+    if not cuts and not holds:
+        return
+    land_enemies = {id(known.unit_data[key].unit) for enemy in supply.enemies
+                    for group in known.land_units.get(enemy, {}).values() for key in group}
+    options = {}
+    for tile in sorted(holds.keys() | {tile for cut in cuts for tile in cut}):
+        candidates = sorted(routes[tile], key=lambda order: (bool(order[2]), -queries.calculate_unit_strength(order[0]), len(order[2])))
+        candidates = candidates[:ai_tuning.AI_SUPPLY_CUT_CANDIDATES_PER_TILE]
+        counter = max((unit for near in provinces[tile].get("neighbors", ()) for unit in hostile_units.get(near, ())
+                       if id(unit) in land_enemies and queries.unit_movement_speed(unit) > 0
+                       and queries.can_unit_move_step(unit, provinces[near], provinces[tile], known.nations, context=context)),
+                      key=queries.calculate_unit_strength, default=None)
+        options[tile] = []
+        for size in range(1, len(candidates) + 1):
+            for orders in combinations(candidates, size):
+                cost = _land_cut_cost(context, supply, provinces[tile], orders, hostile_units.get(tile, ()), counter)
+                if cost is not None:
+                    options[tile].append((cost, orders))
+        options[tile].sort(key=lambda option: option[0])
+
+    def commit(orders):
+        units = {id(unit) for unit, _, _ in orders}
+        if len(units) != len(orders) or units & reserved:
+            return False
+        leaving = defaultdict(int)
+        for _, origin, path in orders:
+            if path:
+                leaving[origin["id"]] += 1
+        if any(available.get(origin, 0) <= count for origin, count in leaving.items() if origin in protected):
+            return False
+        issued = []
+        for unit, origin, path in orders:
+            if not _order_move(context, ai_name, origin, unit, path):
+                for prior, start in issued:
+                    _order_move(context, ai_name, start, prior, ())
+                return False
+            issued.append((unit, origin))
+        reserved.update(units)
+        for origin, count in leaving.items():
+            available[origin] -= count
+        for unit, origin, path in orders:
+            _book_reserved_land_order(supply, ctx, unit, origin, path)
+        return True
+
+    followup = set()
+    for tile, (value, exposed) in sorted(holds.items(), key=lambda row: (-row[1][0], row[0])):
+        for cost, orders in options[tile]:
+            if cost >= value:
+                break
+            if commit(orders):
+                followup.update(exposed)
+                break
+    for target in followup & ctx["target_assignments"].keys():
+        ctx["target_assignments"][target] -= ai_tuning.AI_SUPPLY_CUT_FOLLOWUP_WEIGHT
+
+    plans = []
+    for tiles, losses in cuts.items():
+        value = sum(losses.values())
+        for choices in product(*(options[tile] for tile in tiles)):
+            cost = sum(option[0] for option in choices)
+            if value > cost:
+                orders = tuple(order for _, group in choices for order in group)
+                plans.append((value - cost, cost, tiles, orders))
+    disrupted = set()
+    taken = set()
+    for _, cost, tiles, orders in sorted(plans, key=lambda plan: (-plan[0], plan[2])):
+        losses = cuts[tiles]
+        if not taken.intersection(tiles) and sum(loss for enemy, loss in losses.items() if enemy not in disrupted) > cost and commit(orders):
+            disrupted.update(losses)
+            taken.update(tiles)
+
+
 def _naval_exchange_favors(context, ship, opponents, tile):
     if not opponents:
         return True
@@ -1072,12 +1242,7 @@ def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, thre
         for *_, unit, origin, path in sorted(orders, key=lambda order: order[:5]):
             if _order_move(context, ai_name, origin, unit, path):
                 committed.add(id(unit))
-                if path:
-                    supply.book(unit, path)
-                    for tile, delta in ((origin["id"], -1), (path[-1], 1)):
-                        if tile in ctx["target_assignments"]:
-                            ctx["target_stacks"][tile] += delta
-                            ctx["target_assignments"][tile] += delta
+                _book_reserved_land_order(supply, ctx, unit, origin, path)
                 return True
         return False
 
@@ -2466,6 +2631,7 @@ def _generate_unit_orders(context, *, countries=None):
 
             _assign_maintenance_orders(context, ai_name, units_info, ctx,
                                        allowed_prov_ids, water_ids, neighbor_ids)
+            _reserve_land_supply_orders(context, ai_name, units_info, supply, ctx, reserved)
 
             # Units can need to retreat or restore supply without an offensive target.
             if not (assignments["target_destinations"] or assignments["naval_destinations"] or battles["lost_battles"]

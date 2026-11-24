@@ -10,6 +10,122 @@ from tests.test_supply import SupplyFixture, division, game, province
 
 
 class AISupplyTests(SupplyFixture):
+    def test_ai_cuts_enemy_land_supply_and_holds_the_route(self):
+        home = province(1, "A", [2, 3], output=(300, 300, 300))
+        front = province(2, "B", [1, 3])
+        cut = province(3, "B", [1, 2, 4])
+        source = province(4, "B", [3], output=(100, 100, 100))
+        attacker = division(home, speed=1)
+        enemy = division(front, "B", attack=5)
+        world = game(home, front, cut, source)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(attacker["order"]["path"], [3])
+        movement_processor.process_movement(world)
+        self.assertEqual(cut["owner"], "A")
+        self.assertEqual(queries.SupplySnapshot(world).status(enemy).readiness, 0)
+
+        followup = division(home, speed=1)
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(attacker["order"]["path"], [])
+        self.assertEqual(followup["order"]["path"], [2])
+
+    def test_ai_commits_both_land_cuts_when_the_routes_are_redundant(self):
+        home = province(1, "A", [2, 3, 4], output=(300, 300, 300))
+        distraction = province(2, "B", [1])
+        north = province(3, "B", [1, 5, 6])
+        south = province(4, "B", [1, 5, 6])
+        front = province(5, "B", [3, 4])
+        source = province(6, "B", [3, 4], output=(200, 200, 200))
+        remote = province(7, "A", output=(100, 100, 100))
+        attacker = division(home, speed=1)
+        division(remote, speed=1)
+        enemy = division(front, "B", attack=5)
+        world = game(home, distraction, north, south, front, source, remote)
+        snapshot = queries.SupplySnapshot(world)
+        self.assertEqual(snapshot.status(enemy, network=snapshot.land_projection("B", block=(3,))).readiness, 1)
+        self.assertEqual(snapshot.status(enemy, network=snapshot.land_projection("B", block=(4,))).readiness, 1)
+        self.assertEqual(snapshot.status(enemy, network=snapshot.land_projection("B", block=(3, 4))).readiness, 0)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(attacker["order"]["path"], [2])
+
+        second = division(home, speed=1)
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual({tuple(unit["order"]["path"]) for unit in (attacker, second)}, {(3,), (4,)})
+        movement_processor.process_movement(world)
+        self.assertEqual(queries.SupplySnapshot(world).status(enemy).readiness, 0)
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual([unit["order"]["path"] for unit in (attacker, second)], [[], []])
+
+    def test_ai_holds_a_captured_source_that_would_supply_the_enemy(self):
+        home = province(1, "A", [2])
+        captured = province(2, "A", [1, 3], output=(200, 200, 200))
+        front = province(3, "B", [2])
+        guard = division(captured, speed=1)
+        enemy = division(front, "B", attack=5)
+        world = game(home, captured, front)
+        world.nation_data["B"]["claims"] = [2]
+        snapshot = queries.SupplySnapshot(world)
+        self.assertEqual(snapshot.status(enemy).readiness, 0)
+        recaptured = snapshot.land_projection("B", reopen={2: "B"})
+        self.assertEqual(snapshot.status(enemy, network=recaptured).readiness, 1)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+
+        self.assertEqual(guard["order"]["path"], [])
+        self.assertEqual(captured["owner"], "A")
+
+    def test_land_cut_scoring_uses_visible_enemy_forces(self):
+        home = province(1, "A", [2], output=(100, 100, 100))
+        cut = province(2, "B", [1, 3, 4])
+        front = province(3, "B", [2])
+        source = province(4, "B", [2], output=(100, 100, 100))
+        division(home)
+        division(front, "B")
+        world = game(home, cut, front, source)
+        actual = queries.SupplySnapshot(world)
+        known = queries.SupplySnapshot(world, visible_to="A", visible_provinces={1, 2, 4}, source=actual)
+
+        observed = ai_supply.SupplyPlanner(actual, actual, "A")
+        fogged = ai_supply.SupplyPlanner(actual, known, "A")
+        self.assertIn((2,), observed.land_supply_objectives({2}, {}, can_coordinate=False)[0])
+        self.assertFalse(fogged.land_supply_objectives({2}, {}, can_coordinate=False)[0])
+
+    def test_ai_keeps_a_land_cut_off_the_list_when_allied_sea_supply_survives(self):
+        home = province(1, "A", [2, 3], output=(100, 100, 100))
+        front = province(2, "B", [1, 3, 5], coast=True)
+        cut = province(3, "B", [1, 2, 4])
+        source = province(4, "B", [3], output=(100, 100, 100))
+        sea = province(5, "Ocean", [2, 6], sea=True)
+        ally = province(6, "C", [5], coast=True, output=(100, 100, 100))
+        division(home)
+        division(front, "B")
+        world = game(home, front, cut, source, sea, ally)
+        for country in ("B", "C"):
+            world.nation_data[country]["faction"] = "Test Faction"
+        snapshot = queries.SupplySnapshot(world)
+        planner = ai_supply.SupplyPlanner(snapshot, snapshot, "A")
+
+        cuts, _ = planner.land_supply_objectives({3}, {}, can_coordinate=False)
+
+        self.assertFalse(cuts)
+
+    def test_ai_avoids_a_land_cut_it_cannot_win(self):
+        home = province(1, "A", [2, 3], output=(100, 100, 100))
+        distraction = province(2, "B", [1])
+        cut = province(3, "B", [1, 4, 5])
+        front = province(4, "B", [3])
+        source = province(5, "B", [3], output=(300, 300, 300))
+        attacker = division(home, speed=1)
+        division(cut, "B", attack=1000)
+        division(front, "B", attack=5)
+        world = game(home, distraction, cut, front, source)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+
+        self.assertEqual(attacker["order"]["path"], [2])
+
     def test_destroyer_too_far_away_leaves_immediate_landing_to_the_army(self):
         beach = province(1, "A", [2, 3, 6], coast=True)
         approach = province(2, "Ocean", [1, 4], sea=True)

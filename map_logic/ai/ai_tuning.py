@@ -528,6 +528,12 @@ AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls eligible units toward active battles
 AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
 AI_COAST_GARRISON_TURNS = 3  # Stage a guard from this many turns away by land.
 AI_SUPPLY_SEA_CANDIDATES = 12  # Limit alternate-route projections per country and order pass.
+AI_SUPPLY_LAND_CANDIDATES = 10
+AI_SUPPLY_LAND_PAIR_CANDIDATES = 6
+AI_SUPPLY_CUT_CANDIDATES_PER_TILE = 4
+AI_SUPPLY_CUT_MAX_VOLLEYS = 2
+AI_SUPPLY_CUT_COMMITMENT_COST = 0.25  # Fraction of unit health charged for diverting it from other targets.
+AI_SUPPLY_CUT_FOLLOWUP_WEIGHT = 2
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 

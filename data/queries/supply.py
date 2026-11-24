@@ -24,6 +24,13 @@ def _add_resources(total, amounts, scale=1):
         total[resource] += amounts[resource] * scale
 
 
+def _province_resources(producer, province):
+    output = _resources()
+    for amounts in producer.breakdown(province).values():
+        _add_resources(output, amounts)
+    return output
+
+
 def supply_fractions(production, demand, unit_demand):
     return tuple(min(1.0, max(0.0, production[resource] / demand[resource]))
                  if unit_demand[resource] > 0 and demand[resource] > 0 else 1.0
@@ -216,6 +223,7 @@ class SupplySnapshot:
         self.networks = {}
         self.domestic_networks = {}
         self.accessible = {}
+        self.land_access = {}
         self.country_enemies = {}
         self.allies = {}
         self.members = {}
@@ -261,21 +269,23 @@ class SupplySnapshot:
 
     def province_output(self, key):
         if key not in self.yields:
-            output = _resources()
-            for amounts in self.production.breakdown(self.provinces[key]).values():
-                _add_resources(output, amounts)
-            self.yields[key] = output
+            self.yields[key] = _province_resources(self.production, self.provinces[key])
         return self.yields[key]
+
+    def _permitted_land_owners(self, country):
+        if country not in self.land_access:
+            permitted = {country} | set(queries.friendly_nations_view(country, self.nations))
+            permitted.update(owner for owner in self.nations if queries.has_military_access(country, owner, self.nations))
+            permitted.difference_update(self._enemies(country), c.OWNERLESS_OWNERS)
+            self.land_access[country] = permitted
+        return self.land_access[country]
 
     def _traversable(self, country):
         if country in self.accessible:
             return self.accessible[country]
-        permitted = {country} | set(queries.friendly_nations_view(country, self.nations))
-        permitted.update(owner for owner in self.nations if queries.has_military_access(country, owner, self.nations))
         enemies = self._enemies(country)
-        permitted.difference_update(enemies, c.OWNERLESS_OWNERS)
         blocked = {key for key, occupants in self.occupants.items() if enemies & occupants}
-        land = {key for owner in permitted for key in self.owned_land.get(owner, ())}
+        land = {key for owner in self._permitted_land_owners(country) for key in self.owned_land.get(owner, ())}
         self.accessible[country] = frozenset((land | self.sea) - blocked)
         return self.accessible[country]
 
@@ -412,31 +422,47 @@ class SupplySnapshot:
         networks[country] = replace(network, areas=areas)
         return self._allocate_allied_supply(networks, sources)[country]
 
-    def _route_projection(self, country, closed, opened):
+    def _route_projection(self, country, closed, opened, recaptured=None):
         members = self._sharing_members(country)
+        recaptured = recaptured or {}
+        affected_owners = set(recaptured.values()) | {self.provinces[tile]["owner"] for tile in recaptured}
         changes = {}
         for member in members:
             accessible = self._traversable(member)
             unavailable = closed.get(member, set())
             removed = unavailable & accessible
             added = opened.get(member, set()) - accessible - unavailable
-            if removed or added:
+            if removed or added or member in affected_owners:
                 changes[member] = frozenset(removed), frozenset(added)
         if not changes:
             return self.for_country(country)
-        key = members, tuple(changes.items())
+        key = members, tuple(changes.items()), tuple(sorted(recaptured.items()))
         if key not in self.route_projections:
             networks = {member: self._domestic_network(member) for member in members}
             for member, (removed, added) in changes.items():
-                networks[member] = self._build_network(member, (self._traversable(member) | added) - removed)
+                networks[member] = self._build_network(member, (self._traversable(member) | added) - removed, recaptured=recaptured)
             settled = self._settle_supply(networks, self._sharing_sources(networks))
             if len(self.route_projections) >= _ROUTE_PROJECTION_LIMIT:
                 del self.route_projections[next(iter(self.route_projections))]
             self.route_projections[key] = settled
         return self.route_projections[key][country]
 
-    def land_projection(self, country, tile):
-        return self._route_projection(country, {country: {tile}}, {})
+    def _occupation_closures(self, country, tiles, occupier):
+        return {member: tiles for member in self._sharing_members(country)
+                if member == country or occupier in self._enemies(member)}
+
+    def land_projection(self, country, *, block=(), occupier=None, reopen=None):
+        """Forecast hostile occupation and hypothetical recapture of land."""
+        blocked = self.provinces.keys() & (set(block) - self.water)
+        closed = self._occupation_closures(country, blocked, occupier)
+        opened = {}
+        recaptured = {tile: owner for tile, owner in (reopen or {}).items() if tile in self.provinces and tile not in self.water}
+        if recaptured:
+            for member in self._sharing_members(country):
+                permitted = self._permitted_land_owners(member)
+                opened[member] = {tile for tile, owner in recaptured.items() if owner in permitted}
+                closed[member] = closed.get(member, set()) | (recaptured.keys() - opened[member])
+        return self._route_projection(country, closed, opened, recaptured)
 
     def sea_projection(self, country, *, block=(), reopen=(), blocker=None, departing=None):
         """Recalculate supply under hypothetical sea occupations or clearances."""
@@ -445,7 +471,7 @@ class SupplySnapshot:
         if not blocked and not cleared and not departing:
             return self.for_country(country)
         members = self._sharing_members(country)
-        closed = {country: blocked}
+        closed = self._occupation_closures(country, blocked, blocker)
         opened = defaultdict(set)
         departing = departing or {}
         changes = cleared | (self.sea & departing.keys())
@@ -458,24 +484,20 @@ class SupplySnapshot:
             for member in members:
                 if not remaining & self._enemies(member):
                     opened[member].add(tile)
-        if blocker is not None:
-            for member in members:
-                if blocker in self._enemies(member):
-                    closed[member] = closed[country]
         return self._route_projection(country, closed, opened)
 
     def _estimate_province_output(self, key):
         if key not in self.visible_provinces:
             return c.BASE_YIELDS
         if key not in self.estimated_output:
-            if self.estimated_production is None:
-                # Use visible province contents and default national multipliers.
-                self.estimated_production = queries.ProvinceProduction({owner: {} for owner in self.nations}, self.production.context)
-            output = _resources()
-            for amounts in self.estimated_production.breakdown(self.provinces[key]).values():
-                _add_resources(output, amounts)
-            self.estimated_output[key] = output
+            self.estimated_output[key] = _province_resources(self._foreign_production(), self.provinces[key])
         return self.estimated_output[key]
+
+    def _foreign_production(self):
+        if self.estimated_production is None:
+            # Use visible province contents and default national multipliers.
+            self.estimated_production = queries.ProvinceProduction({owner: {} for owner in self.nations}, self.production.context)
+        return self.estimated_production
 
     def neighboring_areas(self, network, tile):
         """Supply areas reachable by one land or sea edge."""
@@ -504,17 +526,28 @@ class SupplySnapshot:
         self.topologies[accessible] = province_area, anchors
         return province_area, anchors
 
-    def _build_network(self, country, accessible=None):
+    def _build_network(self, country, accessible=None, *, recaptured=None):
         if accessible is None:
             accessible = self._traversable(country)
         province_area, anchors = self._province_areas(accessible)
         network = SupplyNetwork(province_area=province_area, areas={key: SupplyArea() for key in anchors})
-        output = self._estimate_province_output if self.visible_provinces is not None and country != self.visible_to else self.province_output
+        estimated = self.visible_provinces is not None and country != self.visible_to
+        output = self._estimate_province_output if estimated else self.province_output
         land_units = self.land_units.get(country, {})
         for key in self.owned_land.get(country, ()):
-            if (area_id := province_area.get(key)) is not None:
+            if (area_id := province_area.get(key)) is not None and (not recaptured or key not in recaptured):
                 production = network.production_tiles[key] = output(key)
                 _add_resources(network.areas[area_id].production, production)
+        for key, owner in (recaptured or {}).items():
+            if owner != country or (area_id := province_area.get(key)) is None:
+                continue
+            if estimated and key not in self.visible_provinces:
+                production = c.BASE_YIELDS
+            else:
+                producer = self._foreign_production() if estimated else self.production
+                production = _province_resources(producer, dict(self.provinces[key], owner=owner))
+            network.production_tiles[key] = production
+            _add_resources(network.areas[area_id].production, production)
         for key, identities in land_units.items():
             if (area_id := province_area.get(key)) is not None:
                 for identity in identities:

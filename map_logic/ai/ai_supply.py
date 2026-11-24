@@ -1,6 +1,7 @@
 """Supply information and projected assignments for one country's order pass."""
 
 from collections import defaultdict, deque
+from itertools import combinations
 
 import data.constants as c
 from data import queries
@@ -94,7 +95,7 @@ class SupplyPlanner:
             exposed = [data.unit for data, area in units if area == area_id and data.province != tile]
             if not exposed:
                 continue
-            projected = self.known.land_projection(self.country, tile)
+            projected = self.known.land_projection(self.country, block=(tile,))
             if any(any(new < old for new, old in zip(self.known.fractions(unit, network=projected),
                                                     self.known.fractions(unit, network=self.network))) for unit in exposed):
                 critical.add(tile)
@@ -174,34 +175,97 @@ class SupplyPlanner:
                     break
         return targets
 
-    def _naval_shortlist(self, country, tiles, network):
-        """Prefer sea approaches close to forces that could lose supply."""
+    def _nearest_supply_tiles(self, country, tiles, network, limit):
+        """Prefer approaches close to forces that could lose supply."""
         if not tiles:
             return []
         pending = deque(sorted(self.known.land_units[country]))
         seen = set(pending)
         ranked = []
-        while pending and len(ranked) < ai_tuning.AI_SUPPLY_SEA_CANDIDATES:
+        while pending and len(ranked) < limit:
             here = pending.popleft()
             if here in tiles:
                 ranked.append(here)
+                if here not in network.province_area and here not in self.known.sea:
+                    continue
             for near in self.known.neighbors[here]:
-                if near not in seen and (near in self.known.sea or near in network.province_area):
+                if near not in seen and (near in tiles or near in self.known.sea or near in network.province_area):
                     seen.add(near)
                     pending.append(near)
         return ranked
 
-    def _naval_impact(self, country, before, after):
+    def _supply_impact(self, country, before, after, ignored=(), exposed=None):
         """Measure the change in effective health and movement of observed forces."""
         impact = 0.0
-        for group in self.known.land_units[country].values():
+        for tile, group in self.known.land_units[country].items():
+            if tile in ignored:
+                continue
             for identity in group:
                 unit = self.known.unit_data[identity].unit
                 readiness_before, speed_before = self._conditions(unit, self.known.status(unit, network=before))
                 readiness_after, speed_after = self._conditions(unit, self.known.status(unit, network=after))
                 impact += unit["health"] * (readiness_after - readiness_before
                                            + (speed_after - speed_before) / max(1, unit.get("speed", c.DEFAULT_UNIT_SPD)))
+                if exposed is not None and (readiness_after < readiness_before or speed_after < speed_before):
+                    exposed.add(tile)
         return impact
+
+    def land_supply_objectives(self, reachable, held, can_coordinate):
+        """Value taking reachable enemy routes and keeping captured routes closed."""
+        cuts = defaultdict(dict)
+        holds = {}
+        for enemy in sorted(self.enemies & self.known.land_units.keys()):
+            base = self.known.for_country(enemy)
+            candidates = reachable & base.province_area.keys()
+            if candidates:
+                limit = ai_tuning.AI_SUPPLY_LAND_CANDIDATES
+                bridges = _articulation_tiles(self.known.neighbors, base.province_area) & candidates
+                nearby = self._nearest_supply_tiles(enemy, candidates, base, limit)
+                priority = self._nearest_supply_tiles(enemy, bridges, base, limit)
+                targets = list(dict.fromkeys(priority + nearby))[:limit]
+                quiet = set()
+                for tile in targets:
+                    projected = self.known.land_projection(enemy, block=(tile,), occupier=self.country)
+                    loss = -self._supply_impact(enemy, base, projected, ignored=(tile,))
+                    if loss > 0:
+                        cuts[(tile,)][enemy] = loss
+                    else:
+                        quiet.add(tile)
+                if can_coordinate:
+                    paired = [tile for tile in nearby if tile in quiet][:ai_tuning.AI_SUPPLY_LAND_PAIR_CANDIDATES]
+                    for tiles in combinations(sorted(paired), 2):
+                        projected = self.known.land_projection(enemy, block=tiles, occupier=self.country)
+                        loss = -self._supply_impact(enemy, base, projected, ignored=tiles)
+                        if loss > 0:
+                            cuts[tiles][enemy] = loss
+
+            if not held:
+                continue
+            weak_positions = set()
+            weak_areas = set()
+            for tile, identities in self.known.land_units[enemy].items():
+                for identity in identities:
+                    unit = self.known.unit_data[identity].unit
+                    readiness, speed = self._conditions(unit, self.known.status(unit, network=base))
+                    if readiness < 1 or speed < unit.get("speed", c.DEFAULT_UNIT_SPD):
+                        weak_positions.add(tile)
+                        if identity in base.unit_area:
+                            weak_areas.add(base.unit_area[identity])
+            hold_sites = {tile for tile in held if tile not in base.province_area
+                          and (weak_positions.intersection(self.known.neighbors[tile])
+                               or weak_areas & self.known.neighboring_areas(base, tile))}
+            for tile in self._nearest_supply_tiles(enemy, hold_sites, base, ai_tuning.AI_SUPPLY_LAND_CANDIDATES):
+                best_loss, best_exposed = 0, set()
+                for owner in held[tile]:
+                    reopened = self.known.land_projection(enemy, reopen={tile: owner})
+                    exposed = set()
+                    loss = -self._supply_impact(enemy, reopened, base, ignored=(tile,), exposed=exposed)
+                    if loss > best_loss:
+                        best_loss, best_exposed = loss, exposed
+                if best_loss > 0:
+                    score, exposed = holds.get(tile, (0, set()))
+                    holds[tile] = score + best_loss, exposed | best_exposed
+        return cuts, holds
 
     def naval_supply_objectives(self, reachable, enemy_reach, vacating_ships, stations, available_ships):
         """Score sea occupations and clearances with the actual supply network rules.
@@ -213,12 +277,13 @@ class SupplyPlanner:
         if not self.enemies or not sea:
             return []
         objectives = []
+        limit = ai_tuning.AI_SUPPLY_SEA_CANDIDATES
         visible_blockers = {tile for tile in sea if self.known.occupants.get(tile, set()) & self.enemies}
         if self.country in self.known.land_units:
             home = self.known.sea_projection(self.country)
-            for tile in self._naval_shortlist(self.country, visible_blockers, home):
+            for tile in self._nearest_supply_tiles(self.country, visible_blockers, home, limit):
                 opened = self.known.sea_projection(self.country, reopen=(tile,))
-                gain = self._naval_impact(self.country, home, opened)
+                gain = self._supply_impact(self.country, home, opened)
                 if gain > 0:
                     objectives.append(("relief", gain, (tile,), self.country))
             unexplained = any(self.current(self.known.unit_data[identity].unit)
@@ -230,9 +295,9 @@ class SupplyPlanner:
                 if not unexplained:
                     candidates &= enemy_reach.keys()
                 quiet = []
-                for tile in self._naval_shortlist(self.country, candidates, home):
+                for tile in self._nearest_supply_tiles(self.country, candidates, home, limit):
                     closed = self.known.sea_projection(self.country, block=(tile,))
-                    loss = -self._naval_impact(self.country, home, closed)
+                    loss = -self._supply_impact(self.country, home, closed)
                     if loss > 0:
                         kind = "guard" if tile in enemy_reach else "scout"
                         objectives.append((kind, loss, (tile,), self.country))
@@ -247,7 +312,7 @@ class SupplyPlanner:
                         if not unexplained and not threaten_both:
                             continue
                         closed = self.known.sea_projection(self.country, block=(first, second))
-                        loss = -self._naval_impact(self.country, home, closed)
+                        loss = -self._supply_impact(self.country, home, closed)
                         if loss > 0:
                             if threaten_both:
                                 objectives.append(("guard_one", loss, (first, second), self.country))
@@ -258,14 +323,14 @@ class SupplyPlanner:
             # Ships available for reassignment can leave their starting tile.
             # Count a blockade by those ships only if they are assigned to hold it.
             base = self.known.sea_projection(enemy, block=stations, blocker=self.country, departing=vacating_ships)
-            candidates = self._naval_shortlist(enemy, sea & base.province_area.keys(), base)
+            candidates = self._nearest_supply_tiles(enemy, sea & base.province_area.keys(), base, limit)
             if not candidates:
                 continue
             quiet = []
             for tile in candidates:
                 cut = (tile,)
                 after = self.known.sea_projection(enemy, block=stations | {tile}, blocker=self.country, departing=vacating_ships)
-                loss = -self._naval_impact(enemy, base, after)
+                loss = -self._supply_impact(enemy, base, after)
                 if loss > 0:
                     objectives.append(("blockade", loss, cut, enemy))
                 else:
@@ -277,7 +342,7 @@ class SupplyPlanner:
                 for second in quiet[index + 1:]:
                     cut = (first, second)
                     after = self.known.sea_projection(enemy, block=stations | set(cut), blocker=self.country, departing=vacating_ships)
-                    loss = -self._naval_impact(enemy, base, after)
+                    loss = -self._supply_impact(enemy, base, after)
                     if loss > 0:
                         objectives.append(("blockade", loss, cut, enemy))
         return objectives
