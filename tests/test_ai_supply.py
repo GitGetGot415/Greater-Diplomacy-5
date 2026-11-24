@@ -92,6 +92,42 @@ class AISupplyTests(SupplyFixture):
         self.assertIn((2,), observed.land_supply_objectives({2}, {}, can_coordinate=False)[0])
         self.assertFalse(fogged.land_supply_objectives({2}, {}, can_coordinate=False)[0])
 
+    def test_fogged_views_share_unit_facts_and_follow_roster_changes(self):
+        home = province(1, "A", [2, 4, 5], coast=True, output=(100, 100, 100))
+        seen = province(2, "B", [1, 3])
+        hidden = province(3, "B", [2])
+        outpost = province(4, "B", [1])
+        sea = province(5, "Ocean", [1], sea=True)
+        mine = division(home)
+        division(home, health=0)
+        division(home, kind="Supply Test Plane")
+        division(seen, "B")
+        division(hidden, "B")
+        division(outpost)
+        division(sea, kind="Supply Test Ship")
+        world = game(home, seen, hidden, outpost, sea)
+        actual = queries.SupplySnapshot(world)
+
+        def view(source):
+            return queries.SupplySnapshot(world, visible_to="A", visible_provinces={1, 2, 5}, source=source)
+
+        def summary(snapshot):
+            return ({key: [unit["unit_id"] for unit in units] for key, units in snapshot.visible_units.items()},
+                    snapshot.occupants,
+                    {identity: (data.country, data.province, data.demand) for identity, data in snapshot.unit_data.items()})
+
+        # The hidden tile holds only enemy units; A's own unit on a hidden tile still counts.
+        first = view(actual)
+        self.assertEqual(summary(first)[0], {1: ["1-0", "1-2"], 2: ["2-0"], 4: ["4-0"], 5: ["5-0"]})
+        self.assertEqual(set(first.unit_data), {"1-0", "2-0", "4-0"})
+        self.assertEqual(summary(first), summary(view(queries.SupplySnapshot(world))))
+
+        # Loading air cargo takes a unit off its tile partway through the pass.
+        home["units"].remove(mine)
+        second = view(actual)
+        self.assertNotIn("1-0", second.unit_data)
+        self.assertEqual(summary(second), summary(view(queries.SupplySnapshot(world))))
+
     def test_ai_keeps_a_land_cut_off_the_list_when_allied_sea_supply_survives(self):
         home = province(1, "A", [2, 3], output=(100, 100, 100))
         front = province(2, "B", [1, 3, 5], coast=True)

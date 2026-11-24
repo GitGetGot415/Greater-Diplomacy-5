@@ -99,6 +99,8 @@ class AIWorld:
             for prov_id, prov in id_to_province.items()
         }
         self._land_entry_ids = {}
+        self._entry_groups = None
+        self._upgrade_targets = {}
         #: nation -> set of bordering nations, unplayable owners excluded
         #: (get_neighboring_nations drops them, so this must too).
         self.neighbors = collections.defaultdict(set)
@@ -537,12 +539,44 @@ class AIWorld:
         """
         cached = self._land_entry_ids.get(nation)
         if cached is None:
-            cached = {
-                prov["id"] for prov in self.all_provinces
-                if queries.can_land_units_enter(nation, prov, self.nation_data)
-            }
+            cached = set()
+            for representative, ids in self._land_entry_groups():
+                if queries.can_land_units_enter(nation, representative, self.nation_data):
+                    cached.update(ids)
             self._land_entry_ids[nation] = cached
         return cached
+
+    def upgrade_target(self, nation, unit_type, unit_library, tech_tree):
+        """queries.get_upgrade_target for one nation's unit type, kept for the turn.
+
+        The answer depends on the nation's research levels and the active unit
+        library. Neither changes while the AI prepares a turn: research levels
+        rise only in turn resolution. Callers pass the active library and tree.
+        """
+        key = (nation, unit_type)
+        if key not in self._upgrade_targets:
+            research = self.nation_data.get(nation, {}).get("research", {})
+            self._upgrade_targets[key] = queries.get_upgrade_target(unit_type, research, unit_library, tech_tree)
+        return self._upgrade_targets[key]
+
+    def _land_entry_groups(self):
+        """Provinces grouped by the three fields can_land_units_enter reads.
+
+        The rule reads only whether a tile is water, its owner and its
+        turn-start owner; everything else it consults is about the two
+        nations. Every province in a group therefore gets the same answer,
+        so land_entry_ids asks the rule once per group, of its first member.
+        """
+        if self._entry_groups is None:
+            groups = {}
+            for prov in self.all_provinces:
+                owner = prov.get("owner", "Unclaimed")
+                key = (queries.is_water_province(prov), owner, prov.get("_turn_start_owner", owner))
+                if key not in groups:
+                    groups[key] = (prov, [])
+                groups[key][1].append(prov["id"])
+            self._entry_groups = tuple(groups.values())
+        return self._entry_groups
 
     # ------------------------------------------------------------------
     # Standing

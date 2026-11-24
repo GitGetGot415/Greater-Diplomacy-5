@@ -209,6 +209,8 @@ class SupplySnapshot:
             self.country_enemies = {}
             self.allies = {}
             self.members = {}
+            self.open_tiles = {}
+            self.unit_facts = {}
         else:
             self.provinces = source.provinces
             self.water = source.water
@@ -224,6 +226,9 @@ class SupplySnapshot:
             self.country_enemies = source.country_enemies
             self.allies = source.allies
             self.members = source.members
+            self.open_tiles = source.open_tiles
+            # Owners, types and health do not depend on the viewer either.
+            self.unit_facts = source.unit_facts
         self.occupants = {}
         self.visible_units = {}
         self.estimated_output = {}
@@ -237,17 +242,15 @@ class SupplySnapshot:
         self.route_projections = {}
         self.topologies = {}
         library = queries.get_unit_library(context)
-        player_unit = getattr(session_for(context), "player_unit", None)
         for key in self.occupied:
             province = self.provinces[key]
+            facts, display_owners = self._unit_facts(context, key, province, library)
+            # Every unit here would fail the hidden-tile check below.
+            if (visible_to is not None and visible_provinces is not None
+                    and key not in visible_provinces and visible_to not in display_owners):
+                continue
             occupants = set()
-            for unit in province.get("units", ()):
-                if unit.get("health", 0) <= 0:
-                    continue
-                owner = queries.get_unit_combat_owner(unit)
-                display_owner = unit.get("owner")
-                if owner == "TACTICAL_HIDDEN" and unit is player_unit:
-                    owner = display_owner = session_for(context).player_country
+            for unit, owner, display_owner, draws_supply, base_stats in facts:
                 if display_owner != visible_to and visible_to is not None:
                     if visible_provinces is not None and key not in visible_provinces:
                         continue
@@ -255,12 +258,7 @@ class SupplySnapshot:
                         continue
                 occupants.add(owner)
                 self.visible_units.setdefault(key, []).append(unit)
-                unit_type = unit.get("type", "")
-                stats = library.get(unit_type, {})
-                base_stats = library.get(queries.get_base_unit_type(unit), stats)
-                if (owner not in self.nations or key in self.water or stats.get("air_role")
-                        or base_stats.get("air_role") or base_stats.get("naval_unit") or unit.get("naval_unit")
-                        or unit_type.startswith("Convoy")):
+                if not draws_supply:
                     continue
                 identity = supply_unit_key(unit)
                 existing = source.unit_data.get(identity) if source is not None else None
@@ -272,6 +270,43 @@ class SupplySnapshot:
                 self.unit_data[identity] = SupplyUnit(unit, owner, display_owner, key, demand)
             if occupants:
                 self.occupants[key] = occupants
+
+    def _unit_facts(self, context, key, province, library):
+        """Viewer-independent facts for a tile's living units, and their display owners.
+
+        Each fact is (unit, combat owner, display owner, draws land supply,
+        base stats). Views of one phase share them. Each view still reads the
+        tile's current roster, because loading air cargo takes ground units
+        off a tile partway through the AI's movement pass, so a changed roster
+        rebuilds the tile's facts. A unit's owner, type and health do not
+        change during the pass.
+        """
+        units = province.get("units", ())
+        roster = tuple(map(id, units))
+        cached = self.unit_facts.get(key)
+        if cached is not None and cached[0] == roster:
+            return cached[1], cached[2]
+        session = session_for(context)
+        player_unit = getattr(session, "player_unit", None)
+        facts = []
+        for unit in units:
+            if unit.get("health", 0) <= 0:
+                continue
+            owner = queries.get_unit_combat_owner(unit)
+            display_owner = unit.get("owner")
+            if owner == "TACTICAL_HIDDEN" and unit is player_unit:
+                owner = display_owner = session.player_country
+            unit_type = unit.get("type", "")
+            stats = library.get(unit_type, {})
+            base_stats = library.get(queries.get_base_unit_type(unit), stats)
+            draws_supply = not (owner not in self.nations or key in self.water or stats.get("air_role")
+                                or base_stats.get("air_role") or base_stats.get("naval_unit") or unit.get("naval_unit")
+                                or unit_type.startswith("Convoy"))
+            facts.append((unit, owner, display_owner, draws_supply, base_stats))
+        # The roster's ids stay valid while the cached facts hold the units.
+        entry = roster, tuple(facts), frozenset(fact[2] for fact in facts)
+        self.unit_facts[key] = entry
+        return entry[1], entry[2]
 
     def province_output(self, key):
         if key not in self.yields:
@@ -291,9 +326,18 @@ class SupplySnapshot:
             return self.accessible[country]
         enemies = self._enemies(country)
         blocked = {key for key, occupants in self.occupants.items() if enemies & occupants}
-        land = {key for owner in self._permitted_land_owners(country) for key in self.owned_land.get(owner, ())}
-        self.accessible[country] = frozenset((land | self.sea) - blocked)
+        self.accessible[country] = self._open_tiles(country) - blocked
         return self.accessible[country]
+
+    def _open_tiles(self, country):
+        """Land the country may enter and every sea tile, before visible blockers.
+
+        Reads only diplomacy and ownership, so the views of one phase share it.
+        """
+        if country not in self.open_tiles:
+            land = {key for owner in self._permitted_land_owners(country) for key in self.owned_land.get(owner, ())}
+            self.open_tiles[country] = frozenset(land | self.sea)
+        return self.open_tiles[country]
 
     def _enemies(self, country):
         if country not in self.country_enemies:

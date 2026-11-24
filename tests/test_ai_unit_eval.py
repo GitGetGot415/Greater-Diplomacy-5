@@ -10,13 +10,13 @@ is already saturated stops winning.
 
 import os
 import unittest
-from types import SimpleNamespace
 from unittest.mock import patch
 
 
 import data.constants as c
 from map_logic.ai import ai_tuning
 from map_logic.ai import ai_unit_eval as ue
+from map_logic.ai import ai_world
 
 
 def unit(attack=100, defense=0, health=1000, speed=1, mat=500, man=1000, fuel=0,
@@ -227,38 +227,49 @@ class AircraftValuationTests(unittest.TestCase):
         values = scores(ctx, self.library)
         self.assertGreater(values["Aster"].combat, values["Dahlia"].combat)
 
-    def threat_world(self):
+    def threat_world(self, fog_of_war):
+        """A real turn snapshot: the profile reads its cached fog view.
+
+        The view is cached for the whole turn, as in play, so each fog setting
+        needs its own world.
+        """
         nations = {"A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]},
                    "C": {"at_war_with": []}}
         province = {"id": 1, "owner": "B", "neighbors": [], "units": [
             dict(self.library["Dahlia"], type="Dahlia", owner="B")]}
-        return SimpleNamespace(map_data={1: province}, id_to_province={1: province}, nation_data=nations, scenario_settings={})
+        return ai_world.AIWorld({1: province}, nations, {1: province},
+                                scenario_settings={"fog_of_war": fog_of_war})
 
     def test_visible_air_threat_falls_as_owned_and_queued_cover_increases(self):
-        world = self.threat_world()
-        with patch.dict(world.scenario_settings, {"fog_of_war": False}):
-            before = ue.air_threat_profile(world, "A", self.library)[0]
-            home = {"id": 2, "owner": "A", "neighbors": [], "units": [
-                dict(self.library["Aster"], type="Aster", owner="A")]}
-            world.map_data[2] = world.id_to_province[2] = home
-            standing = ue.air_threat_profile(world, "A", self.library)[0]
-            home["unit_queue"] = [{"unit_type": "Aster"}]
-            queued = ue.air_threat_profile(world, "A", self.library)[0]
+        world = self.threat_world(fog_of_war=False)
+        before = ue.air_threat_profile(world, "A", self.library)[0]
+        home = {"id": 2, "owner": "A", "neighbors": [], "units": [
+            dict(self.library["Aster"], type="Aster", owner="A")]}
+        world.map_data[2] = world.id_to_province[2] = home
+        standing = ue.air_threat_profile(world, "A", self.library)[0]
+        home["unit_queue"] = [{"unit_type": "Aster"}]
+        queued = ue.air_threat_profile(world, "A", self.library)[0]
         self.assertGreater(before, standing)
         self.assertGreater(standing, queued)
 
     def test_hidden_neutral_and_immune_aircraft_do_not_create_interception_demand(self):
         from data import queries
-        world = self.threat_world()
-        with patch.dict(world.scenario_settings, {"fog_of_war": True}), patch.object(
-                queries, "get_visible_provinces", return_value=(set(), set())):
-            self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
-        with patch.dict(world.scenario_settings, {"fog_of_war": False}):
-            world.map_data[1]["units"][0]["owner"] = "C"
-            self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
-            world.map_data[1]["units"][0]["owner"] = "B"
-            library = dict(self.library, Dahlia=dict(self.library["Dahlia"], air_interception_immune=True))
-            self.assertEqual(ue.air_threat_profile(world, "A", library)[0], 0)
+        fogged = self.threat_world(fog_of_war=True)
+        with patch.object(queries, "get_visible_provinces", return_value=(set(), set())):
+            self.assertEqual(ue.air_threat_profile(fogged, "A", self.library)[0], 0)
+        world = self.threat_world(fog_of_war=False)
+        self.assertGreater(ue.air_threat_profile(world, "A", self.library)[0], 0)
+        world.map_data[1]["units"][0]["owner"] = "C"
+        self.assertEqual(ue.air_threat_profile(world, "A", self.library)[0], 0)
+        world.map_data[1]["units"][0]["owner"] = "B"
+        library = dict(self.library, Dahlia=dict(self.library["Dahlia"], air_interception_immune=True))
+        self.assertEqual(ue.air_threat_profile(world, "A", library)[0], 0)
+
+    def test_air_threat_reads_the_turn_snapshot_fog_view(self):
+        world = self.threat_world(fog_of_war=True)
+        with patch.object(world, "visible_provinces", return_value={1}) as view:
+            self.assertGreater(ue.air_threat_profile(world, "A", self.library)[0], 0)
+        view.assert_called_once_with("A")
 
 
 class RoleTests(unittest.TestCase):

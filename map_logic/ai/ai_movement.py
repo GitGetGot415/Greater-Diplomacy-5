@@ -259,8 +259,10 @@ def _assign_air_orders(context, country, units_info):
                   if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context)]
     if not units_info:
         return
-    visible = ai_world.visible_to(world_state.map_data, world_state.nation_data,
-                                  world_state.id_to_province, country)
+    world = ai_world.for_screen(context)
+    # The turn's cached fog view. None when fog is off, where every use below
+    # already skips its fog filter.
+    visible = world.visible_provinces(country)
     enemies = [province for province in world_state.map_data.values()
                if (not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, context.scenario_settings) or visible is None or province["id"] in visible)
                and queries.air_target_is_hostile({"owner": country}, province,
@@ -268,7 +270,6 @@ def _assign_air_orders(context, country, units_info):
     threatened = _air_base_threats(context, country, visible)
     unit_library = queries.get_unit_library(context)
     tech_tree = queries.get_tech_tree(context)
-    research = world_state.nation_data[country].get("research", {})
     patrol_threats = _air_patrol_threats(context, country, visible)
     patrol_cover = {}
     strike_cover = {}
@@ -371,7 +372,7 @@ def _assign_air_orders(context, country, units_info):
         # percentage, so it would spend the turn and still be wounded.
         if (base["id"] not in threatened and queries.has_industry(base)
                 and _health_fraction(unit) >= ai_tuning.AI_REPAIR_ON_SITE_FRACTION):
-            target = queries.get_upgrade_target(unit["type"], research, unit_library, tech_tree)
+            target = world.upgrade_target(country, unit["type"], unit_library, tech_tree)
             if target:
                 unit_actions.apply_action(context, country, base, unit, queries.canonical_unit_order(context, country, base, unit,
                     {"type": "UPGRADE", "target_type": target}), authority="ai")
@@ -2246,11 +2247,11 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     moment it stops making sense.
     """
     world_state = world_for(context)
+    world = ai_world.for_screen(context)
     unit_library = queries.get_unit_library(context)
     path_cache = {}
     tech_tree = queries.get_tech_tree(context)
     nation = world_state.nation_data.get(ai_name, {})
-    research = nation.get("research", {})
 
     war_borders = ctx["war_borders"]
     active_battles = ctx["active_battles"]
@@ -2402,7 +2403,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
                   and target_assignments.get(curr_id, 0) <= 1)
 
         if is_idle:
-            target = queries.get_upgrade_target(u_type, research, unit_library, tech_tree)
+            target = world.upgrade_target(ai_name, u_type, unit_library, tech_tree)
             if target:
                 unit_actions.apply_action(context, ai_name, prov, unit, {"type": "UPGRADE", "turns_left": 1,
                                  "target_type": target, "refund": {}}, authority="ai")

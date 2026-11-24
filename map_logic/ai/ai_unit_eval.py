@@ -35,7 +35,6 @@ heuristic AI.
 
 import collections
 import math
-from types import SimpleNamespace
 
 import data.constants as c
 from map_logic.ai import ai_tuning
@@ -98,10 +97,8 @@ def air_threat_profile(world, nation, unit_library):
     """Value interception against visible aircraft, reduced by existing air cover."""
     if world is None:
         return 0.0, 0.0, 1.0
-    view = SimpleNamespace(player_country=nation, map_data=world.map_data,
-        nation_data=world.nation_data, id_to_province=world.id_to_province,
-        tactical_mode=False, player_unit=None)
-    visible, _partial = queries.get_visible_provinces(view)
+    # The turn's cached fog view: None when fog is off, which skips the filter below.
+    visible = world.visible_provinces(nation)
     ground_attack, air_attack, cover = 0.0, 0.0, 0.0
     defenses, counts = [], []
     for province in world.map_data.values():
