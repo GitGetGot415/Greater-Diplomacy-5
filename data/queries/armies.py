@@ -13,7 +13,7 @@ from data.queries.unit_info import (
 )
 from data.queries.units import country_unit_stats, held_volunteer_units
 from data.queries.economy import get_conversion_turns
-from data.queries.movement import find_unit_move_path
+from data.queries import movement
 from data import queries
 
 
@@ -471,32 +471,6 @@ def validate_air_drop_recovery_armies(country_id, armies, nation_data, map_data)
         raise ValueError("A recovering unit cannot change armies.")
 
 
-def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
-                                         id_to_province, nation_data, *, context=None):
-    """Return each legal route from ``start_province`` to a target-area tile.
-
-    ``find_unit_move_path`` remains the movement-rule owner.  Keeping the
-    routes separate lets the target-area planner choose a destination that fills
-    an uncovered tile instead of independently selecting every unit's nearest
-    tile.
-    """
-    if context is None:
-        context = nation_data
-    if not isinstance(start_province, dict):
-        return {}
-    paths = {}
-    for destination_id in destination_ids or ():
-        if destination_id in paths:
-            continue
-        if destination_id not in id_to_province:
-            continue
-        path = find_unit_move_path(unit, start_province, destination_id,
-                                   id_to_province, nation_data, context=context)
-        if path is not None:
-            paths[destination_id] = path
-    return paths
-
-
 def _queue_army_balanced_area_orders(context, country_id, army, destination_ids,
                                      only_idle=False, excluded_unit_object_ids=()):
     """Queue balanced legal routes to one army's target-area tiles.
@@ -541,7 +515,7 @@ def _queue_army_balanced_area_orders(context, country_id, army, destination_ids,
             if (not only_idle and isinstance(order, dict)
                     and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT):
                 continue
-            paths = find_unit_move_paths_to_destinations(
+            paths = movement.find_unit_move_paths_to_destinations(
                 unit, province, destinations, world_state.id_to_province,
                 world_state.nation_data, context=context)
             if not paths:

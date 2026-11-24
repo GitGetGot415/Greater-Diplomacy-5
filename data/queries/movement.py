@@ -185,17 +185,27 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
     order contract.  Neighbours are sorted so identical maps produce identical
     routes on every client and server.
     """
+    return find_unit_move_paths_to_destinations(
+        unit, start_province, (destination_id,), id_to_province, nation_data,
+        context=context).get(destination_id)
+
+
+def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
+                                         id_to_province, nation_data, *, context=None):
+    """Find all requested legal routes in one breadth-first search."""
     if context is None:
         context = nation_data
-    if not start_province or destination_id not in id_to_province:
-        return None
+    if not start_province:
+        return {}
+    destinations = dict.fromkeys(destination_id for destination_id in destination_ids or ()
+                                if destination_id in id_to_province)
+    remaining = set(destinations)
     start_id = start_province.get("id")
-    if start_id == destination_id:
-        return []
+    remaining.discard(start_id)
 
     frontier = collections.deque([start_id])
     previous = {start_id: None}
-    while frontier:
+    while frontier and remaining:
         current_id = frontier.popleft()
         current = id_to_province.get(current_id)
         if not current:
@@ -207,15 +217,22 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
             if not can_unit_move_step(unit, current, neighbor, nation_data, context=context):
                 continue
             previous[neighbor_id] = current_id
-            if neighbor_id == destination_id:
-                path = []
-                cursor = destination_id
-                while cursor != start_id:
-                    path.append(cursor)
-                    cursor = previous[cursor]
-                return list(reversed(path))
+            remaining.discard(neighbor_id)
+            if not remaining:
+                break
             frontier.append(neighbor_id)
-    return None
+
+    paths = {}
+    for destination_id in destinations:
+        if destination_id not in previous:
+            continue
+        path = []
+        cursor = destination_id
+        while cursor != start_id:
+            path.append(cursor)
+            cursor = previous[cursor]
+        paths[destination_id] = path[::-1]
+    return paths
 
 
 def find_retreat_routes(unit, province, id_to_province, nation_data, *, context=None):
