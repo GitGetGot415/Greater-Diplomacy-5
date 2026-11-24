@@ -21,6 +21,7 @@ import data.constants as c
 from map_logic.ai import ai_tuning
 from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_movement
+from map_logic.system32 import movement_processor
 
 
 def unit(owner="Avaria", u_type="Rifles", health=100, max_health=1000, speed=1):
@@ -311,6 +312,51 @@ class ShipsSailHomeTests(unittest.TestCase):
         self.sail(ship, provs)
         self.assertEqual(ship["repair_trip"], 3)
         self.assertEqual(ship["order"]["path"], [11])
+
+    def test_a_lone_warship_sails_to_port_and_repairs(self):
+        ship, provs = self.fleet()
+        origin, lane, port = provs
+        origin["units"] = [ship]
+        screen = Screen(provs, at_war=())
+
+        for stop in (lane, port):
+            ai_movement.process_ai_unit_orders(screen, countries=["Avaria"])
+            self.assertEqual(ship.get("repair_trip"), port["id"])
+            movement_processor.process_movement(screen)
+            self.assertIn(ship, stop["units"])
+
+        ai_movement.process_ai_unit_orders(screen, countries=["Avaria"])
+        self.assertEqual(ship["order"]["type"], "REPAIR")
+        movement_processor.process_unit_maintenance_orders(screen)
+        self.assertEqual(ship["health"], ship["max_health"])
+
+    def test_repair_routes_detour_around_a_visible_enemy_warship(self):
+        for underway in (False, True):
+            with self.subTest(underway=underway):
+                ship, provs = self.fleet()
+                origin, lane, port = provs
+                lane["units"] = [dict(unit(owner="Borland", u_type="Fixture Ship", health=1000), attack=10)]
+                origin["neighbors"].append(12)
+                port["neighbors"].append(13)
+                provs.extend([sea(12, neighbors=[10, 13]), sea(13, neighbors=[12, 3])])
+                if underway:
+                    ship["repair_trip"] = port["id"]
+
+                ai_movement.process_ai_unit_orders(Screen(provs), countries=["Avaria"])
+
+                self.assertEqual(ship.get("repair_trip"), port["id"])
+                self.assertEqual(ship["order"]["path"], [12])
+
+    def test_an_existing_repair_trip_is_abandoned_if_the_only_route_is_unsafe(self):
+        ship, provs = self.fleet()
+        _, lane, port = provs
+        lane["units"] = [dict(unit(owner="Borland", u_type="Fixture Ship", health=1000), attack=10)]
+        ship["repair_trip"] = port["id"]
+
+        ai_movement.process_ai_unit_orders(Screen(provs), countries=["Avaria"])
+
+        self.assertIsNone(ship.get("repair_trip"))
+        self.assertEqual(ship["order"]["path"], [])
 
     def test_a_port_without_industry_is_no_destination(self):
         ship, provs = self.fleet(port_industry=False)

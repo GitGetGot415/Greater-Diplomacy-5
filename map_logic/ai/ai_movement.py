@@ -2629,7 +2629,8 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
       fight than the same unit at full health -- fixing it is worth the turn.
     - Wounded, and not: below the harder ai_tuning.AI_REPAIR_HEALTH_FRACTION line it is
       worth the trip as well, so it is sent home. Land units march overland;
-      warships sail to a friendly port with a factory (_port_havens).
+      warships sail to their own coastal factories (_port_havens), even when
+      they are alone on a water tile.
     - Wounded, in a battle the rest of the stack can hold: it steps out to its
       best retreat tile and starts the trip from there (_wounded_who_can_leave).
     - Idle: on a quiet tile with no battle nearby and nothing else routed
@@ -2659,6 +2660,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
 
     war_borders = ctx["war_borders"]
     active_battles = ctx["active_battles"]
+    unsafe_waters = ctx["unsafe_waters"]
     target_assignments = ctx["target_assignments"]
     havens = ctx["repair_havens"]
     supply = ctx.get("supply")
@@ -2666,6 +2668,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     port_targets = _port_havens(context, ai_name, march_targets)
     leavers = _wounded_who_can_leave(context, ai_name, units_info)
     trip_tiles = set(allowed_prov_ids) - set(active_battles)
+    ship_trip_tiles = trip_tiles.difference(unsafe_waters) if unsafe_waters else trip_tiles
 
     def start_repair(unit):
         costs = unit_actions.repair_costs(context, unit, unit_library)
@@ -2681,9 +2684,10 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
 
         A land unit walks overland only: a land route over water needs the
         CONVERT-to-Convoy dance _assign_unit_orders does for an invasion, and
-        none of that is worth it to fix one division. A warship sails. A convoy
-        is a land unit mid-crossing that should finish the crossing first, so
-        it never starts a trip. No trip passes through a battle.
+        none of that is worth it to fix one division. A warship sails around
+        visible enemy fleets. A convoy is a land unit mid-crossing that should
+        finish the crossing first, so it never starts a trip. No trip passes
+        through an active battle.
         """
         if not targets:
             return None
@@ -2695,7 +2699,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
                 if best_path:
                     return best_path
         path = _bfs_nearest_target(
-            curr_id, set(targets), trip_tiles, world_state.id_to_province,
+            curr_id, set(targets), ship_trip_tiles if is_ship else trip_tiles, world_state.id_to_province,
             target_assignments, is_ship=is_ship,
             moving_nation=ai_name, nation_data=world_state.nation_data,
             unit_speed=queries.unit_movement_speed(unit),
@@ -2750,7 +2754,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
             # Out of the fight first, then home from the retreat tile.
             if id(unit) in leavers and trips < trip_cap:
                 tile = _retreat_tile(context, ai_name, unit, prov, ctx["friendly_nations"],
-                                     ctx["unsafe_waters"], havens, supply)
+                                     unsafe_waters, havens, supply)
                 if tile is not None and _order_move(context, ai_name, prov, unit, [tile]):
                     if supply:
                         supply.book(unit, [tile])
@@ -2773,7 +2777,8 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
                 and trip_targets
                 and trips < trip_cap
                 and _is_wounded(unit)
-                and _may_leave_the_line(context, ai_name, unit, prov, ctx)):
+                and ((is_naval_combatant and curr_id in water_ids)
+                     or _may_leave_the_line(context, ai_name, unit, prov, ctx))):
             path = route(unit, curr_id, trip_targets, is_naval_combatant)
             if path and _order_move(context, ai_name, prov, unit, path[:speed]):
                 if supply:
