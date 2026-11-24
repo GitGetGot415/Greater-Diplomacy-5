@@ -3,7 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.bars import ui_bars
-from ui.widgets.ui_elements import RESOURCE_ICONS, draw_bombardment_stats, draw_combat_stats, draw_icon_row
+from ui.widgets.ui_elements import ICON_SPEED, RESOURCE_ICONS, draw_bombardment_stats, draw_combat_stats, draw_icon_row
 from ui.widgets import flag_icons
 from map_logic.system32 import combat_rules
 
@@ -66,13 +66,16 @@ def prepare_unit_roster(map_screen, province):
             profile = battle.profiles.get(id(unit), unit)
             row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
             status = queries.unit_supply_status(supply, unit)
-            if status is not None and any(fraction < 1 for fraction in status.fractions):
-                uses_fuel = queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0
-                resources = tuple((key, fraction) for key, fraction in zip(c.ECON_RESOURCE_KEYS, status.fractions)
-                                  if key != "fuel" or uses_fuel)
-                if any(fraction < 1 for _, fraction in resources):
-                    entries = tuple((RESOURCE_ICONS[key], _supply_percentage(fraction)) for key, fraction in resources)
-                    row["supply"] = f"Supply {_supply_percentage(status.readiness)}   ", entries
+            if status is None:
+                continue
+            manpower, materials, fuel = status.fractions
+            if manpower < 1 or materials < 1:
+                entries = ((RESOURCE_ICONS["manpower"], _supply_percentage(manpower)),
+                           (RESOURCE_ICONS["materials"], _supply_percentage(materials)))
+                row["supply"] = f"Supply {_supply_percentage(status.readiness)}   ", entries
+            if fuel < 1 and queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0:
+                base_speed = profile.get("speed", c.DEFAULT_UNIT_SPD)
+                row["fuel"] = _supply_percentage(fuel), row["speed"] - base_speed
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:
@@ -99,15 +102,26 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
     # units highlighted as the ones dealing damage -- was simply untrue.
     is_combat, battle, rows = map_screen._unit_roster_cache[province["id"]]
 
-    def draw_supply(row, row_x, y):
+    def draw_supply_lines(row, row_x, y):
+        font = map_screen.small_font
+        height = font.get_height()
+        icon_size = max(1, height - 2)
+        end_y = y
         supply = row.get("supply")
         if supply:
             label, entries = supply
-            font = map_screen.small_font
-            height = font.get_height()
-            draw_icon_row(surface, font, label, entries, row_x, y, c.UI_TEXT_MUTED, icon_size=max(1, height - 2))
-            return height
-        return 0
+            draw_icon_row(surface, font, label, entries, row_x, end_y, c.UI_TEXT_MUTED, icon_size=icon_size)
+            end_y += height
+        fuel = row.get("fuel")
+        if fuel:
+            percent, speed_change = fuel
+            end_x = draw_icon_row(surface, font, "", ((RESOURCE_ICONS["fuel"], percent),),
+                                  row_x, end_y, c.UI_TEXT_MUTED, icon_size=icon_size)
+            if speed_change < 0:
+                draw_icon_row(surface, font, f"{speed_change:+g} ", ((ICON_SPEED, ""),),
+                              end_x, end_y, c.UI_TEXT_MUTED, icon_size=icon_size)
+            end_y += height
+        return end_y - y
 
     # --- Active Garrison / Combat Zone ---
     # While a fight is active, the Combat Zone display (grouped by side) fully
@@ -172,7 +186,8 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 profile = row["profile"]
                 u_name = queries.get_condensed_unit_name(profile.get("type", "Unit"))
                 has_bombard = row["bombard"] is not None
-                row_height = 20 + (18 if has_bombard else 0) + (map_screen.small_font.get_height() if "supply" in row else 0)
+                supply_lines = sum(key in row for key in ("supply", "fuel"))
+                row_height = 20 + (18 if has_bombard else 0) + map_screen.small_font.get_height() * supply_lines
 
                 in_front = id(u) in engaged_ids
                 if in_front:
@@ -204,7 +219,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 )
 
                 current_y += 20
-                current_y += draw_supply(row, text_x + 20, current_y)
+                current_y += draw_supply_lines(row, text_x + 20, current_y)
 
                 # Bombardment stats on their own indented line, only for units that can bombard
                 if has_bombard:
@@ -278,7 +293,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             )
 
             current_y += 20
-            current_y += draw_supply(row, text_x + 15, current_y)
+            current_y += draw_supply_lines(row, text_x + 15, current_y)
 
             # Bombardment stats on their own indented line, only for units that can bombard
             if row["bombard"] is not None:

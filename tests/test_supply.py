@@ -114,9 +114,8 @@ class SupplyTests(SupplyFixture):
                 self.assertEqual(queries.unit_movement_speed(unit), speed)
                 self.assertEqual(queries.presentation_move_speed(world, unit), speed)
                 self.assertEqual(rows[id(unit)]["speed"], speed)
-        fuel_icon = sidebar_info.RESOURCE_ICONS["fuel"]
-        self.assertIn(fuel_icon, dict(rows[id(fuel_user)]["supply"][1]))
-        self.assertNotIn(fuel_icon, dict(rows[id(infantry)]["supply"][1]))
+        self.assertEqual(rows[id(fuel_user)]["fuel"], ("0%", -4))
+        self.assertNotIn("fuel", rows[id(infantry)])
 
     def test_sidebar_omits_fully_supplied_units_but_shows_a_fuel_only_shortage(self):
         tile = province(1, "A", output=(200, 200, 99.9))
@@ -129,14 +128,20 @@ class SupplyTests(SupplyFixture):
 
         rows = world._unit_roster_cache[tile["id"]][2]
         self.assertNotIn("supply", rows[id(infantry)])
-        label, entries = rows[id(fuel_user)]["supply"]
-        self.assertIn("100%", label)
-        self.assertEqual(dict(entries)[sidebar_info.RESOURCE_ICONS["fuel"]], "<100%")
+        self.assertNotIn("fuel", rows[id(infantry)])
+        self.assertNotIn("supply", rows[id(fuel_user)])
+        self.assertEqual(rows[id(fuel_user)]["fuel"], ("<100%", -1))
+
+        fuel_user["speed"] = 1
+        sidebar_info.prepare_unit_roster(world, tile)
+        self.assertEqual(world._unit_roster_cache[tile["id"]][2][id(fuel_user)]["fuel"], ("<100%", 0))
 
         tile["test_output"] = (200, 200, 100)
         queries.prepare_presentation_supply(world)
         sidebar_info.prepare_unit_roster(world, tile)
-        self.assertNotIn("supply", world._unit_roster_cache[tile["id"]][2][id(fuel_user)])
+        full_row = world._unit_roster_cache[tile["id"]][2][id(fuel_user)]
+        self.assertNotIn("supply", full_row)
+        self.assertNotIn("fuel", full_row)
 
     def test_fuel_caps_turn_movement_and_preserves_the_queued_route(self):
         tiles = [province(key, "Unclaimed" if key == 2 else "A",
@@ -425,8 +430,15 @@ class SupplyTests(SupplyFixture):
 
                     icon_row.reset_mock()
                     sidebar_info.draw_unit_roster(world, surface, tile, tile["units"], True, 0, 0, surface.get_width())
-                    rendered = [call.args[2:4] for call in icon_row.call_args_list]
-                    self.assertCountEqual(rendered, [rows[id(unit)]["supply"], rows[id(foreign)]["supply"]])
+                    rendered = [(call.args[2], call.args[3], call.args[5]) for call in icon_row.call_args_list]
+                    fuel_entry = ((sidebar_info.RESOURCE_ICONS["fuel"], "0%"),)
+                    speed_entry = ((sidebar_info.ICON_SPEED, ""),)
+                    self.assertCountEqual(
+                        [line[:2] for line in rendered],
+                        [rows[id(unit)]["supply"], ("", fuel_entry), ("-1 ", speed_entry), rows[id(foreign)]["supply"]])
+                    fuel_index = next(index for index, line in enumerate(rendered) if line[1] == fuel_entry)
+                    self.assertGreater(rendered[fuel_index][2], rendered[fuel_index - 1][2])
+                    self.assertEqual(rendered[fuel_index + 1][2], rendered[fuel_index][2])
 
     def test_sidebar_uses_the_player_supply_projection(self):
         self.library["Supply Test Division"].update(cost_materials=900)
@@ -444,8 +456,10 @@ class SupplyTests(SupplyFixture):
         rows = world._unit_roster_cache[tile["id"]][2]
         self.assertEqual(world.player_supply_projection, {unit["unit_id"]: (1, 0, 0.5)})
         self.assertIn("10%", rows[id(unit)]["supply"][0])
+        self.assertEqual(rows[id(unit)]["fuel"], ("50%", -3))
         with queries.combat_supply(queries.presentation_supply(world)):
             self.assertAlmostEqual(queries.unit_supply_multiplier(unit), 0.1)
         self.assertNotIn("supply", rows[id(foreign)])
+        self.assertNotIn("fuel", rows[id(foreign)])
         self.assertEqual(queries.presentation_move_speed(world, unit), 2)
         self.assertEqual(queries.presentation_move_speed(world, foreign), 5)
