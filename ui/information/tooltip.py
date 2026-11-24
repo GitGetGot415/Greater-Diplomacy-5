@@ -9,9 +9,8 @@ UNIT_PREVIEW_LIMIT = 5
 
 def _fuel_conversion_key(map_screen):
     session = map_screen.session
-    player = session.player_country
-    if not session.is_editor and not session.tactical_mode and queries.get_viewing_country(map_screen) == player:
-        return player, map_screen._presentation_cache_revision
+    if not (session.is_editor or session.tactical_mode or session.selection_mode):
+        return session.mode, session.player_country, queries.get_viewing_country(map_screen), map_screen._presentation_cache_revision
 
 
 def prepare_building_yields(map_screen):
@@ -30,15 +29,21 @@ def prepare_building_yields(map_screen):
     owner = province.get("owner", "Unclaimed")
     world = map_screen.world
     country = world.nation_data.get(owner, {})
-    # Conversion output is private and cached once per player and map revision.
-    cached_key, _ = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
-    if conversion_key and owner == conversion_key[0] and conversion_key != cached_key:
-        conversions = {}
-        if queries.get_fuel_conversion_rate(country) > 0:
-            production = queries.ProvinceProduction(world.nation_data, map_screen)
-            provinces = (tile for tile in world.map_data.values() if tile.get("owner") == owner)
-            conversions = production.fuel_conversion_by_province(owner, provinces)
-        map_screen._tooltip_fuel_conversions = conversion_key, conversions
+    if conversion_key:
+        cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
+        if conversion_key != cached_key:
+            countries = {}
+            map_screen._tooltip_fuel_conversions = conversion_key, countries
+        if owner not in countries:
+            conversions = {}
+            session = map_screen.session
+            # Network projections preserve full province economy inputs for the player.
+            has_source_data = not session.is_networked or owner == session.player_country == queries.get_viewing_country(map_screen)
+            if has_source_data and queries.can_view_country_economy(map_screen, owner) and queries.get_fuel_conversion_rate(country) > 0:
+                production = queries.ProvinceProduction(world.nation_data, map_screen)
+                provinces = (tile for tile in world.map_data.values() if tile.get("owner") == owner)
+                conversions = production.fuel_conversion_by_province(owner, provinces)
+            countries[owner] = conversions
     research = country.get("research", {})
     library = queries.get_building_library(map_screen)
     modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
@@ -54,7 +59,8 @@ def prepare_building_yields(map_screen):
 
 def _province_tooltip_lines(map_screen, prov):
     # --- FOG OF WAR VISIBILITY CHECK ---
-    show_details = map_screen.base_layer != "RELATIONS" or not map_screen.selected_province
+    show_details = (map_screen.secondary_mode == "ECONOMY"
+                    or map_screen.base_layer != "RELATIONS" or not map_screen.selected_province)
     is_visible = show_details and queries.is_province_visible(map_screen, prov["id"])
 
     owner_id = prov.get('owner', 'Unclaimed')
@@ -181,9 +187,9 @@ def _province_tooltip_lines(map_screen, prov):
             lines.append("  *(Non-Core Penalties Applied)*")
 
         if is_visible:
-            cached_key, conversions = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
-            if cached_key and cached_key[0] == owner_id and cached_key == _fuel_conversion_key(map_screen):
-                conversion = conversions.get(prov["id"])
+            cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
+            if cached_key and cached_key == _fuel_conversion_key(map_screen):
+                conversion = countries.get(owner_id, {}).get(prov["id"])
                 if conversion and any(conversion.values()):
                     amounts = []
                     for resource, label in (("materials", "Materials"), ("fuel", "Fuel")):
