@@ -104,7 +104,7 @@ async def prepare_turn(context):
 
             session_state.loading_status_text = "Running AI Economy & Construction..."
             print("[SYSTEM] Running AI Economy & Construction...")
-            ai_construction.process_ai_economy_decisions(context)
+            ai_construction.process_ai_economy_decisions(context, prioritize_naval_repairs=True)
             await asyncio.sleep(0)
 
             session_state.loading_status_text = "Generating AI Movement Orders..."

@@ -18,9 +18,9 @@ from unittest.mock import patch
 
 
 import data.constants as c
-from map_logic.ai import ai_tuning
+from map_logic.actions import unit_actions
+from map_logic.ai import ai_construction, ai_movement, ai_tuning
 from tests.stub_map_screen import MapDouble, fill_state_defaults
-from map_logic.ai import ai_movement
 from map_logic.system32 import movement_processor
 
 
@@ -329,6 +329,51 @@ class ShipsSailHomeTests(unittest.TestCase):
         self.assertEqual(ship["order"]["type"], "REPAIR")
         movement_processor.process_unit_maintenance_orders(screen)
         self.assertEqual(ship["health"], ship["max_health"])
+
+    def test_peace_raises_the_health_cutoff_for_leaving_to_repair(self):
+        for enemies in ((), ("Borland",)):
+            with self.subTest(enemies=enemies):
+                ship, provs = self.fleet()
+                origin, lane, port = provs
+                origin["units"] = [ship]
+                fraction = (ai_tuning.AI_REPAIR_HEALTH_FRACTION + ai_tuning.AI_REPAIR_ON_SITE_FRACTION) / 2
+                ship["health"] = ship["max_health"] * fraction
+
+                ai_movement.process_ai_unit_orders(Screen(provs, at_war=enemies), countries=["Avaria"])
+
+                self.assertEqual(ship.get("repair_trip"), None if enemies else port["id"])
+                self.assertEqual(ship["order"]["path"], [] if enemies else [lane["id"]])
+
+    def test_docked_repair_gets_peacetime_funds_before_recruitment(self):
+        for enemies, prioritize in (((), True), (("Borland",), True), ((), False)):
+            with self.subTest(enemies=enemies, prioritize=prioritize):
+                ship, provs = self.fleet()
+                origin, _, port = provs
+                origin["units"] = []
+                port["units"] = [ship]
+                country = ship["owner"]
+                screen = Screen(provs, at_war=enemies)
+                screen.world.scenario_settings["free_repairs"] = False
+                funds = screen.world.nation_data[country]
+                cost = unit_actions.repair_costs(screen, ship)
+                funds["materials"] = cost["cost_materials"]
+                book_repair = prioritize and not enemies
+
+                def check_recruitment_budget(*args):
+                    self.assertEqual(ship["order"]["type"], "REPAIR" if book_repair else "MOVE")
+                    self.assertEqual(funds["materials"], 0 if book_repair else cost["cost_materials"])
+
+                with patch.object(ai_construction, "_run_purchase_loop", side_effect=check_recruitment_budget) as buy:
+                    ai_construction.process_ai_economy_decisions(
+                        screen, countries=[country], prioritize_naval_repairs=prioritize)
+                buy.assert_called_once()
+
+                if book_repair:
+                    paid_order = ship["order"]
+                    balances = {resource: funds[resource] for resource in ("manpower", "materials", "fuel")}
+                    ai_movement.process_ai_unit_orders(screen, countries=[country])
+                    self.assertIs(ship["order"], paid_order)
+                    self.assertEqual(balances, {resource: funds[resource] for resource in balances})
 
     def test_repair_routes_detour_around_a_visible_enemy_warship(self):
         for underway in (False, True):

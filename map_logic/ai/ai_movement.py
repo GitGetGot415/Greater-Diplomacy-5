@@ -951,6 +951,12 @@ def _build_shared_pathing_caches(context):
     return allowed_prov_ids_cache, water_ids, neighbor_ids
 
 
+def _can_replan_unit(context, unit):
+    order = unit.get("order")
+    return (not queries.is_tactical_player_unit(context, unit)
+            and not (isinstance(order, dict) and order.get("type") in c.MULTI_TURN_ORDER_TYPES))
+
+
 def _reset_orders_and_collect_units(context, ai_nations):
     """Clears every AI unit's movement order (so it rethinks its strategy every
     turn) and buckets units/provinces by owning nation.
@@ -979,11 +985,8 @@ def _reset_orders_and_collect_units(context, ai_nations):
         nation_units[ai_name] = []
 
         for unit, prov in units:
-            if queries.is_tactical_player_unit(context, unit):
+            if not _can_replan_unit(context, unit):
                 continue
-            order = unit.get("order")
-            if isinstance(order, dict) and order.get("type") in c.MULTI_TURN_ORDER_TYPES:
-                continue  # Already committed; leave it be and do not re-task it.
 
             # Clear old path so the AI can rethink its strategy every turn
             unit_actions.apply_action(context, ai_name, prov, unit,
@@ -2559,6 +2562,28 @@ def _port_havens(context, ai_name, march_targets):
                                         world_state.nation_data)}
 
 
+def _start_repair(context, ai_name, province, unit, unit_library):
+    costs = unit_actions.repair_costs(context, unit, unit_library)
+    if not queries.can_afford(world_for(context).nation_data[ai_name], costs):
+        return False
+    unit_actions.apply_action(context, ai_name, province, unit, {"type": "REPAIR"}, authority="ai")
+    unit.pop("repair_trip", None)
+    return True
+
+
+def repair_docked_warships(context, ai_name, units_info, unit_library):
+    """Book affordable peacetime naval repairs before recruitment spends the stockpile."""
+    candidates = [(unit, province) for unit, province in units_info
+                  if province.get("owner") == ai_name and province.get("is_coastal", False)
+                  and 0 < _health_fraction(unit) < ai_tuning.AI_REPAIR_ON_SITE_FRACTION
+                  and _is_combat_ship(unit.get("type", ""), context=context)
+                  and _can_replan_unit(context, unit)]
+    havens = _repair_havens(context, ai_name, (province for _, province in candidates))
+    for unit, province in candidates:
+        if province["id"] in havens:
+            _start_repair(context, ai_name, province, unit, unit_library)
+
+
 def _may_leave_the_line(context, ai_name, unit, prov, ctx):
     """Whether this wounded unit can be spared for the trip to a factory.
 
@@ -2630,7 +2655,8 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     - Wounded, and not: below the harder ai_tuning.AI_REPAIR_HEALTH_FRACTION line it is
       worth the trip as well, so it is sent home. Land units march overland;
       warships sail to their own coastal factories (_port_havens), even when
-      they are alone on a water tile.
+      they are alone on a water tile. At peace warships use the on-site cutoff
+      to start a repair trip.
     - Wounded, in a battle the rest of the stack can hold: it steps out to its
       best retreat tile and starts the trip from there (_wounded_who_can_leave).
     - Idle: on a quiet tile with no battle nearby and nothing else routed
@@ -2656,7 +2682,9 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     unit_library = queries.get_unit_library(context)
     path_cache = {}
     tech_tree = queries.get_tech_tree(context)
-    nation = world_state.nation_data.get(ai_name, {})
+    naval_repair_trip_cutoff = (ai_tuning.AI_REPAIR_HEALTH_FRACTION
+                                if queries.get_enemies(ai_name, world_state.nation_data)
+                                else ai_tuning.AI_REPAIR_ON_SITE_FRACTION)
 
     war_borders = ctx["war_borders"]
     active_battles = ctx["active_battles"]
@@ -2669,15 +2697,6 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
     leavers = _wounded_who_can_leave(context, ai_name, units_info)
     trip_tiles = set(allowed_prov_ids) - set(active_battles)
     ship_trip_tiles = trip_tiles.difference(unsafe_waters) if unsafe_waters else trip_tiles
-
-    def start_repair(unit):
-        costs = unit_actions.repair_costs(context, unit, unit_library)
-        if not queries.can_afford(nation, costs):
-            return False
-        unit_actions.apply_action(context, ai_name, prov, unit,
-                                  {"type": "REPAIR"}, authority="ai")
-        unit.pop("repair_trip", None)
-        return True
 
     def route(unit, curr_id, targets, is_ship):
         """A trip to the nearest of `targets`, or None.
@@ -2727,6 +2746,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         is_naval_combatant = _is_combat_ship(u_type, context=context)
         travels = not is_convoy
         trip_targets = port_targets if is_naval_combatant else march_targets
+        trip_cutoff = naval_repair_trip_cutoff if is_naval_combatant else ai_tuning.AI_REPAIR_HEALTH_FRACTION
 
         # --- a trip already under way ---------------------------------------
         trip = unit.get("repair_trip")
@@ -2737,7 +2757,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
                 unit.pop("repair_trip", None)
                 trips -= 1
             elif curr_id == trip:
-                if not in_combat and start_repair(unit):
+                if not in_combat and _start_repair(context, ai_name, prov, unit, unit_library):
                     trips -= 1
                     continue
             else:
@@ -2771,12 +2791,12 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         if curr_id in havens:
             if _health_fraction(unit) < ai_tuning.AI_REPAIR_ON_SITE_FRACTION:
                 wants_repair = True
-                if start_repair(unit):
+                if _start_repair(context, ai_name, prov, unit, unit_library):
                     continue
         elif (travels
                 and trip_targets
                 and trips < trip_cap
-                and _is_wounded(unit)
+                and _health_fraction(unit) < trip_cutoff
                 and ((is_naval_combatant and curr_id in water_ids)
                      or _may_leave_the_line(context, ai_name, unit, prov, ctx))):
             path = route(unit, curr_id, trip_targets, is_naval_combatant)

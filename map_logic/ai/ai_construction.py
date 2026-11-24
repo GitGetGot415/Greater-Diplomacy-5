@@ -121,7 +121,7 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     """Section 1: upkeep-vs-income ratios (including the pending build queue,
     so the AI doesn't bankrupt itself on units that haven't spawned yet) and
     which resources are in deficit."""
-    at_war = len(data.get("at_war_with", [])) > 0
+    at_war = bool(queries.get_enemies(ai_name, world_for(context).nation_data))
     war_mult = ai_tuning.AI_WAR_UPKEEP_MULTIPLIER if at_war else 1.0
 
     target_man = c.AI_UPKEEP_TARGETS["manpower"] * war_mult
@@ -871,7 +871,7 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
         built += 1
 
 
-def process_ai_economy_decisions(context, *, countries=None):
+def process_ai_economy_decisions(context, *, countries=None, prioritize_naval_repairs=False):
     """Handles AI unit recruitment and building construction based on economy."""
     world_state = world_for(context)
     unit_library = queries.get_unit_library(context)
@@ -960,6 +960,9 @@ def process_ai_economy_decisions(context, *, countries=None):
 
         _disband_worst_unit_if_deficit(context, data, my_provs, ai_name,
                                        state["disband_deficits"], unit_library, all_values)
+
+        if prioritize_naval_repairs and not state["at_war"]:
+            ai_movement.repair_docked_warships(context, ai_name, world.units_by_owner.get(ai_name, ()), unit_library)
 
         # --- Panic Builds & Combat Queue Clearing ---
         force_tally = _panic_build_and_tally_forces(
