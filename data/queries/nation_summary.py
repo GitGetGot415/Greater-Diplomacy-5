@@ -80,6 +80,17 @@ def can_view_country_economy(context, country_id):
         "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
 
 
+def can_view_complete_army(context, country_id):
+    """Allow private military information to the owner and unrestricted local viewers."""
+    session = session_for(context)
+    viewer = get_viewing_country(context)
+    if viewer == c.TOURNAMENT_SPECTATOR:
+        return False
+    if not session.is_networked and (session.is_editor or viewer in ("Spectator", "Editor")):
+        return True
+    return country_id == viewer and not session.tactical_mode
+
+
 def get_country_summary(context, country_id):
     """Build a read-only country summary from information available to its viewer.
 
@@ -97,9 +108,7 @@ def get_country_summary(context, country_id):
     country = nation_data[country_id]
     viewer = get_viewing_country(context)
     networked = session_state.is_networked
-    unrestricted = (not networked and viewer != c.TOURNAMENT_SPECTATOR
-                    and (session_state.is_editor or viewer in ("Spectator", "Editor")))
-    complete_army = unrestricted or (country_id == viewer and not session_state.tactical_mode)
+    complete_army = can_view_complete_army(context, country_id)
     fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
     units = []
     for province in world_state.map_data.values():
@@ -149,7 +158,7 @@ def get_country_summary(context, country_id):
         "politics": {"label": politics.label(political_value),
                      "value": political_value,
                      # Directions are private; only the viewer's own country shows one.
-                     "drift": politics.drift(nation_data, country_id) if unrestricted or country_id == viewer else None,
+                     "drift": politics.drift(nation_data, country_id) if complete_army or country_id == viewer else None,
                      "economic_value": economic_value,
                      "economic_label": politics.economic_label(economic_value),
                      "quality_value": quality_value,

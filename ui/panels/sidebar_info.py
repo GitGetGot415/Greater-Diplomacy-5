@@ -5,6 +5,7 @@ from data import queries
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import ICON_SPEED, RESOURCE_ICONS, draw_bombardment_stats, draw_combat_stats, draw_icon_row
 from ui.widgets import flag_icons
+from ui.widgets.text_utils import fit_text
 from map_logic.system32 import combat_rules
 
 TERRAINS_DIR = "assets/terrains"
@@ -25,8 +26,9 @@ SIDEBAR_INFO_WIDTH = 370
 SIDEBAR_INFO_HEIGHT = 640 # Sized to fit the terrain image and buildings list
 SUPPLY_HIGHLIGHT_COLOR = (158, 58, 104, 160)
 FUEL_HIGHLIGHT_COLOR = (102, 61, 166, 160)
-SUPPLY_HIGHLIGHT_PADDING = 4
-SUPPLY_HIGHLIGHT_RIGHT_INSET = 10
+CARGO_HIGHLIGHT_COLOR = (170, 42, 42, 160)
+DETAIL_HIGHLIGHT_PADDING = 4
+DETAIL_HIGHLIGHT_RIGHT_INSET = 10
 
 # Define the area for the sidebar info panel utilizing constants
 info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
@@ -76,6 +78,9 @@ def prepare_unit_roster(map_screen, province):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
             row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.world.nation_data, is_combat, library=library)
+            if (cargo := unit.get("air_cargo")) and queries.can_view_complete_army(map_screen, unit["owner"]):
+                row["cargo"] = [(member.get("custom_name") or queries.get_condensed_unit_name(member["type"], library, context=map_screen),
+                                 queries.format_health_percent(member)) for member in cargo]
             status = queries.unit_supply_status(supply, unit)
             if status is None:
                 continue
@@ -112,13 +117,13 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
     # units highlighted as the ones dealing damage -- was simply untrue.
     is_combat, battle, rows = map_screen._unit_roster_cache[province["id"]]
 
-    def draw_supply_lines(row, row_x, y):
+    def draw_detail_lines(row, row_x, y):
         font = map_screen.small_font
         height = font.get_height()
         icon_size = max(1, height - 2)
         end_y = y
-        highlight_x = row_x - SUPPLY_HIGHLIGHT_PADDING
-        highlight_width = right_edge - SUPPLY_HIGHLIGHT_RIGHT_INSET - highlight_x
+        highlight_x = row_x - DETAIL_HIGHLIGHT_PADDING
+        highlight_width = right_edge - DETAIL_HIGHLIGHT_RIGHT_INSET - highlight_x
         supply = row.get("supply")
         if supply:
             label, entries = supply
@@ -134,6 +139,12 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             if speed_change < 0:
                 draw_icon_row(surface, font, f"{speed_change:+g} ", ((ICON_SPEED, ""),),
                               end_x, end_y, c.UI_TEXT_BRIGHT, icon_size=icon_size)
+            end_y += height
+        for name, health in row.get("cargo", ()):
+            ui_bars.draw_translucent_panel(surface, pygame.Rect(highlight_x, end_y, highlight_width, height), CARGO_HIGHLIGHT_COLOR)
+            name_width = highlight_width - 2 * DETAIL_HIGHLIGHT_PADDING - font.size(f" {health}")[0]
+            label = fit_text(f"Cargo: {name}", font, name_width)
+            surface.blit(font.render(f"{label} {health}", True, c.UI_TEXT_BRIGHT), (row_x, end_y))
             end_y += height
         return end_y - y
 
@@ -200,8 +211,8 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 profile = row["profile"]
                 u_name = queries.get_condensed_unit_name(profile.get("type", "Unit"))
                 has_bombard = row["bombard"] is not None
-                supply_lines = sum(key in row for key in ("supply", "fuel"))
-                row_height = 20 + (18 if has_bombard else 0) + map_screen.small_font.get_height() * supply_lines
+                detail_lines = sum(key in row for key in ("supply", "fuel")) + len(row.get("cargo", ()))
+                row_height = 20 + (18 if has_bombard else 0) + map_screen.small_font.get_height() * detail_lines
 
                 in_front = id(u) in engaged_ids
                 if in_front:
@@ -233,7 +244,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
                 )
 
                 current_y += 20
-                current_y += draw_supply_lines(row, text_x + 20, current_y)
+                current_y += draw_detail_lines(row, text_x + 20, current_y)
 
                 # Bombardment stats on their own indented line, only for units that can bombard
                 if has_bombard:
@@ -307,7 +318,7 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
             )
 
             current_y += 20
-            current_y += draw_supply_lines(row, text_x + 15, current_y)
+            current_y += draw_detail_lines(row, text_x + 15, current_y)
 
             # Bombardment stats on their own indented line, only for units that can bombard
             if row["bombard"] is not None:
