@@ -789,6 +789,29 @@ class UnitViewControlTests(unittest.TestCase):
                     game, pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
                 self.assertEqual([call.args[3] for call in arrows.call_args_list], expected)
 
+    def test_economy_hover_renders_conversion_with_a_province_selected(self):
+        game = self.game
+        player = game.session.player_country
+        owned = next(tile for tile in game.world.map_data.values() if tile["owner"] == player)
+        country = game.world.nation_data[player]
+        font = Mock(wraps=game.small_font)
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        with (app_harness.patch_map(game, selected_province=owned, visible_provinces=None,
+                                    small_font=font, base_layer="POLITICAL"),
+              patch.dict(country, mat_to_fuel_slider=0.5, conscription_slider=1),
+              patch.object(c, "COUNTRY_BASE_YIELDS", {"manpower": 0, "materials": 100, "fuel": 0}),
+              patch.object(c, "FUEL_CONVERSION_RATIO", 0.1),
+              patch.object(queries, "get_max_fuel_conversion", return_value=0.5),
+              patch.object(queries, "get_clicked_province", return_value=owned)):
+            game.refresh_ui()
+            game.set_view_mode("ECONOMY")
+            position = surface.get_rect().center
+            map_input._update_map_hover(game, False, *position)
+            with patch.object(pygame.mouse, "get_pos", return_value=position):
+                map_renderer.draw_map_screen(game, surface)
+
+        self.assertTrue(any(call.args[0].startswith("Fuel conversion") for call in font.render.call_args_list))
+
     def _help_topic_with_inline_icons(self, popup):
         """Return the index and text of the shipped Help text that shows inline icons."""
         for index, (category_index, topic_index) in enumerate(popup.topics):
