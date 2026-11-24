@@ -119,20 +119,26 @@ class ProductionActionTests(unittest.TestCase):
         self.assertEqual(result.cost["cost_manpower"], fixture["Fixture Building"]["cost_manpower"])
 
     def test_ai_buildings_pay_manpower_and_wait_until_it_is_affordable(self):
-        from map_logic.ai import ai_construction, ai_tuning
-        stats = {"group": "industry", "time": 2, "cost_materials": 1, "cost_manpower": 5, "cost_fuel": 0}
+        from map_logic.ai import ai_construction
+        # Output worth far more than the cost, so affordability alone decides.
+        stats = {"group": "industry", "time": 2, "cost_materials": 1, "cost_manpower": 5, "cost_fuel": 0,
+                 "prod_materials": 1000}
         fixture = {"Fixture Works": stats}
         country = self.context.world.nation_data["A"]
-        country.update(materials=ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 10, fuel=0)
+        country.update(materials=100000, fuel=0)
+        income = {"manpower": 1000, "materials": 1000, "fuel": 1000}
+        state = {"econ": {"total_inc": income, "upkeep": {}},
+                 "inc_man": 1000, "inc_mat": 1000, "inc_fuel": 1000,
+                 "upk_man": 0, "upk_mat": 0, "upk_fuel": 0}
         with patch("data.queries.get_building_required_tech", return_value=(None, 0)):
             cost = actions.prepare_production(self.context, "A", self.province, "building_queue",
                                               {"order_type": "BUILDING", "item_name": "Fixture Works"},
                                               building_library=fixture).cost
             country["manpower"] = cost["cost_manpower"] - 1
-            ai_construction._apply_construction_logic(self.context, "A", country, [self.province], fixture)
+            ai_construction._apply_construction_logic(self.context, "A", country, [self.province], fixture, state)
             self.assertEqual(self.province["building_queue"], [])
             country["manpower"] = cost["cost_manpower"]
-            ai_construction._apply_construction_logic(self.context, "A", country, [self.province], fixture)
+            ai_construction._apply_construction_logic(self.context, "A", country, [self.province], fixture, state)
         self.assertEqual([entry["item_name"] for entry in self.province["building_queue"]], ["Fixture Works"])
         self.assertEqual(country["manpower"], 0)
 

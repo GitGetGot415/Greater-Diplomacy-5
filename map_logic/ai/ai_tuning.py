@@ -537,7 +537,16 @@ AI_SUPPLY_CUT_FOLLOWUP_WEIGHT = 2
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 
-AI_MIN_MATERIALS_FOR_CONSTRUCTION = 15000
+# Construction. Each turn the AI puts up the buildings worth the most to it
+# (ai_tech_eval.building_net_value), at most this many, one per province.
+AI_MAX_BUILDINGS_PER_TURN = 2
+# What a building may not eat into: after paying, every resource must still
+# have at least this many turns of runway (stockpile over net drain, see
+# ai_construction._runway). It replaces a flat materials threshold, which was
+# years of income to a small nation and loose change to a great power. Tied to
+# the runway below which the AI starts giving units up, so a building never
+# leaves the nation short enough to disband over it.
+AI_CONSTRUCTION_RESERVE_TURNS = AI_DISBAND_RUNWAY_TURNS
 
 AI_SURPLUS_MANPOWER_FOR_CORING = 2000 # Manpower above this triggers AI to prioritize coring uncored provinces
 

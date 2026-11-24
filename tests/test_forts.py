@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 
 import data.constants as c
-from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.ai import ai_construction
 from map_logic.system32 import combat_processor
@@ -133,17 +132,18 @@ class FortTests(unittest.TestCase):
         prov = screen.world.map_data["1"]
         prov.update({"owner": "A", "cores": ["A"], "buildings": [],
                      "building_queue": []})
-        data = {"materials": ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION + 1,
-                "research": {}}
+        data = {"materials": 100000, "manpower": 100000, "fuel": 100000, "research": {}}
+        # Worth building on output alone, so only the rule keeps it off the queue.
         building_library = {
-            "Fort Lvl 1": {"group": "fortification"},
+            "Fort Lvl 1": {"group": "fortification", "cost_materials": 1, "prod_materials": 1000},
         }
+        flat = {"manpower": 1000, "materials": 1000, "fuel": 1000}
+        state = {"econ": {"total_inc": flat, "upkeep": {}},
+                 "inc_man": 1000, "inc_mat": 1000, "inc_fuel": 1000,
+                 "upk_man": 0, "upk_mat": 0, "upk_fuel": 0}
 
-        # Keep candidate groups deterministic so the old implementation would
-        # reach its fort list instead of depending on shuffle randomness.
-        with patch.object(ai_construction.random, "shuffle", lambda values: None):
-            ai_construction._apply_construction_logic(
-                screen, "A", data, [prov], building_library)
+        ai_construction._apply_construction_logic(
+            screen, "A", data, [prov], building_library, state)
 
         self.assertEqual(prov["building_queue"], [])
 

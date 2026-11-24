@@ -107,6 +107,17 @@ def _replaced_building(name, building_library):
     return req
 
 
+def building_net_value(gain, cost):
+    """What a building is worth per turn: its priced output gain, net of its
+    priced cost spread over the period a building is given to earn that back.
+
+    It keeps producing long after the twenty turns a division is costed against.
+    Research reads it to value the level that unlocks a building, and
+    construction to choose which building to put up, so the two agree.
+    """
+    return gain - cost / ai_tuning.AI_BUILDING_PAYBACK_TURNS
+
+
 def _build_cost(name, building_library, prices, *, research=None, context=None):
     """Price the first build in a neutral economy with the given research."""
     stats = queries.get_building_cost(name, None, {}, building_library, {}, context=context, research=research)
@@ -275,11 +286,8 @@ def economy_gain(tech_key, level, prices, building_library, income, built=None, 
             old_output = queries.get_building_output(replaced, research, building_library, context=context, factory_multiplier=factory_multiplier)
             gain -= sum(prices[res] * old_output[res] for res in ai_unit_eval.RESOURCES)
 
-        # Net of what it costs to put up, spread over the period a building is
-        # given to earn that back -- it keeps producing long after the twenty
-        # turns a division is costed against.
         cost = _build_cost(name, building_library, prices, research=research, context=context)
-        best = max(best, gain - cost / ai_tuning.AI_BUILDING_PAYBACK_TURNS)
+        best = max(best, building_net_value(gain, cost))
 
     # A gate has value when it enables the next reachable building research.
     tree = queries.get_tech_tree(context)
