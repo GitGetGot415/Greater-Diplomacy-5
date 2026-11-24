@@ -4,7 +4,7 @@ import collections
 import data.constants as c
 import random
 import re
-from data.state_access import session_for, world_for
+from data.state_access import session_for, viewer_context, world_for
 from data.queries.geometry import is_water_province
 from map_logic.diplomacy import faction_records
 from data import queries
@@ -137,11 +137,32 @@ def get_visible_provinces(context):
     return visible_set, partial_set
 
 
+def fog_of_war_enabled(scenario_settings):
+    """Whether this scenario hides what each country cannot see."""
+    return queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, scenario_settings)
+
+
+def viewer_visible_provinces(world, viewer, tactical_unit=None):
+    """Province IDs one viewer sees in a world, for hidden-information filters.
+
+    ``world`` is a WorldState or any view with the same map, country, province
+    index, and scenario fields. None means fog is off and the viewer sees
+    everything. A viewer that is not a playable country, such as a spectator or a
+    pseudo-owner record, sees nothing. With a tactical unit, the viewer sees what
+    that controlled division sees.
+    """
+    if not fog_of_war_enabled(world.scenario_settings):
+        return None
+    if viewer not in world.nation_data or viewer in c.UNPLAYABLE_NATIONS:
+        return set()
+    view = viewer_context(viewer, world.map_data, world.nation_data, world.id_to_province, tactical_unit)
+    return queries.get_visible_provinces(view)[0]
+
+
 def get_map_fog_visibility(context):
     """Apply the map's fog setting and hotseat viewing rules."""
     session = session_for(context)
-    if session.selection_mode or not queries.get_scenario_flag(
-            "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_for(context).scenario_settings):
+    if session.selection_mode or not fog_of_war_enabled(world_for(context).scenario_settings):
         return None, None
     # Blanket the map during the AI phase so hotseat players cannot see the previous player's view.
     if session.viewing_ai_moves and len(session.active_players) > 1:

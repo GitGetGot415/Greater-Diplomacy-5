@@ -190,8 +190,8 @@ def strip_sensitive_data_for_tournament_spectator(context):
     session_state.current_player_index = 0
 
     _strip_spectator_countries(world_state.nation_data)
-    _strip_spectator_provinces(world_state.map_data, show_cargo=not queries.get_scenario_flag(
-        "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings))
+    _strip_spectator_provinces(world_state.map_data, show_cargo=not queries.fog_of_war_enabled(
+        world_state.scenario_settings))
 
 
 def build_tournament_spectator_save(save_dict, *, player_supply=None):
@@ -209,7 +209,7 @@ def build_tournament_spectator_save(save_dict, *, player_supply=None):
     spectator_save["unit_event_log"] = {
         "turn": spectator_save.get("date", {}).get("total_turns", 0), "events": []}
     spectator_save["unit_event_read_turns"] = {}
-    show_units = not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, save_dict.get("scenario_settings", {}))
+    show_units = not queries.fog_of_war_enabled(save_dict.get("scenario_settings", {}))
     spectator_save.pop("player_supply", None)
     if show_units and player_supply is not None:
         spectator_save["player_supply"] = player_supply
@@ -396,7 +396,7 @@ def export_tournament(context, file_path, master_key, keys_dict):
         if cid in peace_choices:
             entry["enc_peace_choices"] = encrypt_dict(peace_choices[cid], keys_dict[cid])
         if entry.get("role") == "PLAYER":
-            visible = queries.player_snapshot_visible_provinces(context, cid)
+            visible = queries.viewer_visible_provinces(world_state, cid)
             summary = supply.player_summary(cid, visible)
             if summary:
                 entry["enc_player_supply"] = encrypt_dict(summary, keys_dict[cid], compress=True)
@@ -404,7 +404,7 @@ def export_tournament(context, file_path, master_key, keys_dict):
     context.session.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key, compress=True)
-    spectator_visible = queries.player_snapshot_visible_provinces(context, c.TOURNAMENT_SPECTATOR)
+    spectator_visible = queries.viewer_visible_provinces(world_state, c.TOURNAMENT_SPECTATOR)
     spectator_supply = supply.player_summary(c.TOURNAMENT_SPECTATOR, spectator_visible) if spectator_visible is None else None
     spectator_game_data_enc = encrypt_dict(
         build_tournament_spectator_save(save_dict, player_supply=spectator_supply), c.TOURNAMENT_SPECTATOR_KEY, compress=True)

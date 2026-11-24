@@ -1,7 +1,7 @@
 """Record the latest resolved turn without changing game rules."""
 
 
-from data.state_access import world_for, session_for, viewer_context
+from data.state_access import world_for, session_for
 from contextlib import contextmanager
 from contextvars import ContextVar
 import math
@@ -186,15 +186,11 @@ class _TurnRecorder:
             if viewer not in self.visibility:
                 session = self.context.session
                 tactical = session.tactical_mode and viewer == session.player_country and session.player_unit
-                world = self.context.world
-                view = viewer_context(viewer, world.map_data, world.nation_data, world.id_to_province,
-                                      session.player_unit if tactical else None)
-                self.visibility[viewer] = queries.get_visible_provinces(view)[0]
+                self.visibility[viewer] = queries.viewer_visible_provinces(
+                    self.context.world, viewer, session.player_unit if tactical else None)
             visible = self.visibility[viewer]
             province = self.context.world.id_to_province.get(tile)
-            fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                                           self.context.world.scenario_settings)
-            if (province is None or fog and visible is not None and tile not in visible
+            if (province is None or visible is not None and tile not in visible
                     or not queries.is_unit_visible_to(unit, viewer, province, self.context.world.nation_data)):
                 tile = "???"
         return {"text": f"{unit_name(unit)} (tile {tile})", "owner": unit["owner"]}

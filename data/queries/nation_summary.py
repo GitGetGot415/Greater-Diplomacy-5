@@ -76,8 +76,7 @@ def can_view_country_economy(context, country_id):
         return False
     if session_state.is_editor or viewer in ("Spectator", "Editor"):
         return True
-    return not queries.get_scenario_flag(
-        "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
+    return not queries.fog_of_war_enabled(world_state.scenario_settings)
 
 
 def can_view_complete_army(context, country_id):
@@ -109,7 +108,7 @@ def get_country_summary(context, country_id):
     viewer = get_viewing_country(context)
     networked = session_state.is_networked
     complete_army = can_view_complete_army(context, country_id)
-    fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
+    fog = queries.fog_of_war_enabled(world_state.scenario_settings)
     units = []
     for province in world_state.map_data.values():
         if (not complete_army and fog

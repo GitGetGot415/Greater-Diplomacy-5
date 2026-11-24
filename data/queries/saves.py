@@ -3,7 +3,7 @@
 import copy
 import data.constants as c
 from data.io import standalone_music
-from data.state_access import session_for, world_for, viewer_context
+from data.state_access import session_for, world_for
 from map_logic import politics
 from map_logic.diplomacy import faction_records, diplomacy_lifecycle, peace_scope
 from data.queries.content import get_research_years
@@ -360,24 +360,12 @@ def strip_private_unit_orders(unit):
         unit.pop(field, None)
 
 
-def player_snapshot_visible_provinces(context, country_id):
-    """Return the province fog mask used for multiplayer unit records."""
-    world = world_for(context)
-    if not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, world.scenario_settings):
-        return None
-    if country_id not in world.nation_data:
-        return set()
-    view = viewer_context(country_id, world.map_data, world.nation_data,
-                          {p["id"]: p for p in world.map_data.values()})
-    return queries.get_visible_provinces(view)[0]
-
-
 def player_snapshot_projection(context, snapshot, country_id, *, player_supply=None):
     """Filter a network save before transmission, including raw map geometry."""
     world_state = world_for(context)
     result = copy.deepcopy(snapshot)
     result.pop("tactical_player_unit_id", None)
-    visible = player_snapshot_visible_provinces(context, country_id)
+    visible = queries.viewer_visible_provinces(world_state, country_id)
     result["player_supply"] = queries.SupplySnapshot(context).player_summary(country_id, visible, player_supply)
     # Only the map editor uses these settings, and a background image can be large.
     result.pop("standalone_export_settings", None)

@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import patch
 
+import data.constants as c
 from data import queries
 from tests import app_harness
 
@@ -48,6 +49,19 @@ class RealtimeFogTests(unittest.TestCase):
         self.assertNotIn("peace_choices", snapshot["nation_data"][enemy])
         self.assertEqual(snapshot["nation_data"][enemy]["pending_diplomacy"], {
             owner: {"action": "PEACE_TREATY", "turns": 1, "request_id": "visible-offer"}})
+
+    def test_viewer_visibility_covers_fog_off_countries_and_countryless_viewers(self):
+        world = self.map.world
+        owner = self.map.session.player_country
+        owned = next(prov["id"] for prov in world.map_data.values() if prov.get("owner") == owner)
+        with patch.dict(world.scenario_settings, fog_of_war=False):
+            self.assertIsNone(queries.viewer_visible_provinces(world, owner))
+        with patch.dict(world.scenario_settings, fog_of_war=True):
+            for viewer in ("", c.TOURNAMENT_SPECTATOR, "Spectator"):
+                self.assertEqual(queries.viewer_visible_provinces(world, viewer), set())
+            visible = queries.viewer_visible_provinces(world, owner)
+        self.assertIn(owned, visible)
+        self.assertLess(len(visible), len(world.map_data))
 
 
 if __name__ == "__main__":

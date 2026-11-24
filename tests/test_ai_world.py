@@ -317,7 +317,7 @@ class PerceptionTests(unittest.TestCase):
 
     Unlike the parity tests above, these answers are meant to differ from the
     exact figures: a country sees its own side and the enemy units in view,
-    and guesses the rest. Visibility is fixed by patching ai_world.visible_to,
+    and guesses the rest. Visibility is fixed by patching queries.get_visible_provinces,
     so the rule is tested apart from the fog-of-war rules that compute it.
     """
 
@@ -328,7 +328,7 @@ class PerceptionTests(unittest.TestCase):
         from unittest.mock import patch
         if visible is None:
             visible = set(self.id_to_province)
-        patches = [patch.object(ai_world, "visible_to", return_value=set(visible))]
+        patches = [patch.object(ai_world.queries, "get_visible_provinces", return_value=(set(visible), set()))]
         if traits is not None:
             patches.append(patch.object(ai_world.ai_personality, "get", return_value=traits))
         for item in patches:
