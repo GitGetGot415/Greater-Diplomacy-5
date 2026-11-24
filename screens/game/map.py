@@ -1125,7 +1125,7 @@ class Map(StateAccess, Screen):
             popup.is_dragging = False
         if self.navigation_intro_popup is not None:
             self.navigation_intro_popup.is_dragging = False
-            self.navigation_intro_popup._scroll_drag_offset = None
+            self.navigation_intro_popup.scroll.cancel()
 
     def has_secondary_action_at(self, position):
         return (self.touch_map_at(position) is self

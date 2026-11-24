@@ -51,8 +51,8 @@ class TextDetailScreen(Screen):
         view_h = c.SCREEN_HEIGHT - self.BODY_TOP - 40
         clip = pygame.Rect(self.SIDE_MARGIN, self.BODY_TOP - 10, width, view_h)
 
-        # max_scroll is zero or negative here, as everywhere else in this
-        # codebase: scroll_y counts down from 0 towards it.
+        # The pane's limit is zero or negative, as on every standard pane:
+        # its value counts down from 0 towards it.
         self.draw_scrolling_lines(surface, lines, body_font, self.SIDE_MARGIN, self.BODY_TOP, view_h,
                                   self.LINE_HEIGHT, clip, lambda _line: c.UI_TEXT_BRIGHT)
 

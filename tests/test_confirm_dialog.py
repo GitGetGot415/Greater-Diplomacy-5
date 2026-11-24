@@ -357,17 +357,17 @@ class DialogTests(unittest.TestCase):
             with self.subTest(inline=inline):
                 modal = self.long_message_modal(inline)
                 self.assertLessEqual(modal.panel_rect.bottom, 320)
-                self.assertGreater(modal.max_scroll, 0)
-                self.assertIsNotNone(modal.scroll_track_rect)
+                self.assertLess(modal.scroll.limit, 0)
+                self.assertIsNotNone(modal.scroll.track)
                 modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
-                self.assertEqual(modal.scroll_y, modal.max_scroll)
+                self.assertEqual(modal.scroll.value, modal.scroll.limit)
                 modal.handle_events([key(pygame.K_PAGEUP)])
-                self.assertLess(modal.scroll_y, modal.max_scroll)
+                self.assertGreater(modal.scroll.value, modal.scroll.limit)
                 modal.handle_events([key(pygame.K_UP)] * 100)
-                self.assertEqual(modal.scroll_y, 0)
-                track = modal.scroll_track_rect
+                self.assertEqual(modal.scroll.value, 0)
+                track = modal.scroll.track
                 modal.handle_events([click((track.centerx, track.bottom - 1))])
-                self.assertEqual(modal.scroll_y, modal.max_scroll)
+                self.assertEqual(modal.scroll.value, modal.scroll.limit)
                 surface = pygame.Surface((520, 320))
                 modal.draw(surface)
                 self.assertEqual(surface.get_clip(), surface.get_rect())
@@ -377,8 +377,8 @@ class DialogTests(unittest.TestCase):
     def test_help_text_that_fits_has_no_scrollbar(self):
         dialogs.show_info("T", "Help text.")
         modal = self.dialog()
-        self.assertEqual(modal.max_scroll, 0)
-        self.assertIsNone(modal.scroll_track_rect)
+        self.assertEqual(modal.scroll.limit, 0)
+        self.assertIsNone(modal.scroll.track)
         modal_stack.pop()
 
     def test_long_credit_text_without_images_scrolls(self):
@@ -386,8 +386,8 @@ class DialogTests(unittest.TestCase):
         from ui.dialogs.person_info import _PersonInfoModal
         modal = _PersonInfoModal(pygame.Surface((520, 320)), "Artist",
                                  "\n".join(f"Line {n}." for n in range(60)), [], None)
-        self.assertGreater(modal.max_scroll, 0)
-        self.assertIsNotNone(modal.scroll_track_rect)
+        self.assertLess(modal.scroll.limit, 0)
+        self.assertIsNotNone(modal.scroll.track)
 
     # -- show_person_info ------------------------------------------------
 
@@ -509,7 +509,7 @@ class DialogTests(unittest.TestCase):
                     modal = _PersonInfoModal(surface, "Artist", "Art", [],
                                              align, self.credited_images())
                     modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
-                    self.assertEqual(modal.scroll_y, modal.max_scroll)
+                    self.assertEqual(modal.scroll.value, modal.scroll.limit)
                     modal.draw(surface)
                     self.assertEqual(surface.get_clip(), surface.get_rect())
                     modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
@@ -534,7 +534,7 @@ class DialogTests(unittest.TestCase):
         modal = _PersonInfoModal(surface, "Artist", "Art", links,
                                  "left", self.credited_images())
         modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
-        visible_link = modal.link_rects[0].move(0, -modal.scroll_y)
+        visible_link = modal.link_rects[0].move(0, modal.scroll.value)
         with mock.patch("ui.dialogs.person_info.webbrowser.open") as open_url:
             modal.handle_events([click(visible_link.center)])
         open_url.assert_called_once_with(links[0]["url"])
@@ -559,40 +559,40 @@ class DialogTests(unittest.TestCase):
 
     def test_credit_scrollbar_drags_without_a_jump(self):
         modal = self.scrollable_credit_modal()
-        track, handle = modal.scroll_track_rect, modal.scroll_handle_rect
+        track, handle = modal.scroll.track, modal.scroll.handle
         self.assertIsNotNone(track)
         surface = pygame.Surface((520, 320))
         modal.draw(surface)
         grab = (handle.centerx, handle.bottom - 2)
         modal.handle_events([click(grab)])
         modal.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=grab)])
-        self.assertAlmostEqual(modal.scroll_y, 0, delta=1)
+        self.assertAlmostEqual(modal.scroll.value, 0, delta=1)
         modal.handle_events([pygame.event.Event(pygame.MOUSEMOTION,
                                                 pos=(grab[0], track.bottom + track.height))])
-        self.assertEqual(modal.scroll_y, modal.max_scroll)
+        self.assertEqual(modal.scroll.value, modal.scroll.limit)
         modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, pos=(0, 0), button=1)])
         modal.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(grab[0], track.top))])
-        self.assertEqual(modal.scroll_y, modal.max_scroll)
+        self.assertEqual(modal.scroll.value, modal.scroll.limit)
 
     def test_credit_scrollbar_track_wheel_keys_and_focus_loss(self):
         modal = self.scrollable_credit_modal()
-        track = modal.scroll_track_rect
+        track = modal.scroll.track
         modal.handle_events([click((track.centerx, track.bottom - 1))])
-        self.assertEqual(modal.scroll_y, modal.max_scroll)
+        self.assertEqual(modal.scroll.value, modal.scroll.limit)
         modal.handle_events([pygame.event.Event(pygame.WINDOWFOCUSLOST)])
-        self.assertIsNone(modal._scroll_drag_offset)
+        self.assertFalse(modal.scroll.bar_drag)
         modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=1)])
-        self.assertLess(modal.scroll_y, modal.max_scroll)
-        previous = modal.scroll_y
+        self.assertGreater(modal.scroll.value, modal.scroll.limit)
+        previous = modal.scroll.value
         modal.handle_events([key(pygame.K_UP)])
-        self.assertLess(modal.scroll_y, previous)
+        self.assertGreater(modal.scroll.value, previous)
 
     def test_credit_scrollbar_is_hidden_when_all_images_fit(self):
         dialogs.show_person_info("Artist", "Art", images=self.credited_images())
         modal = self.dialog()
-        self.assertEqual(modal.max_scroll, 0)
-        self.assertIsNone(modal.scroll_track_rect)
-        self.assertIsNone(modal.scroll_handle_rect)
+        self.assertEqual(modal.scroll.limit, 0)
+        self.assertIsNone(modal.scroll.track)
+        self.assertIsNone(modal.scroll.handle)
 
 
 

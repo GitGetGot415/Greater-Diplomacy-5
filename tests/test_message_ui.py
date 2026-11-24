@@ -302,8 +302,8 @@ class TableRowClickTests(unittest.TestCase):
         long_text = " ".join(f"word{i}" for i in range(2000))
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", long_text)
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
-        # max_scroll is zero or negative throughout this codebase: scroll_y
-        # counts down from 0 towards it.
+        # A standard pane's limit is zero or negative: its value counts down
+        # from 0 towards it.
         self.assertLess(detail.scroll.limit, 0, "a long message must be scrollable")
 
     def test_a_short_message_needs_no_scrolling(self):

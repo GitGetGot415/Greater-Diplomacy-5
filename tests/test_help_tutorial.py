@@ -338,31 +338,31 @@ class HelpPopupTests(unittest.TestCase):
     def test_long_topics_scroll_with_the_wheel_and_scrollbar(self):
         long_text = " ".join(["word"] * 4000)
         popup = self.popup(artificial_content([{"type": "text", "text": long_text}]))
-        self.assertGreater(popup.max_scroll, 0)
+        self.assertLess(popup.scroll.limit, 0)
 
         wheel = pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)
         with mock.patch("pygame.mouse.get_pos", return_value=popup.content_rect.center):
             self.assertTrue(popup.handle_event(wheel))
-        self.assertEqual(popup.scroll_y, c.SCROLL_STEP)
+        self.assertEqual(popup.scroll.value, -c.SCROLL_STEP)
         # Away from the popup, the wheel still zooms the map.
         outside = (popup.rect.right + 5, popup.rect.bottom + 5)
         with mock.patch("pygame.mouse.get_pos", return_value=outside):
             self.assertFalse(popup.handle_event(wheel))
-        self.assertEqual(popup.scroll_y, c.SCROLL_STEP)
+        self.assertEqual(popup.scroll.value, -c.SCROLL_STEP)
 
-        handle = popup.scroll_handle_rect.center
+        handle = popup.scroll.handle.center
         position = popup.rect.topleft
         self.assertTrue(self.click(popup, handle))
         popup.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=(handle[0], handle[1] + 60)))
-        self.assertGreater(popup.scroll_y, c.SCROLL_STEP)
+        self.assertLess(popup.scroll.value, -c.SCROLL_STEP)
         # Dragging the scrollbar scrolls the topic instead of moving the window.
         self.assertEqual(popup.rect.topleft, position)
         popup.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=handle, button=1))
-        self.assertIsNone(popup._scroll_drag_offset)
+        self.assertFalse(popup.scroll.bar_drag)
 
         # A newly selected topic starts at its top.
         popup.select_topic(1)
-        self.assertEqual(popup.scroll_y, 0)
+        self.assertEqual(popup.scroll.value, 0)
 
     def test_shipped_category_list_fits_with_any_category_open(self):
         """Rows past the list's bottom would be clipped and could not be clicked."""

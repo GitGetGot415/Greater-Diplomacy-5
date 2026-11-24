@@ -658,11 +658,11 @@ class UnitEventScreenTests(unittest.TestCase):
                 screen.show_event(screen.rows[0])
                 popup = push.call_args.args[0].screen
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
-                self.assertGreater(popup.scroll_y, 0)
-                self.assertEqual(popup.scroll_y, popup.max_scroll)
+                self.assertLess(popup.scroll.value, 0)
+                self.assertEqual(popup.scroll.value, popup.scroll.limit)
                 popup.draw(pygame.Surface(size))
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=1000)])
-                self.assertEqual(popup.scroll_y, 0)
+                self.assertEqual(popup.scroll.value, 0)
                 popup.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
                 self.assertTrue(popup.done)
 
