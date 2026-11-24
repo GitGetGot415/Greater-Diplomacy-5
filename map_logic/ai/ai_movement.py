@@ -8,6 +8,7 @@ from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
 from map_logic.ai import ai_supply, ai_unit_eval, ai_world
+from map_logic.diplomacy import deal as deal_mod
 from map_logic.system32 import combat_forecast, combat_rules
 
 
@@ -899,11 +900,47 @@ def _operational_paths(context, unit, origin, tiles, limit, stops=frozenset(), i
 def _book_reserved_land_order(supply, ctx, unit, origin, path):
     if not path:
         return
-    supply.book(unit, path)
+    # Optional as in _assign_unit_orders' assign(): a planner without supply
+    # rules still books the move against the target counts.
+    if supply is not None:
+        supply.book(unit, path)
     for tile, delta in ((origin["id"], -1), (path[-1], 1)):
         if tile in ctx["target_assignments"]:
             ctx["target_stacks"][tile] += delta
             ctx["target_assignments"][tile] += delta
+
+
+def _commit_reserved_orders(context, ai_name, orders, reserved, available, protected, supply, ctx):
+    """Issues a group of (unit, origin, path) land orders together, or none.
+
+    Refused when a unit is already reserved or appears twice, or when the group
+    would empty a protected tile (`available` counts the free units on each).
+    A move the order owner refuses rolls back the ones already issued. On
+    success the units join `reserved` and their moves are booked against
+    supply and the target counts.
+    """
+    units = {id(unit) for unit, _, _ in orders}
+    if len(units) != len(orders) or units & reserved:
+        return False
+    leaving = defaultdict(int)
+    for _, origin, path in orders:
+        if path:
+            leaving[origin["id"]] += 1
+    if any(available.get(origin, 0) <= count for origin, count in leaving.items() if origin in protected):
+        return False
+    issued = []
+    for unit, origin, path in orders:
+        if not _order_move(context, ai_name, origin, unit, path):
+            for prior, start in issued:
+                _order_move(context, ai_name, start, prior, ())
+            return False
+        issued.append((unit, origin))
+    reserved.update(units)
+    for origin, count in leaving.items():
+        available[origin] -= count
+    for unit, origin, path in orders:
+        _book_reserved_land_order(supply, ctx, unit, origin, path)
+    return True
 
 
 def _land_cut_cost(context, supply, tile, orders, defenders, counter):
@@ -1014,28 +1051,7 @@ def _reserve_land_supply_orders(context, ai_name, units_info, supply, ctx, reser
         options[tile].sort(key=lambda option: option[0])
 
     def commit(orders):
-        units = {id(unit) for unit, _, _ in orders}
-        if len(units) != len(orders) or units & reserved:
-            return False
-        leaving = defaultdict(int)
-        for _, origin, path in orders:
-            if path:
-                leaving[origin["id"]] += 1
-        if any(available.get(origin, 0) <= count for origin, count in leaving.items() if origin in protected):
-            return False
-        issued = []
-        for unit, origin, path in orders:
-            if not _order_move(context, ai_name, origin, unit, path):
-                for prior, start in issued:
-                    _order_move(context, ai_name, start, prior, ())
-                return False
-            issued.append((unit, origin))
-        reserved.update(units)
-        for origin, count in leaving.items():
-            available[origin] -= count
-        for unit, origin, path in orders:
-            _book_reserved_land_order(supply, ctx, unit, origin, path)
-        return True
+        return _commit_reserved_orders(context, ai_name, orders, reserved, available, protected, supply, ctx)
 
     followup = set()
     for tile, (value, exposed) in sorted(holds.items(), key=lambda row: (-row[1][0], row[0])):
@@ -1063,6 +1079,192 @@ def _reserve_land_supply_orders(context, ai_name, units_info, supply, ctx, reser
         if not taken.intersection(tiles) and sum(loss for enemy, loss in losses.items() if enemy not in disrupted) > cost and commit(orders):
             disrupted.update(losses)
             taken.update(tiles)
+
+
+def _new_fights(context, ai_name, ctx):
+    """{tile: visible hostiles} for each enemy tile a fight would start on.
+
+    Enemy or expedition destinations holding visible hostiles that this nation
+    is not already fighting on. Only _reserve_strike_orders starts these; a
+    battle already under way is reinforced by the ordinary battle pull, which
+    tile_is_lost has already judged worth holding.
+    """
+    world_state = world_for(context)
+    fights = {}
+    for tile in ctx["target_destinations"]:
+        if tile not in ctx["enemy_targets"] and tile not in ctx["expedition_targets"]:
+            continue
+        if tile in ctx["active_battles"] or tile in ctx["lost_battles"]:
+            continue
+        prov = world_state.id_to_province.get(tile)
+        hostiles = _visible_hostiles(context, ai_name, prov) if prov else []
+        if hostiles:
+            fights[tile] = hostiles
+    return fights
+
+
+def _may_strike(context, ai_name, unit, origin, ctx, reserved):
+    """Whether `unit` would reach _assign_unit_orders' attack branch this turn.
+
+    The checks that run ahead of that branch, in its order, so the strike
+    planner takes only units the per-unit pass would have sent to attack:
+    nothing busy, fighting, wounded, at sea or riding a convoy; no gun with
+    something to shell; nobody with a supply move to make; and nobody about to
+    walk into unclaimed land. Lone guards are held back by the caller's
+    protected tiles, as in the supply pass.
+    """
+    world_state = world_for(context)
+    nation_data = world_state.nation_data
+    u_type = unit.get("type", "")
+    if (id(unit) in reserved or not any(current is unit for current in origin.get("units", []))
+            or u_type.startswith("Convoy") or _is_combat_ship(u_type, context=context)
+            or _is_wounded(unit) or origin["id"] in ctx["lost_battles"]
+            or queries.is_nation_in_combat_here(ai_name, origin, nation_data)):
+        return False
+    bomb_range = queries.get_bombardment_range(u_type, context=context)
+    if bomb_range > 0 and _bombardment_target(context, ai_name, origin, bomb_range) is not None:
+        return False
+    supply = ctx.get("supply")
+    if supply is not None:
+        relief = ctx.get("relief_targets", set())
+        current = supply.current(unit)
+        for tile in origin.get("neighbors", ()):
+            prov = world_state.id_to_province.get(tile)
+            if prov is None or queries.is_water_province(prov):
+                continue
+            if tile in relief or supply.quality(unit, tile) > current:
+                return False
+    return not any(tile in ctx["unclaimed_targets"] for tile in origin.get("neighbors", ()))
+
+
+def _short_of_new_fights(path, new_fights):
+    """`path` up to, not into, the first tile where it would start a new fight."""
+    for index, tile in enumerate(path):
+        if tile in new_fights:
+            return list(path[:index])
+    return list(path)
+
+
+def _strike_depth(context, ai_name, tile):
+    """How many units a new fight on `tile` can use: a front rank and its relief."""
+    world_state = world_for(context)
+    prov = world_state.id_to_province[tile]
+    capacity = {tile: combat_rules.nation_front_capacity(ai_name, prov, world_state.nation_data)}
+    return int(_tile_depth(capacity, tile))
+
+
+def _strike_group(context, ai_name, tile, hostiles, routes, reserved, friendly_nations):
+    """The fewest of `routes` that make a new fight on `tile` one we do not lose.
+
+    "Not lost" is the bar tile_is_lost holds a fight by: the shared forecast
+    does not have the enemy wipe us out within AI_RETREAT_FORECAST_TURNS. A
+    fight the planner starts is therefore one the retreat check will not order
+    abandoned next turn. Strongest units first, and no more than the tile can
+    use (_tile_depth). None when even that many would lose.
+    """
+    world_state = world_for(context)
+    prov = world_state.id_to_province[tile]
+    candidates = sorted((route for route in routes if id(route[0]) not in reserved),
+                        key=lambda route: (-queries.calculate_unit_strength(route[0]), len(route[2]),
+                                           str(route[1]["id"])))
+    candidates = candidates[:_strike_depth(context, ai_name, tile)]
+    allies = [unit for unit in prov.get("units", ())
+              if unit.get("health", 0) > 0 and queries.get_unit_combat_owner(unit) in friendly_nations]
+    for size in range(1, len(candidates) + 1):
+        group = candidates[:size]
+        outcome = combat_forecast.estimated_combat_outcome(
+            [allies + [unit for unit, _, _ in group], hostiles], world_state.nation_data,
+            province=prov, max_turns=ai_tuning.AI_RETREAT_FORECAST_TURNS)
+        if outcome["winner_side"] != 1:
+            return tuple(group)
+    return None
+
+
+def _reserve_strike_orders(context, ai_name, units_info, ctx, reserved, ground_ids):
+    """Starts new fights as concerted attacks, before the per-unit pass.
+
+    The per-unit pass sent each unit alone at whichever adjacent enemy tile had
+    the fewest attackers booked, so an army spread itself evenly along the
+    front, and a unit went in whenever it alone survived the first exchange --
+    a weaker bar than the one tile_is_lost then held the fight to, so a stack
+    could charge a tile one turn and be ordered out of it the next.
+
+    Here every new fight (_new_fights) is planned with every unit that could
+    reach it this turn, and started only with a group the retreat check would
+    keep there (_strike_group). The fights that need the fewest units go first,
+    then the land worth most at the peace table, so the army masses on the
+    fights it can win before spreading to the rest. Units left over join a
+    fight already started, up to what its tile can use.
+
+    `ctx["new_fights"]` tells the per-unit pass which tiles it must not start
+    on its own. Patterned on _reserve_land_supply_orders, whose
+    _commit_reserved_orders this shares.
+    """
+    world_state = world_for(context)
+    fights = _new_fights(context, ai_name, ctx) if ctx["at_war"] else {}
+    ctx["new_fights"] = set(fights)
+    if not fights:
+        return
+    supply = ctx.get("supply")
+    friendly_nations = ctx["friendly_nations"]
+    stops = set(ctx["enemy_targets"]) | set(ctx["expedition_targets"])
+    allowed = set(ground_ids) | set(fights)
+    protected = (ctx["peace_borders"] - ctx["war_borders"]) | (supply.critical if supply else set())
+
+    available = defaultdict(int)
+    for unit, origin in units_info:
+        order = unit.get("order") or {}
+        if not order.get("path") and order.get("type") not in ("CONVERT", "DISBAND"):
+            available[origin["id"]] += 1
+
+    routes = defaultdict(list)
+    for unit, origin in units_info:
+        if id(unit) in reserved:
+            continue
+        # Reach first: a few tiles of search, where _may_strike asks the supply
+        # rules about every neighbour. Most of an army is nowhere near a fight.
+        paths = _operational_paths(context, unit, origin, allowed, queries.unit_movement_speed(unit), stops)
+        reachable = sorted(fights.keys() & paths.keys())
+        if not reachable or not _may_strike(context, ai_name, unit, origin, ctx, reserved):
+            continue
+        for tile in reachable:
+            path = paths[tile]
+            if not path or (origin["id"] in protected and available.get(origin["id"], 0) <= 1):
+                continue
+            if supply is not None and not supply.improves_reinforcement(unit, world_state.id_to_province[tile]):
+                continue
+            routes[tile].append((unit, origin, path))
+
+    plans = {tile: _strike_group(context, ai_name, tile, fights[tile], routes[tile], reserved, friendly_nations)
+             for tile in routes}
+    started = {}
+    while True:
+        viable = [(len(group), -deal_mod.tile_value(world_state.id_to_province[tile]), str(tile), tile)
+                  for tile, group in plans.items() if group]
+        if not viable:
+            break
+        tile = min(viable)[-1]
+        group = plans.pop(tile)
+        if not _commit_reserved_orders(context, ai_name, group, reserved, available, protected, supply, ctx):
+            continue
+        started[tile] = len(group)
+        taken = {id(unit) for unit, _, _ in group}
+        for other in list(plans):
+            if any(id(unit) in taken for unit, _, _ in routes[other]):
+                plans[other] = _strike_group(context, ai_name, other, fights[other], routes[other],
+                                             reserved, friendly_nations)
+
+    # Whoever could still reach a fight that is going ahead joins it, strongest
+    # first, until its tile has a full front and relief.
+    for tile, committed in sorted(started.items()):
+        room = _strike_depth(context, ai_name, tile) - committed
+        for route in sorted(routes[tile], key=lambda route: (-queries.calculate_unit_strength(route[0]),
+                                                             str(route[1]["id"]))):
+            if room <= 0:
+                break
+            if id(route[0]) not in reserved and _commit_reserved_orders(
+                    context, ai_name, (route,), reserved, available, protected, supply, ctx):
+                room -= 1
 
 
 def _naval_exchange_favors(context, ship, opponents, tile):
@@ -1829,6 +2031,9 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
     supply = ctx.get("supply")
     reserved = ctx.get("reserved_units", set())
     relief = ctx.get("relief_targets", set())
+    # Enemy tiles where a fight would start. Only _reserve_strike_orders starts
+    # one, with a group it has forecast; no unit here walks into one alone.
+    new_fights = ctx.get("new_fights", set())
     # Where a wounded unit must not be routed: anywhere the fighting is.
     combat_destinations = (set(active_battles) | set(ctx.get("enemy_targets", ()))
                            | set(ctx.get("expedition_targets", ()))
@@ -1981,8 +2186,10 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
         # fight, and this branch is what used to send a routed stack straight
         # back into the tile it had just fled.
         if at_war and not is_naval_combatant and not wounded:
-            # Include expedition targets in the adjacent strike check so they can push off allied territory
-            adjacent_targets = [n for n in prov.get("neighbors", []) if n in target_destinations and (n in ctx["enemy_targets"] or n in ctx["expedition_targets"])]
+            # Include expedition targets in the adjacent strike check so they can push off allied territory.
+            # Empty enemy ground and fights already under way only: a new fight is the strike planner's.
+            adjacent_targets = [n for n in prov.get("neighbors", []) if n in target_destinations and (n in ctx["enemy_targets"] or n in ctx["expedition_targets"])
+                                and n not in new_fights]
 
             # PREVENT ILLEGAL CONVOY ATTACKS
             if is_convoy:
@@ -2005,6 +2212,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
                     context, unit, best_adj, curr_id, is_convoy, unsafe_waters, pressure,
                     lambda owner: (queries.is_hostile_territory(ai_name, owner, world_state.nation_data)
                                    or owner in c.UNOWNED_LAND_OWNERS))
+                path = _short_of_new_fights(path, new_fights)
 
                 if supply and not is_convoy:
                     path = supply.advance(unit, path)
@@ -2084,7 +2292,7 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
 
                 # PREVENT LAND UNITS QUEUEING INTO OCEAN MID-MOVE
                 final_path = []
-                for step_id in path[:speed]:
+                for step_id in _short_of_new_fights(path[:speed], new_fights):
                     step_prov = world_state.id_to_province.get(step_id)
                     if not is_convoy and not is_naval_combatant and step_prov and queries.is_water_province(step_prov):
                         break
@@ -2633,6 +2841,7 @@ def _generate_unit_orders(context, *, countries=None):
             _assign_maintenance_orders(context, ai_name, units_info, ctx,
                                        allowed_prov_ids, water_ids, neighbor_ids)
             _reserve_land_supply_orders(context, ai_name, units_info, supply, ctx, reserved)
+            _reserve_strike_orders(context, ai_name, units_info, ctx, reserved, allowed_prov_ids - water_ids)
 
             # Units can need to retreat or restore supply without an offensive target.
             if not (assignments["target_destinations"] or assignments["naval_destinations"] or battles["lost_battles"]
