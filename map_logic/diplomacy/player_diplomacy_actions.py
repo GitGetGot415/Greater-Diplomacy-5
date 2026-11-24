@@ -177,7 +177,7 @@ def _toggle_commitment(context, rules, undo_action, active_targets):
         return
     pending = context.world.nation_data.get(context.session.player_country, {}).get(
         "pending_diplomacy", {}).get(target, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    pending_action = pending.get("action")
     if pending_action in (rules.ACTION, undo_action):
         _queue_and_report(context, target, pending_action, "")
         return
@@ -211,7 +211,7 @@ def handle_revoke_foreign_military_attache(context):
         return
     host = context.session.player_country
     pending = context.world.nation_data.get(host, {}).get("pending_diplomacy", {}).get(sender, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    pending_action = pending.get("action")
     if pending_action == military_attaches.REVOKE_ACTION:
         _queue_and_report(context, sender, pending_action, "")
         return
@@ -247,7 +247,7 @@ def _answer_incoming_request(context, target, verdict, custom_msg):
 
     # The terms belong to their offer -- carry them so nothing is lost.
     their_pending = context.world.nation_data.get(target, {}).get("pending_diplomacy", {}).get(context.session.player_country, {})
-    params = their_pending.get("parameters") if isinstance(their_pending, dict) else None
+    params = their_pending.get("parameters")
 
     msg = diplomacy_processor.toggle_diplomatic_response(
         context.world.nation_data, context.session.player_country, target,
@@ -479,7 +479,7 @@ def handle_send_home_foreign_volunteers(context):
         return
     host = context.session.player_country
     pending = context.world.nation_data.get(host, {}).get("pending_diplomacy", {}).get(donor, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
+    pending_action = pending.get("action")
     if pending_action == volunteers.SEND_HOME_ACTION:
         _queue_and_report(context, donor, pending_action, "")
         return

@@ -35,10 +35,11 @@ class SparseDiplomacyTests(unittest.TestCase):
         messages.set_pending(data, "C", "A", "JOIN_FACTION_REQ")
         self.assertEqual(dp._pending_clash_pairs(data), [("C", "A"), ("A", "B")])
 
-    def test_delayed_legacy_unknown_and_self_entries_do_not_clash(self):
+    def test_delayed_converted_unknown_and_self_entries_do_not_clash(self):
+        # A text request from an older save converts to a delivered request on load.
         data = {"A": {"pending_diplomacy": {
             "B": {"action": "WAR_DECLARATION", "turns": 1},
-            "C": "FACTION_INVITE", "Missing": {}, "A": {},
+            "C": {"action": "FACTION_INVITE", "turns": 1, "timer": 0}, "Missing": {}, "A": {},
         }}, "B": {}, "C": {}}
         self.assertEqual(dp._pending_clash_pairs(data), [])
 

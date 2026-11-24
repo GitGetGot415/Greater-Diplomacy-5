@@ -337,6 +337,19 @@ class OlderFormatTests(unittest.TestCase):
         diplomacy_lifecycle.normalize_diplomacy_channels(restored)
         self.assertEqual(restored, countries)
 
+    def test_older_text_requests_become_delivered_request_records(self):
+        current = {"action": "FIXTURE_PROPOSAL", "turns": 0, "timer": 0, "custom_field": 7}
+        pending = {"older": "FIXTURE_REQUEST", "current": current}
+        meta, _map, _history = upgraded({"nation_data": {"country": {"pending_diplomacy": pending}}})
+        self.assertEqual(pending["older"], {"action": "FIXTURE_REQUEST", "turns": 1, "timer": 0})
+        self.assertIs(pending["current"], current)
+        self.assertEqual(current, {"action": "FIXTURE_PROPOSAL", "turns": 0, "timer": 0, "custom_field": 7})
+        countries = meta["nation_data"]
+        diplomacy_lifecycle.normalize_diplomacy_channels(countries)
+        restored = round_trip(countries)
+        diplomacy_lifecycle.normalize_diplomacy_channels(restored)
+        self.assertEqual(restored, countries)
+
     def test_scripted_events_gain_condition_and_action_lists(self):
         old = {"condition_type": "Turn Number", "condition_val": "17",
                "action_type": "Fixture Action", "action_target": "country", "custom_field": 9}

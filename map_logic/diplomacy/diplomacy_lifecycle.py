@@ -48,7 +48,7 @@ def remove_request(pending, target, *, request_id=None):
     record = pending.get(target)
     if target not in pending:
         return False
-    if request_id is not None and (not isinstance(record, dict) or record.get("request_id") != request_id):
+    if request_id is not None and record.get("request_id") != request_id:
         return False
     del pending[target]
     return True
@@ -74,7 +74,7 @@ def put_response(nation_data, recipient, sender, verdict, action, **extra):
     """Bind an answer to the current request without creating a travelling reply."""
     request = nation_data.get(sender, {}).get("pending_diplomacy", {}).get(recipient, {})
     record = {"verdict": verdict, "action": action, "message": "",
-              "request_id": request.get("request_id") if isinstance(request, dict) else None}
+              "request_id": request.get("request_id")}
     record.update(extra)
     nation_data.setdefault(recipient, {}).setdefault("diplo_responses", {})[sender] = record
     return record
@@ -93,7 +93,7 @@ def response_matches_request(response, request):
     if reference is None:
         # Only the older-data adapter supplies this marker. Network input strips it.
         return response.get("legacy_unmatched", False)
-    return (isinstance(request, dict) and reference == request.get("request_id")
+    return (request is not None and reference == request.get("request_id")
             and response.get("action") == request.get("action"))
 
 
@@ -111,7 +111,7 @@ def apply_draft(nation_data, sender, pending, responses, draft_lists):
     country = nation_data[sender]
     current = country.setdefault("pending_diplomacy", {})
     in_flight = {target: copy.deepcopy(record) for target, record in current.items()
-                 if isinstance(record, dict) and record.get("turns", 0) > 0}
+                 if record.get("turns", 0) > 0}
     for record in in_flight.values():
         if record.get("action", "").startswith("MSG:"):
             record.pop("forwarded_message", None)
@@ -134,7 +134,7 @@ def apply_draft(nation_data, sender, pending, responses, draft_lists):
         # Keep the host identity of an unchanged unsent draft. Client identities
         # are references and cannot establish a new authoritative identity.
         comparable = lambda entry: {key: value for key, value in entry.items() if key != "request_id"}
-        identity = (old.get("request_id") if isinstance(old, dict)
+        identity = (old.get("request_id") if old is not None
                     and comparable(old) == comparable(record) else None)
         record.pop("request_id", None)
         action = record.pop("action")
@@ -172,14 +172,14 @@ def normalize_response_reference(nation_data, recipient, sender, response):
         request = normalize_diplomatic_request(copy.deepcopy(request), sender, recipient)
     reference = response.get("request_id")
     if reference is not None:
-        if (not isinstance(reference, str) or not isinstance(request, dict)
+        if (not isinstance(reference, str) or request is None
                 or reference != request.get("request_id") or response.get("action") != request.get("action")):
             raise ValueError("That response refers to an expired diplomatic request.")
         return {"request_id": reference}
     existing = nation_data.get(recipient, {}).get("diplo_responses", {}).get(sender)
     if isinstance(existing, dict) and existing.get("legacy_unmatched") and response == existing:
         return {"legacy_unmatched": True}
-    if isinstance(request, dict) and response.get("action") == request.get("action"):
+    if request is not None and response.get("action") == request.get("action"):
         return {"request_id": request["request_id"]}
     # Older files can contain standalone responses with copied treaty terms.
     return {"legacy_unmatched": True}
@@ -187,10 +187,8 @@ def normalize_response_reference(nation_data, recipient, sender, response):
 
 def normalize_diplomatic_request(entry, sender, target):
     """Give older requests reproducible identities without gameplay randomness."""
-    if isinstance(entry, str):
-        entry = {"action": entry, "turns": 1, "timer": 0}
     if not isinstance(entry, dict):
-        raise ValueError("A diplomatic request must be an action or a record.")
+        raise ValueError("A diplomatic request must be a record.")
     identity = entry.get("request_id")
     if identity is None:
         payload = json.dumps([sender, target, entry], sort_keys=True, separators=(",", ":"))

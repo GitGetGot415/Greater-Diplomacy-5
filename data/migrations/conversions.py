@@ -290,6 +290,10 @@ def _country(country, aliases, path, *, player_input=False):
                 }
                 del pending[other]
                 break
+        else:
+            if isinstance(entry, str):
+                # Older requests stored only the action of a delivered request.
+                pending[other] = {"action": entry, "turns": 1, "timer": 0}
 
 
 def _scripted_event(event, aliases, path, *, player_input=False):
