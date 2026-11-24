@@ -50,6 +50,7 @@ BATTLE_PANEL_GAP = 8
 UNIT_ROW_X_OFFSET = 4
 UNIT_ICON_OFFSET_X = 7
 UNIT_ICON_OFFSET_Y = 4
+UNIT_ICON_SIZE = 32
 UNIT_NAME_OFFSET_X = 46
 UNIT_NAME_OFFSET_Y = 1
 UNIT_STATUS_OFFSET_Y = 20
@@ -1352,6 +1353,17 @@ class UnitCommandControls:
             help_text, font, cls.PANEL_WIDTH - (PANEL_INSET * 2),
             max_lines=HEADER_HELP_MAX_LINES, ellipsis=c.ELLIPSIS)
 
+    def _unit_row_icon_rect(self, row_y):
+        return pygame.Rect(self.PANEL_X + UNIT_ICON_OFFSET_X, row_y + UNIT_ICON_OFFSET_Y,
+                           UNIT_ICON_SIZE, UNIT_ICON_SIZE)
+
+    @staticmethod
+    def _unit_row_health(unit):
+        try:
+            return float(unit.get("health", 0)), max(1.0, float(unit.get("max_health", 1)))
+        except (TypeError, ValueError):
+            return 0.0, 1.0
+
     def _draw_unit_row(self, surface, row_key, unit, province, unit_index, row_y, display_index,
                        owner_color, small_font, tiny_font, show_actions):
         """Draws one 40px roster row underneath its transparent hitbox/icons."""
@@ -1381,9 +1393,7 @@ class UnitCommandControls:
         pygame.draw.rect(surface, strip_color,
                          (row_rect.x, row_rect.y, 4, row_rect.height))
 
-        icon_box = pygame.Rect(
-            self.PANEL_X + UNIT_ICON_OFFSET_X, row_y + UNIT_ICON_OFFSET_Y,
-            32, 32)
+        icon_box = self._unit_row_icon_rect(row_y)
         pygame.draw.rect(surface, (20, 22, 26), icon_box)
         pygame.draw.rect(surface, (90, 95, 105), icon_box, 1)
         icon = self.unit_row_icons.get(row_key)
@@ -1410,11 +1420,7 @@ class UnitCommandControls:
             surface.blit(name_surf,
                          (name_x, row_y + UNIT_NAME_OFFSET_Y))
 
-            try:
-                hp = float(unit.get("health", 0))
-                max_hp = max(1.0, float(unit.get("max_health", 1)))
-            except (TypeError, ValueError):
-                hp, max_hp = 0.0, 1.0
+            hp, max_hp = self._unit_row_health(unit)
             hp_ratio = max(0.0, min(1.0, hp / max_hp))
             if is_own:
                 # A foreign unit's order (where it's headed, what it's doing)

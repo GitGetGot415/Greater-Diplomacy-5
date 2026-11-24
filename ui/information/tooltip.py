@@ -192,11 +192,17 @@ def draw_tooltip(map_screen, surface):
     else:
         return
 
-    mx, my = pygame.mouse.get_pos()
-    # Calculate dimensions
     rendered_lines = [map_screen.small_font.render(line, True, (255, 255, 255)) for line in lines]
+    draw_text_tooltip(surface, rendered_lines, pygame.mouse.get_pos())
+
+
+def draw_text_tooltip(surface, rendered_lines, position):
+    """Place an existing set of text surfaces beside the pointer."""
+    if not rendered_lines:
+        return
+    mx, my = position
     width = max(ts.get_width() for ts in rendered_lines) + 20
-    height = sum(ts.get_height() for ts in rendered_lines) + 15
+    height = sum(ts.get_height() + 2 for ts in rendered_lines) + 14
 
     # Position logic (prevent going off screen)
     tx, ty = mx + 15, my - height
@@ -205,14 +211,14 @@ def draw_tooltip(map_screen, surface):
     if ty < 0:
         ty = my + 20
 
-    bg_rect = pygame.Rect(tx, ty, width, height)
+    bg_rect = pygame.Rect(tx, ty, width, height).clamp(surface.get_rect())
 
     # Draw Background
     pygame.draw.rect(surface, (30, 30, 30, 230), bg_rect)
     pygame.draw.rect(surface, (200, 200, 200), bg_rect, 1) # Border
 
     # Draw Text
-    curr_y = ty + 8
+    curr_y = bg_rect.top + 8
     for ts in rendered_lines:
-        surface.blit(ts, (tx + 10, curr_y))
+        surface.blit(ts, (bg_rect.left + 10, curr_y))
         curr_y += ts.get_height() + 2

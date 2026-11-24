@@ -315,6 +315,24 @@ class CombatBubbleClickTests(unittest.TestCase):
 
 
 class OrdersSelectionRowsTests(unittest.TestCase):
+    def test_portrait_hover_uses_the_visible_row_after_scrolling(self):
+        screen = bare_orders_screen()
+        first, second = object(), object()
+        screen._roster_rows = [(0, None, None, 0), ((2, 0), None, None, 0)]
+        screen._row_portrait_tooltips = {0: (first,), (2, 0): (second,)}
+        screen.panel_top = 100
+        screen.row_height = 40
+        screen.scroll_y = -20
+        screen.scroll_content_rect = pygame.Rect(screen.PANEL_X, screen.panel_top, screen.PANEL_WIDTH, 80)
+        top = screen.panel_top + screen.scroll_y
+        first_portrait = screen._unit_row_icon_rect(top)
+        second_portrait = screen._unit_row_icon_rect(top + screen.row_height)
+
+        self.assertEqual(screen._hovered_portrait_tooltip((first_portrait.centerx, screen.panel_top)), (first,))
+        self.assertEqual(screen._hovered_portrait_tooltip(second_portrait.center), (second,))
+        self.assertFalse(screen._hovered_portrait_tooltip((first_portrait.centerx, screen.panel_top - 1)))
+        self.assertFalse(screen._hovered_portrait_tooltip((second_portrait.right + 10, second_portrait.centery)))
+
     def test_right_clicking_an_orders_row_toggles_only_that_unit(self):
         selected_unit = {"owner": "A", "type": "Infantry"}
         other_selected_unit = {"owner": "A", "type": "Infantry"}

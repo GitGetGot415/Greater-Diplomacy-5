@@ -11,7 +11,7 @@ from data import queries
 from map_logic import custom_battle, politics
 from map_logic.system32 import combat_rules, turn_processor
 from map_logic.system32.time_handler import TimeHandler
-from tests.stub_map_screen import map_double
+from tests.stub_map_screen import bare_orders_screen, map_double
 from ui.panels import sidebar_info
 
 
@@ -463,3 +463,30 @@ class SupplyTests(SupplyFixture):
         self.assertNotIn("fuel", rows[id(foreign)])
         self.assertEqual(queries.presentation_move_speed(world, unit), 2)
         self.assertEqual(queries.presentation_move_speed(world, foreign), 5)
+
+    def test_orders_portrait_details_use_visible_supply_and_keep_foreign_orders_private(self):
+        self.library["Supply Test Division"].update(cost_materials=900)
+        tile = province(1, "A", output=(100, 0, 50))
+        unit = division(tile, speed=5, custom_name="Long division name")
+        foreign = division(tile, "C", speed=5, order={"type": "MOVE", "path": [99]})
+        world = game(tile)
+        world.scenario_settings["fog_of_war"] = True
+        world.visible_provinces = {tile["id"]}
+        queries.prepare_presentation_supply(world)
+        screen = bare_orders_screen()
+        screen.map_screen = world
+        screen._row_order_summaries = {0: ("Move: 1 step to P2", None)}
+
+        lines = screen._unit_portrait_tooltip_lines(0, unit, tile)
+        self.assertIn(unit["custom_name"], lines)
+        self.assertIn(queries.get_unit_display_name(unit["type"], self.library), lines)
+        self.assertIn("HP 100 / 100", lines)
+        self.assertIn("Supply 10% | Manpower 100% | Materials 0%", lines)
+        self.assertIn("Fuel: 50% | Speed -3", lines)
+        self.assertIn("Move: 1 step to P2", lines)
+
+        foreign_lines = screen._unit_portrait_tooltip_lines(1, foreign, tile)
+        self.assertTrue(foreign_lines)
+        self.assertFalse(any("| Manpower " in line or line.startswith(("Fuel:", "Move:")) for line in foreign_lines))
+        world.visible_provinces.clear()
+        self.assertFalse(screen._unit_portrait_tooltip_lines(1, foreign, tile))

@@ -32,9 +32,10 @@ SUPPLY_HIGHLIGHT_RIGHT_INSET = 10
 info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
 
 
-def unit_roster_row(profile, province, nation_data, is_combat):
+def unit_roster_row(profile, province, nation_data, is_combat, *, library=None):
     """Presentation numbers derived from the shared damage/defense rules."""
-    stats = queries.get_unit_library(nation_data).get(profile.get("type", ""), {})
+    library = queries.get_unit_library(nation_data) if library is None else library
+    stats = library.get(profile.get("type", ""), {})
     damage = combat_rules.effective_damage_multiplier(profile, nation_data, province=province if is_combat else None)
     defense = combat_rules.defense_multiplier(profile, nation_data) if is_combat else 1
     return {
@@ -50,9 +51,15 @@ def unit_roster_row(profile, province, nation_data, is_combat):
     }
 
 
-def _supply_percentage(fraction):
+def format_supply_percentage(fraction):
     percent = f"{fraction:.0%}"
     return "<100%" if fraction < 1 and percent == "100%" else percent
+
+
+def unit_fuel_readout(unit, fuel, speed, library, nation_data):
+    if queries.get_live_unit_upkeep(unit, library, nation_data)["fuel"] > 0:
+        return format_supply_percentage(fuel), speed - unit.get("speed", c.DEFAULT_UNIT_SPD)
+    return None
 
 
 def prepare_unit_roster(map_screen, province):
@@ -68,18 +75,17 @@ def prepare_unit_roster(map_screen, province):
     with queries.combat_supply(supply):
         for unit in units:
             profile = battle.profiles.get(id(unit), unit)
-            row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat)
+            row = rows[id(unit)] = unit_roster_row(profile, province, map_screen.nation_data, is_combat, library=library)
             status = queries.unit_supply_status(supply, unit)
             if status is None:
                 continue
             manpower, materials, fuel = status.fractions
             if manpower < 1 or materials < 1:
-                entries = ((RESOURCE_ICONS["manpower"], _supply_percentage(manpower)),
-                           (RESOURCE_ICONS["materials"], _supply_percentage(materials)))
-                row["supply"] = f"Supply {_supply_percentage(status.readiness)}   ", entries
-            if fuel < 1 and queries.get_live_unit_upkeep(unit, library, map_screen.nation_data)["fuel"] > 0:
-                base_speed = profile.get("speed", c.DEFAULT_UNIT_SPD)
-                row["fuel"] = _supply_percentage(fuel), row["speed"] - base_speed
+                entries = ((RESOURCE_ICONS["manpower"], format_supply_percentage(manpower)),
+                           (RESOURCE_ICONS["materials"], format_supply_percentage(materials)))
+                row["supply"] = f"Supply {format_supply_percentage(status.readiness)}   ", entries
+            if fuel < 1 and (fuel_readout := unit_fuel_readout(unit, fuel, row["speed"], library, map_screen.nation_data)):
+                row["fuel"] = fuel_readout
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:

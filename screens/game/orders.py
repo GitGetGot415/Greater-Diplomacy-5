@@ -5,7 +5,8 @@ from ui.widgets.ui_elements import Button
 from ui.rendering.font_manager import fonts
 from data import queries
 from map_logic.actions import unit_actions
-from ui.widgets.text_utils import fit_text
+from ui.widgets.text_utils import fit_text, wrap_text
+from ui.information import tooltip
 from ui.bars import ui_bars, resource_hud, view_mode_buttons
 from ui.panels import army_panel
 from ui.panels.unit_commands import (
@@ -39,6 +40,7 @@ TOP_BTN_ROW_OFFSET_Y = 57
 HEADER_HELP_OFFSET_Y = 151
 HEADER_HELP_LINE_GAP = 2
 LIST_TOP_OFFSET_Y = 185
+UNIT_TOOLTIP_TEXT_WIDTH = 380
 
 TOP_BTN_GAP_X = 6
 BATCH_LABEL_INSET = 4
@@ -80,6 +82,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         # context so a player can see the army without accidentally ordering
         # every member.
         self._roster_rows = []
+        self._row_portrait_tooltips = {}
         self._selected_display_records = []
         self._selected_display_ids = frozenset()
         self._panel_title_text = "ORDERS | MAP COMMAND"
@@ -652,6 +655,7 @@ class Orders_Screen(UnitCommandControls, Screen):
             key: self._order_summary(key, unit)
             for key, unit, _province, _index in rows
             if unit.get("owner") == player_country}
+        self._row_portrait_tooltips = {}
         self._presentation_state = self._current_presentation_state()
 
         # Battle is deliberately a child of Orders.  Keep this available for
@@ -766,6 +770,7 @@ class Orders_Screen(UnitCommandControls, Screen):
                 mission_button.help_text = "Choose a mission for selected aircraft. No mission cancels their orders."
                 self.elements.append(mission_button)
 
+        tiny_font = fonts.get("tiny")
         for display_index, (row_key, unit, province, index) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll_y
             row_rect = pygame.Rect(
@@ -777,6 +782,11 @@ class Orders_Screen(UnitCommandControls, Screen):
                 continue
 
             self._cache_row_icon(row_key, unit)
+            if self.unit_row_icons.get(row_key) is not None:
+                lines = self._unit_portrait_tooltip_lines(row_key, unit, province)
+                self._row_portrait_tooltips[row_key] = tuple(
+                    tiny_font.render(line, True, c.UI_TEXT_BRIGHT)
+                    for text in lines for line in wrap_text(text, tiny_font, UNIT_TOOLTIP_TEXT_WIDTH))
 
             # Not this player's unit, or (Tactical Mode) one of their own
             # units that isn't the one they're piloting -- still listed with
@@ -847,6 +857,63 @@ class Orders_Screen(UnitCommandControls, Screen):
         if cleared_any or cancelled_targeting:
             self.refresh_ui()
         return played_sound
+
+    def _unit_portrait_tooltip_lines(self, row_key, unit, province):
+        owner = unit.get("owner", "Unknown")
+        map_screen = self.map_screen
+        nations = map_screen.nation_data
+        is_own = owner == map_screen.player_country
+        if not is_own and (not queries.is_province_visible(map_screen, province["id"])
+                           or not queries.is_unit_visible_to(unit, map_screen.player_country, province, nations)):
+            return ()
+
+        library = queries.get_unit_library(map_screen)
+        unit_type = queries.get_unit_display_name(unit.get("type", "Unit"), library, context=map_screen)
+        name = unit.get("custom_name") or unit_type
+        lines = [name]
+        if name != unit_type:
+            lines.append(unit_type)
+        lines.append(f"{queries.get_country_display_name(owner, nations)} | P{province['id']}")
+        if unit.get("volunteer_host"):
+            lines.append(f"Volunteer: {queries.get_country_display_name(unit['volunteer_host'], nations)}")
+
+        supply = queries.presentation_supply(map_screen)
+        with queries.combat_supply(supply):
+            active = queries.is_province_in_active_combat(province, nations)
+            stats = sidebar_info.unit_roster_row(unit, province, nations, active, library=library)
+        hp, max_hp = self._unit_row_health(unit)
+        lines.append(f"HP {hp:,.0f} / {max_hp:,.0f}")
+        number = queries.format_number
+        defense = number(stats["defense"])
+        if stats["fort"]:
+            defense += f" + {number(stats['fort'])}"
+        lines.append(f"Attack {number(stats['attack'])} | Defense {defense} | Speed {number(stats['speed'])}")
+        if stats["bombard"] is not None:
+            damage, attack_range = stats["bombard"]
+            lines.append(f"Bombardment {number(damage)} | Range {number(attack_range)}")
+
+        status = queries.unit_supply_status(supply, unit)
+        if status is not None:
+            percent = sidebar_info.format_supply_percentage
+            manpower, materials, fuel = status.fractions
+            lines.append(f"Supply {percent(status.readiness)} | Manpower {percent(manpower)} | Materials {percent(materials)}")
+            fuel_readout = sidebar_info.unit_fuel_readout(unit, fuel, stats["speed"], library, nations)
+            if fuel_readout:
+                fuel_percent, speed_change = fuel_readout
+                speed_note = f" | Speed {speed_change:+g}" if speed_change else ""
+                lines.append(f"Fuel: {fuel_percent}{speed_note}")
+        if is_own and (order_summary := self._row_order_summaries.get(row_key)):
+            lines.append(order_summary[0])
+        return lines
+
+    def _hovered_portrait_tooltip(self, position):
+        if not self.scroll_content_rect or not self.scroll_content_rect.collidepoint(position):
+            return ()
+        list_top = self.panel_top + self.scroll_y
+        index = (position[1] - list_top) // self.row_height
+        if 0 <= index < len(self._roster_rows) and self._unit_row_icon_rect(list_top + index * self.row_height).collidepoint(position):
+            return self._row_portrait_tooltips.get(self._roster_rows[index][0], ())
+        return ()
 
     def _draw_panel_header(self, surface, rows, player_units, read_only):
         title_font = fonts.get("heading2")
@@ -980,11 +1047,15 @@ class Orders_Screen(UnitCommandControls, Screen):
             self.battle_screen.draw_embedded(surface)
 
     def draw(self, surface):
-        """Draw army editing modals after Orders' button elements.
+        """Draw the portrait tooltip and army editing modals above the buttons.
 
         Screen draws elements after ``additional_draw``.  The army tray is
         map content, but its editor is modal UI and must sit over the command
         buttons rather than behind them.
         """
         super().draw(surface)
+        if self.map_screen and not (self.map_screen.army_editor_state or self.map_screen.army_custom_symbol_state
+                                    or self.map_screen.unit_selection_drag):
+            position = pygame.mouse.get_pos()
+            tooltip.draw_text_tooltip(surface, self._hovered_portrait_tooltip(position), position)
         army_panel.draw_editors_over_map(self.map_screen, surface)
