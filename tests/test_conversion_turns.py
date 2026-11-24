@@ -61,10 +61,10 @@ class ConversionTurnsTests(unittest.TestCase):
                     screen.convert_unit(0, self.base)
                     self.assertEqual(self.ship["order"], {"type": "CONVERT", "to": target, "turns_left": turns})
                     for remaining in range(turns - 1, 0, -1):
-                        movement_processor.process_conversions(self.game)
+                        movement_processor.process_unit_maintenance_orders(self.game, order_types={"CONVERT"})
                         self.assertEqual(self.ship["type"], source)
                         self.assertEqual(self.ship["order"]["turns_left"], remaining)
-                    movement_processor.process_conversions(self.game)
+                    movement_processor.process_unit_maintenance_orders(self.game, order_types={"CONVERT"})
                     self.assertEqual(self.ship["type"], result)
                     self.assertEqual(self.ship["order"], {"type": "MOVE", "path": []})
 

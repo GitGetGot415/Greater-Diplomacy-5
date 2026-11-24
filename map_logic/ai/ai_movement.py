@@ -2815,7 +2815,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         is_quiet = curr_id not in war_borders and curr_id not in active_battles
         is_near_battle = any(n in active_battles for n in prov.get("neighbors", ()))
         # A unit that wanted repairing and could not afford it must not be sent
-        # to upgrade instead: process_upgrades carries health across as a
+        # to upgrade instead: a completed UPGRADE order carries health across as a
         # *percentage*, so it would spend the turn and still be wounded, only
         # now wounded as a more expensive type.
         #

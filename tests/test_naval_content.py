@@ -12,7 +12,7 @@ from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from data.state_access import BackendState
 from map_logic.actions import production_actions, unit_actions
 from map_logic.ai import ai_research, ai_tech_eval, ai_unit_eval
-from map_logic.system32.movement_processor import process_upgrades
+from map_logic.system32.movement_processor import process_unit_maintenance_orders
 from map_logic.system32.research_processor import process_national_research
 from tests.research_fixtures import research_lock_cases
 from tests.stub_map_screen import sample_map_screen
@@ -91,7 +91,7 @@ class NavalContentTests(unittest.TestCase):
                     self.province["units"] = [unit]
                     unit_actions.apply_action(self.context, "A", self.province, unit,
                                               {"type": "UPGRADE", "target_type": name})
-                    process_upgrades(self.context)
+                    process_unit_maintenance_orders(self.context, order_types={"UPGRADE"})
                     self.assertEqual(unit["type"], name)
                     self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.6)
                     self.assertEqual(unit["max_health"], self.library[name]["health"])

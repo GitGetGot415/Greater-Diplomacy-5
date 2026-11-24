@@ -782,7 +782,7 @@ class TransportTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             queries.canonical_unit_order(self.game, "A", self.base, self.plane, {"type": "DISBAND"})
         self.plane["order"] = {"type": "DISBAND", "turns_left": 1}
-        movement_processor.process_disbands(self.game)
+        movement_processor.process_unit_maintenance_orders(self.game, order_types={"DISBAND"})
         self.assertIn(self.plane, self.base["units"])
         self.assertEqual(self.plane["air_cargo"], [self.cargo])
 
