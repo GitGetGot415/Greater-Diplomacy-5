@@ -260,8 +260,9 @@ def _assign_air_orders(context, country, units_info):
     if not units_info:
         return
     world = ai_world.for_screen(context)
-    visible = ai_world.visible_to(world_state.map_data, world_state.nation_data,
-                                  world_state.id_to_province, country)
+    # The turn's cached fog view. None when fog is off, where every use below
+    # already skips its fog filter.
+    visible = world.visible_provinces(country)
     enemies = [province for province in world_state.map_data.values()
                if (not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, context.scenario_settings) or visible is None or province["id"] in visible)
                and queries.air_target_is_hostile({"owner": country}, province,
