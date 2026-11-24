@@ -153,8 +153,13 @@ def cancel_production(context, country_id, province, queue, index, *, authority=
 
 
 def validate_queue_budget(country, commands):
-    """Check cumulative production and repair costs without changing stockpiles."""
+    """Check cumulative production and repair costs without changing stockpiles.
+
+    Like queries.can_afford for one order, a resource fails only when the draft charges it.
+    A stockpile already below zero does not block orders that cost none of it.
+    """
     available = {key: float(country.get(key.removeprefix("cost_"), 0)) for key in COST_KEYS}
+    charged = dict.fromkeys(COST_KEYS, 0.0)
     for command in commands:
         if command.get("type") == "province_queue":
             for item in command.get("cancelled", []):
@@ -164,6 +169,7 @@ def validate_queue_budget(country, commands):
             for cost in command.get("new_costs", []):
                 for key in available:
                     available[key] -= float(cost.get(key, 0))
+                    charged[key] += float(cost.get(key, 0))
         elif command.get("type") == "unit_order":
             for key in available:
                 available[key] += float(command.get("unit_refund", {}).get(key, 0))
@@ -171,7 +177,8 @@ def validate_queue_budget(country, commands):
             if isinstance(order, dict) and order.get("type") == "REPAIR":
                 for key in available:
                     available[key] -= float(order["realtime_cost"].get(key, 0))
-    if any(value < 0 for value in available.values()):
+                    charged[key] += float(order["realtime_cost"].get(key, 0))
+    if any(available[key] < 0 and charged[key] > 0 for key in COST_KEYS):
         raise ValueError("These production and repair orders exceed available resources.")
     return available
 

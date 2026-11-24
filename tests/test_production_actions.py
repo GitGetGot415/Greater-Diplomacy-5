@@ -86,6 +86,15 @@ class ProductionActionTests(unittest.TestCase):
         self.assertEqual(command["new_costs"], [])
         self.assertEqual(command["cancelled"], [])
 
+    def test_a_negative_stockpile_blocks_only_drafts_that_charge_it(self):
+        country = {"materials": -50, "manpower": 10, "fuel": 10}
+        actions.validate_queue_budget(country, [{"type": "unit_order", "order": {"type": "MOVE", "path": []}}])
+        actions.validate_queue_budget(country, [{"type": "province_queue", "cancelled": [],
+                                                 "new_costs": [{"cost_manpower": 5}]}])
+        with self.assertRaises(ValueError):
+            actions.validate_queue_budget(country, [{"type": "province_queue", "cancelled": [],
+                                                     "new_costs": [{"cost_materials": 1}]}])
+
     def test_building_orders_charge_their_manpower(self):
         fixture = {"Fixture Building": {"group": "fixture", "time": 3,
                                         "cost_materials": 4, "cost_manpower": 5, "cost_fuel": 1}}
