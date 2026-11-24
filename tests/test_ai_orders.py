@@ -591,15 +591,29 @@ class StrikePlannerTests(unittest.TestCase):
     def test_a_fight_lost_just_past_the_retreat_horizon_is_not_started(self):
         """The attack's first exchange happens this turn, so next turn's retreat
         check sees one exchange further than a plan that stopped at its horizon."""
-        enemy_attack = 100
-        health = enemy_attack * (ai_tuning.AI_RETREAT_FORECAST_TURNS + 0.5)
-        attacker = fixture_unit(attack=1, health=health)
-        defender = fixture_unit("Bruland", attack=enemy_attack, health=100000)
+        defender = fixture_unit("Bruland", attack=100, health=100000)
         screen = GridScreen({1: ("Avaria", [2]), 2: ("Bruland", [1])})
-        within_horizon = combat_forecast.estimated_combat_outcome(
-            [[dict(attacker)], [dict(defender)]], screen.world.nation_data,
-            province=screen.world.id_to_province[2], max_turns=ai_tuning.AI_RETREAT_FORECAST_TURNS)
-        self.assertNotEqual(within_horizon["winner_side"], 1, "premise: it survives the horizon itself")
+
+        def lost_within(health, turns):
+            outcome = combat_forecast.estimated_combat_outcome(
+                [[fixture_unit(attack=1, health=health)], [dict(defender)]], screen.world.nation_data,
+                province=screen.world.id_to_province[2], max_turns=turns)
+            return outcome["winner_side"] == 1
+
+        # The least health that outlasts the retreat horizon, found by asking
+        # the forecast rather than assuming how much damage an exchange does.
+        # More health never loses sooner, so a bisection finds it.
+        low, high = 1, 100000
+        while low < high:
+            middle = (low + high) // 2
+            if lost_within(middle, ai_tuning.AI_RETREAT_FORECAST_TURNS):
+                low = middle + 1
+            else:
+                high = middle
+        health = low
+        self.assertTrue(lost_within(health, ai_movement.strike_forecast_turns()),
+                        "premise: it falls on the exchange after the horizon")
+        attacker = fixture_unit(attack=1, health=health)
         paths = self.run_turn({1: ("Avaria", [2]), 2: ("Bruland", [1])}, {1: [attacker]}, {2: [defender]})
         self.assertEqual(paths, [[]])
 

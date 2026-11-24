@@ -13,6 +13,7 @@ Every building here is a fixture; nothing reads the real library.
 import unittest
 from unittest.mock import patch
 
+from data import queries
 from map_logic.ai import ai_construction, ai_tuning
 from tests.stub_map_screen import map_double
 
@@ -87,7 +88,9 @@ class ConstructionTests(unittest.TestCase):
         drain = 10
         income = {**PLENTY, "materials": drain}
         upkeep = {**NOTHING, "materials": 2 * drain}
-        cost = LIBRARY["Fixture Works"]["cost_materials"]
+        # The price the AI pays, after the politics multiplier, not the library figure.
+        cost = queries.get_building_cost("Fixture Works", "Avaria", {}, LIBRARY,
+                                         {"Avaria": {"research": {}}})["cost_materials"]
         enough = cost + drain * ai_tuning.AI_CONSTRUCTION_RESERVE_TURNS
         state = economy(income, upkeep)
         self.assertEqual(self.build([province(1, factory=False)],
