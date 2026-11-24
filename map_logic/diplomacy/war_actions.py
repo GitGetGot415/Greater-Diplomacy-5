@@ -8,6 +8,7 @@ each other where the concerns interact.
 # Faction, subject, and deal mutations call war actions. Keep their imports local to avoid cycles.
 
 from data import queries
+from data.world_nations import WorldNations
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy.diplomacy_messages import clear_pending
 import data.constants as c
@@ -41,9 +42,8 @@ def add_enemy(nation_data, country, other):
     if other in enemies:
         return False
     enemies.append(other)
-    world = queries.world_for(nation_data)
-    if not isinstance(world, dict):
-        world.diplomacy_revision += 1
+    if isinstance(nation_data, WorldNations):
+        nation_data.world.diplomacy_revision += 1
     return True
 
 
@@ -57,9 +57,8 @@ def remove_enemy(nation_data, country, other):
     if not enemies or other not in enemies:
         return False
     enemies.remove(other)
-    world = queries.world_for(nation_data)
-    if not isinstance(world, dict):
-        world.diplomacy_revision += 1
+    if isinstance(nation_data, WorldNations):
+        nation_data.world.diplomacy_revision += 1
     return True
 
 

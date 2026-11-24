@@ -5,6 +5,7 @@ import hashlib
 import uuid
 
 from data.state_access import world_for
+from data.world_nations import WorldNations
 
 
 def canonical_records(nation_data, records=None):
@@ -45,11 +46,11 @@ def canonical_records(nation_data, records=None):
 
 
 def records_for(context):
-    world = world_for(context)
     # Plain country dictionaries remain supported by public diplomacy helpers.
-    if isinstance(world, dict):
+    if isinstance(context, dict) and not isinstance(context, WorldNations):
         return None
-    if not getattr(world, "factions_initialized", False):
+    world = world_for(context)
+    if not world.factions_initialized:
         if not world.factions:
             world.factions.update(canonical_records(dict(world.nation_data)))
         project(world)
@@ -118,7 +119,7 @@ def project(context):
     world = world_for(context)
     records = world.factions
     world.factions_initialized = True
-    world.diplomacy_revision = getattr(world, "diplomacy_revision", 0) + 1
+    world.diplomacy_revision += 1
     for country in world.nation_data.values():
         if isinstance(country, dict) and ("faction" in country or "is_faction_leader" in country):
             country["faction"] = ""

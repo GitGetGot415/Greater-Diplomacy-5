@@ -46,9 +46,7 @@ def _apply_vision_radius(prov, id_to_province, visible_set, partial_set):
 def get_viewing_country(context):
     """Keep visibility identity separate from the participant who can issue orders."""
     session = session_for(context)
-    # Older map contexts have only the controlling identity.
-    viewer = getattr(session, "viewing_country", None)
-    return viewer if viewer is not None else session.player_country
+    return session.viewing_country if session.viewing_country is not None else session.player_country
 
 
 def get_visible_provinces(context):

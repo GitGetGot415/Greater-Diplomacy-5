@@ -389,10 +389,10 @@ class PerceptionTests(unittest.TestCase):
 
         open_world = self.world(fog=False)
         fogged = self.world(visible={1, 2, 3, 4})
-        public = war_score.between(ai_opinion._host(fogged), "Avaria", "Borland", fogged)
-        exact = war_score.between(ai_opinion._host(open_world), "Avaria", "Borland", open_world)
+        public = war_score.between(fogged, "Avaria", "Borland", fogged)
+        exact = war_score.between(open_world, "Avaria", "Borland", open_world)
         self.assertEqual(public["mine"], exact["mine"])
-        own = war_score.between(ai_opinion._host(fogged), "Avaria", "Borland", fogged,
+        own = war_score.between(fogged, "Avaria", "Borland", fogged,
                                 viewer="Avaria")
         self.assertNotAlmostEqual(own["mine"], public["mine"])
         self.assertEqual(own["their_parts"]["occupation"], public["their_parts"]["occupation"])

@@ -143,7 +143,7 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     person = traits(world, nation, scenario_settings)
     border_ratio, global_ratio = world.perceived_power_ratio(nation, enemy)
     outgunned = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, ai_tuning.AI_ODDS_STEEPNESS)
-    occupied = war_score.between(_host(world), nation, enemy, world)["their_parts"]["occupation"]
+    occupied = war_score.between(world, nation, enemy, world)["their_parts"]["occupation"]
     losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(ai_tuning.AI_W_PEACE_OCCUPIED * occupied))
 
     return clamp01(ai_tuning.AI_PEACE_LOSING_SHARE * losing
@@ -275,7 +275,7 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
 
     # This nation's own reading of the war, not the exact figures: see
     # war_score.leverage on `viewer`.
-    scores = war_score.between(_host(world), nation, proposer, world, viewer=nation)
+    scores = war_score.between(world, nation, proposer, world, viewer=nation)
     occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
     appetite = peace_appetite(world, nation, proposer, scenario_settings)
     willingness = (ai_tuning.AI_PEACE_LEVERAGE_SHARE * scores["theirs"]
@@ -287,7 +287,7 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
 
     slack = (willingness + sweetener) - (demand + war_prize + margin)
     # The sentence quotes the exact share, which the leverage bar also draws.
-    exact_share = war_score.between(_host(world), nation, proposer, world)["mine"]
+    exact_share = war_score.between(world, nation, proposer, world)["mine"]
     return _verdict(slack >= 0, slack,
                     _peace_reason(slack, demand, war_prize, exact_share, occupied))
 
@@ -393,18 +393,6 @@ def verdict_band(slack):
             return dots, total, text
     _threshold, dots, text = ai_tuning.AI_VERDICT_BANDS[-1]
     return dots, total, text
-
-
-class _host:
-    """The two attributes war_score reads, borrowed off an AIWorld.
-
-    AIWorld carries map_data and nation_data already; this only spells out that
-    those two are all war_score wants, so it works equally off the map screen.
-    """
-
-    def __init__(self, world):
-        self.map_data = getattr(world, "map_data", {}) or {}
-        self.nation_data = world.nation_data
 
 
 def ratifies(world, member, deal, map_data, scenario_settings=None):

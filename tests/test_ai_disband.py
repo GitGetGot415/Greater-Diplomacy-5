@@ -216,12 +216,14 @@ class PeacetimeMilitiaTests(unittest.TestCase):
 
     def test_militia_stand_down_at_peace(self):
         m = self.militia()
-        ai_construction._disband_peacetime_militia("Avaria", [province(1, [m])], at_war=False)
+        provs = [province(1, [m])]
+        ai_construction._disband_peacetime_militia("Avaria", provs, at_war=False, context=Screen(provs))
         self.assertEqual(m["order"]["type"], "DISBAND")
 
     def test_militia_are_kept_during_a_war(self):
         m = self.militia()
-        ai_construction._disband_peacetime_militia("Avaria", [province(1, [m])], at_war=True)
+        provs = [province(1, [m])]
+        ai_construction._disband_peacetime_militia("Avaria", provs, at_war=True, context=Screen(provs))
         self.assertEqual(m["order"]["type"], "MOVE")
 
     def test_militia_on_order_are_not_scrapped_the_turn_they_are_bought(self):
@@ -230,13 +232,14 @@ class PeacetimeMilitiaTests(unittest.TestCase):
         twin in one turn is the whole bug, whatever the unit is called."""
         m = self.militia()
         prov = province(1, [m], queue=["Militia I"])
-        ai_construction._disband_peacetime_militia("Avaria", [prov], at_war=False)
+        ai_construction._disband_peacetime_militia("Avaria", [prov], at_war=False, context=Screen([prov]))
         self.assertEqual(m["order"]["type"], "MOVE")
 
     def test_someone_elses_militia_are_not_ours_to_disband(self):
         theirs = self.militia()
         theirs["owner"] = "Borland"
-        ai_construction._disband_peacetime_militia("Avaria", [province(1, [theirs])], at_war=False)
+        provs = [province(1, [theirs])]
+        ai_construction._disband_peacetime_militia("Avaria", provs, at_war=False, context=Screen(provs))
         self.assertEqual(theirs["order"]["type"], "MOVE")
 
 
@@ -286,8 +289,9 @@ class TacticalPlayerTests(unittest.TestCase):
     def test_a_player_playing_as_militia_is_not_stood_down_at_peace(self):
         me, spare = self.militia(), self.militia()
 
+        provs = [province(1, [me, spare])]
         ai_construction._disband_peacetime_militia(
-            "Avaria", [province(1, [me, spare])], at_war=False, protected=me)
+            "Avaria", provs, at_war=False, protected=me, context=Screen(provs))
 
         self.assertEqual(me["order"]["type"], "MOVE")
         self.assertEqual(spare["order"]["type"], "DISBAND")

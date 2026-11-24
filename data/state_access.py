@@ -7,21 +7,18 @@ from dataclasses import fields
 
 
 def world_for(context):
-    # Legacy adapters and lightweight tests may still supply a flat context.
-    return getattr(context, "world", context)
+    """The WorldState of a game context, a WorldState itself, or the world that owns country records."""
+    return context if isinstance(context, WorldState) else context.world
 
 
 def session_for(context):
-    # This compatibility boundary does not infer permissions or game modes.
-    return getattr(context, "session", context)
+    """The SessionState of a game context."""
+    return context.session
 
 
 def replace_mapping(owner, name, value):
-    # Older flat contexts can receive their first dictionary during loading.
-    current = getattr(owner, name, None)
-    if current is None:
-        setattr(owner, name, value)
-        return
+    """Update a retained dictionary in place so existing references keep seeing the owner's data."""
+    current = getattr(owner, name)
     if value is not current:
         current.clear()
         current.update(value)

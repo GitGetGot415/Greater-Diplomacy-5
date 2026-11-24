@@ -86,7 +86,7 @@ def tactical_player_unit(context):
     return session_state.player_unit
 
 
-def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, context=None):
+def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, context):
     """Militia are for wars. At peace, stand them down.
 
     Runs after the purchase loop rather than before it, and skips any type on

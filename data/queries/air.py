@@ -292,7 +292,7 @@ def air_order_radius(unit, kind, *, context=None):
     stats = air_unit_stats(unit, context=context)
     # Type-level callers pass a library context or none, and read the type's
     # listed range; a game context carries the countries.
-    nation_data = getattr(world_for(context), "nation_data", None)
+    nation_data = queries.context_nation_data(context)
     radius = stats.get("air_range_px", 0)
     if nation_data is not None and unit.get("owner"):
         radius *= politics.axis_policy_multiplier(nation_data, unit["owner"], "aircraft_range")

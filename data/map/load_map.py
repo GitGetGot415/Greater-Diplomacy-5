@@ -738,9 +738,6 @@ def apply_authoritative_snapshot(context, snapshot):
         if saved_state:
             message.update(saved_state)
     replace_mapping(world_for(context), "nation_data", nation_data)
-    # Older snapshot fixtures use flat contexts without a declared faction mapping.
-    if not hasattr(world_state, "factions"):
-        world_state.factions = {}
     faction_records.restore(context, snapshot.get("factions"))
     context.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
     by_json_key = {province.get("json_key"): province for province in world_state.map_data.values()}

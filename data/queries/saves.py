@@ -266,8 +266,7 @@ def compact_save_nation_data(save_dict, map_data):
 def saved_tactical_player_unit_id(context):
     """Identify the live tactical division without saving a second copy of the unit."""
     session = session_for(context)
-    # History-only test doubles can omit player session state.
-    if not getattr(session, "tactical_mode", False):
+    if not session.tactical_mode:
         return None
     if (session.is_editor or session.selection_mode or session.multiplayer_mode
             or session.realtime_multiplayer or session.player_unit is None):

@@ -7,6 +7,7 @@ import json
 import os
 import pygame
 from data.state_access import world_for
+from data.world_nations import WorldNations
 from data.migrations import convert_historical_leader_images, convert_scenario_settings, normalize_cached_json_names
 from data.runtime_rules import rebuild, ActiveLibrary, for_world
 from data.io import settings_schema, starting_defaults
@@ -99,8 +100,14 @@ def get_truce_turns(scenario_settings=None):
 
 def world_truce_turns(nation_data):
     # Plain country dictionaries retain the supported no-world behavior.
-    world = world_for(nation_data)
-    return get_truce_turns(None if isinstance(world, dict) else world.scenario_settings)
+    return get_truce_turns(nation_data.world.scenario_settings if isinstance(nation_data, WorldNations) else None)
+
+
+def context_nation_data(context):
+    """The country records of a game context, or None for type-level callers that pass a library or nothing."""
+    if context is None or (isinstance(context, dict) and not isinstance(context, WorldNations)):
+        return None
+    return world_for(context).nation_data
 
 
 def apply_global_scenario_flags(scenario_settings):
@@ -391,7 +398,7 @@ def _game_library(name, context):
     # No-context callers edit or inspect default content, never an active world.
     if isinstance(context, ActiveLibrary):
         return context.runtime_rules.libraries[name]
-    if context is None or isinstance(context, dict) and world_for(context) is context:
+    if context is None or isinstance(context, dict) and not isinstance(context, WorldNations):
         return _load_cached_json(name)
     return for_world(context).libraries[name]
 

@@ -97,7 +97,7 @@ def _factions_disabled(context):
     import data.constants as c
     from data.state_access import world_for
     return queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS,
-                                     getattr(world_for(context), "scenario_settings", {}))
+                                     world_for(context).scenario_settings)
 
 def _check_faction_invite(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries

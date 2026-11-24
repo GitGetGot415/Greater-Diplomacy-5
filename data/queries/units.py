@@ -190,7 +190,7 @@ def load_transport(unit, target, *, context=None):
     pct = unit.get("health", 1) / max(1, unit.get("max_health", 1))
 
     unit["type"] = f"{target} ({base_type})"
-    nation_data = getattr(world_for(context), "nation_data", None)
+    nation_data = queries.context_nation_data(context)
     unit.update(_transport_stats(target, nation_data, unit.get("owner")))
     unit["health"] = unit["max_health"] * pct
 

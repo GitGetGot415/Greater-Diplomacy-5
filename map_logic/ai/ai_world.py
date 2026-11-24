@@ -35,6 +35,7 @@ it can see, and guesses the rest from public land. See perceived_military.
 """
 
 from data.state_access import world_for, session_for, viewer_context
+from data.world_nations import WorldNations
 import collections
 import random
 
@@ -62,8 +63,10 @@ class AIWorld:
                  human_players=(), scenario_settings=None):
         self.map_data = map_data
         self.nation_data = nation_data
-        self.scenario_settings = (scenario_settings if scenario_settings is not None
-                                  else getattr(world_for(nation_data), "scenario_settings", {}))
+        if scenario_settings is None:
+            # Plain country dictionaries carry no scenario.
+            scenario_settings = nation_data.world.scenario_settings if isinstance(nation_data, WorldNations) else {}
+        self.scenario_settings = scenario_settings
         self.id_to_province = id_to_province
         self.total_turns = total_turns
 

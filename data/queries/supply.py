@@ -287,7 +287,7 @@ class SupplySnapshot:
         if cached is not None and cached[0] == roster:
             return cached[1], cached[2]
         session = session_for(context)
-        player_unit = getattr(session, "player_unit", None)
+        player_unit = session.player_unit
         facts = []
         for unit in units:
             if unit.get("health", 0) <= 0:

@@ -28,12 +28,13 @@ and shadow it wholesale, which would take a brand new function down with it.
 See the note at the top of map_logic/ai/ai_world.py.
 """
 
-from data.state_access import world_for, session_for
+from data.state_access import world_for
 from data.number_utils import clamp01
 from data import queries
 from map_logic.diplomacy import deal as deal_mod
 
 from map_logic.diplomacy import peace_scope
+from map_logic.ai.ai_world import AIWorld
 
 WAR_SCORE_W_OCCUPATION = 0.65   # how much of their homeland you are standing on
 WAR_SCORE_W_STRENGTH = 0.35     # armies and economies, both blocs summed
@@ -52,6 +53,11 @@ prewar_index = deal_mod.prewar_index
 original_owner = deal_mod.original_owner
 
 
+def _map_and_countries(context):
+    """War scores read only map_data and nation_data, which a game context and an AIWorld snapshot both hold."""
+    return context if isinstance(context, AIWorld) else world_for(context)
+
+
 def occupation(context, side_a, side_b):
     """How much of each side's homeland the other is sitting on, 0..1 each.
 
@@ -59,7 +65,7 @@ def occupation(context, side_a, side_b):
     heartland counts for more than taking five empty tiles -- which is also what
     stops a side that has overrun a wasteland from reading as the winner.
     """
-    world_state = world_for(context)
+    world_state = _map_and_countries(context)
     prewar = prewar_index(world_state.nation_data)
     a, b = set(side_a), set(side_b)
 
@@ -100,7 +106,7 @@ def nation_power(context, nation, world=None, viewer=None):
     instead: exact for its own side, a fog-limited guess for everyone else.
     The war-score bar and every other public reading pass no viewer.
     """
-    world_state = world_for(context)
+    world_state = _map_and_countries(context)
     if world is not None and viewer is not None:
         return (world.perceived_military(viewer, nation)
                 + world.perceived_econ(viewer, nation) / 100.0)
@@ -188,7 +194,7 @@ def between(context, nation, opponent, world=None, viewer=None):
     {"mine": 0..1, "theirs": 0..1, ...}. Pass `viewer` for one country's own
     reading of the war, as leverage describes.
     """
-    world_state = world_for(context)
+    world_state = _map_and_countries(context)
 
     side_mine, side_theirs = peace_scope.war_sides(nation, opponent, world_state.nation_data)
     scores = leverage(context, side_mine, side_theirs, world, viewer)
