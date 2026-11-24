@@ -43,7 +43,7 @@ Read this entire file from disk and confirm to the user that you read it before 
 | `data/migrations/` | Conversion of older GD5 data, identifier aliases, load repairs, and snapshot move reader. One file per concern. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
-| `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
+| `data/state_access.py` | Explicit world and session access, the guard against stale map copies of their fields, and backend execution context. |
 | `map_logic/actions/production_actions.py` | Production validation, queue construction, charging, cancellation, and refunds. |
 | `map_logic/actions/unit_actions.py` | Unit-order preparation, execution, replacement, payment, and cancellation. |
 | `map_logic/actions/player_actions.py` | Multiplayer intent validation and application. |

@@ -123,6 +123,7 @@ They also keep support for older save formats that v46 accepted.
 - Inbox messages without `message_id` receive one.
 - Release requests without `release_type` use Integrated.
 - Older `ACCEPT_` and `REJECT_` entries move from `pending_diplomacy` to `diplo_responses`.
+- Other `pending_diplomacy` entries stored as action text become delivered request records: `{"action": ..., "turns": 1, "timer": 0}`.
 - Completed real-time saves without `offline_view` open as spectator replays.
 - Scenario settings without a category's Use Defaults setting, such as `use_default_units`, keep using that category's saved values.
   `convert_scenario_settings` turns the setting off when the category has values, such as `unit_turn_overrides` or `unit_disabled`.
