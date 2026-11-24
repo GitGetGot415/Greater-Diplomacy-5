@@ -1,10 +1,9 @@
 from data.state_access import world_for, session_for
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
-import random
 from collections import namedtuple
 from map_logic.ai import (ai_candidates, ai_director, ai_evaluation,
                           ai_handler, ai_letters, ai_llm_runner, ai_opinion,
-                          ai_personality, ai_politics, ai_prompts, ai_world)
+                          ai_personality, ai_politics, ai_prompts, ai_unit_eval, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
 from data import queries
@@ -886,9 +885,12 @@ def _declare_war_for_cores_and_claims(bag, context, ai_name, my_enemies, my_mast
         desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
         if desire >= ai_tuning.AI_WAR_DESIRE_THRESHOLD:
 
-            # Random chance to actually declare war
+            # The chance to actually declare war, rolled so the same save makes
+            # the same declarations whatever order the nations are processed in.
             war_chance = float(world_state.scenario_settings.get("ai_war_declaration_chance", c.AI_WAR_DECLARATION_CHANCE))
-            if random.random() <= war_chance:
+            roll = ai_candidates.stable_fraction(ai_personality.scenario_seed(world_state.scenario_settings),
+                                                 ai_name, target, current_turn, "WAR_DECLARATION")
+            if roll < war_chance:
                 has_wargoal = queries.has_wargoal(ai_name, target, world_state.nation_data, world_state.map_data)
                 if has_wargoal:
                     if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target, "WAR_DECLARATION"):
@@ -1002,15 +1004,41 @@ def _invite_friends_to_faction(bag, context, ai_name, data, active_nations, worl
                 "they are unaligned, we are on good terms, and they would strengthen the bloc"))
 
 
+def _trade_partners(ai_name, world, nation_data):
+    """Countries this nation deals with: across a border or a short sea
+    crossing, in its faction, or its master or subjects.
+
+    Trade has no reach rule of its own, and it used to be land neighbours only,
+    so an island nation or a bloc split by water never traded with its own side.
+    """
+    data = nation_data.get(ai_name, {})
+    partners = set(world.war_targets(ai_name))
+    faction = queries.get_country_faction(ai_name, nation_data)
+    if faction:
+        partners.update(queries.get_faction_members(faction, nation_data))
+    partners.update(data.get("puppets", ()))
+    if data.get("master"):
+        partners.add(data["master"])
+    partners.discard(ai_name)
+    return sorted(partners)
+
+
 def _offer_trades(bag, context, ai_name, active_nations, world):
-    """Section 7: offers a swap to a neighbour whose shortages mirror ours.
+    """Section 7: offers a swap to a partner whose shortages mirror ours.
 
     New. The AI could not propose a trade at all, and would accept one only if
     it gave away literally nothing -- so the entire trade system was inert
     between AI nations.
+
+    One offer a turn, to whichever partner's offer brings in the most at this
+    nation's own prices: with every partner eligible at once, a nation would
+    otherwise write to all of them every time its cooldowns ran out.
     """
     world_state = world_for(context)
-    for other in sorted(world.neighbors.get(ai_name, ())):
+    prices = ai_unit_eval.resource_prices(world.economies.get(ai_name, {}),
+                                          world_state.nation_data.get(ai_name, {}))
+    best = None
+    for other in _trade_partners(ai_name, world, world_state.nation_data):
         if other not in active_nations:
             continue
         if queries.are_at_war(ai_name, other, world_state.nation_data):
@@ -1028,6 +1056,15 @@ def _offer_trades(bag, context, ai_name, active_nations, world):
         if not offer:
             continue
 
+        # The offer is written from our side: "take" is what comes to us.
+        incoming = sum(prices.get(res, 1.0) * offer.get(f"take_{res}", 0)
+                       for res in c.TRADE_RESOURCE_KEYS)
+        # Partners arrive sorted, so a tie keeps the first name.
+        if best is None or incoming > best[0]:
+            best = (incoming, other, offer)
+
+    if best is not None:
+        _incoming, other, offer = best
         bag.add(ai_candidates.make(
             "TRADE", other, ai_tuning.AI_SCORE_TRADE,
             "our spare resources for what we lack",
@@ -1128,6 +1165,17 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
                 bag.add_initiative(ai_candidates.make(action, other, score, rationale, **payload))
 
 
+def _claim_rank(prov):
+    """Sort key putting the province most worth claiming first.
+
+    A claim is what makes land cheaper to take at the peace table (see
+    deal.tile_value_between), so it goes on the land worth the most there,
+    valued as the peace terms value it. Ties go to the lowest id so a re-run
+    claims the same province.
+    """
+    return (-deal_mod.tile_value(prov), str(prov["id"]))
+
+
 def _fabricate_claims_during_war(context, ai_name, data, my_enemies, active_nations):
     """Section 4.5: while at war and with no claim queued, picks one enemy
     province (preferring one bordering territory we already hold or claim) to fabricate a claim on."""
@@ -1158,9 +1206,9 @@ def _fabricate_claims_during_war(context, ai_name, data, my_enemies, active_nati
 
     chosen_target = None
     if potential_targets_adjacent:
-        chosen_target = random.choice(potential_targets_adjacent)
+        chosen_target = min(potential_targets_adjacent, key=lambda item: _claim_rank(item[1]))
     elif potential_targets_any:
-        chosen_target = random.choice(potential_targets_any)
+        chosen_target = min(potential_targets_any, key=lambda item: _claim_rank(item[1]))
 
     if chosen_target:
         target_enemy, target_prov = chosen_target
@@ -1213,7 +1261,7 @@ def _fabricate_claims_on_weaker_neighbors(context, ai_name, data, my_master, my_
                         coastal_ids = world.sea_targets.get(ai_name, {}).get(neighbor, set())
                         valid_targets = [p for p in valid_targets if p["id"] in coastal_ids]
                     if valid_targets:
-                        target_prov = random.choice(valid_targets)
+                        target_prov = min(valid_targets, key=_claim_rank)
                         queue = data.setdefault("claim_queue", [])
 
                         # Ensure it's not already in the queue

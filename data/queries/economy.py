@@ -742,6 +742,51 @@ def get_province_building_output(province, research, building_library=None, *, c
     return output
 
 
+def next_building_in_group(group_id, current_buildings, building_library):
+    """The building a province can queue next in `group_id`, or None at the top.
+
+    The first building of the group when the province has none of it, otherwise
+    the one after the highest it owns, in library order. The Production screen
+    offers this and the AI builds it, so both read it here.
+    """
+    b_list = [b for b, d in building_library.items() if d.get("group") == group_id]
+    owned_in_group = [b for b in current_buildings if building_library.get(b, {}).get("group") == group_id]
+    if not owned_in_group:
+        return b_list[0] if b_list else None
+    target = None
+    for i, b_name in enumerate(b_list):
+        if b_name in owned_in_group:
+            if i + 1 < len(b_list):
+                target = b_list[i+1]
+    return target
+
+
+def group_yields(province, target, research, building_library, *, context=None, factory_multiplier=1.0,
+                 non_core_multiplier=None):
+    """(output with `target` built, output of the group today) for one province.
+
+    "Today" counts what the province already has in `target`'s group, plus any
+    of that group under construction. The Production screen shows the two side
+    by side, and the AI values a building by their difference, so a building is
+    worth to the AI exactly what the screen tells a player it adds.
+    """
+    group_id = building_library.get(target, {}).get("group")
+    owner, cores = province.get("owner"), province.get("cores", [])
+    new = get_province_building_output(
+        {"owner": owner, "cores": cores, "buildings": [target]},
+        research, building_library, context=context, factory_multiplier=factory_multiplier,
+        non_core_multiplier=non_core_multiplier)
+    previous = get_province_building_output(
+        {"owner": owner, "cores": cores,
+         "buildings": [name for name in province.get("buildings", [])
+                       if building_library.get(name, {}).get("group") == group_id],
+         "building_queue": [project for project in province.get("building_queue", [])
+                            if building_library.get(project.get("item_name"), {}).get("group") == group_id]},
+        research, building_library, context=context, factory_multiplier=factory_multiplier,
+        non_core_multiplier=non_core_multiplier)
+    return new, previous
+
+
 class ProvinceProduction:
     """Gross province output shared by national income and local supply."""
 

@@ -5,7 +5,7 @@ import data.constants as c
 from map_logic.ai import ai_tuning
 from data import queries
 from map_logic.actions import unit_actions
-from map_logic.ai import ai_unit_eval, ai_world
+from map_logic.ai import ai_movement, ai_tech_eval, ai_unit_eval, ai_world
 from map_logic.diplomacy import restrictions
 
 
@@ -38,6 +38,12 @@ def _deficit_list(upkeep, income, targets):
     return over
 
 
+def _runway(stock, upkeep, income):
+    """Turns until `stock` runs dry at this upkeep and income; infinite with no drain."""
+    drain = upkeep - income
+    return stock / drain if drain > 0 else float("inf")
+
+
 def _short_of_runway(deficits, upkeep, income, stockpiles):
     """Narrows a deficit list to the resources actually about to run out.
 
@@ -59,10 +65,7 @@ def _short_of_runway(deficits, upkeep, income, stockpiles):
         res = stat_for.get(stat)
         if res is None:
             continue
-        drain = upkeep.get(res, 0) - income.get(res, 0)
-        if drain <= 0:
-            continue
-        if stockpiles.get(res, 0) / drain < ai_tuning.AI_DISBAND_RUNWAY_TURNS:
+        if _runway(stockpiles.get(res, 0), upkeep.get(res, 0), income.get(res, 0)) < ai_tuning.AI_DISBAND_RUNWAY_TURNS:
             short.append(stat)
     return short
 
@@ -415,27 +418,30 @@ def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
+    own_units = None
 
     for prov in my_provs:
         in_combat = queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data)
         has_factory = queries.has_industry(prov)
 
-        # 1. Clear queues on tiles in active combat if we are losing
+        # 1. Clear queues on a tile we are about to lose. A captured province
+        # keeps its queues (only coring is dropped), and the captor finishes
+        # them -- so this refunds what the enemy would otherwise be handed. A
+        # tile that will hold keeps its queue: production only pauses in combat.
+        # Asked of the same forecast movement retreats by, with the same
+        # reinforcements, so the two passes agree about which tiles are lost.
         if in_combat:
             friendly_nations = queries.get_all_friendly_nations(ai_name, world_state.nation_data)
-            my_units = [u for u in prov.get("units", []) if u.get("owner") in friendly_nations]
-            enemy_units = [u for u in prov.get("units", []) if queries.are_at_war(ai_name, u.get("owner"), world_state.nation_data)]
-
-            my_str = sum(queries.calculate_unit_strength(u) for u in my_units)
-            enemy_str = sum(queries.calculate_unit_strength(u) for u in enemy_units)
-
-            if enemy_str > my_str:
-                while prov.get("unit_queue"):
-                    item = prov["unit_queue"].pop(0)
-                    if "refund" in item: queries.refund_resources(data, item["refund"])
-                while prov.get("building_queue"):
-                    item = prov["building_queue"].pop(0)
-                    if "refund" in item: queries.refund_resources(data, item["refund"])
+            if own_units is None:
+                # Looked up once: outside a turn for_screen builds a snapshot.
+                own_units = ai_world.for_screen(context).units_by_owner.get(ai_name, ())
+            reinforcements = ai_movement.available_reinforcements(context, ai_name, prov, own_units)
+            if ai_movement.tile_is_lost(context, ai_name, prov, friendly_nations, reinforcements):
+                for queue in ("unit_queue", "building_queue"):
+                    while prov.get(queue):
+                        production_actions.cancel_production(
+                            context, ai_name, prov, queue, 0,
+                            authority="ai", recorded_refund_only=True)
 
             continue # Skip the panic build since it's already in combat and can't build anyway
 
@@ -766,82 +772,100 @@ def _apply_coring_priority(context, ai_name, data, my_provs):
 
 
 
-def _apply_construction_logic(context, ai_name, data, my_provs, building_library):
-    """Section: EVALUATE CONSTRUCTION LOGIC -- if the AI has an excess hoard
-    of materials, invests it back into the next industry or recruitment
-    building tier it has available and a free build slot for, one per turn."""
+#: The groups the AI builds in. Fortifications are intentionally
+#: player-directed; the AI only puts up economic and recruitment buildings.
+_AI_BUILDING_GROUPS = ("industry", "recruitment")
+#: A province with any of these on order is busy: one building at a time each.
+_BUSY_BUILDING_GROUPS = ("industry", "recruitment", "fortification")
+
+
+def _building_slot_free(prov):
+    return not any(q.get("group") in _BUSY_BUILDING_GROUPS for q in prov.get("building_queue", []))
+
+
+def _construction_options(context, ai_name, data, my_provs, building_library, econ, prices):
+    """Every building this nation could put up now that is worth having, best first.
+
+    One option per province and group: the next building in the group
+    (queries.next_building_in_group, which the Production screen offers too),
+    valued by what it adds to that province (queries.group_yields, the same
+    yields the screen shows) net of its real cost, with ai_tech_eval's payback
+    rule -- the one research uses to value the level that unlocks it. Both
+    sides are priced in this nation's own scarcity, so a recruitment centre
+    outranks a factory upgrade for a nation short of manpower.
+
+    Provinces at the front are skipped: a captured province keeps its queue,
+    and the captor finishes it.
+    """
     world_state = world_for(context)
-    if data.get("materials", 0) <= ai_tuning.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
-        return
-
-    res_levels = data.get("research", {})
-
-    # Fetch the dynamic lists
-    industry_b_list = [b for b, d in building_library.items() if d.get("group") == "industry"]
-    recruit_b_list = [b for b, d in building_library.items() if d.get("group") == "recruitment"]
-
-    # Sort provinces by queue length to spread out construction
-    my_provs.sort(key=lambda p: len(p.get("building_queue", [])))
-
+    research = data.get("research", {})
+    options = []
     for prov in my_provs:
-        # Ensure AI only builds in its core territories
-        if not queries.has_core(ai_name, prov):
+        if (not queries.has_core(ai_name, prov) or not _building_slot_free(prov)
+                or _is_frontline(context, ai_name, prov)):
             continue
+        for group_id in _AI_BUILDING_GROUPS:
+            # The Production screen's factory dependency.
+            if group_id == "recruitment" and not queries.has_basic_factory(prov):
+                continue
+            target = queries.next_building_in_group(group_id, prov.get("buildings", []), building_library)
+            if not target:
+                continue
+            req_tech, req_lvl = queries.get_building_required_tech(target)
+            if req_tech and research.get(req_tech, 0) < req_lvl:
+                continue
+            new, previous = queries.group_yields(
+                prov, target, research, building_library, context=context,
+                factory_multiplier=econ.get("factory_multiplier", 1.0),
+                non_core_multiplier=econ.get("non_core_building_multiplier"))
+            gain = sum(prices[res] * (new.get(res, 0) - previous.get(res, 0)) for res in ai_unit_eval.RESOURCES)
+            cost = queries.get_building_cost(target, ai_name, world_state.map_data, building_library,
+                                             world_state.nation_data)
+            value = ai_tech_eval.building_net_value(
+                gain, sum(prices[res] * cost.get(f"cost_{res}", 0) for res in ai_unit_eval.RESOURCES))
+            if value > 0:
+                options.append((value, prov, target))
+    # Ties go to the province id, then the name, so a re-run builds the same thing.
+    options.sort(key=lambda option: (-option[0], str(option[1]["id"]), option[2]))
+    return options
 
-        current_buildings = prov.get("buildings", [])
-        queue = prov.get("building_queue", [])
 
-        # Double check the queue so it doesn't build two at once in the same province
-        if any(q.get("group") in ["industry", "recruitment", "fortification"] for q in queue):
+def _apply_construction_logic(context, ai_name, data, my_provs, building_library, state):
+    """Section: EVALUATE CONSTRUCTION LOGIC -- puts up the buildings worth the
+    most to this nation (_construction_options), at most
+    AI_MAX_BUILDINGS_PER_TURN a turn and one per province.
+
+    Runs after the purchase loop, so the army is paid for first. A building is
+    only bought when every resource keeps AI_CONSTRUCTION_RESERVE_TURNS of
+    runway afterwards, measured as the disband rule measures it (_runway), at
+    the upkeep and income `state` holds after this turn's purchases.
+    """
+    world_state = world_for(context)
+    upkeep = {"manpower": state["upk_man"], "materials": state["upk_mat"], "fuel": state["upk_fuel"]}
+    income = {"manpower": state["inc_man"], "materials": state["inc_mat"], "fuel": state["inc_fuel"]}
+    prices = ai_unit_eval.resource_prices(state["econ"], data)
+
+    built = 0
+    for _value, prov, target in _construction_options(context, ai_name, data, my_provs,
+                                                      building_library, state["econ"], prices):
+        if built >= ai_tuning.AI_MAX_BUILDINGS_PER_TURN:
+            break
+        if not _building_slot_free(prov):
             continue
-
-        target_bldg = None
-        has_factory = queries.has_basic_factory(prov)
-
-        # Expand AI's building options dynamically based on the tile's current capacity
-        # Fortifications are intentionally player-directed; the AI only
-        # evaluates economic and recruitment buildings here.
-        groups_to_check = [industry_b_list]
-        if has_factory:
-            groups_to_check.extend([recruit_b_list])
-
-        random.shuffle(groups_to_check)
-
-        for b_list in groups_to_check:
-            if not b_list: continue
-            group_id = building_library[b_list[0]].get("group")
-            owned_in_group = [b for b in current_buildings if building_library.get(b, {}).get("group") == group_id]
-
-            if not owned_in_group:
-                target_bldg = b_list[0]
-            else:
-                for i, b_name in enumerate(b_list):
-                    if b_name in owned_in_group:
-                        if i + 1 < len(b_list):
-                            target_bldg = b_list[i+1]
-
-            if target_bldg:
-                # Check if the AI actually has the research required for this next tier
-                req_tech, req_lvl = queries.get_building_required_tech(target_bldg)
-                if req_tech and res_levels.get(req_tech, 0) < req_lvl:
-                    target_bldg = None # Lacks the research, clear and check the next group
-                    continue
-                break # Found a valid, fully-researched building!
-
-        if target_bldg:
-            # We have the tech and the physical foundation, now check dynamic costs
-            b_stats = queries.get_building_cost(target_bldg, ai_name, world_state.map_data, building_library,
-                                                world_state.nation_data)
-
-            if queries.can_afford(data, b_stats):
-                production_actions.submit_production(
-                    context, ai_name, prov, "building_queue",
-                    {"order_type": "BUILDING", "item_name": target_bldg},
-                    authority="ai", building_library=building_library)
-
-                # Successfully queued a building. Break out of the loop so it only queues one per turn
-                # to avoid instantly draining its treasury on 30 workshops at once.
-                break
+        # Priced again here, since a building bought a moment ago can change
+        # it: a Basic Factory costs more for every factory the nation has.
+        cost = queries.get_building_cost(target, ai_name, world_state.map_data, building_library,
+                                         world_state.nation_data)
+        if not all(data.get(res, 0) >= cost.get(f"cost_{res}", 0)
+                   and _runway(data.get(res, 0) - cost.get(f"cost_{res}", 0), upkeep[res], income[res])
+                   >= ai_tuning.AI_CONSTRUCTION_RESERVE_TURNS
+                   for res in ai_unit_eval.RESOURCES):
+            continue
+        production_actions.submit_production(
+            context, ai_name, prov, "building_queue",
+            {"order_type": "BUILDING", "item_name": target},
+            authority="ai", building_library=building_library)
+        built += 1
 
 
 def process_ai_economy_decisions(context, *, countries=None):
@@ -881,8 +905,9 @@ def process_ai_economy_decisions(context, *, countries=None):
 
         # --- NEW: Randomize Tile Selection ---
         # By shuffling the array before doing any queue length sorting,
-        # the AI will organically distribute its buildings and units to random valid tiles
+        # the AI will organically distribute its units to random valid tiles
         # instead of always hard-focusing the first province id it owns.
+        # Buildings go where they are worth most (_construction_options).
         random.shuffle(my_provs)
 
         # --- 1. EVALUATE RECRUITMENT RATIOS ---
@@ -959,4 +984,4 @@ def process_ai_economy_decisions(context, *, countries=None):
         _apply_coring_priority(context, ai_name, data, my_provs)
 
         # --- 2. EVALUATE CONSTRUCTION LOGIC ---
-        _apply_construction_logic(context, ai_name, data, my_provs, building_library)
+        _apply_construction_logic(context, ai_name, data, my_provs, building_library, state)

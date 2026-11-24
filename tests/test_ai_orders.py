@@ -16,6 +16,7 @@ import data.constants as c
 from map_logic.ai import ai_tuning
 from tests.stub_map_screen import MapDouble, fill_state_defaults
 from map_logic.ai import ai_movement, ai_world
+from map_logic.system32 import combat_forecast
 
 
 class FakeScreen(MapDouble):
@@ -250,6 +251,15 @@ class BombardmentPriorityTests(unittest.TestCase):
         self.assertEqual(gun["order"], {"type": "BOMBARD", "target_id": 2})
 
 
+def plan_and_assign(screen, units_info, ctx, neighbor_ids):
+    """The strike planner, then the per-unit pass, as _generate_unit_orders runs them."""
+    reserved = set()
+    ctx["reserved_units"] = reserved
+    ground = set(neighbor_ids)
+    ai_movement._reserve_strike_orders(screen, "Avaria", units_info, ctx, reserved, ground)
+    ai_movement._assign_unit_orders(screen, "Avaria", units_info, ctx, ground, set(), neighbor_ids)
+
+
 class ImmediateLossAttackTests(unittest.TestCase):
     def context(self, target_id=2):
         ctx = empty_ctx(
@@ -285,9 +295,7 @@ class ImmediateLossAttackTests(unittest.TestCase):
         attacker = self.attacker(attack=1, health=1)
         screen.world.map_data["home"]["units"] = [attacker]
 
-        ai_movement._assign_unit_orders(
-            screen, "Avaria", [(attacker, screen.world.map_data["home"])],
-            self.context(), {1, 2}, set(), {1: [2], 2: [1]})
+        plan_and_assign(screen, [(attacker, screen.world.map_data["home"])], self.context(), {1: [2], 2: [1]})
 
         self.assertEqual(attacker["order"], {"type": "MOVE", "path": []})
 
@@ -296,9 +304,7 @@ class ImmediateLossAttackTests(unittest.TestCase):
         attacker = self.attacker(attack=100, health=100)
         screen.world.map_data["home"]["units"] = [attacker]
 
-        ai_movement._assign_unit_orders(
-            screen, "Avaria", [(attacker, screen.world.map_data["home"])],
-            self.context(), {1, 2}, set(), {1: [2], 2: [1]})
+        plan_and_assign(screen, [(attacker, screen.world.map_data["home"])], self.context(), {1: [2], 2: [1]})
 
         self.assertEqual(attacker["order"]["path"], [2])
 
@@ -364,7 +370,7 @@ class NavalReinforcementTests(unittest.TestCase):
         screen.place(2, self.ship(), self.ship("Bruland"))
         reinforcement += screen.place(3, convoy)
 
-        self.assertEqual(ai_movement._available_reinforcements(screen, "Avaria", screen.world.id_to_province[2], reinforcement), [reserve])
+        self.assertEqual(ai_movement.available_reinforcements(screen, "Avaria", screen.world.id_to_province[2], reinforcement), [reserve])
 
         self.plan(screen)
 
@@ -433,9 +439,7 @@ class WoundedUnitsDoNotChargeTests(unittest.TestCase):
         hurt["health"] = int(hurt["max_health"] * ai_tuning.AI_REPAIR_HEALTH_FRACTION) - 1
         screen.world.map_data["home"]["units"] = [hurt]
 
-        ai_movement._assign_unit_orders(
-            screen, "Avaria", [(hurt, screen.world.map_data["home"])],
-            self.context(), {1, 2}, set(), {1: [2], 2: [1]})
+        plan_and_assign(screen, [(hurt, screen.world.map_data["home"])], self.context(), {1: [2], 2: [1]})
 
         self.assertEqual(hurt["order"], {"type": "MOVE", "path": []})
 
@@ -508,7 +512,7 @@ class ForecastRetreatTests(unittest.TestCase):
     def test_a_hopeless_fight_is_lost(self):
         screen, prov = self.tile([fixture_unit(attack=1)],
                                  [fixture_unit("Bruland", attack=1000, health=1000)])
-        self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+        self.assertTrue(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
 
     def test_a_slow_defeat_counts_before_the_last_turn(self):
         """The old check read one exchange: a stack that would die over a few
@@ -517,18 +521,123 @@ class ForecastRetreatTests(unittest.TestCase):
         health = enemy_attack * (ai_tuning.AI_RETREAT_FORECAST_TURNS - 0.5)
         screen, prov = self.tile([fixture_unit(attack=1, health=health)],
                                  [fixture_unit("Bruland", attack=enemy_attack, health=100000)])
-        self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+        self.assertTrue(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
 
     def test_a_winning_fight_is_not(self):
         screen, prov = self.tile([fixture_unit(attack=1000, health=1000)],
                                  [fixture_unit("Bruland", attack=1)])
-        self.assertFalse(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+        self.assertFalse(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
 
     def test_reinforcements_that_turn_it_keep_the_tile(self):
         help_ = [fixture_unit(attack=5000, health=5000)]
         screen, prov = self.tile([fixture_unit(attack=1)],
                                  [fixture_unit("Bruland", attack=1000, health=1000)], help_)
-        self.assertFalse(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}, help_))
+        self.assertFalse(ai_movement.tile_is_lost(screen, "Avaria", prov, {"Avaria"}, help_))
+
+
+class StrikePlannerTests(unittest.TestCase):
+    """New fights are started by groups the retreat check would keep there.
+
+    The per-unit pass sent each unit alone at whichever adjacent enemy tile had
+    the fewest attackers, whenever that unit alone survived the first exchange.
+    So an army spread along the front, and a unit could charge a tile the
+    retreat forecast then had it abandon the next turn.
+    """
+
+    # Each of these loses to DEFENDER alone, over more than one exchange; two
+    # together hold. The first two tests check that premise on the forecast.
+    ATTACKER = {"attack": 100, "health": 200}
+    DEFENDER = {"attack": 150, "health": 300}
+
+    def ctx(self, *enemy_tiles):
+        return empty_ctx(enemy_targets=set(enemy_tiles), target_destinations=list(enemy_tiles),
+                         target_assignments={t: 0 for t in enemy_tiles},
+                         target_stacks={t: 0 for t in enemy_tiles}, expedition_targets=set())
+
+    def run_turn(self, layout, ours, theirs):
+        """`ours` and `theirs` map a tile to the units standing on it."""
+        screen = GridScreen(layout)
+        units_info = []
+        for tile, units in ours.items():
+            units_info += screen.place(tile, *units)
+        for tile, units in theirs.items():
+            screen.place(tile, *units)
+        enemy_tiles = sorted(theirs)
+        plan_and_assign(screen, units_info, self.ctx(*enemy_tiles),
+                        {pid: list(neighbors) for pid, (_owner, neighbors) in layout.items()})
+        return [unit["order"]["path"] for unit, _ in units_info]
+
+    def outcome(self, attackers):
+        screen = GridScreen({1: ("Avaria", [2]), 2: ("Bruland", [1])})
+        return combat_forecast.estimated_combat_outcome(
+            [[fixture_unit(**self.ATTACKER) for _ in range(attackers)],
+             [fixture_unit("Bruland", **self.DEFENDER)]],
+            screen.world.nation_data, province=screen.world.id_to_province[2],
+            max_turns=ai_movement.strike_forecast_turns())
+
+    def test_premise_one_attacker_loses_but_survives_the_first_exchange(self):
+        self.assertEqual(self.outcome(1)["winner_side"], 1)
+        self.assertGreater(self.outcome(1)["turns"], 1)
+
+    def test_premise_two_attackers_hold(self):
+        self.assertNotEqual(self.outcome(2)["winner_side"], 1)
+
+    def test_a_lone_unit_does_not_start_a_fight_it_would_lose(self):
+        paths = self.run_turn({1: ("Avaria", [2]), 2: ("Bruland", [1])},
+                              {1: [fixture_unit(**self.ATTACKER)]},
+                              {2: [fixture_unit("Bruland", **self.DEFENDER)]})
+        self.assertEqual(paths, [[]])
+
+    def test_a_fight_lost_just_past_the_retreat_horizon_is_not_started(self):
+        """The attack's first exchange happens this turn, so next turn's retreat
+        check sees one exchange further than a plan that stopped at its horizon."""
+        defender = fixture_unit("Bruland", attack=100, health=100000)
+        screen = GridScreen({1: ("Avaria", [2]), 2: ("Bruland", [1])})
+
+        def lost_within(health, turns):
+            outcome = combat_forecast.estimated_combat_outcome(
+                [[fixture_unit(attack=1, health=health)], [dict(defender)]], screen.world.nation_data,
+                province=screen.world.id_to_province[2], max_turns=turns)
+            return outcome["winner_side"] == 1
+
+        # The least health that outlasts the retreat horizon, found by asking
+        # the forecast rather than assuming how much damage an exchange does.
+        # More health never loses sooner, so a bisection finds it.
+        low, high = 1, 100000
+        while low < high:
+            middle = (low + high) // 2
+            if lost_within(middle, ai_tuning.AI_RETREAT_FORECAST_TURNS):
+                low = middle + 1
+            else:
+                high = middle
+        health = low
+        self.assertTrue(lost_within(health, ai_movement.strike_forecast_turns()),
+                        "premise: it falls on the exchange after the horizon")
+        attacker = fixture_unit(attack=1, health=health)
+        paths = self.run_turn({1: ("Avaria", [2]), 2: ("Bruland", [1])}, {1: [attacker]}, {2: [defender]})
+        self.assertEqual(paths, [[]])
+
+    def test_two_units_that_lose_alone_attack_together(self):
+        layout = {1: ("Avaria", [2]), 3: ("Avaria", [2]), 2: ("Bruland", [1, 3])}
+        paths = self.run_turn(layout, {1: [fixture_unit(**self.ATTACKER)], 3: [fixture_unit(**self.ATTACKER)]},
+                              {2: [fixture_unit("Bruland", **self.DEFENDER)]})
+        self.assertEqual(paths, [[2], [2]])
+
+    def test_they_mass_on_one_fight_instead_of_splitting_over_two(self):
+        layout = {1: ("Avaria", [2, 4]), 3: ("Avaria", [2, 4]),
+                  2: ("Bruland", [1, 3]), 4: ("Bruland", [1, 3])}
+        paths = self.run_turn(layout, {1: [fixture_unit(**self.ATTACKER)], 3: [fixture_unit(**self.ATTACKER)]},
+                              {2: [fixture_unit("Bruland", **self.DEFENDER)],
+                               4: [fixture_unit("Bruland", **self.DEFENDER)]})
+        self.assertEqual(len({tuple(path) for path in paths}), 1, paths)
+        self.assertTrue(all(path for path in paths), paths)
+
+    def test_routing_stops_short_of_a_fight_nobody_started(self):
+        # Two tiles away: the route toward the enemy ends beside it, not in it.
+        layout = {1: ("Avaria", [3]), 3: ("Avaria", [1, 2]), 2: ("Bruland", [3])}
+        fast = dict(fixture_unit(**self.ATTACKER), speed=2)
+        paths = self.run_turn(layout, {1: [fast]}, {2: [fixture_unit("Bruland", **self.DEFENDER)]})
+        self.assertEqual(paths, [[3]])
 
 
 class RetreatTileTests(unittest.TestCase):
