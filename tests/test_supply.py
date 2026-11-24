@@ -435,7 +435,7 @@ class SupplyTests(SupplyFixture):
                     speed_entry = ((sidebar_info.ICON_SPEED, ""),)
                     self.assertCountEqual(
                         [line[:2] for line in rendered],
-                        [rows[id(unit)]["supply"], ("", fuel_entry), ("-1 ", speed_entry), rows[id(foreign)]["supply"]])
+                        [rows[id(unit)]["supply"], ("Fuel: ", fuel_entry), ("-1 ", speed_entry), rows[id(foreign)]["supply"]])
                     fuel_index = next(index for index, line in enumerate(rendered) if line[1] == fuel_entry)
                     self.assertGreater(rendered[fuel_index][2], rendered[fuel_index - 1][2])
                     self.assertEqual(rendered[fuel_index + 1][2], rendered[fuel_index][2])

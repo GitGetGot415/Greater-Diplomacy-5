@@ -23,6 +23,10 @@ SIDEBAR_INFO_X = 900
 SIDEBAR_INFO_Y = 70
 SIDEBAR_INFO_WIDTH = 370
 SIDEBAR_INFO_HEIGHT = 640 # Sized to fit the terrain image and buildings list
+SUPPLY_HIGHLIGHT_COLOR = (158, 58, 104, 160)
+FUEL_HIGHLIGHT_COLOR = (102, 61, 166, 160)
+SUPPLY_HIGHLIGHT_PADDING = 4
+SUPPLY_HIGHLIGHT_RIGHT_INSET = 10
 
 # Define the area for the sidebar info panel utilizing constants
 info_rect = pygame.Rect(SIDEBAR_INFO_X, SIDEBAR_INFO_Y, SIDEBAR_INFO_WIDTH, SIDEBAR_INFO_HEIGHT)
@@ -107,19 +111,23 @@ def draw_unit_roster(map_screen, surface, province, units, is_visible, x, y, wid
         height = font.get_height()
         icon_size = max(1, height - 2)
         end_y = y
+        highlight_x = row_x - SUPPLY_HIGHLIGHT_PADDING
+        highlight_width = right_edge - SUPPLY_HIGHLIGHT_RIGHT_INSET - highlight_x
         supply = row.get("supply")
         if supply:
             label, entries = supply
-            draw_icon_row(surface, font, label, entries, row_x, end_y, c.UI_TEXT_MUTED, icon_size=icon_size)
+            ui_bars.draw_translucent_panel(surface, pygame.Rect(highlight_x, end_y, highlight_width, height), SUPPLY_HIGHLIGHT_COLOR)
+            draw_icon_row(surface, font, label, entries, row_x, end_y, c.UI_TEXT_BRIGHT, icon_size=icon_size)
             end_y += height
         fuel = row.get("fuel")
         if fuel:
             percent, speed_change = fuel
-            end_x = draw_icon_row(surface, font, "", ((RESOURCE_ICONS["fuel"], percent),),
-                                  row_x, end_y, c.UI_TEXT_MUTED, icon_size=icon_size)
+            ui_bars.draw_translucent_panel(surface, pygame.Rect(highlight_x, end_y, highlight_width, height), FUEL_HIGHLIGHT_COLOR)
+            end_x = draw_icon_row(surface, font, "Fuel: ", ((RESOURCE_ICONS["fuel"], percent),),
+                                  row_x, end_y, c.UI_TEXT_BRIGHT, icon_size=icon_size)
             if speed_change < 0:
                 draw_icon_row(surface, font, f"{speed_change:+g} ", ((ICON_SPEED, ""),),
-                              end_x, end_y, c.UI_TEXT_MUTED, icon_size=icon_size)
+                              end_x, end_y, c.UI_TEXT_BRIGHT, icon_size=icon_size)
             end_y += height
         return end_y - y
 
