@@ -886,36 +886,35 @@ class CombatDamageTests(unittest.TestCase):
 class TerritoryDamageTests(unittest.TestCase):
     """Strategy's damage modifier depends on whose core the tile is."""
 
-    def dealt(self, tile_owner, cores, strategy=c.POLITICS_START):
+    def observed_multiplier(self, tile_owner, cores, strategy=c.POLITICS_START):
         screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         politics.set_axis_value(screen.world.nation_data, "A", politics.STRATEGY, strategy)
-        prov = screen.add_province("p1", tile_owner, units=[unit("A"), unit("B")], cores=cores)
-        b_units = [u for u in prov["units"] if u["owner"] == "B"]
+        a_unit, b_unit = unit("A"), unit("B")
+        screen.add_province("p1", tile_owner, units=[a_unit, b_unit], cores=cores)
+        base_attack = combat_rules.volley([a_unit], nation_data=screen.world.nation_data)
         combat_processor.process_combat(screen)
-        return damage_taken(b_units)
+        return damage_taken([b_unit]) / base_attack
 
     def test_core_and_non_core_modifiers_follow_strategy(self):
-        attack = unit("A")["attack"]
         for strategy in (c.POLITICS_MIN, c.POLITICS_START, c.POLITICS_MAX):
             with self.subTest(strategy=strategy):
-                self.assertAlmostEqual(self.dealt("A", ["A"], strategy),
-                                       attack * politics.effect_at("core_territory_damage", strategy))
-                self.assertAlmostEqual(self.dealt("B", ["B"], strategy),
-                                       attack * politics.effect_at("non_core_territory_damage", strategy))
+                self.assertAlmostEqual(self.observed_multiplier("A", ["A"], strategy),
+                                       politics.effect_at("core_territory_damage", strategy))
+                self.assertAlmostEqual(self.observed_multiplier("B", ["B"], strategy),
+                                       politics.effect_at("non_core_territory_damage", strategy))
 
     def test_retaking_an_occupied_core_keeps_the_core_modifier(self):
-        self.assertAlmostEqual(self.dealt("B", ["A", "B"]),
-                               unit("A")["attack"] * politics.effect_at("core_territory_damage", c.POLITICS_START))
+        self.assertAlmostEqual(self.observed_multiplier("B", ["A", "B"]),
+                               politics.effect_at("core_territory_damage", c.POLITICS_START))
 
     def test_disable_cores_counts_every_owned_tile_as_core(self):
-        attack = unit("A")["attack"]
         with patch.object(c, "DISABLE_CORES", True):
-            self.assertAlmostEqual(self.dealt("A", []),
-                                   attack * politics.effect_at("core_territory_damage", c.POLITICS_START))
-            self.assertAlmostEqual(self.dealt("B", ["A"]),
-                                   attack * politics.effect_at("non_core_territory_damage", c.POLITICS_START))
+            self.assertAlmostEqual(self.observed_multiplier("A", []),
+                                   politics.effect_at("core_territory_damage", c.POLITICS_START))
+            self.assertAlmostEqual(self.observed_multiplier("B", ["A"]),
+                                   politics.effect_at("non_core_territory_damage", c.POLITICS_START))
 
 
     def test_each_side_of_a_border_clash_fights_on_its_own_tile(self):
@@ -926,8 +925,8 @@ class TerritoryDamageTests(unittest.TestCase):
         battle = combat_rules.build_battle([[a_unit], [b_unit]], nation_data, tiles=(a_home, b_home))
         shots = {id(targets[0]): attack for targets, attack in combat_rules.exchange(battle, nation_data)}
         core = politics.effect_at("core_territory_damage", c.POLITICS_START)
-        self.assertAlmostEqual(shots[id(b_unit)], a_unit["attack"] * core)
-        self.assertAlmostEqual(shots[id(a_unit)], b_unit["attack"] * core)
+        self.assertAlmostEqual(shots[id(b_unit)], combat_rules.volley([a_unit], nation_data=nation_data) * core)
+        self.assertAlmostEqual(shots[id(a_unit)], combat_rules.volley([b_unit], nation_data=nation_data) * core)
 
 
 class DefenseAndHealthTests(unittest.TestCase):
