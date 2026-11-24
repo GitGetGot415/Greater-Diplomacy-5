@@ -1,5 +1,6 @@
 """Regression tests for the map's hostile head-on movement preview."""
 
+import copy
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -10,6 +11,7 @@ import pygame
 from tests.stub_map_screen import map_double
 from pygame.math import Vector2
 from data.session_state import LOCAL_PLAY
+from map_logic.system32 import combat_forecast, combat_processor, combat_rules, unit_events
 
 
 def province(province_id, units):
@@ -101,12 +103,41 @@ class BouncePreviewTests(unittest.TestCase):
         self.assertTrue(outcome[0]["overrun"])
         self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]), (2, 1))
 
+    def test_narrow_endpoint_prevents_an_overrun_in_either_direction(self):
+        self.screen.session.viewing_ai_moves = True
+        world = self.screen.world
+        with patch.multiple(combat_rules.c, COMBAT_WIDTH=4, MIN_LANE_SLOTS_PER_SIDE=1,
+                            COMBAT_WIDTH_BY_TERRAIN={"narrow": 2, "wide": 4}):
+            for attacker in (1, 2):
+                with self.subTest(attacker=attacker):
+                    first, second = world.map_data.values()
+                    first["terrain"], second["terrain"] = "narrow", "wide"
+                    for tile, owner in ((first, "A"), (second, "B")):
+                        attack = 1000 if tile["id"] == attacker else 0
+                        tile["units"] = [moving_unit(owner, 3 - tile["id"], attack=attack)
+                                         for _ in range(2)]
+                    sides = [first["units"], second["units"]]
+                    default_width = combat_forecast.estimated_combat_outcome(sides, world.nation_data)
+                    self.assertEqual((default_width["winner_side"], default_width["turns"]),
+                                     (attacker - 1, 1))
+
+                    with unit_events.record_turn(self.screen):
+                        before = copy.deepcopy(world.map_data)
+                        outcome, = overlay_renderer.midpoint_bounce_outcomes(self.screen)
+                    self.assertFalse(outcome["overrun"])
+                    self.assertEqual(world.map_data, before)
+                    self.assertEqual(world.unit_event_log["events"], [])
+
+                    result = combat_processor.resolve_meeting_engagement(
+                        first, second, *sides, world.nation_data)
+                    self.assertTrue(result.survivors1 and result.survivors2)
+
     def test_tactical_crossing_preview_follows_the_player_in_both_directions(self):
         library = {"Fixture Infantry I": {"naval_unit": False, "bombard_range": 0}}
         for player_side in (1, 2):
             with self.subTest(player_side=player_side), \
                     patch("data.queries.get_unit_library", return_value=library), \
-                    patch.object(overlay_renderer, "estimated_combat_outcome") as forecast:
+                    patch.object(combat_forecast, "meeting_overrun_side") as forecast:
                 self.screen.session.viewing_ai_moves = True
                 self.screen.session.tactical_mode = True
                 for province in self.screen.world.map_data.values():
@@ -143,7 +174,7 @@ class BouncePreviewTests(unittest.TestCase):
             tile["units"][0]["type"] = "Fixture Infantry I"
         self.screen.session.player_unit = self.screen.world.map_data[1]["units"][0]
         with patch("data.queries.get_unit_library", return_value=library), \
-                patch.object(overlay_renderer, "estimated_combat_outcome") as forecast:
+                patch.object(combat_forecast, "meeting_overrun_side") as forecast:
             self.assertEqual(overlay_renderer.midpoint_bounce_pairs(self.screen), [])
             self.assertEqual(overlay_renderer.midpoint_bounce_outcomes(self.screen), [])
             forecast.assert_not_called()
