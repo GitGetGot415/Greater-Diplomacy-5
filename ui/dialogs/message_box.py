@@ -922,7 +922,7 @@ class _NavigationIntroPopup:
             surface.blit(button, button.get_rect(center=rect.center))
 
 
-def show_message(title, message, tk_parent=None, kind="info", on_result=None, *, inline_parts=None, align=None):
+def show_message(title, message, kind="info", on_result=None, *, inline_parts=None, align=None):
     """Drop-in replacement for messagebox.showinfo / showwarning / showerror.
 
     `kind` picks the accent color: "info", "success", "warning", or "error".
@@ -930,24 +930,24 @@ def show_message(title, message, tk_parent=None, kind="info", on_result=None, *,
     on_result, if given, is called (with no arguments) once the user dismisses it.
     """
     open_dialog(lambda surface: _MessageModal(surface, title, message, kind, inline_parts, align=align),
-                on_result, tk_parent)
+                on_result)
 
 
-def show_info(title, message, tk_parent=None, on_result=None, *, inline_parts=None, align=None):
-    show_message(title, message, tk_parent=tk_parent, kind="info", on_result=on_result, inline_parts=inline_parts,
+def show_info(title, message, on_result=None, *, inline_parts=None, align=None):
+    show_message(title, message, kind="info", on_result=on_result, inline_parts=inline_parts,
                  align=align)
 
 
-def show_success(title, message, tk_parent=None, on_result=None):
-    show_message(title, message, tk_parent=tk_parent, kind="success", on_result=on_result)
+def show_success(title, message, on_result=None):
+    show_message(title, message, kind="success", on_result=on_result)
 
 
-def show_warning(title, message, tk_parent=None, on_result=None):
-    show_message(title, message, tk_parent=tk_parent, kind="warning", on_result=on_result)
+def show_warning(title, message, on_result=None):
+    show_message(title, message, kind="warning", on_result=on_result)
 
 
-def show_error(title, message, tk_parent=None, on_result=None):
-    show_message(title, message, tk_parent=tk_parent, kind="error", on_result=on_result)
+def show_error(title, message, on_result=None):
+    show_message(title, message, kind="error", on_result=on_result)
 
 
 def show_navigation_intro(map_screen, *, resume=False):

@@ -15,7 +15,7 @@ from ui import dialogs
 from ui.dialogs import pickers
 
 
-def export_with_overwrite_confirmation(file_path, export, parent=None):
+def export_with_overwrite_confirmation(file_path, export):
     """Run an export after confirmation when its destination already exists."""
     if not os.path.lexists(file_path):
         return export()
@@ -29,11 +29,11 @@ def export_with_overwrite_confirmation(file_path, export, parent=None):
         f"Overwrite existing {kind}?",
         f"{os.path.basename(file_path)} already exists in:\n{os.path.dirname(file_path) or '.'}\n\n"
         f"Overwrite this {kind}?",
-        on_result=after_choice, tk_parent=parent, yes_label="Overwrite", no_label="Cancel")
+        on_result=after_choice, yes_label="Overwrite", no_label="Cancel")
     return None
 
 
-def choose_save_destination(default_path, on_ready, *, game_state=None, parent=None,
+def choose_save_destination(default_path, on_ready, *, game_state=None,
                             title="Save As", directory=False, allow_copy=False):
     """Choose a destination before writing. on_ready receives (path, overwrite).
 
@@ -44,7 +44,7 @@ def choose_save_destination(default_path, on_ready, *, game_state=None, parent=N
         if not path:
             return
         if directory and os.path.lexists(path) and not os.path.isdir(path):
-            dialogs.show_error(title, "A file already uses this folder name.", tk_parent=parent)
+            dialogs.show_error(title, "A file already uses this folder name.")
             return
         if directory and allow_copy and os.path.isdir(path):
             def chosen(answer):
@@ -58,10 +58,10 @@ def choose_save_destination(default_path, on_ready, *, game_state=None, parent=N
             dialogs.ask_yes_no(
                 "Scenario Already Exists", f'"{os.path.basename(path)}" already exists in:\n'
                 f"{os.path.dirname(path)}\n\nOverwrite it, save a numbered copy, or cancel?",
-                chosen, tk_parent=parent, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
+                chosen, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
             return
         exists = os.path.lexists(path)
-        return export_with_overwrite_confirmation(path, lambda: on_ready(path, exists), parent)
+        return export_with_overwrite_confirmation(path, lambda: on_ready(path, exists))
 
     if IS_WEB:
         return picked(default_path)
@@ -70,10 +70,10 @@ def choose_save_destination(default_path, on_ready, *, game_state=None, parent=N
         game_state, title, os.path.dirname(default_path),
         mode="save_folder" if directory else "save_file",
         extensions=[extension] if extension and not directory else None,
-        initial_name=os.path.basename(default_path), tk_parent=parent, on_result=picked)
+        initial_name=os.path.basename(default_path), on_result=picked)
 
 
-def export_file(file_name, produce, parent=None, *, game_state=None):
+def export_file(file_name, produce, *, game_state=None):
     """Choose an export destination, starting in Downloads, then produce the file.
 
     Web exports use the existing browser download bridge and virtual filesystem.
@@ -82,10 +82,10 @@ def export_file(file_name, produce, parent=None, *, game_state=None):
 
     def downloaded(status, error):
         if status == "error":
-            dialogs.show_error("Export Error", error, tk_parent=parent)
+            dialogs.show_error("Export Error", error)
         elif status in ("saved", "downloaded"):
             action = "exported" if status == "saved" else "downloaded"
-            dialogs.show_success("Export Success", f"{file_name} {action}.", tk_parent=parent)
+            dialogs.show_success("Export Success", f"{file_name} {action}.")
 
     def export(dest_path, _overwrite):
         try:
@@ -96,14 +96,13 @@ def export_file(file_name, produce, parent=None, *, game_state=None):
             if IS_WEB:
                 download_file(dest_path, on_result=downloaded)
             else:
-                dialogs.show_success("Export Success", f"Exported to {dest_path}", tk_parent=parent)
+                dialogs.show_success("Export Success", f"Exported to {dest_path}")
             return dest_path
         except (OSError, ValueError, pygame.error, zipfile.BadZipFile, zipfile.LargeZipFile) as e:
-            dialogs.show_error("Export Error", str(e), tk_parent=parent)
+            dialogs.show_error("Export Error", str(e))
             return None
 
-    return choose_save_destination(default_path, export, game_state=game_state,
-                                   parent=parent, title="Export File")
+    return choose_save_destination(default_path, export, game_state=game_state, title="Export File")
 
 
 def _readable_json_payload(file_path):
@@ -127,7 +126,7 @@ def _readable_json_payload(file_path):
     return history_io.dump_save_text(value).encode("utf-8")
 
 
-def export_dir_as_zip(source_dir, zip_name, parent=None, *, game_state=None):
+def export_dir_as_zip(source_dir, zip_name, *, game_state=None):
     """Zips a folder and sends it to the user.
 
     Counterpart to extract_and_flatten_zip, and the single implementation
@@ -149,12 +148,12 @@ def export_dir_as_zip(source_dir, zip_name, parent=None, *, game_state=None):
                     else:
                         zipf.writestr(archive_name, readable_json)
 
-    return export_file(zip_name, zip_it, parent, game_state=game_state)
+    return export_file(zip_name, zip_it, game_state=game_state)
 
 
-def export_json_file(source_path, file_name, parent=None, *, game_state=None):
+def export_json_file(source_path, file_name, *, game_state=None):
     """Copy a JSON file to the chosen export destination."""
-    return export_file(file_name, lambda dest: shutil.copy2(source_path, dest), parent,
+    return export_file(file_name, lambda dest: shutil.copy2(source_path, dest),
                        game_state=game_state)
 
 

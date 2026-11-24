@@ -8,8 +8,8 @@ that shape (see ui/navigation/modal_stack.py for the full rationale):
   the dialog is pushed onto the modal stack and answered on a later frame --
   it can't block the caller, since blocking is exactly what freezes a pygbag
   browser tab (main.py's loop never gets to yield to the browser).
-- When no display exists yet (standalone tkinter dev tools like
-  scripts/editors/country_editor.py, run outside the game's main loop entirely),
+- When no display exists yet (standalone dev tools like
+  scripts/maps/reset_map_data.py, run outside the game's main loop entirely),
   there's no modal stack pumping frames, so the dialog runs in its own window
   and short-lived blocking loop and calls on_result() right before returning --
   same callback shape, just resolved synchronously. Closing that window gives

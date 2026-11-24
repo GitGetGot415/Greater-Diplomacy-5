@@ -1178,13 +1178,13 @@ class FileBrowserScreen(ModalScreen):
 # ---------------------------------------------------------------------- #
 
 def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
-                     confirm_label=None, game_state=None, tk_parent=None, on_result=None, initial_name=""):
+                     confirm_label=None, game_state=None, on_result=None, initial_name=""):
     """Answers on_result(path) -- or (list of paths), or None if cancelled.
 
     Usable from the game (a display is already up, so this hands off to the
     modal stack and returns immediately) and from the standalone scripts/maps
-    tools and Tk editor windows (a window is created for the duration and
-    on_result fires synchronously before this returns -- see run_screen).
+    tools (a window is created for the duration and on_result fires
+    synchronously before this returns -- see run_screen).
     """
 
     result = {}
@@ -1193,4 +1193,4 @@ def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
                                          mode=mode, extensions=extensions,
                                          confirm_label=confirm_label, initial_name=initial_name),
                on_done=lambda screen: on_result(result.get("picked")) if on_result else None,
-               tk_parent=tk_parent, caption=title)
+               caption=title)

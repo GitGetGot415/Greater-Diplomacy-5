@@ -13,7 +13,6 @@ import colorsys
 from data import queries
 from data.io.country_io import DEFAULT_NATION_COLOR
 from data.io.json_io import load_json_or_empty
-from ui import dialogs
 PATH = c.COUNTRIES_DATA_PATH
 
 class CountryEditor:
@@ -170,7 +169,7 @@ class CountryEditor:
             messagebox.showinfo("Success", "All countries synchronized to the current tech tree.")
             self.refresh_list()
 
-        dialogs.ask_yes_no("Confirm Sync", msg, on_confirm, tk_parent=self.root)
+        on_confirm(messagebox.askyesno("Confirm Sync", msg, parent=self.root))
 
     def save_country(self):
         """Saves or updates a country using the dynamic tech template."""
@@ -246,7 +245,7 @@ class CountryEditor:
 
             self.refresh_list()
 
-        dialogs.ask_yes_no("Confirm", f"Delete {int_id}?", on_confirm, tk_parent=self.root)
+        on_confirm(messagebox.askyesno("Confirm", f"Delete {int_id}?", parent=self.root))
 
     def load_into_editor(self, int_id):
         country = self.data[int_id]

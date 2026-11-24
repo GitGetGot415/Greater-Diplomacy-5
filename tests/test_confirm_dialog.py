@@ -544,7 +544,7 @@ class DialogTests(unittest.TestCase):
         images = self.credited_images()
         calls = []
         with mock.patch.object(screen_runner, "run_screen") as run:
-            dialogs.show_person_info("Artist", "Art", [], "left", None,
+            dialogs.show_person_info("Artist", "Art", [], "left",
                                      lambda: calls.append(True), images=images)
         make_dialog, on_done = run.call_args.args[:2]
         modal = make_dialog()
