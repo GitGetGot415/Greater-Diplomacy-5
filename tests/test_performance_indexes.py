@@ -3,6 +3,7 @@
 import unittest
 
 
+from data import queries
 from map_logic.ai import ai_world
 from ui.rendering.overlay_renderer import _UnitRenderIndex
 
@@ -40,6 +41,36 @@ class PerformanceIndexTests(unittest.TestCase):
         self.assertEqual(world.units_by_owner["Avaria"], [(self.unit_a, self.map_data["1"])])
         self.assertIs(world.units_by_owner["Avaria"][0][0], self.unit_a)
         self.assertEqual(world.land_entry_ids("Avaria"), {1, 2, 3})
+
+    def test_land_entry_ids_match_the_rule_for_every_province(self):
+        # One tile of each kind the entry rule distinguishes: own, enemy,
+        # military access, neutral, unclaimed, ownerless, water, and land
+        # captured this turn (judged by its turn-start owner).
+        provinces = [
+            {"id": 1, "owner": "Avaria", "terrain": "plains"},
+            {"id": 2, "owner": "Borland", "terrain": "plains"},
+            {"id": 3, "owner": "Cordia", "terrain": "plains"},
+            {"id": 4, "owner": "Dunmark", "terrain": "plains"},
+            {"id": 5, "owner": "Unclaimed", "terrain": "plains"},
+            {"id": 6, "terrain": "plains"},
+            {"id": 7, "owner": "Unclaimed", "terrain": "ocean"},
+            {"id": 8, "owner": "Borland", "_turn_start_owner": "Dunmark", "terrain": "plains"},
+            {"id": 9, "owner": "Dunmark", "_turn_start_owner": "Borland", "terrain": "plains"},
+            {"id": 10, "owner": "Dunmark", "terrain": "plains"},
+        ]
+        map_data = {str(prov["id"]): dict(prov, neighbors=[], units=[]) for prov in provinces}
+        id_to_province = {prov["id"]: prov for prov in map_data.values()}
+        nation_data = {
+            "Avaria": {"at_war_with": ["Borland"], "claims": []},
+            "Borland": {"at_war_with": ["Avaria"], "claims": []},
+            "Cordia": {"at_war_with": [], "claims": [], "military_access": ["Avaria"]},
+            "Dunmark": {"at_war_with": [], "claims": []},
+        }
+        world = ai_world.AIWorld(map_data, nation_data, id_to_province)
+        for nation in nation_data:
+            expected = {prov["id"] for prov in map_data.values()
+                        if queries.can_land_units_enter(nation, prov, nation_data)}
+            self.assertEqual(world.land_entry_ids(nation), expected, nation)
 
     def test_render_index_is_dense_over_occupied_provinces(self):
         index = _UnitRenderIndex(self.map_data)

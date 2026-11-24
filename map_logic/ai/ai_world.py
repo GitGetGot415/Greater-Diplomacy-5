@@ -99,6 +99,7 @@ class AIWorld:
             for prov_id, prov in id_to_province.items()
         }
         self._land_entry_ids = {}
+        self._entry_groups = None
         #: nation -> set of bordering nations, unplayable owners excluded
         #: (get_neighboring_nations drops them, so this must too).
         self.neighbors = collections.defaultdict(set)
@@ -537,12 +538,31 @@ class AIWorld:
         """
         cached = self._land_entry_ids.get(nation)
         if cached is None:
-            cached = {
-                prov["id"] for prov in self.all_provinces
-                if queries.can_land_units_enter(nation, prov, self.nation_data)
-            }
+            cached = set()
+            for representative, ids in self._land_entry_groups():
+                if queries.can_land_units_enter(nation, representative, self.nation_data):
+                    cached.update(ids)
             self._land_entry_ids[nation] = cached
         return cached
+
+    def _land_entry_groups(self):
+        """Provinces grouped by the three fields can_land_units_enter reads.
+
+        The rule reads only whether a tile is water, its owner and its
+        turn-start owner; everything else it consults is about the two
+        nations. Every province in a group therefore gets the same answer,
+        so land_entry_ids asks the rule once per group, of its first member.
+        """
+        if self._entry_groups is None:
+            groups = {}
+            for prov in self.all_provinces:
+                owner = prov.get("owner", "Unclaimed")
+                key = (queries.is_water_province(prov), owner, prov.get("_turn_start_owner", owner))
+                if key not in groups:
+                    groups[key] = (prov, [])
+                groups[key][1].append(prov["id"])
+            self._entry_groups = tuple(groups.values())
+        return self._entry_groups
 
     # ------------------------------------------------------------------
     # Standing
