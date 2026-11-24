@@ -886,8 +886,9 @@ class CombatDamageTests(unittest.TestCase):
 class TerritoryDamageTests(unittest.TestCase):
     """Strategy's damage modifier depends on whose core the tile is."""
 
-    def observed_multiplier(self, tile_owner, cores, strategy=c.POLITICS_START):
+    def observed_multiplier(self, tile_owner, cores, strategy=c.POLITICS_START, *, disable_cores=False):
         screen = StubBattleMap()
+        screen.world.scenario_settings["disable_cores"] = disable_cores
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         politics.set_axis_value(screen.world.nation_data, "A", politics.STRATEGY, strategy)
@@ -910,11 +911,14 @@ class TerritoryDamageTests(unittest.TestCase):
                                politics.effect_at("core_territory_damage", c.POLITICS_START))
 
     def test_disable_cores_counts_every_owned_tile_as_core(self):
-        with patch.object(c, "DISABLE_CORES", True):
-            self.assertAlmostEqual(self.observed_multiplier("A", []),
-                                   politics.effect_at("core_territory_damage", c.POLITICS_START))
-            self.assertAlmostEqual(self.observed_multiplier("B", ["A"]),
-                                   politics.effect_at("non_core_territory_damage", c.POLITICS_START))
+        core = politics.effect_at("core_territory_damage", c.POLITICS_START)
+        non_core = politics.effect_at("non_core_territory_damage", c.POLITICS_START)
+        for setting, owned_multiplier, occupied_multiplier in (
+                (True, core, non_core), ("True", core, non_core),
+                (False, non_core, core), ("False", non_core, core)):
+            with self.subTest(setting=setting):
+                self.assertAlmostEqual(self.observed_multiplier("A", [], disable_cores=setting), owned_multiplier)
+                self.assertAlmostEqual(self.observed_multiplier("B", ["A"], disable_cores=setting), occupied_multiplier)
 
 
     def test_each_side_of_a_border_clash_fights_on_its_own_tile(self):
