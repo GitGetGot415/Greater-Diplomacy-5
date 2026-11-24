@@ -1,6 +1,7 @@
 """Regression coverage for cached AI and dense rendering indexes."""
 
 import unittest
+from unittest import mock
 
 
 from data import queries
@@ -71,6 +72,19 @@ class PerformanceIndexTests(unittest.TestCase):
             expected = {prov["id"] for prov in map_data.values()
                         if queries.can_land_units_enter(nation, prov, nation_data)}
             self.assertEqual(world.land_entry_ids(nation), expected, nation)
+
+    def test_upgrade_target_is_looked_up_once_per_nation_and_type(self):
+        world = ai_world.AIWorld(self.map_data, self.nation_data, self.id_to_province)
+        self.nation_data["Avaria"]["research"] = {"armor": 2}
+        library, tree = {"Tank I": {}, "Tank II": {}}, {}
+        with mock.patch.object(queries, "get_upgrade_target", return_value="Tank II") as lookup:
+            for _ in range(3):
+                self.assertEqual(world.upgrade_target("Avaria", "Tank I", library, tree), "Tank II")
+            world.upgrade_target("Borland", "Tank I", library, tree)
+        self.assertEqual(lookup.call_args_list, [
+            mock.call("Tank I", {"armor": 2}, library, tree),
+            mock.call("Tank I", {}, library, tree),
+        ])
 
     def test_render_index_is_dense_over_occupied_provinces(self):
         index = _UnitRenderIndex(self.map_data)

@@ -100,6 +100,7 @@ class AIWorld:
         }
         self._land_entry_ids = {}
         self._entry_groups = None
+        self._upgrade_targets = {}
         #: nation -> set of bordering nations, unplayable owners excluded
         #: (get_neighboring_nations drops them, so this must too).
         self.neighbors = collections.defaultdict(set)
@@ -544,6 +545,19 @@ class AIWorld:
                     cached.update(ids)
             self._land_entry_ids[nation] = cached
         return cached
+
+    def upgrade_target(self, nation, unit_type, unit_library, tech_tree):
+        """queries.get_upgrade_target for one nation's unit type, kept for the turn.
+
+        The answer depends on the nation's research levels and the active unit
+        library. Neither changes while the AI prepares a turn: research levels
+        rise only in turn resolution. Callers pass the active library and tree.
+        """
+        key = (nation, unit_type)
+        if key not in self._upgrade_targets:
+            research = self.nation_data.get(nation, {}).get("research", {})
+            self._upgrade_targets[key] = queries.get_upgrade_target(unit_type, research, unit_library, tech_tree)
+        return self._upgrade_targets[key]
 
     def _land_entry_groups(self):
         """Provinces grouped by the three fields can_land_units_enter reads.
