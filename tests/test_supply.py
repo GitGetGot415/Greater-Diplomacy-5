@@ -59,6 +59,70 @@ class SupplyFixture(TestCase):
 
 
 class SupplyTests(SupplyFixture):
+    def test_converted_fuel_follows_supply_routes_and_restores_full_speed(self):
+        front = province(1, "A", [2], coast=True, output=(100, 0, 0))
+        sea = province(2, "Ocean", [1, 3], sea=True)
+        factory = province(3, "A", [2], coast=True, output=(0, 1900, 0))
+        unit = division(front, speed=5)
+        world = game(front, sea, factory)
+        nation = world.world.nation_data["A"]
+        nation.update(mat_to_fuel_slider=0.75, conscription_slider=1)
+        with (patch.object(c, "COUNTRY_BASE_YIELDS", {"manpower": 0, "materials": 100, "fuel": 0}),
+              patch.object(c, "FUEL_CONVERSION_RATIO", 0.1),
+              patch.object(queries, "get_max_fuel_conversion", return_value=0.5)):
+            economy = queries.calculate_all_economies(world.world.map_data, world.world.nation_data, context=world)["A"]
+            snapshot = queries.SupplySnapshot(world)
+            network = snapshot.for_country("A")
+            self.assertEqual(economy["breakdown"]["fuel"]["conversion"], 100)
+            self.assertEqual(network.production_tiles[factory["id"]]["materials"], 950)
+            self.assertEqual(network.production_tiles[front["id"]]["fuel"], 2.5)
+            self.assertEqual(snapshot.fractions(unit), (1, 1, 1))
+            queries.prepare_presentation_supply(world)
+            sidebar_info.prepare_unit_roster(world, front)
+            self.assertNotIn("fuel", world._unit_roster_cache[front["id"]][2][id(unit)])
+            with queries.combat_supply(queries.freeze_combat_supply(world)):
+                self.assertEqual(queries.unit_movement_speed(unit), 5)
+            world.world.scenario_settings["fog_of_war"] = True
+            projected = queries.player_snapshot_projection(world, queries.build_save_dict(world), "A")
+            self.assertEqual(projected["player_supply"][unit["unit_id"]], (1, 1, 1))
+
+            blocked = snapshot.sea_projection("A", block=(sea["id"],), blocker="B")
+            self.assertEqual(snapshot.fractions(unit, network=blocked)[2], 0.025)
+            division(sea, "B", kind="Supply Test Ship")
+            self.assertEqual(queries.SupplySnapshot(world).fractions(unit)[2], 0.025)
+            nation["mat_to_fuel_slider"] = 0
+            self.assertEqual(queries.SupplySnapshot(world).fractions(unit)[2], 0)
+
+    def test_supply_conversion_uses_economy_rounding_and_conscription_income(self):
+        tile = province(1, "A", output=(40, 147, 0))
+        world = game(tile)
+        world.world.nation_data["A"].update(mat_to_fuel_slider=0.5, conscription_slider=0.5)
+        with (patch.object(c, "COUNTRY_BASE_YIELDS", {"manpower": 40, "materials": 100, "fuel": 0}),
+              patch.object(c, "FUEL_CONVERSION_RATIO", 0.1),
+              patch.object(c, "CONSCRIPTION_RATIO", 0.25),
+              patch.object(queries, "get_max_fuel_conversion", return_value=0.5)):
+            economy = queries.calculate_all_economies(world.world.map_data, world.world.nation_data, context=world)["A"]
+            actual = queries.SupplySnapshot(world).fuel_conversion_for("A")[tile["id"]]
+            self.assertEqual(economy["gross_materials"], 257)
+            self.assertEqual(economy["breakdown"]["materials"]["conversion"], -120)
+            self.assertEqual(actual["fuel"], economy["breakdown"]["fuel"]["conversion"])
+            self.assertAlmostEqual(actual["materials"], -120 * 147 / 257)
+
+    def test_fractional_province_conversion_can_cover_exact_fuel_demand(self):
+        front = province(1, "A", [2, 3], output=(100, 32, 0))
+        first = province(2, "A", [1], output=(0, 36, 0))
+        second = province(3, "A", [1], output=(0, 15, 0))
+        unit = division(front, speed=5)
+        world = game(front, first, second)
+        world.world.nation_data["A"].update(mat_to_fuel_slider=0.65, conscription_slider=1)
+        self.library[unit["type"]]["cost_fuel"] = 10
+        with (patch.object(c, "COUNTRY_BASE_YIELDS", dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)),
+              patch.object(c, "FUEL_CONVERSION_RATIO", 0.2),
+              patch.object(queries, "get_max_fuel_conversion", return_value=0.65)):
+            snapshot = queries.SupplySnapshot(world)
+            self.assertEqual(snapshot.fractions(unit)[2], 1.0)
+            self.assertEqual(queries.unit_movement_speed(unit, supply={unit["unit_id"]: snapshot.status(unit)}), 5)
+
     def test_capture_projection_moves_ashore_demand_and_adds_embarked_demand(self):
         home = province(1, "A", [2], output=(100, 100, 100))
         target = province(2, "B", [1], output=(50, 50, 50))

@@ -430,7 +430,9 @@ def draw_map_screen(map_screen, surface):
                 bg=style["color"], gradient_strength=style["gradient_strength"])
 
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
-    show_hover = not map_screen.selected_province or (map_screen.base_layer == "RELATIONS" and not map_screen.session.selection_mode)
+    show_hover = (not map_screen.selected_province
+                  or (not map_screen.session.selection_mode
+                      and (map_screen.secondary_mode == "ECONOMY" or map_screen.base_layer == "RELATIONS")))
     if show_hover and not map_screen.hide_tooltip:
         tooltip.draw_tooltip(map_screen, surface)
         
