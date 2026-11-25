@@ -228,6 +228,23 @@ class AISupplyTests(SupplyFixture):
 
         self.assertEqual(guard["order"]["path"], [1])
 
+    def test_coastal_warning_uses_the_weaker_guard_and_frees_the_attacker(self):
+        for guard_tile in (1, 3):
+            with self.subTest(guard_tile=guard_tile):
+                beach = province(1, "A", [2, 3], coast=True)
+                sea = province(2, "Ocean", [1, 4], sea=True)
+                rear = province(3, "A", [1, 5], output=(200, 200, 200))
+                enemy_coast = province(4, "B", [2], coast=True)
+                front = province(5, "B", [3])
+                attacker = division(beach, health=200, max_health=200, attack=400, defense=40, speed=2)
+                guard = division(beach if guard_tile == 1 else rear, attack=40, speed=1)
+                world = game(beach, sea, rear, enemy_coast, front)
+
+                ai_movement.process_ai_unit_orders(world, countries=["A"])
+
+                self.assertEqual(guard["order"]["path"], [] if guard_tile == 1 else [1])
+                self.assertEqual(attacker["order"]["path"], [3, 5])
+
     def test_two_route_blockade_is_assigned_and_held_by_two_ships(self):
         front = province(1, "B", [2, 3], coast=True)
         north = province(2, "Ocean", [1, 4, 5], sea=True)

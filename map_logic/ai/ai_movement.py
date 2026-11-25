@@ -1635,11 +1635,26 @@ def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, thre
         paths = _operational_paths(context, unit, origin, owned_land, speed * ai_tuning.AI_COAST_GARRISON_TURNS, stops)
         candidates.append((unit, origin, speed, paths))
 
-    def guard(sites):
-        orders = [(-warning_risk.get(site, 0), len(path) > speed, len(path), -unit["health"], site, unit, origin, path[:speed])
-                  for unit, origin, speed, paths in candidates if id(unit) not in committed
-                  for site in (sites & paths.keys()) - stops if (path := paths[site]) == () or speed > 0]
-        for *_, unit, origin, path in sorted(orders, key=lambda order: order[:5]):
+    def guard(sites, *, imminent=False):
+        orders = []
+        for unit, origin, speed, paths in candidates:
+            if id(unit) in committed:
+                continue
+            for site in (sites & paths.keys()) - stops:
+                path = paths[site]
+                if path and speed <= 0:
+                    continue
+                distance = len(path)
+                if imminent:
+                    priority = distance > speed, distance, -unit["health"]
+                else:
+                    # Preserve combat strength for the front when guards can
+                    # cover the coast on the same turn.
+                    turns_late = (distance - 1) // speed if distance > speed else 0
+                    priority = turns_late, queries.calculate_unit_strength(unit), distance
+                rank = (-warning_risk.get(site, 0), *priority, site)
+                orders.append((rank, unit, origin, path[:speed]))
+        for _, unit, origin, path in sorted(orders, key=lambda order: order[0]):
             if _order_move(context, ai_name, origin, unit, path):
                 committed.add(id(unit))
                 _book_reserved_land_order(supply, ctx, unit, origin, path)
@@ -1648,7 +1663,7 @@ def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, thre
 
     for beach, arrivals in sorted(threats.items(), key=lambda item: (min(item[1]), -len(item[1]), item[0])):
         for _ in arrivals:
-            if not guard({beach}):
+            if not guard({beach}, imminent=True):
                 break
 
     pending = warnings.keys() | threats.keys()
