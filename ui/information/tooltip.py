@@ -184,13 +184,15 @@ def _province_tooltip_lines(map_screen, prov):
         fuel_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]
 
         in_combat = is_visible and map_screen._tooltip_tile_in_combat
-        actual_man = 0 if in_combat else int(base_man * man_mult)
-        actual_mat = 0 if in_combat else int(base_mat * mat_mult)
-        actual_fuel = 0 if in_combat else int(base_fuel * fuel_mult)
-
-        lines.append(f"Tile Yield: +{queries.format_number(actual_man)}Man, +{queries.format_number(actual_mat)}Mat, +{queries.format_number(actual_fuel)}Fuel")
-        if not is_core and owner_id not in c.UNPLAYABLE_NATIONS:
-            lines.append("  *(Non-Core Penalties Applied)*")
+        if in_combat:
+            lines.append("No income during battle")
+        else:
+            actual_man = int(base_man * man_mult)
+            actual_mat = int(base_mat * mat_mult)
+            actual_fuel = int(base_fuel * fuel_mult)
+            lines.append(f"Tile Yield: +{queries.format_number(actual_man)}Man, +{queries.format_number(actual_mat)}Mat, +{queries.format_number(actual_fuel)}Fuel")
+            if not is_core and owner_id not in c.UNPLAYABLE_NATIONS:
+                lines.append("  *(Non-Core Penalties Applied)*")
 
         if is_visible and not in_combat:
             cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
