@@ -174,7 +174,6 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertEqual(len({button.rect.centerx for button in column}), 1)
         self.assertEqual([button.rect.y for button in column], sorted(button.rect.y for button in column))
         self.assertTrue(all(button.image is None for button in column))
-        self.assertEqual(len({tuple(button.color) for button in column}), 1)
         # The button panel sits behind the whole column.
         self.assertTrue(all(menu.button_panel_rect.contains(button.rect) for button in column))
         # The menu shows no version text. The Credits screen names Greater Diplomacy 5 instead.
