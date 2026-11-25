@@ -8,7 +8,8 @@ from data.queries.diplomacy import get_enemies
 from data.queries.factions import are_in_same_faction, get_faction_members
 from data.queries.countries import get_country_display_name, get_viewing_country
 from data.queries.unit_info import units_with_air_cargo
-from data.queries.economy import get_conscription_rate, get_country_damage_multiplier, get_fuel_conversion_rate
+from data.queries.economy import (get_conscription_rate, get_country_damage_multiplier, get_fuel_conversion_rate,
+                                  get_research_funding_rate, get_research_funding_spent)
 from data import queries
 
 
@@ -35,11 +36,13 @@ def shares_country_economy(viewer, country_id, nation_data):
             or nation_data[viewer].get("master") == country_id)
 
 
-def _country_economy_summary(country, income, expenses):
+def _country_economy_summary(country, income, expenses, breakdown):
     return {
         "available": True,
         "conscription": get_conscription_rate(country),
         "conversion": get_fuel_conversion_rate(country),
+        "research_funding_rate": get_research_funding_rate(country),
+        "research_funding_spent": get_research_funding_spent(breakdown),
         "resources": [{"resource": resource, "stockpile": country.get(resource, 0),
                        "income": income[resource], "expenses": expenses[resource],
                        "net": income[resource] - expenses[resource]}
@@ -57,10 +60,12 @@ def get_shared_country_economy_summaries(viewer, map_data, nation_data, *, conte
         return {}
     # Projection can initialize siphon rates. Do not change the authoritative state.
     economies = queries.calculate_all_economies(map_data, copy.deepcopy(nation_data), context=context)
-    empty = {resource: 0 for resource in c.ECON_RESOURCE_KEYS}
-    return {country_id: _country_economy_summary(
-        nation_data[country_id], economies.get(country_id, {}).get("total_inc", empty),
-        economies.get(country_id, {}).get("upkeep", empty)) for country_id in shared}
+    summaries = {}
+    for country_id in shared:
+        economy = economies[country_id]
+        summaries[country_id] = _country_economy_summary(
+            nation_data[country_id], economy["total_inc"], economy["upkeep"], economy["breakdown"])
+    return summaries
 
 
 def can_view_country_economy(context, country_id):
@@ -131,9 +136,9 @@ def get_country_summary(context, country_id):
             # Remote clients without server totals keep the economy private.
             # Economy queries can initialize missing siphon rates. Inspection must
             # not initialize or change any saved country state.
-            income, expenses, _breakdown = queries.get_economy_projections(
+            income, expenses, breakdown = queries.get_economy_projections(
                 country_id, world_state.map_data, copy.deepcopy(nation_data), context=context)
-            economy = _country_economy_summary(country, income, expenses)
+            economy = _country_economy_summary(country, income, expenses, breakdown)
 
     faction = queries.get_country_faction(country_id, nation_data)
     policies = [{"name": politics.policy(policy_id)["name"], "status": state["status"],

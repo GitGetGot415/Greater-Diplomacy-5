@@ -110,13 +110,19 @@ class CountrySummaryScreen(Screen):
         height = CARD_TITLE_HEIGHT + sum(line.get_height() + LINE_GAP for line in rendered_lines) + CARD_PADDING
         table_y = height
         economy_details = []
-        if economy and self.summary["economy"]["available"]:
-            height += ECONOMY_ROW_HEIGHT * (len(self.summary["economy"]["resources"]) + 1)
+        economy_data = self.summary["economy"]
+        if economy and economy_data["available"]:
+            height += ECONOMY_ROW_HEIGHT * (len(economy_data["resources"]) + 1)
             details_y = height + CARD_PADDING
-            economy_details = [font.render(line, True, c.UI_TEXT_BRIGHT) for text in (
-                f"Conscription (manpower kept): {self.summary['economy']['conscription']:.0%}",
-                f"Materials to fuel: {self.summary['economy']['conversion']:.0%}")
-                for line in wrap_text(text, font, width)]
+            details = [f"Conscription (manpower kept): {economy_data['conscription']:.0%}",
+                       f"Materials to fuel: {economy_data['conversion']:.0%}"]
+            # Older multiplayer summaries may omit the amount or the rate.
+            if (spent := economy_data.get("research_funding_spent")) is not None:
+                funding = f"{spent:,} materials per turn"
+                if (rate := economy_data.get("research_funding_rate")) is not None:
+                    funding = f"{rate:.0%} ({funding})"
+                details.append(f"Research Funding: {funding}")
+            economy_details = [font.render(line, True, c.UI_TEXT_BRIGHT) for text in details for line in wrap_text(text, font, width)]
             height = details_y + sum(line.get_height() + LINE_GAP for line in economy_details) + CARD_PADDING
         card = pygame.Surface((self.card_width, height), pygame.SRCALPHA)
         style = COUNTRY_SUMMARY_STYLES["card"]

@@ -65,6 +65,7 @@ class CountrySummaryTests(unittest.TestCase):
     def test_own_summary_matches_shared_damage_and_economy_rules(self):
         game = world()
         game.world.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
+        game.world.nation_data["A"]["research_funding_slider"] = 0.25
         politics.set_axis_value(game.world.nation_data, "A", politics.ECONOMIC, -4)
         game.world.nation_data["A"][politics.POLICY_KEY] = {
             "damage_fixture": {"status": politics.POLICY_ACTIVE}}
@@ -80,8 +81,10 @@ class CountrySummaryTests(unittest.TestCase):
                                * summary["military"]["damage_multiplier"], expected_damage)
         self.assertEqual(summary["military"]["damage_multiplier"],
                          queries.get_country_damage_multiplier("A", game.world.nation_data))
-        income, expenses, _breakdown = queries.get_economy_projections(
+        income, expenses, breakdown = queries.get_economy_projections(
             "A", game.world.map_data, copy.deepcopy(game.world.nation_data))
+        self.assertEqual(summary["economy"]["research_funding_rate"], queries.get_research_funding_rate(game.world.nation_data["A"]))
+        self.assertEqual(summary["economy"]["research_funding_spent"], queries.get_research_funding_spent(breakdown))
         for row in summary["economy"]["resources"]:
             self.assertEqual(row["income"], income[row["resource"]])
             self.assertEqual(row["expenses"], expenses[row["resource"]])
@@ -164,6 +167,7 @@ class CountrySummaryTests(unittest.TestCase):
     def test_network_filtered_foreign_records_do_not_become_zero_economy_figures(self):
         game = world()
         game.home_of("A")["neighbors"] = [game.home_of("B")["id"]]
+        game.world.nation_data["B"]["research_funding_slider"] = 0.25
         snapshot = {"nation_data": game.world.nation_data,
                     "provinces": {province["json_key"]: province for province in game.world.map_data.values()}}
         filtered = queries.player_snapshot_projection(game, snapshot, "A")
@@ -176,6 +180,8 @@ class CountrySummaryTests(unittest.TestCase):
         self.assertEqual(summary["economy"]["resources"], [])
         self.assertNotIn("conscription", summary["economy"])
         self.assertNotIn("conversion", summary["economy"])
+        self.assertNotIn("research_funding_rate", summary["economy"])
+        self.assertNotIn("research_funding_spent", summary["economy"])
 
     def test_faction_members_and_direct_subjects_share_economies_in_each_mode(self):
         for mode in (LOCAL_PLAY, TOURNAMENT, REALTIME):
@@ -207,7 +213,7 @@ class CountrySummaryTests(unittest.TestCase):
         game.world.nation_data["A"]["faction"] = game.world.nation_data["B"]["faction"] = "Fixture Pact"
         hidden = game.add_province("B", units=[unit("B")])
         hidden.update(json_key="hidden", terrain="plains")
-        game.world.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}])
+        game.world.nation_data["B"].update(inbox=[{"secret": True}], research_queue=[{"secret": True}], research_funding_slider=0.25)
         expected = queries.get_country_summary(game, "B")["economy"]
         before = copy.deepcopy((game.world.map_data, game.world.nation_data))
         snapshot = {"nation_data": game.world.nation_data,
@@ -215,7 +221,7 @@ class CountrySummaryTests(unittest.TestCase):
         filtered = queries.player_snapshot_projection(game, snapshot, "A")
         self.assertEqual((game.world.map_data, game.world.nation_data), before)
         self.assertEqual(set(filtered["country_economy_summaries"]), {"B"})
-        for field in ("research", "research_queue", "inbox", "materials", "manpower", "fuel"):
+        for field in ("research", "research_queue", "research_funding_slider", "inbox", "materials", "manpower", "fuel"):
             self.assertNotIn(field, filtered["nation_data"]["B"])
         game.session.mode = REALTIME
         game.world.nation_data = filtered["nation_data"]
@@ -240,7 +246,7 @@ class CountrySummaryTests(unittest.TestCase):
         # The tournament filter projects a complete save, which records the date.
         game.world.time_manager = TimeHandler()
         game.presentation_enabled = False  # The stub has no map layers to refresh.
-        game.world.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED)
+        game.world.nation_data["B"].update(master="A", puppet_type=c.PUPPET_TYPE_INTEGRATED, research_funding_slider=0.25)
         game.world.nation_data["A"]["puppets"] = ["B"]
         expected = queries.get_country_summary(game, "B")["economy"]
         tournament_files.strip_sensitive_data_for_viewer(game, "A")
