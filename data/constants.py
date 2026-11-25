@@ -190,7 +190,7 @@ DEFAULT_UNIT_ART_STYLE = get_starting_value("settings_config.json", "unit_art_st
 UNIT_ART_STYLE = DEFAULT_UNIT_ART_STYLE
 UNIT_ART_STYLES = ("classic", "hanskolmer")
 
-GAME_VERSION = "v50"
+GAME_VERSION = "v51"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
 # ==========================================
