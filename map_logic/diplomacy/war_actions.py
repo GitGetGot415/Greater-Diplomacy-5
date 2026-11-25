@@ -22,18 +22,38 @@ from map_logic.diplomacy import guarantees, military_attaches
 # odd one out was the one that could raise.
 
 def sever_military_access(nation_data, a, b):
-    """Drops any granted or requested passage between two nations.
+    """Drops granted or requested passage and its reasons between two nations.
 
     Done when nations become allies/subjects (where a standing grant is
-    redundant) and when they become enemies (where passage would be
-    contradictory).  It also clears an in-flight request, which must never be
-    accepted after either of those state changes.
+    redundant), become enemies, or retire. In-flight access requests end with
+    the grants.
     """
     for country, other in ((a, b), (b, a)):
-        access = nation_data.get(country, {}).get("military_access", [])
-        if other in access:
-            access.remove(other)
+        data = nation_data.get(country)
+        if not isinstance(data, dict):
+            continue
+        access = data.get("military_access")
+        if isinstance(access, list) and other in access:
+            access[:] = [grantee for grantee in access if grantee != other]
+        reasons = data.get("military_access_reasons")
+        if isinstance(reasons, dict):
+            reasons.pop(other, None)
         clear_pending(nation_data, country, other, only_actions=["REQ_MILITARY_ACCESS"])
+
+
+def reconcile_retired_military_access(nation_data, active_nations):
+    """Remove grants involving defunct countries and preserve faction exiles."""
+    for country, data in nation_data.items():
+        if not isinstance(data, dict):
+            continue
+        targets = set()
+        for field, container in (("military_access", list), ("military_access_reasons", dict)):
+            entries = data.get(field)
+            if isinstance(entries, container):
+                targets.update(target for target in entries if isinstance(target, str))
+        for target in targets:
+            if country not in active_nations or target not in active_nations:
+                sever_military_access(nation_data, country, target)
 
 
 def add_enemy(nation_data, country, other):

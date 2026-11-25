@@ -20,7 +20,7 @@ from data.state_access import BackendState
 from map_logic.random_map import procedural_map_generator
 from map_logic.system32 import unit_events, movement_processor, economy_processor
 from map_logic.diplomacy import (diplomacy_events, diplomacy_lifecycle, faction_records,
-                                 faction_leadership, treaty_effects)
+                                 faction_leadership, treaty_effects, war_actions)
 from map_logic.territory import ownership
 from map_logic import tactical_rules
 
@@ -636,6 +636,9 @@ def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_pr
 
     yield "Preparing Diplomacy..."
     _repair_factions(context, save_meta)
+    if save_meta and not (session_state.is_editor or session_state.selection_mode):
+        active_nations = queries.get_politically_active_nations(world_state.map_data, world_state.nation_data)
+        war_actions.reconcile_retired_military_access(world_state.nation_data, active_nations)
     treaty_effects.expire_obsolete_peace(world_state.nation_data)
 
     queries.repair_spawned_territories(world_state.nation_data, world_state.map_data)

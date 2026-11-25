@@ -8,11 +8,12 @@ import data.constants as c
 from data import queries
 from map_logic.system32 import combat_processor
 from map_logic.territory import ownership
+from map_logic.diplomacy import war_actions
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
 
 def process_dead_nations(context):
-    """Removes defunct units and updates wars, preserving faction exiles."""
+    """Removes defunct units, wars, and access grants, preserving faction exiles."""
     world_state = world_for(context)
     # A government in exile survives only while another member still has land
     # from which it could restore the defeated country. Do this before deriving
@@ -37,9 +38,10 @@ def process_dead_nations(context):
         # Overwrite the province units with only the survivors
         province["units"] = surviving_units
 
-    # 2. Instantly clean up ghost wars after post-combat captures changed who
-    # remains politically active.
+    # 2. Clean up wars and access after post-combat captures changed who remains
+    # politically active.
     queries.cleanup_ghost_wars(world_state.nation_data, active_nations)
+    war_actions.reconcile_retired_military_access(world_state.nation_data, active_nations)
 
     for nation, data in list(world_state.nation_data.items()):
         # --- Master Independence on Collapse ---

@@ -65,6 +65,39 @@ class MapSaveFormatTests(unittest.TestCase):
             self.assertEqual(politics.economic_value(older.world.nation_data, country), c.POLITICS_START)
             self.assertEqual(politics.economic_drift(older.world.nation_data, country), 0)
 
+    def test_save_and_selected_history_repair_retired_military_access(self):
+        context = sample_map_screen()
+        world = context.world
+        home = next(iter(world.map_data.values()))
+        home.update(units=[], unit_queue=[])
+        other = dict(home, id=8, json_key="(8, 0, 0)", map_color=[8, 0, 0], owner="Borland", cores=["Borland"])
+        world.map_data[(8, 0, 0)] = other
+        world.nation_data["Avaria"].update(military_access=["Borland"], military_access_reasons={"Borland": "war"})
+        world.nation_data["Borland"] = {"name": "Borland", "military_access": ["Avaria"],
+                                        "military_access_reasons": {"Avaria": "war"}}
+        world.time_manager.get_date_string = lambda: "Fixture date"
+        active_turn = world.time_manager.total_turns
+        snapshot_history(context)
+        world.time_manager.total_turns += 1
+        other["owner"] = "Avaria"
+        retired_turn = world.time_manager.total_turns
+        snapshot_history(context)
+
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(queries, "get_settings", return_value={}):
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_save_dict(context, include_provinces=False), handle)
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_map_data_save(context), handle)
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            history_io.write(directory, world.history)
+            for turn, expected in ((None, []), (retired_turn, []), (active_turn, ["Borland"])):
+                with self.subTest(turn=turn):
+                    loaded = load_map.load_backend_state(directory, history_turn=turn, skip_initial_income=True)
+                    nations = loaded.world.nation_data
+                    self.assertEqual(queries.get_military_access_granted_to("Avaria", nations), expected)
+                    self.assertEqual(queries.get_military_access_granted_by("Avaria", nations), expected)
+                    self.assertEqual(list(nations["Avaria"].get("military_access_reasons", {})), expected)
+
     def tactical_context(self):
         context = sample_map_screen()
         library = {"Fixture Infantry I": {"health": 100, "speed": 2, "attack": 10, "defense": 3,

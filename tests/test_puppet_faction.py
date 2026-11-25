@@ -190,6 +190,30 @@ class RetireLandlessTests(unittest.TestCase):
         self.assertTrue(queries.is_government_in_exile(
             "Doomed", self.map_data, self.nation_data))
 
+    def test_passage_ends_when_a_faction_exile_is_retired(self):
+        nation_data = {
+            "Defender": nation(faction="Pact", is_faction_leader=True,
+                               military_access=["Neutral"], military_access_reasons={"Neutral": "war"}),
+            "Ally": nation(faction="Pact"),
+            "Neutral": nation(military_access=["Defender", "Taker"], military_access_reasons={"Defender": "war"}),
+            "Taker": nation(),
+        }
+        map_data = {"1": province(1, "Defender"), "2": province(2, "Ally"),
+                    "3": province(3, "Neutral")}
+        screen = Screen(nation_data, map_data)
+        nations = screen.world.nation_data
+
+        own.conquer_province(screen, map_data["1"], "Taker")
+        self.assertTrue(queries.has_military_access("Defender", "Neutral", nations))
+        self.assertTrue(queries.has_military_access("Neutral", "Defender", nations))
+
+        own.conquer_province(screen, map_data["2"], "Taker")
+        self.assertEqual(queries.get_military_access_granted_by("Defender", nations), [])
+        self.assertEqual(queries.get_military_access_granted_to("Defender", nations), [])
+        self.assertNotIn("Neutral", nations["Defender"].get("military_access_reasons", {}))
+        self.assertNotIn("Defender", nations["Neutral"].get("military_access_reasons", {}))
+        self.assertTrue(queries.has_military_access("Taker", "Neutral", nations))
+
     def test_its_wars_remain_the_factions_problem(self):
         screen = self.build()
         own.retire_landless_nation(screen, "Doomed")
