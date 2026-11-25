@@ -6,6 +6,7 @@ from math import fsum
 import random
 from data.state_access import session_for, world_for
 from map_logic import politics
+from data.queries.combat_state import is_province_in_active_combat
 from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
 from data.queries.tech import get_base_research_rates, get_exact_year, get_normal_research_progress, get_unmodified_research_points
@@ -846,6 +847,8 @@ class ProvinceProduction:
         return self.countries[owner]
 
     def breakdown(self, province):
+        if is_province_in_active_combat(province, self.nation_data):
+            return {}
         owner = province["owner"]
         economy = self.country(owner)
         is_core = queries.has_core(owner, province)
@@ -864,13 +867,14 @@ class ProvinceProduction:
         return {"core" if is_core else "non_core": yields, "resources": deposits, "buildings": self.building_output(province)}
 
     def _cached_breakdown(self, province):
-        key = province["id"], province["owner"]
+        # A capture forecast clears the roster even when ownership stays the same.
+        key = province["id"], province["owner"], bool(province.get("units"))
         if key not in self.province_breakdowns:
             self.province_breakdowns[key] = self.breakdown(province)
         return self.province_breakdowns[key]
 
     def total_output(self, province):
-        key = province["id"], province["owner"]
+        key = province["id"], province["owner"], bool(province.get("units"))
         if key not in self.totals:
             breakdown = self._cached_breakdown(province)
             self.totals[key] = {resource: sum(output[resource] for output in breakdown.values()) for resource in c.ECON_RESOURCE_KEYS}
@@ -886,7 +890,10 @@ class ProvinceProduction:
             breakdown[resource]["base"] = c.COUNTRY_BASE_YIELDS[resource]
         land_materials = {}
         for province in provinces:
-            _add_province_income(breakdown, self._cached_breakdown(province))
+            output = self._cached_breakdown(province)
+            if not output:
+                continue
+            _add_province_income(breakdown, output)
             if not is_water_province(province):
                 land_materials[province["id"]] = self.total_output(province)["materials"]
         if not land_materials:

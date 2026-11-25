@@ -24,10 +24,15 @@ def prepare_building_yields(map_screen):
         return
     map_screen._tooltip_building_stamp = stamp
     map_screen._tooltip_building_yields = []
+    map_screen._tooltip_tile_in_combat = False
     if not visible:
         return
     owner = province.get("owner", "Unclaimed")
     world = map_screen.world
+    if queries.is_province_in_active_combat(province, world.nation_data):
+        map_screen._tooltip_tile_in_combat = True
+        map_screen._tooltip_building_yields = [(name, dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)) for name in province.get("buildings", [])]
+        return
     country = world.nation_data.get(owner, {})
     if conversion_key:
         cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
@@ -178,15 +183,16 @@ def _province_tooltip_lines(map_screen, prov):
         mat_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"]
         fuel_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]
 
-        actual_man = int(base_man * man_mult)
-        actual_mat = int(base_mat * mat_mult)
-        actual_fuel = int(base_fuel * fuel_mult)
+        in_combat = is_visible and map_screen._tooltip_tile_in_combat
+        actual_man = 0 if in_combat else int(base_man * man_mult)
+        actual_mat = 0 if in_combat else int(base_mat * mat_mult)
+        actual_fuel = 0 if in_combat else int(base_fuel * fuel_mult)
 
         lines.append(f"Tile Yield: +{queries.format_number(actual_man)}Man, +{queries.format_number(actual_mat)}Mat, +{queries.format_number(actual_fuel)}Fuel")
         if not is_core and owner_id not in c.UNPLAYABLE_NATIONS:
             lines.append("  *(Non-Core Penalties Applied)*")
 
-        if is_visible:
+        if is_visible and not in_combat:
             cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
             if cached_key and cached_key == _fuel_conversion_key(map_screen):
                 conversion = countries.get(owner_id, {}).get(prov["id"])

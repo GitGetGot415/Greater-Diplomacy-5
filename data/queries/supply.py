@@ -314,7 +314,7 @@ class SupplySnapshot:
         owned = self.owned_provinces.get(country, ())
         if recaptured and any(owner == country or self.provinces[key]["owner"] == country for key, owner in recaptured.items()):
             provinces = [self.provinces[key] for key in owned if key not in recaptured]
-            provinces.extend(dict(self.provinces[key], owner=owner) for key, owner in recaptured.items() if owner == country)
+            provinces.extend(dict(self.provinces[key], owner=owner, units=()) for key, owner in recaptured.items() if owner == country)
             return self.production.fuel_conversion_by_province(country, provinces)
         if country not in self.fuel_conversions:
             self.fuel_conversions[country] = self.production.fuel_conversion_by_province(country, (self.provinces[key] for key in owned))
@@ -587,8 +587,9 @@ class SupplySnapshot:
 
     def _foreign_production(self):
         if self.estimated_production is None:
-            # Use visible province contents and default national multipliers.
-            self.estimated_production = queries.ProvinceProduction({owner: {} for owner in self.nations}, self.production.context)
+            # Use visible province contents and public wars with default national multipliers.
+            self.estimated_production = queries.ProvinceProduction(
+                {owner: {"at_war_with": queries.get_enemies(owner, self.nations)} for owner in self.nations}, self.production.context)
         return self.estimated_production
 
     def neighboring_areas(self, network, tile):
@@ -639,7 +640,7 @@ class SupplySnapshot:
                     production = c.BASE_YIELDS
                 else:
                     producer = self._foreign_production() if estimated else self.production
-                    production = producer.total_output(dict(province, owner=country))
+                    production = producer.total_output(dict(province, owner=country, units=()))
             else:
                 production = self._estimate_province_output(key) if estimated else self.production.total_output(province)
             if (conversion := conversions.get(key)) is not None:

@@ -364,6 +364,52 @@ class OutputBonusTests(unittest.TestCase):
         for res in c.ECON_RESOURCE_KEYS:
             self.assertEqual(country[res], expected["total_inc"][res])
 
+    def test_active_combat_pauses_tile_income_and_fuel_conversion_until_the_fighting_ends(self):
+        tile = dict(self.province(), id=1, terrain="plains", units=[{"owner": "A", "health": 100}])
+        safe = {"id": 2, "terrain": "plains", "owner": "A", "cores": ["A"]}
+        provinces = {1: tile, 2: safe}
+        country = {"at_war_with": ["B"], "mat_to_fuel_slider": 1, "conscription_slider": 1}
+        nations = {"A": country, "B": {"at_war_with": ["A"]}, "C": {}}
+        game = map_double(map_data=provinces, nation_data=nations, player_country="A",
+                          hovered_province=tile, secondary_mode="ECONOMY", base_layer="POLITICAL",
+                          _presentation_cache_revision=0, _tooltip_building_stamp=None)
+
+        def economy(tiles):
+            return queries.calculate_all_economies(tiles, nations, context=game)["A"]
+
+        with (patch.object(queries, "get_unit_library", return_value={}),
+              patch.object(queries, "get_max_fuel_conversion", return_value=1),
+              patch.object(c, "FUEL_CONVERSION_RATIO", 1),
+              patch.object(c, "BASE_YIELDS", {"manpower": 100, "materials": 20, "fuel": 10})):
+            safe_income = economy({2: safe})
+            tile["units"].append({"owner": "C", "health": 100})
+            normal = economy(provinces)
+            self.assertGreater(normal["gross_materials"], safe_income["gross_materials"])
+
+            tile["units"].append({"owner": "B", "health": 100})
+            self.assertEqual(economy(provinces)["breakdown"], safe_income["breakdown"])
+            supply = queries.SupplySnapshot(game)
+            actual = supply.fuel_conversion_for("A")
+            self.assertEqual(set(actual), {2})
+            self.assertEqual(actual[2]["fuel"], safe_income["breakdown"]["fuel"]["conversion"])
+            self.assertNotIn(1, supply.for_country("A").production_tiles)
+            reopened = supply.land_projection("A", reopen={1: "A"})
+            self.assertGreater(reopened.production_tiles[1]["fuel"], 0)
+
+            tooltip.prepare_building_yields(game)
+            self.assertTrue(game._tooltip_tile_in_combat)
+            self.assertTrue(all(not any(output.values()) for _, output in game._tooltip_building_yields))
+
+            economy_processor.process_economy(game)
+            for resource, amount in safe_income["total_inc"].items():
+                self.assertEqual(country[resource], amount)
+
+            tile["units"].pop()
+            game._presentation_cache_revision += 1
+            tooltip.prepare_building_yields(game)
+            self.assertFalse(game._tooltip_tile_in_combat)
+            self.assertEqual(economy(provinces)["breakdown"], normal["breakdown"])
+
     def test_first_compass_step_changes_credited_factory_income_and_research(self):
         factory_materials = 100
         self.library["Basic Factory"] = building(factory_materials, 0, 0, "industry")
