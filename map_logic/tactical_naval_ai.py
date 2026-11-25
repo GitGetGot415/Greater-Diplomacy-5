@@ -161,11 +161,7 @@ class NavalBehavior:
         """Both sides and the player use the same mount sectors and firing checks."""
         controlled = fighter is self.controlled
         if controlled:
-            throttle, turn = self._throttle, self._turn
-            if self._move_direction is not None:
-                dx, dy = self._move_direction
-                strength = min(1.0, math.hypot(dx, dy))
-                throttle, turn = self._heading_controls(fighter, strength, math.atan2(dy, dx)) if strength else (0.0, 0.0)
+            throttle, turn = self._player_controls(fighter)
         else:
             blocked_course = None
             fighter.retarget -= dt
@@ -245,11 +241,7 @@ class NavalBehavior:
             # A torpedo has no range limit: it runs until it leaves the map.
             remaining = naval.time_to_leave_map(start, angle, weapon["speed"], self.battlefield.size)
         self.projectiles.append(units.Projectile(fighter, dict(fighter.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
-        fighter.fired_weapon = slot
-        fighter.muzzle = fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS
-        fighter.recoil = fighter.mount_recoils[slot] = c.TACTICAL_MUZZLE_SECONDS if gravity else 0.0
-        if self.on_shot is not None:
-            self.on_shot(fighter)
+        self._record_shot(fighter, slot, recoil=bool(gravity))
 
     def _predict_naval_tick(self, trial, throttle, turn, dt):
         """Advance an isolated motion prediction with the live steering/acceleration rules."""
