@@ -980,9 +980,9 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
     map_screen.btn_multi_turn.visible = not is_sel and not is_thinking and is_spec
 
     if is_spec:
-        map_screen.btn_spec_mp_manage.visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
-        map_screen.btn_spec_mp_export.visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
-        map_screen.btn_spec_mp_keys.visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
+        spec_mp_visible = map_screen.multiplayer_host_mode and not is_sel and not is_thinking
+        for btn in (map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys):
+            btn.visible = spec_mp_visible
     map_screen.btn_declare_indep.visible = map_screen.session.tactical_mode and not is_sel and not is_thinking
 
 
@@ -990,23 +990,14 @@ def _update_gameplay_buttons(map_screen, is_sel, is_thinking):
     map_screen.btn_gp_msgs.text = "Mail"
     map_screen.btn_gp_msgs.image = ui_elements.UI_ICONS.get("mail")
     viewing_ai = map_screen.session.viewing_ai_moves
-    gp_btns = [
-        map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
-        map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_settings,
-        map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims,
-        map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics,
-        map_screen.slider_camera_tilt
-    ]
-
-    always_visible_btns = [map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt]
-
-    for btn in gp_btns:
-        if btn in always_visible_btns:
-            btn.visible = not is_sel
-        elif viewing_ai or is_thinking:
-            btn.visible = False
-        else:
-            btn.visible = not is_sel
+    for btn in (map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.slider_camera_tilt):
+        btn.visible = not is_sel
+    country_visible = not is_sel and not (viewing_ai or is_thinking)
+    for btn in (map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
+                map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_faction,
+                map_screen.btn_gp_claims, map_screen.btn_gp_puppets,
+                map_screen.btn_gp_automation, map_screen.btn_gp_politics):
+        btn.visible = country_visible
 
     # GREY OUT THE FACTION BUTTON
     my_faction = queries.get_country_faction(map_screen.session.player_country, map_screen.world.nation_data)
@@ -1040,24 +1031,28 @@ def _update_gameplay_buttons(map_screen, is_sel, is_thinking):
 
 def _update_spectator_province_buttons(map_screen, owner):
     if queries.is_playable(owner, map_screen.world.nation_data):
-        set_btn(map_screen.btn_force_war, True, True, "Force War", "red")
-        set_btn(map_screen.btn_force_peace, True, True, "Force Ceasefire", "green")
         can_remove_country = queries.can_use_spectator_country_actions(map_screen)
-        set_btn(map_screen.btn_spec_annex, can_remove_country, can_remove_country, "Annex", "orange")
-        set_btn(map_screen.btn_spec_delete, can_remove_country, can_remove_country, "Delete", "red")
+        for btn, available, text, color in (
+            (map_screen.btn_force_war, True, "Force War", "red"),
+            (map_screen.btn_force_peace, True, "Force Ceasefire", "green"),
+            (map_screen.btn_spec_annex, can_remove_country, "Annex", "orange"),
+            (map_screen.btn_spec_delete, can_remove_country, "Delete", "red"),
+        ):
+            set_btn(btn, available, available, text, color)
 
         in_faction = queries.get_country_faction(owner, map_screen.world.nation_data)
         is_leader = queries.is_faction_leader(owner, map_screen.world.nation_data)
-
         if not in_faction:
-            set_btn(map_screen.btn_spec_create_fac, True, True, "Create Faction", "blue")
-            set_btn(map_screen.btn_spec_join_fac, True, True, "Join Faction", "green")
+            faction_specs = ((map_screen.btn_spec_create_fac, "Create Faction", "blue"),
+                             (map_screen.btn_spec_join_fac, "Join Faction", "green"))
+        elif is_leader:
+            faction_specs = ((map_screen.btn_spec_invite_fac, "Invite to Faction", "blue"),
+                             (map_screen.btn_spec_disband_fac, "Disband Faction", "red"))
         else:
-            set_btn(map_screen.btn_spec_invite_fac, True, True, "Invite to Faction", "blue")
-            if is_leader:
-                set_btn(map_screen.btn_spec_disband_fac, True, True, "Disband Faction", "red")
-            else:
-                set_btn(map_screen.btn_spec_leave_fac, True, True, "Leave Faction", "orange")
+            faction_specs = ((map_screen.btn_spec_invite_fac, "Invite to Faction", "blue"),
+                             (map_screen.btn_spec_leave_fac, "Leave Faction", "orange"))
+        for btn, text, color in faction_specs:
+            set_btn(btn, True, True, text, color)
 
     # Allow Spectator to view production lines
     is_land = not queries.is_water_province(map_screen.selected_province)
@@ -1121,6 +1116,13 @@ def _update_war_button(map_screen, owner, pending_action, pending_turns, at_war)
     set_btn(map_screen.btn_declare_war, True, dw_enabled, dw_text, "red")
 
 
+def _set_foreign_revocation_button(button, hosting, pending_action, expected_action, pending_turns,
+                                   undo_label, action_label):
+    pending = (pending_action == expected_action and pending_turns == 0)
+    visible = hosting or pending
+    set_btn(button, visible, visible, undo_label if pending else action_label, "red")
+
+
 def _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns):
     """Update both volunteer buttons and return this country's mission state."""
     # A destroyed volunteer has no off-map record to clean up, so
@@ -1153,15 +1155,11 @@ def _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns):
 
     foreign_volunteer_state = volunteers.mission_state(
         map_screen.world.nation_data, owner, map_screen.session.player_country)
-    pending_send_home = (pending_action == volunteers.SEND_HOME_ACTION
-                         and pending_turns == 0)
-    hosting_foreign_volunteers = foreign_volunteer_state in (
-        volunteers.OUTBOUND, volunteers.DEPLOYED)
-    set_btn(map_screen.btn_send_home_foreign_volunteers,
-            hosting_foreign_volunteers or pending_send_home,
-            hosting_foreign_volunteers or pending_send_home,
-            "Undo Send Home" if pending_send_home else "Send Their Volunteers Home",
-            "red")
+    _set_foreign_revocation_button(
+        map_screen.btn_send_home_foreign_volunteers,
+        foreign_volunteer_state in (volunteers.OUTBOUND, volunteers.DEPLOYED),
+        pending_action, volunteers.SEND_HOME_ACTION, pending_turns,
+        "Undo Send Home", "Send Their Volunteers Home")
     return volunteer_state
 
 
@@ -1208,13 +1206,10 @@ def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
 
     hosting_their_attache = map_screen.session.player_country in military_attaches.hosts_for(
         owner, map_screen.world.nation_data)
-    pending_revoke_their_attache = (
-        pending_action == military_attaches.REVOKE_ACTION and pending_turns == 0)
-    set_btn(map_screen.btn_revoke_foreign_military_attache,
-            hosting_their_attache or pending_revoke_their_attache,
-            hosting_their_attache or pending_revoke_their_attache,
-            "Undo Revoke Their Attaché" if pending_revoke_their_attache
-            else "Revoke Their Attaché", "red")
+    _set_foreign_revocation_button(
+        map_screen.btn_revoke_foreign_military_attache,
+        hosting_their_attache, pending_action, military_attaches.REVOKE_ACTION, pending_turns,
+        "Undo Revoke Their Attaché", "Revoke Their Attaché")
     return not attached and not pending_attache and not pending_withdraw_attache
 
 
@@ -1339,26 +1334,19 @@ def _update_player_province_buttons(map_screen, owner):
     is_land = not queries.is_water_province(map_screen.selected_province)
     is_tactical = map_screen.session.tactical_mode
 
+    set_orders_or_battle(map_screen, set_btn, has_player_units)
     if owner == map_screen.session.player_country:
-        set_orders_or_battle(map_screen, set_btn, has_player_units)
-
         if is_tactical:
             set_btn(map_screen.btn_go_production, True, False, "Tactical: Disabled", "grey")
         else:
             set_btn(map_screen.btn_go_production, True, is_land, "Production", "orange")
-
     elif queries.is_playable(owner, map_screen.world.nation_data):
-        set_orders_or_battle(map_screen, set_btn, has_player_units)
-
         if is_tactical:
             # Disable all foreign interactions
             for button in _foreign_action_buttons(map_screen):
                 set_btn(button, True, False, "Tactical: Disabled", "grey")
             return
         _update_foreign_country_buttons(map_screen, owner)
-
-    else:
-        set_orders_or_battle(map_screen, set_btn, has_player_units)
 
 
 def update_button_states(map_screen):
