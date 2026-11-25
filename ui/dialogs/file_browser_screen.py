@@ -920,14 +920,7 @@ class FileBrowserScreen(ModalScreen):
                 return
 
     def _scroll_to(self, index):
-        if index is None:
-            return
-        top = index * self.ROW_HEIGHT
-        view_h = self.rows_rect.height
-        if top + self.scroll.value < 0:
-            self.scroll.value = -top
-        elif top + self.ROW_HEIGHT + self.scroll.value > view_h:
-            self.scroll.value = view_h - top - self.ROW_HEIGHT
+        self.scroll.ensure_row_visible(index, self.ROW_HEIGHT, self.rows_rect.height)
 
     def additional_events(self, event):
         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1

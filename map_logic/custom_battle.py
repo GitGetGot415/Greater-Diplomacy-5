@@ -101,8 +101,12 @@ class BattleSimulation(LandBehavior, NavalBehavior):
         return self.terrain in c.WATER_TERRAINS
 
     @property
+    def domain(self):
+        return rules.domain_config(self.naval)
+
+    @property
     def arena_size(self):
-        return naval.ARENA_SIZE if self.naval else rules.ARENA_SIZE
+        return self.domain.arena_size
 
     @property
     def sight_range(self):
@@ -121,7 +125,7 @@ class BattleSimulation(LandBehavior, NavalBehavior):
             self.terrain = self.battlefield.terrain
         if self.battlefield is None:
             self.battlefield = battle_terrain.Battlefield.generate(
-                self.terrain, self.arena_size, self.max_radius, naval.FRONT_GAP if self.naval else rules.SPAWN_FRONT_GAP, self.seed,
+                self.terrain, self.arena_size, self.max_radius, self.domain.front_gap, self.seed,
                 deployment_half_height=rules.deployment_half_height())
         allowed = set(rules.custom_unit_types(self.library))
         for side, (roster, columns) in enumerate(((self.friendly, self.friendly_columns), (self.enemy, self.enemy_columns))):
@@ -135,14 +139,14 @@ class BattleSimulation(LandBehavior, NavalBehavior):
             if any(rules.battle_unit_type(entry["type"] if isinstance(entry, dict) else entry, self.library) not in allowed
                    for entry in roster):
                 raise ValueError("Custom battles accept only current land-unit or ship identifiers.")
-            front = (self.arena_size[0] - (naval.FRONT_GAP if self.naval else rules.SPAWN_FRONT_GAP)) / 2
+            front = (self.arena_size[0] - self.domain.front_gap) / 2
             column_count = columns[-1] + 1
             offset = rules.stack_offset()
             for index, entry in enumerate(roster):
                 name = entry["type"] if isinstance(entry, dict) else entry
                 column = columns[index]
                 # The first column stands in the front rank, the last one furthest back.
-                x = front - column * (naval.RANK_GAP if self.naval else rules.RANK_GAP)
+                x = front - column * self.domain.rank_gap
                 # A column's only division stands centered; two stand one above the other.
                 height = 0.0 if columns.count(column) == 1 else offset if index and columns[index - 1] == column else -offset
                 if side:
@@ -162,7 +166,7 @@ class BattleSimulation(LandBehavior, NavalBehavior):
                 members = self._deploy_division(data, side, x, rules.unit_shape(data["type"], self.library),
                                                 self.arena_size[1] / 2 + height)
                 # Each column approaches in its own lane; a stacked division keeps its height within it.
-                lane = (column - (column_count - 1) / 2) * (naval.LANE_GAP if self.naval else rules.APPROACH_LANE_GAP) + height
+                lane = (column - (column_count - 1) / 2) * self.domain.lane_gap + height
                 for fighter in members:
                     fighter.lane = lane
                 if side == 0 and index == self.controlled_index:
@@ -337,15 +341,19 @@ class BattleSimulation(LandBehavior, NavalBehavior):
         else:
             fighter.primary_rounds, fighter.cooldown, fighter.primary_wait = rounds, wait, wait
 
-    def _drive_player(self, fighter, dt, shots):
-        if fighter.naval:
-            self._drive_naval(fighter, dt, shots)
-            return
+    def _player_controls(self, fighter):
         throttle, turn = self._throttle, self._turn
         if self._move_direction is not None:
             dx, dy = self._move_direction
             strength = min(1.0, math.hypot(dx, dy))
-            throttle, turn = self._heading_controls(fighter, strength, math.atan2(dy, dx)) if strength else (0.0, 0.0)
+            return self._heading_controls(fighter, strength, math.atan2(dy, dx)) if strength else (0.0, 0.0)
+        return throttle, turn
+
+    def _drive_player(self, fighter, dt, shots):
+        if fighter.naval:
+            self._drive_naval(fighter, dt, shots)
+            return
+        throttle, turn = self._player_controls(fighter)
         self._steer(fighter, turn, dt)
         self._accelerate(fighter, throttle, dt)
         aim = self._aim_point
@@ -361,6 +369,17 @@ class BattleSimulation(LandBehavior, NavalBehavior):
         turning = abs(fighter.turn_rate) / math.radians(rules.MOBILITY[fighter.shape][1])
         spread = weapon["spread"] + c.TACTICAL_MOVING_SPREAD * movement + c.TACTICAL_TURNING_SPREAD * turning
         return math.radians(spread * (c.TACTICAL_SHELL_SPREAD_MULTIPLIER if weapon["shell"] else 1.0))
+
+    def _record_shot(self, fighter, slot, *, recoil=False):
+        fighter.fired_weapon = slot
+        fighter.muzzle = c.TACTICAL_MUZZLE_SECONDS
+        if recoil:
+            fighter.recoil = c.TACTICAL_MUZZLE_SECONDS
+        if fighter.naval:
+            fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS
+            fighter.mount_recoils[slot] = c.TACTICAL_MUZZLE_SECONDS if recoil else 0.0
+        if self.on_shot is not None:
+            self.on_shot(fighter)
 
     def _fire_shot(self, fighter, slot=0):
         if fighter.naval:
@@ -384,12 +403,7 @@ class BattleSimulation(LandBehavior, NavalBehavior):
             fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(angle) * speed,
             math.sin(angle) * speed, rules.WEAPON_RANGE / speed,
             height=height, vertical_speed=vertical_speed, weapon_data=dict(weapon)))
-        fighter.fired_weapon = slot
-        fighter.muzzle = c.TACTICAL_MUZZLE_SECONDS
-        if weapon["shell"]:
-            fighter.recoil = c.TACTICAL_MUZZLE_SECONDS
-        if self.on_shot is not None:
-            self.on_shot(fighter)
+        self._record_shot(fighter, slot, recoil=bool(weapon["shell"]))
 
     @staticmethod
     def _shell_arc(start, point, weapon):

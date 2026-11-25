@@ -10,22 +10,21 @@ from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_
 from ui import dialogs
 from ui.rendering.font_manager import fonts
 
-# ==========================================
-# CONVOY / TRUCK CONVERTER
-# ==========================================
-
-class Convoy_Converter_Screen(EditorOverlayScreen):
+class _ProvinceUnitChecklistScreen(EditorOverlayScreen):
+    """Shared checklist modal for toggling units on one province."""
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
     PANEL_STYLE = EDITOR_PANEL_STYLES["convoy_converter"]
-    PANEL_TITLE = "Convert Units"
+    CONFIRM_REQUIRES_SELECTION = False
 
     def __init__(self, map_screen, province):
         super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
         self.province = province
-        self.unit_lib = queries.get_unit_library(map_screen)
-        self.selected = {i for i, unit in enumerate(province.get("units", [])) if queries.is_in_transport(unit)}
+        self.selected = self._initial_selected(province)
         self.refresh_ui()
+
+    def _initial_selected(self, _province):
+        return set()
 
     def toggle(self, idx):
         if idx in self.selected:
@@ -36,10 +35,10 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
-            Button(self.centered_x("medium"), p.bottom - 55, "medium", "green", "Save Changes", self.save),
-        ]
+        confirm = self._confirm_button(p)
+        if self.CONFIRM_REQUIRES_SELECTION:
+            confirm.disabled = not self.selected
+        self.elements = [make_back_button(self.exit_screen, style="map"), confirm]
 
         units = self.province.get("units", [])
         row_top = p.y + 70
@@ -50,17 +49,42 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         self.scroll.content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
         for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
                                           cull_top=cull_top, cull_bottom=cull_bottom):
-            unit = units[i]
-            name = queries.get_base_unit_type(unit)
-            is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
-            suffix = "(Truck)" if is_naval else "(Convoy)"
             checked = i in self.selected
-            label = checkbox_label(f"{queries.get_unit_display_name(name, self.unit_lib)} {suffix}", checked)
+            label = checkbox_label(self._row_label(units[i]), checked)
             btn = Button(row_x, y, "list_row", toggle_color(checked), label, lambda ii=i: self.toggle(ii))
             btn.rect.width = row_w
             self.add_list_row(btn)
 
         self.list_view_h = view_h
+
+    def draw_content(self, surface):
+        p = self.panel_rect
+        self.draw_panel(surface)
+        self.draw_list_scrollbar(surface, p.right - 15, p.y + 70, self.list_view_h)
+
+
+# ==========================================
+# CONVOY / TRUCK CONVERTER
+# ==========================================
+
+class Convoy_Converter_Screen(_ProvinceUnitChecklistScreen):
+    PANEL_TITLE = "Convert Units"
+
+    def __init__(self, map_screen, province):
+        self.unit_lib = queries.get_unit_library(map_screen)
+        super().__init__(map_screen, province)
+
+    def _initial_selected(self, province):
+        return {i for i, unit in enumerate(province.get("units", [])) if queries.is_in_transport(unit)}
+
+    def _confirm_button(self, p):
+        return Button(self.centered_x("medium"), p.bottom - 55, "medium", "green", "Save Changes", self.save)
+
+    def _row_label(self, unit):
+        name = queries.get_base_unit_type(unit)
+        is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
+        suffix = "(Truck)" if is_naval else "(Convoy)"
+        return f"{queries.get_unit_display_name(name, self.unit_lib)} {suffix}"
 
     def save(self):
         units = self.province.get("units", [])
@@ -82,62 +106,23 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         self.map_screen.show_feedback("Unit transport status updated!")
         self.done = True
 
-    def draw_content(self, surface):
-        p = self.panel_rect
-        self.draw_panel(surface)
-        self.draw_list_scrollbar(surface, p.right - 15, p.y + 70, self.list_view_h)
 
 # ==========================================
 # UNIT TRANSFER
 # ==========================================
 
-class Unit_Transfer_Screen(EditorOverlayScreen):
+class Unit_Transfer_Screen(_ProvinceUnitChecklistScreen):
     """Pick units on one tile, then pick the country that receives them."""
-    scroll_anywhere = True
-    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
-    PANEL_STYLE = EDITOR_PANEL_STYLES["convoy_converter"]
     PANEL_TITLE = "Transfer Units"
+    CONFIRM_REQUIRES_SELECTION = True
 
-    def __init__(self, map_screen, province):
-        super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
-        self.province = province
-        self.selected = set()
-        self.refresh_ui()
+    def _confirm_button(self, p):
+        return Button(self.centered_x("medium"), p.bottom - 55, "medium", "green", "Confirm Units", self.pick_country)
 
-    def toggle(self, idx):
-        if idx in self.selected:
-            self.selected.discard(idx)
-        else:
-            self.selected.add(idx)
-        self.refresh_ui()
-
-    def refresh_ui(self):
-        p = self.panel_rect
-        confirm = Button(self.centered_x("medium"), p.bottom - 55, "medium", "green",
-                         "Confirm Units", self.pick_country)
-        confirm.disabled = not self.selected
-        self.elements = [make_back_button(self.exit_screen, style="map"), confirm]
-
-        units = self.province.get("units", [])
-        nation_data = self.map_screen.world.nation_data
-        row_top = p.y + 70
-        view_h = p.height - 140
-        row_x = p.x + 20
-        row_w = p.width - 40
-        cull_top, cull_bottom = p.y + 60, p.bottom - 70
-        self.scroll.content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
-        for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
-                                          cull_top=cull_top, cull_bottom=cull_bottom):
-            unit = units[i]
-            name = queries.get_unit_display_name(unit.get("type", "Unknown"), context=self.map_screen)
-            owner = queries.get_country_display_name(unit.get("owner", "Unclaimed"), nation_data)
-            checked = i in self.selected
-            label = checkbox_label(f"{name} ({owner})", checked)
-            btn = Button(row_x, y, "list_row", toggle_color(checked), label, lambda ii=i: self.toggle(ii))
-            btn.rect.width = row_w
-            self.add_list_row(btn)
-
-        self.list_view_h = view_h
+    def _row_label(self, unit):
+        name = queries.get_unit_display_name(unit.get("type", "Unknown"), context=self.map_screen)
+        owner = queries.get_country_display_name(unit.get("owner", "Unclaimed"), self.map_screen.world.nation_data)
+        return f"{name} ({owner})"
 
     def pick_country(self):
         if not self.selected:
@@ -158,11 +143,6 @@ class Unit_Transfer_Screen(EditorOverlayScreen):
 
         pickers.open_listbox_selector(self.map_screen, "Transfer Units", "Choose the new owner:",
                                       queries.editor_unit_owner_choices(self.map_screen), picked)
-
-    def draw_content(self, surface):
-        p = self.panel_rect
-        self.draw_panel(surface)
-        self.draw_list_scrollbar(surface, p.right - 15, p.y + 70, self.list_view_h)
 
 # ==========================================
 # RESOURCE BRUSH

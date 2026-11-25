@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 from compilation_scripts import android_runtime, build_manifest as manifest
 from data.io.starting_defaults import write_preference_defaults
@@ -213,3 +214,44 @@ def verified_build_path(root, relative):
     if path == root or root not in path.parents:
         raise ValueError(f"Build target is outside the repository: {path}")
     return str(path)
+
+
+def stage_distributed_files(repo_root, dist_dir, platform_name, *,
+                            files_fn=distributed_files, reset_fn=reset_runtime_files):
+    """Copy manifest-listed runtime files into dist_dir and reset runtime state."""
+    os.makedirs(dist_dir, exist_ok=True)
+    for source, relative in files_fn(repo_root, platform_name):
+        target = os.path.join(dist_dir, relative)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copy2(source, target)
+    reset_fn(dist_dir)
+
+
+def run_pyinstaller_build(*, repo_root, dist_relative, platform_name, label,
+                          pyinstaller_args, archive_base, archive_format, archive_ext,
+                          executable_mode=None, run_cmd=subprocess.run,
+                          files_fn=distributed_files, reset_fn=reset_runtime_files):
+    """Clean dist output, run PyInstaller, stage files, and write the release archive."""
+    os.chdir(repo_root)
+    dist_dir = verified_build_path(repo_root, dist_relative)
+    if os.path.exists(dist_dir):
+        print(f"Cleaning {label} output folder: {dist_dir}...")
+        shutil.rmtree(dist_dir)
+    result = run_cmd([sys.executable, "-m", "PyInstaller"] + pyinstaller_args)
+    if result.returncode != 0:
+        print("PyInstaller failed.")
+        sys.exit(result.returncode)
+    print("PyInstaller finished successfully.")
+    stage_distributed_files(repo_root, dist_dir, platform_name,
+                            files_fn=files_fn, reset_fn=reset_fn)
+    if executable_mode is not None:
+        executable = os.path.join(dist_dir, "main")
+        if os.path.exists(executable):
+            os.chmod(executable, executable_mode)
+    shutil.make_archive(archive_base, archive_format, dist_dir)
+    archive_filename = f"{archive_base}.{archive_ext}"
+    destination = os.path.join(dist_dir, archive_filename)
+    if os.path.exists(destination):
+        os.remove(destination)
+    shutil.move(archive_filename, destination)
+    print(f"{label} build archive created at: {destination}")

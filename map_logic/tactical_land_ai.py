@@ -554,7 +554,7 @@ class LandBehavior:
             times = [] if discriminant < 0 else [(-b - math.sqrt(discriminant)) / (2 * a),
                                                  (-b + math.sqrt(discriminant)) / (2 * a)]
         arrival = min((time for time in times if time > 0), default=math.inf)
-        if arrival > (naval.RAM_APPROACH_RANGE if unit.naval else rules.RAM_APPROACH_RANGE) / rules.RAM_MIN_SPEED:
+        if arrival > rules.domain_config(unit.naval).ram_approach_range / rules.RAM_MIN_SPEED:
             return None
         point = target.x + target.vx * arrival, target.y + target.vy * arrival
         runup = max(0.0, math.dist((unit.x, unit.y), point) - unit.radius - target.radius)
@@ -577,8 +577,9 @@ class LandBehavior:
     def _ram_opportunity(self, unit, target, support, threats):
         distance = math.hypot(target.x - unit.x, target.y - unit.y)
         committed = unit.ram_committed and unit.target is target
+        domain = rules.domain_config(unit.naval)
         return (unit.data["health"] >= unit.data["max_health"] * rules.RAM_MIN_HEALTH
-                and distance <= (naval.RAM_APPROACH_RANGE if unit.naval else rules.RAM_APPROACH_RANGE)
+                and distance <= domain.ram_approach_range
                 and rules.CONTACT_MASS[unit.shape] >= rules.CONTACT_MASS[target.shape] * rules.RAM_MASS_ADVANTAGE
                 and self._can_hurt(unit, target) and threats <= support
                 and tuple(sorted((unit.index, target.index))) not in self._contacts
@@ -598,8 +599,9 @@ class LandBehavior:
                 if not unit.can_ram:
                     unit.ram_committed = False
                     continue
-                ram_range = naval.RAM_APPROACH_RANGE if unit.naval else rules.RAM_APPROACH_RANGE
-                support_range = naval.RAM_SUPPORT_RANGE if unit.naval else rules.RAM_SUPPORT_RANGE
+                domain = rules.domain_config(unit.naval)
+                ram_range = domain.ram_approach_range
+                support_range = domain.ram_support_range
                 nearby = [enemy for enemy in crowds[1 - side].around(unit.x, unit.y, ram_range)
                           if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= ram_range]
                 if not nearby:

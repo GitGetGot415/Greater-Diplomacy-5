@@ -39,6 +39,16 @@ class ScrollState:
         """Move the offset and keep it inside the pane's range."""
         self.value = max(self.limit, min(0, self.value + delta))
 
+    def ensure_row_visible(self, row, row_height, view_height):
+        """Scroll the minimum amount needed to keep ``row`` inside ``view_height``."""
+        if row is None:
+            return
+        top = row * row_height
+        if top + self.value < 0:
+            self.value = -top
+        elif top + row_height + self.value > view_height:
+            self.value = view_height - top - row_height
+
     def cancel(self):
         """Release scrollbar and content drags."""
         self.bar_drag = False

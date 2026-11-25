@@ -1,5 +1,6 @@
 """Tactical battle tuning, unit shapes, eligibility, and the geometry the simulation shares."""
 
+from dataclasses import dataclass
 import math
 
 import data.constants as c
@@ -507,3 +508,28 @@ def falling_window(shot, hit_height):
     """
     land = shot.remaining
     return max(0.0, min(land, naval.descending_time(shot.height, shot.vertical_speed, shot.gravity, hit_height))), land
+
+
+@dataclass(frozen=True)
+class DomainConfig:
+    """Arena and contact thresholds shared across land and naval tactical battles."""
+    naval: bool
+    arena_size: tuple
+    front_gap: float
+    rank_gap: float
+    lane_gap: float
+    ram_approach_range: float
+    ram_support_range: float
+
+
+LAND_DOMAIN = DomainConfig(
+    False, ARENA_SIZE, SPAWN_FRONT_GAP, RANK_GAP, APPROACH_LANE_GAP,
+    RAM_APPROACH_RANGE, RAM_SUPPORT_RANGE)
+NAVAL_DOMAIN = DomainConfig(
+    True, naval.ARENA_SIZE, naval.FRONT_GAP, naval.RANK_GAP, naval.LANE_GAP,
+    naval.RAM_APPROACH_RANGE, naval.RAM_SUPPORT_RANGE)
+
+
+def domain_config(is_naval):
+    """Return the tactical domain configuration for land or naval terrain."""
+    return NAVAL_DOMAIN if is_naval else LAND_DOMAIN

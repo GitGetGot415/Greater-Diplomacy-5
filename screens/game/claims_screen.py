@@ -165,6 +165,14 @@ class Claims_Screen(MapOverlayScreen):
             elif self.view_mode == "THEIRS" and dest.get("owner") == self.player:
                 self.return_foreign_claim(dest)
 
+    @staticmethod
+    def _pop_queued_province(queue, pid):
+        for i, entry in enumerate(queue):
+            if entry["prov_id"] == pid:
+                queue.pop(i)
+                return True
+        return False
+
     def toggle_claim(self, dest):
         if not self.can_edit_realtime():
             return
@@ -179,12 +187,10 @@ class Claims_Screen(MapOverlayScreen):
         revoke_queue = data.setdefault("revoke_queue", [])
 
         # Check if it's currently being revoked
-        for i, rq in enumerate(revoke_queue):
-            if rq["prov_id"] == pid:
-                revoke_queue.pop(i)
-                self.map_screen.show_feedback("Revoke cancelled. Claim retained.")
-                self.refresh_ui()
-                return
+        if self._pop_queued_province(revoke_queue, pid):
+            self.map_screen.show_feedback("Revoke cancelled. Claim retained.")
+            self.refresh_ui()
+            return
 
         # Revoke existing claim or core (takes 1 turn)
         if pid in claims or is_core:
@@ -194,12 +200,10 @@ class Claims_Screen(MapOverlayScreen):
             return
 
         # Cancel claim in progress
-        for i, q in enumerate(queue):
-            if q["prov_id"] == pid:
-                queue.pop(i)
-                self.map_screen.show_feedback("Claim removed from queue.")
-                self.refresh_ui()
-                return
+        if self._pop_queued_province(queue, pid):
+            self.map_screen.show_feedback("Claim removed from queue.")
+            self.refresh_ui()
+            return
 
         # Begin fabricating a new claim (Cores are instant, so queued claims are always non-cores)
         turns = c.CLAIM_TURN_NON_CORE
@@ -242,12 +246,10 @@ class Claims_Screen(MapOverlayScreen):
         return_queue = data.setdefault("return_queue", [])
 
         # Check if it's currently being returned, if so, cancel it
-        for i, rq in enumerate(return_queue):
-            if rq["prov_id"] == pid:
-                return_queue.pop(i)
-                self.map_screen.show_feedback("Return cancelled. Territory retained.")
-                self.refresh_ui()
-                return
+        if self._pop_queued_province(return_queue, pid):
+            self.map_screen.show_feedback("Return cancelled. Territory retained.")
+            self.refresh_ui()
+            return
 
         return_queue.append({"prov_id": pid, "recipient": recipient, "turns_left": 1})
         self.map_screen.show_feedback(f"Returning territory to {recipient} (1 turn).")
