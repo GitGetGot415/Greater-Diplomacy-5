@@ -385,13 +385,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                 index = self.filtered_entries.index(self.selected_entry)
                 index = max(0, min(len(self.filtered_entries) - 1, index + (1 if event.key == pygame.K_DOWN else -1)))
             rect = self.regions["items"]
-            scroll = self.pane_scroll("items")
-            row = index + self.leading_row_count
-            top = row * self.ROW_HEIGHT + scroll
-            if top < 0:
-                self.pane("items").value = -row * self.ROW_HEIGHT
-            elif top + self.ROW_HEIGHT > rect.height:
-                self.pane("items").value = rect.height - (row + 1) * self.ROW_HEIGHT
+            self.pane("items").ensure_row_visible(index + self.leading_row_count, self.ROW_HEIGHT, rect.height)
             self.select_entry(self.filtered_entries[index])
 
     def handle_events(self, events):
