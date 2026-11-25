@@ -64,6 +64,21 @@ def unit_fuel_readout(unit, fuel, speed, library, nation_data):
     return None
 
 
+def unit_supply_shortage_details(unit, status, speed, library, nation_data):
+    """Supply and fuel details shown when visible coverage falls short."""
+    details = {}
+    if status is None:
+        return details
+    manpower, materials, fuel = status.fractions
+    if manpower < 1 or materials < 1:
+        entries = ((RESOURCE_ICONS["manpower"], format_supply_percentage(manpower)),
+                   (RESOURCE_ICONS["materials"], format_supply_percentage(materials)))
+        details["supply"] = f"Supply {format_supply_percentage(status.readiness)}   ", entries
+    if fuel < 1 and (fuel_readout := unit_fuel_readout(unit, fuel, speed, library, nation_data)):
+        details["fuel"] = fuel_readout
+    return details
+
+
 def prepare_unit_roster(map_screen, province):
     """Cache one province's ground battle and stats at a selection/state boundary."""
     units = queries.filter_visible_units(
@@ -82,15 +97,7 @@ def prepare_unit_roster(map_screen, province):
                 row["cargo"] = [(member.get("custom_name") or queries.get_condensed_unit_name(member["type"], library, context=map_screen),
                                  queries.format_health_percent(member)) for member in cargo]
             status = queries.unit_supply_status(supply, unit)
-            if status is None:
-                continue
-            manpower, materials, fuel = status.fractions
-            if manpower < 1 or materials < 1:
-                entries = ((RESOURCE_ICONS["manpower"], format_supply_percentage(manpower)),
-                           (RESOURCE_ICONS["materials"], format_supply_percentage(materials)))
-                row["supply"] = f"Supply {format_supply_percentage(status.readiness)}   ", entries
-            if fuel < 1 and (fuel_readout := unit_fuel_readout(unit, fuel, row["speed"], library, map_screen.world.nation_data)):
-                row["fuel"] = fuel_readout
+            row.update(unit_supply_shortage_details(unit, status, row["speed"], library, map_screen.world.nation_data))
     # Standalone UI fixtures may not have Map's presentation cache yet.
     cache = map_screen._unit_roster_cache
     if cache is None:

@@ -1360,7 +1360,7 @@ class UnitCommandControls:
             return 0.0, 1.0
 
     def _draw_unit_row(self, surface, row_key, unit, province, unit_index, row_y, display_index,
-                       owner_color, small_font, tiny_font, show_actions):
+                       owner_color, small_font, tiny_font, show_actions, *, icon_overlay=None):
         """Draws one 40px roster row underneath its transparent hitbox/icons."""
         row_rect = pygame.Rect(
             self.PANEL_X + UNIT_ROW_X_OFFSET, row_y,
@@ -1394,6 +1394,8 @@ class UnitCommandControls:
         icon = self.unit_row_icons.get(row_key)
         if icon:
             surface.blit(icon, icon.get_rect(center=icon_box.center))
+            if icon_overlay is not None:
+                surface.blit(icon_overlay, icon_overlay.get_rect(center=icon_box.center))
 
         name_x = self.PANEL_X + UNIT_NAME_OFFSET_X
         action_x = self.PANEL_X + ACTION_START_OFFSET_X

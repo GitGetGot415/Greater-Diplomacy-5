@@ -2,6 +2,7 @@ import pygame
 import data.constants as c
 from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button
+from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from data import queries
 from map_logic.actions import unit_actions
@@ -12,7 +13,7 @@ from ui.panels import army_panel
 from ui.panels.unit_commands import (
     UnitCommandControls, _AirMissionSelectScreen,
     PANEL_Y, PANEL_HEIGHT, PANEL_INSET, PANEL_BORDER_COLOR, SCROLLBAR_WIDTH,
-    UNIT_ROW_X_OFFSET, ACTION_START_OFFSET_X, MAP_CLICK_DRAG_THRESHOLD,
+    UNIT_ROW_X_OFFSET, UNIT_ICON_SIZE, ACTION_START_OFFSET_X, MAP_CLICK_DRAG_THRESHOLD,
     AIR_MISSION_CHOICES, AIR_MISSION_ICONS,
 )
 from screens.game import map_input
@@ -41,6 +42,8 @@ HEADER_HELP_OFFSET_Y = 151
 HEADER_HELP_LINE_GAP = 2
 LIST_TOP_OFFSET_Y = 185
 UNIT_TOOLTIP_TEXT_WIDTH = 380
+SUPPLY_WARNING_SIZE = UNIT_ICON_SIZE - 4
+SUPPLY_WARNING_ALPHA = 175
 
 TOP_BTN_GAP_X = 6
 BATCH_LABEL_INSET = 4
@@ -83,6 +86,7 @@ class Orders_Screen(UnitCommandControls, Screen):
         # every member.
         self._roster_rows = []
         self._row_portrait_tooltips = {}
+        self._row_icon_overlays = {}
         self._selected_display_records = []
         self._selected_display_ids = frozenset()
         self._panel_title_text = "ORDERS | MAP COMMAND"
@@ -656,6 +660,7 @@ class Orders_Screen(UnitCommandControls, Screen):
             for key, unit, _province, _index in rows
             if unit.get("owner") == player_country}
         self._row_portrait_tooltips = {}
+        self._row_icon_overlays = {}
         self._presentation_state = self._current_presentation_state()
 
         # Battle is deliberately a child of Orders.  Keep this available for
@@ -771,6 +776,11 @@ class Orders_Screen(UnitCommandControls, Screen):
                 self.elements.append(mission_button)
 
         tiny_font = fonts.get("tiny")
+        supply = queries.presentation_supply(self.map_screen)
+        unit_library = queries.get_unit_library(self.map_screen)
+        nation_data = self.map_screen.world.nation_data
+        warning = symbol_loader.get_symbol("Warning", zoom=1, alpha=SUPPLY_WARNING_ALPHA, style="classic",
+                                           fit_size=(SUPPLY_WARNING_SIZE, SUPPLY_WARNING_SIZE))
         for display_index, (row_key, unit, province, index) in enumerate(rows):
             row_y = self.panel_top + (display_index * self.row_height) + self.scroll.value
             row_rect = pygame.Rect(
@@ -783,6 +793,10 @@ class Orders_Screen(UnitCommandControls, Screen):
 
             self._cache_row_icon(row_key, unit)
             if self.unit_row_icons.get(row_key) is not None:
+                status = queries.unit_supply_status(supply, unit)
+                speed = queries.presentation_move_speed(self.map_screen, unit)
+                if warning is not None and sidebar_info.unit_supply_shortage_details(unit, status, speed, unit_library, nation_data):
+                    self._row_icon_overlays[row_key] = warning
                 lines = self._unit_portrait_tooltip_lines(row_key, unit, province)
                 self._row_portrait_tooltips[row_key] = tuple(
                     tiny_font.render(line, True, c.UI_TEXT_BRIGHT)
@@ -1036,7 +1050,8 @@ class Orders_Screen(UnitCommandControls, Screen):
                         self._draw_unit_row(
                             surface, row_key, unit, province, unit_index, y_pos, display_index,
                             owner_color, small_font, tiny_font,
-                            self.map_screen.is_unit_selected(unit))
+                            self.map_screen.is_unit_selected(unit),
+                            icon_overlay=self._row_icon_overlays.get(row_key))
 
         self.draw_list_scrollbar(
             surface, self.panel_rect.right - SCROLLBAR_WIDTH, self.panel_top,
