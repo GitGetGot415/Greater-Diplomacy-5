@@ -81,6 +81,24 @@ def _disable_windows_native_error_dialogs():
 
 
 class BeepBoxAudioTests(unittest.TestCase):
+    def run_native_audio(self, scenario, *songs, timeout=20):
+        setup = """
+import sys
+import time
+from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
+_disable_windows_native_error_dialogs()
+import pygame
+from beepbox_audio import BeepBoxStream
+
+pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+"""
+        result = subprocess.run(
+            [sys.executable, "-X", "faulthandler", "-c", setup + scenario, *songs],
+            cwd=ROOT, env=os.environ | {"SDL_AUDIODRIVER": "dummy"},
+            capture_output=True, text=True, timeout=timeout,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_added_song_is_recognized_and_upstream_license_is_shipped(self):
         self.assertTrue(is_beepbox_song(SONG_PATH))
         self.assertTrue(has_beepbox_replacement(os.path.splitext(SONG_PATH)[0] + ".mp3"))
@@ -244,14 +262,6 @@ class BeepBoxAudioTests(unittest.TestCase):
     )
     def test_pygame_native_stream_supports_play_pause_and_seek_without_underruns(self):
         script = r"""
-import sys
-import time
-from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
-_disable_windows_native_error_dialogs()
-import pygame
-from beepbox_audio import BeepBoxStream
-
-pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
 stream = BeepBoxStream(sys.argv[1], volume=0.0)
 try:
     deadline = time.monotonic() + 8
@@ -318,17 +328,7 @@ finally:
     stream.stop(wait=True)
     pygame.mixer.quit()
 """
-        environment = os.environ.copy()
-        environment["SDL_AUDIODRIVER"] = "dummy"
-        result = subprocess.run(
-            [sys.executable, "-X", "faulthandler", "-c", script, SONG_PATH],
-            cwd=ROOT,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=20,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.run_native_audio(script, SONG_PATH)
 
     @unittest.skipUnless(
         _native_audio_tests_available(),
@@ -336,14 +336,6 @@ finally:
     )
     def test_rapid_track_switching_keeps_the_latest_stream_playing(self):
         script = r"""
-import sys
-import time
-from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
-_disable_windows_native_error_dialogs()
-import pygame
-from beepbox_audio import BeepBoxStream
-
-pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
 stream = None
 try:
     for song_path in sys.argv[1:]:
@@ -362,22 +354,14 @@ finally:
         stream.stop(wait=True)
     pygame.mixer.quit()
 """
-        environment = os.environ.copy()
-        environment["SDL_AUDIODRIVER"] = "dummy"
-        result = subprocess.run(
-            [sys.executable, "-X", "faulthandler", "-c", script,
-             SONG_PATH,
-             os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
-             SONG_PATH,
-             os.path.join(ROOT, "assets", "music", "Experimental", "Sensory Overload Rainbow.json"),
-             SONG_PATH],
-            cwd=ROOT,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=20,
+        self.run_native_audio(
+            script,
+            SONG_PATH,
+            os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
+            SONG_PATH,
+            os.path.join(ROOT, "assets", "music", "Experimental", "Sensory Overload Rainbow.json"),
+            SONG_PATH,
         )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     @unittest.skipUnless(
         _native_audio_tests_available(),
@@ -385,13 +369,6 @@ finally:
     )
     def test_stop_and_seek_silence_the_queued_block(self):
         script = r"""
-import sys
-import time
-from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
-_disable_windows_native_error_dialogs()
-import pygame
-from beepbox_audio import BeepBoxStream
-
 def wait_for_queued_block(stream):
     deadline = time.monotonic() + 8
     while (stream._channel.get_queue() is None and stream.error is None
@@ -401,7 +378,6 @@ def wait_for_queued_block(stream):
     assert stream.error is None, stream.error
     assert stream._channel.get_queue() is not None
 
-pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
 stream = BeepBoxStream(sys.argv[1], volume=0.0)
 try:
     wait_for_queued_block(stream)
@@ -416,17 +392,7 @@ finally:
     stream.stop(wait=True)
     pygame.mixer.quit()
 """
-        environment = os.environ.copy()
-        environment["SDL_AUDIODRIVER"] = "dummy"
-        result = subprocess.run(
-            [sys.executable, "-X", "faulthandler", "-c", script, SONG_PATH],
-            cwd=ROOT,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=20,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.run_native_audio(script, SONG_PATH)
 
     @unittest.skipUnless(
         _native_audio_tests_available(),
@@ -434,14 +400,6 @@ finally:
     )
     def test_v8_playback_stays_ahead_in_reported_late_song_sections(self):
         script = r"""
-import sys
-import time
-from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
-_disable_windows_native_error_dialogs()
-import pygame
-from beepbox_audio import BeepBoxStream
-
-pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
 for song_path, target in ((sys.argv[1], 247.0), (sys.argv[2], 173.0)):
     stream = BeepBoxStream(song_path, volume=0.0)
     try:
@@ -477,19 +435,12 @@ for song_path, target in ((sys.argv[1], 247.0), (sys.argv[2], 173.0)):
         stream.stop(wait=True)
 pygame.mixer.quit()
 """
-        environment = os.environ.copy()
-        environment["SDL_AUDIODRIVER"] = "dummy"
-        result = subprocess.run(
-            [sys.executable, "-X", "faulthandler", "-c", script,
-             os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
-             SONG_PATH],
-            cwd=ROOT,
-            env=environment,
-            capture_output=True,
-            text=True,
+        self.run_native_audio(
+            script,
+            os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Under the Rainbow Redux.json"),
+            SONG_PATH,
             timeout=30,
         )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     @unittest.skipUnless(
         _native_audio_tests_available(),
@@ -497,15 +448,8 @@ pygame.mixer.quit()
     )
     def test_native_stream_keeps_time_during_heavy_python_turn_work(self):
         script = r"""
-import sys
 import threading
-import time
-from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
-_disable_windows_native_error_dialogs()
-import pygame
-from beepbox_audio import BeepBoxStream
 
-pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
 stream = BeepBoxStream(sys.argv[1], volume=0.0)
 try:
     deadline = time.monotonic() + 8
@@ -546,17 +490,7 @@ finally:
     stream.stop(wait=True)
     pygame.mixer.quit()
 """
-        environment = os.environ.copy()
-        environment["SDL_AUDIODRIVER"] = "dummy"
-        result = subprocess.run(
-            [sys.executable, "-X", "faulthandler", "-c", script, SONG_PATH],
-            cwd=ROOT,
-            env=environment,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.run_native_audio(script, SONG_PATH, timeout=15)
 
 
 if __name__ == "__main__":
