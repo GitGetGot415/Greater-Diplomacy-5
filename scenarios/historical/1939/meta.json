@@ -1,6 +1,6 @@
 {
-  "version": "v50",
-  "generated_at": "2026-11-24T20:13:27.100935",
+  "version": "v51",
+  "generated_at": "2026-11-26T02:01:11.861681",
   "date": {"day": 15, "month": 2, "year": 1939, "total_turns": 0},
   "loop_map": true,
   "player_country": "Editor",
@@ -1441,6 +1441,14 @@
               "message": "Let this happen. Please.",
               "ai_generate": false,
               "send_up_to": false
+            },
+            {
+              "type": "Declare War",
+              "target": "Lithuania",
+              "unit_type": "Supported Rifle Infantry III",
+              "message": "Let this happen. Please.",
+              "ai_generate": false,
+              "send_up_to": false
             }
           ],
           "fire_once": true,
@@ -2643,7 +2651,8 @@
       "master": "German Reich",
       "puppet_type": "Integrated",
       "spawned_territories": [375, 379, 389],
-      "armies": []
+      "armies": [],
+      "siphon_rates": {"manpower": 0.0, "materials": 0.0, "fuel": 0.0}
     },
     "Turkey": {
       "name": "Turkey",
@@ -8123,5 +8132,6 @@
     }
   },
   "unit_event_log": {"turn": 0, "events": []},
-  "unit_event_read_turns": {}
+  "unit_event_read_turns": {},
+  "conversation_colors": {}
 }
