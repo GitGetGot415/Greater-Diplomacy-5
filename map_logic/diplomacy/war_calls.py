@@ -69,45 +69,42 @@ def unshared_wars(nation, other, nation_data):
     enemies would be answered by doing nothing at all.
     """
     return [enemy for enemy in _unshared_enemies(nation, other, nation_data)
-            if not queries.has_active_truce(other, enemy, nation_data)
+            if (enemy in nation_data and not queries.are_in_same_faction(other, enemy, nation_data))
+            and not queries.has_active_truce(other, enemy, nation_data)
             and not queries.has_active_truce(enemy, other, nation_data)]
 
 
+def parties(action, proposer, recipient):
+    """Return the belligerent and the country being asked to join."""
+    return (proposer, recipient) if action == CALL_TO_ARMS else (recipient, proposer)
+
+
+def recently_settled(nation, enemy, nation_data):
+    """Whether the existing postwar relation marker is still active."""
+    entry = nation_data[nation].get("temp_modifiers", {}).get(enemy, {}).get("recent_war", 0)
+    return bool(queries.modifier_value(entry))
+
+
 def intended_action(caller, target, nation_data):
-    """Which of the two messages these two nations' war lists actually support.
-
-    CALL_TO_ARMS when the caller has a war to be helped in, JOIN_WARS when it is
-    the target who does, and None when neither has anything to offer the other --
-    which is the case the unguarded branch used to queue as a call to arms
-    anyway.
-
-    Checked in that order: a nation with a war of its own to fight is asking for
-    help, even if the target also has one it could be pulled into.
-    """
-    if not are_pledged(caller, target, nation_data):
-        return None
-    if unshared_wars(caller, target, nation_data):
-        return CALL_TO_ARMS
-    if unshared_wars(target, caller, nation_data):
-        return JOIN_WARS
-    return None
+    """Prefer asking for help when either direction would be legal."""
+    return next((action for action in WAR_REQUESTS
+                 if is_honest(action, caller, target, nation_data)), None)
 
 
 def is_honest(action, caller, target, nation_data):
-    """Whether this exact message is the one these two nations' wars support."""
-    if action not in WAR_REQUESTS:
-        return True
-    return action == intended_action(caller, target, nation_data)
+    return action not in WAR_REQUESTS or not request_block_reason(action, caller, target, nation_data)
 
 
 def request_block_reason(action, proposer, recipient, nation_data):
-    """Explain why a delivered request can no longer be carried out."""
-    if is_honest(action, proposer, recipient, nation_data):
+    """Recheck the explicitly chosen direction against current war and authority."""
+    if action not in WAR_REQUESTS:
         return ""
-
-    fighter, joiner = (proposer, recipient) if action == CALL_TO_ARMS else (recipient, proposer)
+    fighter, joiner = parties(action, proposer, recipient)
+    master = nation_data.get(joiner, {}).get("master")
     if not are_pledged(proposer, recipient, nation_data):
         key = "WAR_REQUEST_NO_PLEDGE"
+    elif master:
+        key = "WAR_REQUEST_CONTACT_OVERLORD"
     elif not queries.get_enemies(fighter, nation_data):
         key = "WAR_REQUEST_NO_ACTIVE_WARS"
     elif queries.are_at_war(fighter, joiner, nation_data):
@@ -117,10 +114,11 @@ def request_block_reason(action, proposer, recipient, nation_data):
     elif not unshared_wars(fighter, joiner, nation_data):
         key = "WAR_REQUEST_TRUCES"
     else:
-        key = "WAR_REQUEST_DIRECTION_CHANGED"
-
-    return ai_prompts.AI_FALLBACK_RESPONSES[key].format(fighter=queries.get_country_display_name(fighter, nation_data),
-                                                      joiner=queries.get_country_display_name(joiner, nation_data))
+        return ""
+    return ai_prompts.AI_FALLBACK_RESPONSES[key].format(
+        fighter=queries.get_country_display_name(fighter, nation_data),
+        joiner=queries.get_country_display_name(joiner, nation_data),
+        master=queries.get_country_display_name(master, nation_data) if master else "")
 
 
 def closed_request_text(action, proposer, recipient, reason, nation_data):

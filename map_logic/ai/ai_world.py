@@ -50,7 +50,7 @@ class AIWorld:
     """Per-turn snapshot of the map, with memoised strength/relation queries."""
 
     def __init__(self, map_data, nation_data, id_to_province, total_turns=0,
-                 human_players=(), scenario_settings=None):
+                 human_players=(), scenario_settings=None, *, current_date=None):
         self.map_data = map_data
         self.nation_data = nation_data
         if scenario_settings is None:
@@ -59,6 +59,8 @@ class AIWorld:
         self.scenario_settings = scenario_settings
         self.id_to_province = id_to_province
         self.total_turns = total_turns
+        time_manager = nation_data.world.time_manager if isinstance(nation_data, WorldNations) else None
+        self.current_date = current_date or (time_manager.get_date_string() if time_manager is not None else None)
 
         # Deterministic per-turn randomness for AI decisions. Module-level
         # `random` stays where it is -- get_active_ai_nations shuffles with it
@@ -515,6 +517,33 @@ class AIWorld:
             self._reachable[key] = cached
         return cached
 
+    def homeland_border_threatened(self, nation, enemy):
+        """Visible ground combat strength across a border with our core land."""
+        visible = self.visible_provinces(nation)
+        data = self.nation_data
+        library = queries.get_unit_library(data)
+        defenders = queries.get_all_friendly_nations(nation, data)
+        own_tiles, enemy_tiles = set(), set()
+        for province in self.provs_by_owner[nation]:
+            if province["id"] in self.water_ids or nation not in province.get("cores", ()):
+                continue
+            adjacent = [tile for tile in self.neighbor_ids[province["id"]]
+                        if tile in visible and tile not in self.water_ids
+                        and self.id_to_province[tile].get("owner") == enemy]
+            if adjacent:
+                own_tiles.add(province["id"])
+                enemy_tiles.update(adjacent)
+
+        def strength(tiles, owners):
+            return sum(queries.calculate_unit_strength(unit)
+                       for tile in tiles for unit in self.id_to_province[tile].get("units", ())
+                       if unit.get("owner") in owners and unit.get("health", 0) > 0
+                       and not unit.get("naval_unit") and not unit.get("type", "").startswith("Convoy")
+                       and not any(library.get(unit.get("type"), {}).get(tag) for tag in ("air_role", "naval_unit"))
+                       and queries.is_unit_visible_to(unit, nation, self.id_to_province[tile], data))
+
+        return strength(enemy_tiles, {enemy}) > strength(own_tiles, defenders)
+
     def access_improves_route(self, nation, grantor, enemy):
         """Compare routes to the enemy's perimeter with and without passage."""
         targets = {neighbor for province in self.provs_by_owner[enemy]
@@ -668,7 +697,8 @@ def build(context):
     return AIWorld(world_state.map_data, world_state.nation_data,
                    world_state.id_to_province, total_turns,
                    human_players=session_for(context).active_players,
-                   scenario_settings=world_state.scenario_settings)
+                   scenario_settings=world_state.scenario_settings,
+                   current_date=time_manager.get_date_string() if time_manager is not None else None)
 
 
 def for_screen(context):

@@ -22,7 +22,6 @@ from map_logic.diplomacy.faction_actions import (
     finalize_disband_faction,
     finalize_faction_join,
     finalize_faction_leave,
-    join_faction_wars,
     finalize_faction_kick,
     why_an_ai_may_not_leave,
 )
@@ -355,16 +354,19 @@ def _resolve_simultaneous_clashes(context):
                 log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
 
-            elif (((a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS")
-                   or (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"))
-                  # Each country joins the other's wars.
-                  and not _crossing_forbidden(context, nation_a, nation_b, "JOIN_WARS", a_info, b_info)
-                  and not _crossing_forbidden(context, nation_b, nation_a, "JOIN_WARS", b_info, a_info)):
-
-                join_faction_wars(world_state.map_data, world_state.nation_data, nation_a, nation_b)
-                join_faction_wars(world_state.map_data, world_state.nation_data, nation_b, nation_a)
-                log_global_event(world_state.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
-                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
+            elif {a_action, b_action} == set(war_calls.WAR_REQUESTS):
+                if a_action == war_calls.CALL_TO_ARMS:
+                    fighter, joiner, calling, joining = nation_a, nation_b, a_info, b_info
+                else:
+                    fighter, joiner, calling, joining = nation_b, nation_a, b_info, a_info
+                if (_crossing_forbidden(context, fighter, joiner, war_calls.CALL_TO_ARMS, calling, joining)
+                        or _crossing_forbidden(context, joiner, fighter, war_calls.JOIN_WARS, joining, calling)):
+                    continue
+                outcome = treaty_effects.apply_treaty_effect(
+                    context, war_calls.JOIN_WARS, joiner, fighter,
+                    scripted=calling.get("scripted", False), proposer_scripted=joining.get("scripted", False))
+                if outcome.status == "applied":
+                    _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
 
 
 def _forward_war_declaration_to_masters(context, declared_country, declarer,
@@ -943,7 +945,8 @@ def _resolve_queued_response(context, country_name, sender, resp):
         # pass below runs the same rules -- see treaty_effects.
         outcome = treaty_effects.apply_treaty_effect(
             context, orig_action, sender, country_name, params,
-            escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False))
+            escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False),
+            proposer_scripted=their_request.get("scripted", False))
         if outcome.blocked:
             msg_text = outcome.blocked
             wrote_it = False
@@ -1035,6 +1038,10 @@ def _send_justify_wargoal(send):
 
 def _send_war_declaration(send):
     world = send.world
+    if (global_rules.is_ai_controlled(send.context, send.country) and not send.info.get("scripted", False)
+            and war_calls.recently_settled(send.country, send.target, world.nation_data)
+            and not ai_opinion.may_reopen_war(ai_world.for_screen(send.context), send.country, send.target)):
+        return True
     # Store active wargoal in war data
     world.nation_data[send.country].setdefault("wargoals", {})[send.target] = {"type": send.custom_msg}
     log_global_event(world.nation_data, f"WAR DECLARED: {send.country} has declared war on {send.target}!")
@@ -1497,7 +1504,7 @@ def _resolve_ai_answer(context, ai_results, active_nations_list, delayed_respons
         # replaces it.
         outcome = treaty_effects.apply_treaty_effect(
             context, action, sender, target, info.get("parameters"),
-            escrow=info.pop("escrow", None))
+            escrow=info.pop("escrow", None), proposer_scripted=info.get("scripted", False))
         if outcome.blocked:
             message = outcome.blocked
             wrote_it = False

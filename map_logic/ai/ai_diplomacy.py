@@ -731,7 +731,8 @@ def _call_faction_to_arms(bag, context, ai_name, my_faction, my_enemies, active_
     world_state = world_for(context)
     faction_members = queries.get_faction_members(my_faction, world_state.nation_data)
     for member in faction_members:
-        if member == ai_name or member not in active_nations: continue
+        if member == ai_name or member not in active_nations or world_state.nation_data[member].get("master"):
+            continue
 
         # war_calls owns this question, so the pass that *sends* the message,
         # the guardrail that vets one from a model, and join_faction_wars, which
@@ -789,26 +790,32 @@ def _join_faction_wars_proactively(bag, context, ai_name, my_faction, my_enemies
     faction_members = queries.get_faction_members(my_faction, world_state.nation_data)
     loyalty = ai_personality.trait(world_state.nation_data, ai_name, "loyalty",
                                    world_state.scenario_settings)
+    if world_state.nation_data[ai_name].get("master"):
+        return
+
+    options = []
+    covered = set()
     for member in faction_members:
-        if member == ai_name:
+        if member == ai_name or member not in active_nations:
             continue
+        wars = {enemy for enemy in ai_opinion.wars_to_join(world, member, ai_name)
+                if enemy in active_nations}
+        if not wars:
+            continue
+        existing = world_state.nation_data[ai_name].get("pending_diplomacy", {}).get(member, {})
+        if existing.get("action") == war_calls.JOIN_WARS and existing.get("turns", 0) > 0:
+            covered.update(wars)
+        elif ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, member, war_calls.JOIN_WARS):
+            options.append((member, wars))
 
-        # The mirror image, same shared definition -- see the note in
-        # _call_faction_to_arms. Here it is the member who is fighting and we who
-        # would be joining, so the arguments swap.
-        unshared_wars = [e for e in war_calls.unshared_wars(member, ai_name,
-                                                            world_state.nation_data)
-                         if e in active_nations]
-
-        if unshared_wars:
-            target_enemy = unshared_wars[0]
-            if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, member, "JOIN_WARS"):
-                # A faithless nation lets its allies fight alone; a loyal one
-                # turns up. Nothing used to distinguish them.
-                bag.add(ai_candidates.make(
-                    "JOIN_WARS", member, ai_tuning.AI_SCORE_JOIN_WARS * (0.4 + 1.2 * loyalty),
-                    f"our faction-mate is fighting {target_enemy} without us",
-                    context_target=target_enemy))
+    for member, wars in sorted(options, key=lambda option: (-len(option[1]), option[0])):
+        additional = wars - covered
+        if additional:
+            enemy = min(additional)
+            if bag.add(ai_candidates.make(
+                    war_calls.JOIN_WARS, member, ai_tuning.AI_SCORE_JOIN_WARS * (0.4 + 1.2 * loyalty),
+                    f"our faction-mate is fighting {enemy} without us", context_target=enemy)):
+                covered.update(wars)
 
 
 def _declare_war_for_cores_and_claims(bag, context, ai_name, my_enemies, my_master, my_type, is_already_at_war, active_nations, world):
@@ -861,7 +868,8 @@ def _declare_war_for_cores_and_claims(bag, context, ai_name, my_enemies, my_mast
         # we are already losing all count now -- and an aggressive nation will
         # gamble on odds a cautious one turns down.
         desire = ai_opinion.war_desire(world, ai_name, target, world_state.scenario_settings)
-        if desire >= ai_tuning.AI_WAR_DESIRE_THRESHOLD:
+        if (desire >= ai_tuning.AI_WAR_DESIRE_THRESHOLD
+                and ai_opinion.may_reopen_war(world, ai_name, target)):
 
             # The chance to actually declare war, rolled so the same save makes
             # the same declarations whatever order the nations are processed in.
@@ -936,7 +944,7 @@ def _drain_llm_requests(bag, context, ai_name, data, my_enemies, active_nations,
                  and queries.has_wargoal(ai_name, target, world_state.nation_data, world_state.map_data)
                  and ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, target,
                                                    "WAR_DECLARATION"))
-        if not legal:
+        if not legal or not ai_opinion.may_reopen_war(world, ai_name, target):
             diplomacy_events.log_global_event(
                 world_state.nation_data,
                 f"RUMOR: {ai_name} weighed war with {target} and thought better of it.")
@@ -1126,7 +1134,7 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
         if ours:
             offers.append(("CALL_TO_ARMS", 0.0, f"their help against {ours[0]}",
                            {"context_target": ours[0]}))
-        theirs = [e for e in war_calls.unshared_wars(other, ai_name, nation_data) if e in active_nations]
+        theirs = [e for e in ai_opinion.wars_to_join(world, other, ai_name) if e in active_nations]
         if theirs:
             offers.append(("JOIN_WARS", 0.0, f"our help against {theirs[0]}",
                            {"context_target": theirs[0]}))

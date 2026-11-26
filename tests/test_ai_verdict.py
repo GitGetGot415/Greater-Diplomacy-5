@@ -131,6 +131,10 @@ class FactionTests(VerdictTestCase):
     def test_faction_mates_get_help(self):
         self.nation_data["Avaria"]["faction"] = "Entente"
         self.nation_data["Borland"]["faction"] = "Entente"
+        self.nation_data["Carrow"] = nation()
+        self.nation_data["Dunmar"] = nation()
+        self.nation_data["Avaria"]["at_war_with"] = ["Carrow"]
+        self.nation_data["Borland"]["at_war_with"] = ["Dunmar"]
         self.assertTrue(self.accepts("JOIN_WARS"))
         self.assertTrue(self.accepts("CALL_TO_ARMS"))
 

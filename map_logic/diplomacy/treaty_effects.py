@@ -21,7 +21,7 @@ The processor calls this shared implementation for both player and AI acceptance
 
 from typing import NamedTuple
 
-from map_logic.ai import ai_prompts
+from map_logic.ai import ai_opinion, ai_prompts, ai_world
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import war_actions, war_calls
 
@@ -228,31 +228,22 @@ def _accept_trade(host, action, proposer, accepter, params, escrow):
     return _canned("ACCEPT_TRADE")
 
 
-def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
-    nation_data = host.world.nation_data
-    # The backstop for war_calls, at the point every path converges -- the
-    # same place the puppet-peace rule is enforced, and for the same reason:
-    # an offer sits in the inbox for turns, and the wars it was about can
-    # end while it waits. Answering a call to arms that has nothing left to
-    # answer used to run join_faction_wars over an empty list and announce
-    # an escalation that had not happened.
-    reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
-    if reason:
-        return TreatyOutcome("blocked", blocked=reason)
-    join_faction_wars(host.world.map_data, nation_data, accepter, proposer)
-    log_global_event(nation_data,
-                     f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
-    return _APPLIED
-
-
-def _accept_join_wars(host, action, proposer, accepter, params, escrow):
+def _accept_war_request(host, action, proposer, accepter, params, escrow, *, scripted=False, proposer_scripted=False):
     nation_data = host.world.nation_data
     reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
     if reason:
         return TreatyOutcome("blocked", blocked=reason)
-    join_faction_wars(host.world.map_data, nation_data, proposer, accepter)
-    log_global_event(nation_data,
-                     f"ESCALATION: {proposer} has joined the wars of {accepter}!")
+    fighter, joiner = war_calls.parties(action, proposer, accepter)
+    joining_scripted = scripted if action == war_calls.CALL_TO_ARMS else proposer_scripted
+    enemies = war_calls.unshared_wars(fighter, joiner, nation_data)
+    if (global_rules.is_ai_controlled(host, joiner) and not joining_scripted
+            and any(war_calls.recently_settled(joiner, enemy, nation_data) for enemy in enemies)):
+        enemies = ai_opinion.wars_to_join(ai_world.for_screen(host), fighter, joiner)
+        if not enemies:
+            return _blocked("WAR_REQUEST_RECENT_PEACE")
+    joined = join_faction_wars(host.world.map_data, nation_data, joiner, fighter, enemies=enemies)
+    if joined:
+        log_global_event(nation_data, f"ESCALATION: {joiner} joined the wars of {fighter}.")
     return _APPLIED
 
 
@@ -302,7 +293,7 @@ _ACCEPTANCE_EFFECTS = handlers_for("acceptance_effect", globals())
 _ACCEPTANCES_WITH_OWN_EVENTS = {"CEASEFIRE", "PEACE_TREATY", "CREATE_FACTION", "CALL_TO_ARMS", "JOIN_WARS", "SEND_MILITARY_ATTACHE"}
 
 
-def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False, chosen_deal=None):
+def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False, proposer_scripted=False, chosen_deal=None):
     """Applies an accepted proposal and returns a TreatyOutcome.
 
     `proposer` offered the deal and `accepter` agreed to it, whichever side is
@@ -328,6 +319,9 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
     if chosen_deal is not None:
         outcome = effect(host, action, proposer, accepter, params, escrow, chosen_deal=chosen_deal)
+    elif action in war_calls.WAR_REQUESTS:
+        outcome = effect(host, action, proposer, accepter, params, escrow,
+                         scripted=scripted, proposer_scripted=proposer_scripted)
     elif action == "REQ_MILITARY_ACCESS":
         outcome = effect(host, action, proposer, accepter, params, escrow, scripted=scripted)
     else:

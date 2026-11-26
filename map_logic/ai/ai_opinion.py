@@ -24,7 +24,7 @@ from map_logic.ai import ai_tuning
 from data.number_utils import clamp01
 from data import queries
 from map_logic.ai import ai_personality
-from map_logic.diplomacy import guarantees
+from map_logic.diplomacy import guarantees, war_calls
 
 from map_logic.diplomacy import deal as deal_mod, war_score
 from map_logic.ai import ai_unit_eval
@@ -118,6 +118,34 @@ def war_desire(world, nation, target, scenario_settings=None):
         restraint += ai_tuning.AI_GUARANTEE_RESTRAINT * (0.45 + 0.55 * guarantee_risk)
 
     return clamp01(core - restraint)
+
+
+def may_reopen_war(world, nation, enemy):
+    """Require a fresh strategic reason while the last settlement is still recent."""
+    from map_logic.ai import ai_evaluation  # Reuse the declaration reader without an import cycle.
+
+    data = world.nation_data
+    if not war_calls.recently_settled(nation, enemy, data):
+        return True
+
+    days = queries.get_days_per_turn(world.scenario_settings)
+    for ally in queries.get_enemies(enemy, data):
+        if war_calls.are_pledged(nation, ally, data):
+            declaration = ai_evaluation.war_origin(
+                data, ally, enemy, world.current_date, days, max_age=ai_tuning.AI_WAR_REENTRY_DEFENSIVE_TURNS)
+            if declaration and declaration[0] == "they":
+                return True
+
+    if world.homeland_border_threatened(nation, enemy):
+        return True
+    return (world.perceived_power_ratio(nation, enemy)[1] >= ai_tuning.AI_WAR_REENTRY_POWER_RATIO
+            and war_desire(world, nation, enemy, world.scenario_settings) >= ai_tuning.AI_WAR_DESIRE_THRESHOLD)
+
+
+def wars_to_join(world, fighter, joiner):
+    """Wars the AI has reason to enter after the shared legal checks."""
+    return [enemy for enemy in war_calls.unshared_wars(fighter, joiner, world.nation_data)
+            if may_reopen_war(world, joiner, enemy)]
 
 
 def peace_appetite(world, nation, enemy, scenario_settings=None):

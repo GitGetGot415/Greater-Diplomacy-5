@@ -111,7 +111,8 @@ def link_war(nation_data, a, b):
     """
     sever_military_access(nation_data, a, b)
     for country, other in ((a, b), (b, a)):
-        add_enemy(nation_data, country, other)
+        if add_enemy(nation_data, country, other):
+            nation_data[country].setdefault("war_durations", {})[other] = 0
 
 
 def reconcile_military_access(nation_data):

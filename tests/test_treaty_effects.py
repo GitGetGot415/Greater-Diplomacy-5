@@ -168,6 +168,35 @@ class TreatyEffectTests(unittest.TestCase):
         self.assertEqual(outcome.status, "applied")
         self.assertIn("Germany", host.world.nation_data["UK"]["military_access"])
 
+    def test_ai_leaves_a_settled_war_alone_until_a_fresh_attack(self):
+        from map_logic.system32.time_handler import TimeHandler
+
+        host = StubMapScreen(("AI", "Ally", "Enemy"), human_players=("Ally",))
+        host.world.time_manager = TimeHandler()
+        host.set_faction("Pact", "Ally", "AI")
+        host.set_war("Ally", "Enemy")
+        data = host.world.nation_data
+        data["AI"]["temp_modifiers"] = {"Enemy": {"recent_war": -5}}
+        self.assertEqual(self.apply(host, "CALL_TO_ARMS", "Ally", "AI").status, "blocked")
+
+        diplomacy_processor.send_message(host, "Enemy", "Ally", "Declaration of war",
+                                          "DIPLOMACY", extra={"action": "WAR_DECLARATION"})
+        self.assertEqual(self.apply(host, "CALL_TO_ARMS", "Ally", "AI").status, "applied")
+        self.assertIn("Enemy", data["AI"]["at_war_with"])
+
+    def test_a_subject_joins_through_its_overlord(self):
+        from map_logic.diplomacy.puppet_actions import assign_puppet
+
+        host = StubMapScreen(("Master", "Subject", "Ally", "Enemy"), human_players=("Master", "Ally"))
+        host.set_faction("Pact", "Master", "Ally")
+        data = host.world.nation_data
+        assign_puppet(host.world.map_data, data, "Master", "Subject")
+        host.set_war("Ally", "Enemy")
+
+        self.assertEqual(self.apply(host, "CALL_TO_ARMS", "Ally", "Subject").status, "blocked")
+        self.assertEqual(self.apply(host, "CALL_TO_ARMS", "Ally", "Master").status, "applied")
+        self.assertIn("Enemy", data["Subject"]["at_war_with"])
+
     # -- blocked agreements ----------------------------------------------
 
     def test_invite_is_blocked_when_the_accepter_already_has_a_faction(self):

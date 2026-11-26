@@ -403,9 +403,10 @@ class SameOutcomeMergeTests(unittest.TestCase):
         self.assertEqual([inbox[0]["sender"] for inbox in notices], ["B", "A"])
 
     def test_call_to_arms_and_join_wars_merge(self):
-        game = StubMapScreen(["A", "B", "C"], human_players=["A", "B"])
+        game = StubMapScreen(["A", "B", "C", "D"], human_players=["A", "B"])
         game.set_faction("Pact", "A", "B")
         game.set_war("A", "C")
+        game.set_war("B", "D")
 
         game.propose("A", "B", "CALL_TO_ARMS", message="Aid us!")
         game.propose("B", "A", "JOIN_WARS", message="We join your fight!")
@@ -413,6 +414,8 @@ class SameOutcomeMergeTests(unittest.TestCase):
 
         self.assertIn("C", game.world.nation_data["B"]["at_war_with"],
                       "the merged call to arms should have pulled B into A's war")
+        self.assertNotIn("D", game.world.nation_data["A"]["at_war_with"])
+        self.assertEqual(game.world.nation_data["B"]["war_durations"]["C"], 0)
 
 
 class RejectionAndCooldownTests(unittest.TestCase):

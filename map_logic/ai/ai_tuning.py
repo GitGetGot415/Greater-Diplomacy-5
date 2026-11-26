@@ -135,6 +135,8 @@ AI_GUARANTEE_RESTRAINT = 0.55
 # resolve, without making it inert. 0.62 gives 16/6 and 0.70 gives 11/7, both
 # too quiet for a scenario that should catch fire.
 AI_WAR_DESIRE_THRESHOLD = 0.55
+AI_WAR_REENTRY_DEFENSIVE_TURNS = 2
+AI_WAR_REENTRY_POWER_RATIO = 2.0
 # Lower than the war bar: fabricating a claim is a step toward a war, taken
 # before the odds are settled, and it is how a war becomes legal at all.
 AI_CLAIM_DESIRE_THRESHOLD = 0.45
