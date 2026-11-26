@@ -23,7 +23,7 @@ from typing import NamedTuple
 
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import deal as deal_mod
-from map_logic.diplomacy import war_calls
+from map_logic.diplomacy import war_actions, war_calls
 
 from data import queries
 from data.state_access import session_for
@@ -256,20 +256,27 @@ def _accept_join_wars(host, action, proposer, accepter, params, escrow):
     return _APPLIED
 
 
-def _accept_military_access(host, action, proposer, accepter, params, escrow):
+def _accept_military_access(host, action, proposer, accepter, params, escrow, *, scripted=False):
     nation_data = host.world.nation_data
     # The accepter grants the proposer passage through their territory.
     # Deliberately one-way: the proposer gets no say over the reverse.
     if proposer == accepter or queries.are_at_war(proposer, accepter, nation_data):
         return _blocked("INVALID_MILITARY_ACCESS")
-    granted = nation_data.setdefault(accepter, {}).setdefault("military_access", [])
+    automatic = global_rules.is_ai_controlled(host, accepter) and not scripted
+    if automatic:
+        _, reason = war_actions.shared_war_access(proposer, accepter, nation_data)
+        if reason:
+            return _blocked(reason)
+
+    granted = nation_data[accepter].setdefault("military_access", [])
     if proposer not in granted:
         granted.append(proposer)
-
-    shared_enemy = bool(set(queries.get_enemies(accepter, nation_data)) &
-                        set(queries.get_enemies(proposer, nation_data)))
-    if shared_enemy:
-        nation_data[accepter].setdefault("military_access_reasons", {})[proposer] = "war"
+        host.world.diplomacy_revision += 1
+    reasons = nation_data[accepter].setdefault("military_access_reasons", {})
+    if automatic:
+        reasons[proposer] = "war"
+    else:
+        reasons.pop(proposer, None)
 
     return _canned("ACCEPT_MILITARY_ACCESS")
 
@@ -321,6 +328,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
     if chosen_deal is not None:
         outcome = effect(host, action, proposer, accepter, params, escrow, chosen_deal=chosen_deal)
+    elif action == "REQ_MILITARY_ACCESS":
+        outcome = effect(host, action, proposer, accepter, params, escrow, scripted=scripted)
     else:
         outcome = effect(host, action, proposer, accepter, params, escrow)
     if escrow and action in peace_scope.PEACE_ACTIONS and outcome.status == "blocked":

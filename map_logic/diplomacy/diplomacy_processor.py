@@ -1155,9 +1155,7 @@ def _send_take_puppets(send):
 
 def _send_cancel_military_access(send):
     # We are cancelling our access to their country (target's list)
-    target_list = send.world.nation_data.get(send.target, {}).setdefault("military_access", [])
-    if send.country in target_list:
-        target_list.remove(send.country)
+    war_actions.revoke_military_access(send.world.nation_data, send.target, send.country)
     log_global_event(send.world.nation_data, f"{send.country} cancelled their military access to {send.target}.")
     _announce(send)
     return True
@@ -1165,9 +1163,7 @@ def _send_cancel_military_access(send):
 
 def _send_revoke_military_access(send):
     # We are revoking their access to our country (our list)
-    our_list = send.world.nation_data.get(send.country, {}).setdefault("military_access", [])
-    if send.target in our_list:
-        our_list.remove(send.target)
+    war_actions.revoke_military_access(send.world.nation_data, send.country, send.target)
     log_global_event(send.world.nation_data, f"{send.country} revoked {send.target}'s military access.")
     _announce(send)
     return True
@@ -1801,6 +1797,22 @@ def _process_scheduled_ai_volunteer_send_homes(context):
                      "DIPLOMACY", extra={"action": volunteers.SEND_HOME_ACTION})
 
 
+def reconcile_ai_wartime_access(context):
+    """Review automatic grants against the wars and alliances that now exist."""
+    nation_data = world_for(context).nation_data
+    for grantor, data in nation_data.items():
+        if not global_rules.is_ai_controlled(context, grantor):
+            continue
+        for grantee, source in list(data.get("military_access_reasons", {}).items()):
+            if source != "war":
+                continue
+            _, reason = war_actions.shared_war_access(grantee, grantor, nation_data)
+            if reason and war_actions.revoke_military_access(nation_data, grantor, grantee):
+                log_global_event(nation_data, f"{grantor} revoked {grantee}'s military access.")
+                send_message(context, grantor, grantee, ai_prompts.AI_FALLBACK_RESPONSES[reason],
+                             "DIPLOMACY", extra={"action": "REVOKE_MILITARY_ACCESS"})
+
+
 def _schedule_conflicting_ai_attache_revocations(context):
     """Record new AI attaché conflicts for processing on the next turn."""
     world_state = world_for(context)
@@ -1881,6 +1893,7 @@ def _process_diplomacy_turn(context):
     # helpers. Keep temporary diplomatic state valid even on those paths.
     guarantees.reconcile(world_state.nation_data)
     war_actions.reconcile_military_access(world_state.nation_data)
+    reconcile_ai_wartime_access(context)
     military_attaches.reconcile(world_state.nation_data)
     _schedule_conflicting_ai_attache_revocations(context)
     _schedule_conflicting_ai_volunteer_send_homes(context)

@@ -67,7 +67,9 @@ class TreatyEffectTests(unittest.TestCase):
         self.assertEqual(int(host.world.nation_data["B"].get("fuel", 0) or 0), before[1])
 
     def test_military_access_says_something(self):
-        host = self.world()
+        host = StubMapScreen(("A", "B", "C"))
+        host.set_war("A", "C")
+        host.set_war("B", "C")
         outcome = self.apply(host, "REQ_MILITARY_ACCESS")
         self.assertTrue(outcome.canned)
 
@@ -135,16 +137,36 @@ class TreatyEffectTests(unittest.TestCase):
         self.assertNotIn("A", host.world.nation_data["B"]["at_war_with"])
 
     def test_military_access_is_one_way(self):
-        host = self.world()
+        host = StubMapScreen(("A", "B"), human_players=("B",))
         self.apply(host, "REQ_MILITARY_ACCESS", "A", "B")
         self.assertIn("A", host.world.nation_data["B"]["military_access"])
         self.assertNotIn("B", host.world.nation_data["A"]["military_access"])
 
     def test_swapping_the_roles_swaps_who_grants_access(self):
-        host = self.world()
+        host = StubMapScreen(("A", "B"), human_players=("A",))
         self.apply(host, "REQ_MILITARY_ACCESS", "B", "A")
         self.assertIn("B", host.world.nation_data["A"]["military_access"])
         self.assertNotIn("A", host.world.nation_data["B"]["military_access"])
+
+    def test_a_shared_war_grant_ends_when_the_grantee_attacks_an_ally(self):
+        host = StubMapScreen(("UK", "France", "Germany", "Greece"), human_players=())
+        host.set_faction("Allies", "UK", "France")
+        host.set_war("UK", "Greece")
+        host.set_war("Germany", "Greece")
+        self.assertEqual(self.apply(host, "REQ_MILITARY_ACCESS", "Germany", "UK").status, "applied")
+        host.set_war("Germany", "France")
+        diplomacy_processor.reconcile_ai_wartime_access(host)
+        self.assertNotIn("Germany", host.world.nation_data["UK"]["military_access"])
+        self.assertEqual(self.apply(host, "REQ_MILITARY_ACCESS", "Germany", "UK").status, "blocked")
+
+    def test_a_scripted_grant_preserves_its_explicit_approval(self):
+        host = StubMapScreen(("UK", "France", "Germany"), human_players=())
+        host.set_faction("Allies", "UK", "France")
+        host.set_war("Germany", "France")
+        outcome = treaty_effects.apply_treaty_effect(host, "REQ_MILITARY_ACCESS", "Germany", "UK", scripted=True)
+        diplomacy_processor.reconcile_ai_wartime_access(host)
+        self.assertEqual(outcome.status, "applied")
+        self.assertIn("Germany", host.world.nation_data["UK"]["military_access"])
 
     # -- blocked agreements ----------------------------------------------
 

@@ -5,7 +5,7 @@ from map_logic.ai import (ai_candidates, ai_director, ai_evaluation,
                           ai_handler, ai_letters, ai_llm_runner, ai_opinion,
                           ai_personality, ai_politics, ai_prompts, ai_unit_eval, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
-                                 faction_leadership, war_calls)
+                                 faction_leadership, war_actions, war_calls)
 from data import queries
 import data.constants as c
 from map_logic.ai import ai_tuning
@@ -340,30 +340,6 @@ def _decrement_diplo_cooldowns(data):
                     del actions[act]
             if not actions:
                 del data["diplo_cooldowns"][target]
-
-
-def _auto_revoke_war_based_access(context, ai_name, data, my_enemies):
-    """Section 0.5: access granted purely because we shared an enemy lapses
-    once that shared enemy is no longer common to both of us (peace, ceasefire, etc)."""
-    world_state = world_for(context)
-    access_reasons = data.get("military_access_reasons", {})
-    if not access_reasons:
-        return
-
-    my_access = data.get("military_access", [])
-    for grantee in list(access_reasons.keys()):
-        if access_reasons[grantee] != "war":
-            continue
-        grantee_enemies = set(queries.get_enemies(grantee, world_state.nation_data))
-        if set(my_enemies) & grantee_enemies:
-            continue  # still fighting a common enemy, access stands
-
-        if grantee in my_access:
-            my_access.remove(grantee)
-        del access_reasons[grantee]
-
-        diplomacy_events.log_global_event(world_state.nation_data, f"{ai_name} revoked {grantee}'s military access as their shared war has ended.")
-        diplomacy_messages.send_message(context, ai_name, grantee, "Our common war has ended; your military access through our territory has been revoked.", "DIPLOMACY")
 
 
 def _may_settle(nation_data, ai_name, enemy):
@@ -779,7 +755,7 @@ def _call_faction_to_arms(bag, context, ai_name, my_faction, my_enemies, active_
                     context_target=unshared_wars[0]))
 
 
-def _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, active_nations):
+def _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, active_nations, world):
     """Section 2.5: even nations in different factions ask each other for
     passage if they're both fighting the same enemy, so allied fronts can
     actually link up."""
@@ -793,7 +769,9 @@ def _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, acti
             if co in co_belligerents: continue
             if co in my_enemies: continue
             if not queries.needs_military_access_request(ai_name, co, world_state.nation_data): continue
-            co_belligerents[co] = enemy
+            common, _ = war_actions.shared_war_access(ai_name, co, world_state.nation_data)
+            if enemy in common and world.access_improves_route(ai_name, co, enemy):
+                co_belligerents[co] = enemy
 
     for co, enemy in co_belligerents.items():
         if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, co, "REQ_MILITARY_ACCESS"):
@@ -1128,8 +1106,10 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
         # it was the free pick on every menu: in the extensive testing save
         # about half of all access requests went between countries with no
         # enemy to reach, one "to discuss Germany's aggressive wars".
-        reachable = next((e for e in enemies
-                          if e != other and e in world.neighbors.get(other, ())), None)
+        common, _ = war_actions.shared_war_access(ai_name, other, nation_data)
+        reachable = next((e for e in enemies if e in common
+                          and queries.needs_military_access_request(ai_name, other, nation_data)
+                          and world.access_improves_route(ai_name, other, e)), None)
         if reachable:
             offers.append(("REQ_MILITARY_ACCESS", 0.0, f"they border {reachable}, our enemy",
                            {"context_target": reachable}))
@@ -1302,7 +1282,6 @@ def _run_basic_proactive_ai(context):
         my_type = data.get("puppet_type", "")
 
         _decrement_diplo_cooldowns(data)
-        _auto_revoke_war_based_access(context, ai_name, data, my_enemies)
 
         # Domestic policy, above the Battle Royale early-out below: a nation
         # still has an army to arm and factories to run in a world with no
@@ -1340,7 +1319,7 @@ def _run_basic_proactive_ai(context):
             _call_faction_to_arms(bag, context, ai_name, my_faction, my_enemies, active_nations, world)
 
         if is_already_at_war:
-            _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, active_nations)
+            _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, active_nations, world)
 
         if my_faction:
             _join_faction_wars_proactively(bag, context, ai_name, my_faction, my_enemies, active_nations, world)

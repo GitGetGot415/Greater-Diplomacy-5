@@ -116,6 +116,7 @@ class AIWorld:
         self._border_strength = {}
         self._relation = {}
         self._reachable = {}
+        self._transit_distances = {}
         self._core_claim_targets = {}
         self._economies = None
         self._major_powers = None
@@ -513,6 +514,49 @@ class AIWorld:
                                                  borders=self.border_graph)
             self._reachable[key] = cached
         return cached
+
+    def access_improves_route(self, nation, grantor, enemy):
+        """Compare routes to the enemy's perimeter with and without passage."""
+        targets = {neighbor for province in self.provs_by_owner[enemy]
+                   for neighbor in self.neighbor_ids[province["id"]]
+                   if self.id_to_province[neighbor].get("owner") != enemy}
+        if not targets:
+            return False
+        existing = self._transit_routes(nation, None)
+        proposed = self._transit_routes(nation, grantor)
+        old_distance = min((existing[tile] for tile in targets if tile in existing), default=float("inf"))
+        return any(proposed.get(tile, float("inf")) < old_distance for tile in targets)
+
+    def _transit_routes(self, nation, grantor):
+        """Distances from our land through permitted land and connected coastal water."""
+        key = (nation, grantor, getattr(getattr(self.nation_data, "world", None), "diplomacy_revision", 0))
+        if key in self._transit_distances:
+            return self._transit_distances[key]
+        enemies = set(queries.get_enemies(nation, self.nation_data))
+        starts = [province["id"] for province in self.provs_by_owner[nation]
+                  if province["id"] not in self.water_ids]
+        distances = dict.fromkeys(starts, 0)
+        frontier = collections.deque(starts)
+        while frontier:
+            current = frontier.popleft()
+            current_province = self.id_to_province[current]
+            for tile in self.neighbor_ids[current]:
+                if tile in distances:
+                    continue
+                province = self.id_to_province[tile]
+                owner = province.get("owner")
+                if tile in self.water_ids:
+                    legal = province.get("terrain") in c.OCEAN_TERRAINS and (
+                        current in self.water_ids or current_province.get("is_coastal"))
+                else:
+                    legal = (owner not in enemies and (owner == grantor or
+                             queries.can_land_units_enter(nation, province, self.nation_data))
+                             and (current not in self.water_ids or province.get("is_coastal")))
+                if legal:
+                    distances[tile] = distances[current] + 1
+                    frontier.append(tile)
+        self._transit_distances[key] = distances
+        return distances
 
     def land_entry_ids(self, nation):
         """Return land provinces currently legal for this nation's pathing.

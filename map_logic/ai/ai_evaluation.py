@@ -20,7 +20,7 @@ from data import queries
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import diplomacy_messages
 
-from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches
+from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches, war_actions
 
 
 def _to_int(value, default=0):
@@ -553,9 +553,8 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     # Accept Military Access requests from nations fighting the same enemies as us,
     # even across faction lines, so co-belligerents can cross each other's territory.
     if action_type == "REQ_MILITARY_ACCESS":
-        ai_enemies = set(ai_stats.get("at_war_with", []))
-        sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
-        accepted = bool(ai_enemies & sender_enemies)
+        enemies, reason = war_actions.shared_war_access(sender_nation, ai_nation, nation_data)
+        return Verdict(bool(enemies), 1.0, ai_prompts.AI_FALLBACK_RESPONSES.get(reason, ""))
 
     # NEW: AI Master-Puppet Faction Acceptance
     my_master = ai_stats.get("master", "")
