@@ -21,6 +21,7 @@ class ConversionTurnsTests(unittest.TestCase):
         self.fixture.setUp()
         self.game = self.fixture.game
         self.base = self.fixture.base
+        self.base["is_coastal"] = True
         queries.get_unit_library()["Fixture Ship"] = {
             "health": 1200, "attack": 80, "defense": 0, "speed": 1,
             "cost_materials": 200, "cost_manpower": 40, "cost_fuel": 10,

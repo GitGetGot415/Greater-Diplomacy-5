@@ -1527,7 +1527,9 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
     def test_repair_cost_is_deducted_by_the_server_not_the_client_order(self):
         map_ref = self.make_map()
         map_ref.session.player_country = "None"
-        map_ref.world.map_data["home"]["units"][0].update({"health": 5, "max_health": 10})
+        home = map_ref.world.map_data["home"]
+        home["buildings"] = ["Basic Factory"]
+        home["units"][0].update({"health": 5, "max_health": 10})
         driver = MapRealtimeDriver(map_ref)
         with mock.patch("data.queries.get_unit_library", return_value={"Infantry": {
                 "cost_materials": 20, "cost_manpower": 10, "cost_fuel": 4}}), \

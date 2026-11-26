@@ -9,6 +9,8 @@ from data.state_access import world_for, session_for
 from map_logic.system32 import combat_rules
 
 COST_KEYS = tuple("cost_" + resource for resource in c.ECON_RESOURCE_KEYS)
+# Only local commands can ask the server-side rule to choose the conversion target.
+AUTO_CONVERSION_TARGET = object()
 
 
 @dataclass(frozen=True)
@@ -183,6 +185,76 @@ def repair_costs(context, unit, unit_library=None):
     return {key: int(stats.get(key, 0) * missing) for key in COST_KEYS}
 
 
+def _in_combat(context, country_id, province, cache):
+    key = (country_id, id(province))
+    if cache is not None and key in cache:
+        return cache[key]
+    result = queries.is_nation_in_combat_here(country_id, province, world_for(context).nation_data)
+    if cache is not None:
+        cache[key] = result
+    return result
+
+
+def repair_site_error(context, country_id, province, *, combat_cache=None):
+    if _in_combat(context, country_id, province, combat_cache):
+        return "Repair: unavailable in combat"
+    if not queries.has_industry(province):
+        return "Repair: requires a factory"
+    return ""
+
+
+def maintenance_order(context, country_id, province, unit, kind, *, combat_cache=None):
+    """Return the new repair, upgrade, or conversion order offered at this location."""
+    world = world_for(context)
+    if kind == "REPAIR":
+        if unit.get("health", 0) >= unit.get("max_health", 1):
+            raise ValueError("Repair: unit is at full HP")
+        if error := repair_site_error(context, country_id, province, combat_cache=combat_cache):
+            raise ValueError(error)
+        cost = repair_costs(context, unit)
+        return {"type": kind, "turns_left": 1, "refund": cost, "realtime_cost": cost}
+
+    source = unit.get("type", "")
+    research = world.nation_data.get(country_id, {}).get("research", {})
+    in_combat = _in_combat(context, country_id, province, combat_cache)
+    if kind == "UPGRADE":
+        library = queries.get_unit_library(context)
+        target = queries.get_upgrade_target(source, research, library, queries.get_tech_tree(context), context=context)
+        if not target or not queries.is_unit_unlocked(target, research, library, context=context):
+            raise ValueError("Upgrade: maximum level reached")
+        if in_combat:
+            raise ValueError("Upgrade: unavailable in combat")
+        if not queries.has_industry(province):
+            raise ValueError("Upgrade: requires a factory")
+        return {"type": kind, "turns_left": 1, "target_type": target, "refund": {}}
+
+    if kind != "CONVERT":
+        raise ValueError("Unknown maintenance order.")
+    if in_combat:
+        raise ValueError("Convert: unavailable in combat")
+    water = queries.is_water_province(province)
+    coastal = province.get("is_coastal", False)
+    if conversion := queries.air_conversion_order(unit, context=context):
+        if water or (queries.is_air_unit(unit, context=context) and not coastal):
+            raise ValueError("Aircraft Convoy conversion requires a coast; unloading requires land")
+        return conversion
+
+    if source.startswith("Convoy"):
+        if water:
+            raise ValueError("Convert: convoy needs land")
+        return {"type": kind, "turns_left": 1, "to": "Land Unit"}
+    if conversion := queries.truck_ship_conversion_order(unit, world.scenario_settings, context=context):
+        packing_ship = conversion["to"] == "Truck"
+        if packing_ship and research.get("trucks", 0) < 1:
+            raise ValueError("Convert: requires Trucks research")
+        if not coastal and (water if packing_ship else not water):
+            raise ValueError("Convert: requires a coast")
+        return conversion
+    if not coastal and not water:
+        raise ValueError("Convert: requires a coast")
+    return {"type": kind, "turns_left": 1, "to": "Convoy"}
+
+
 def canonical_order(context, country_id, province, unit, order):
     """Host/server validation shared with tournament aircraft commands."""
     world_state = world_for(context)
@@ -229,51 +301,18 @@ def canonical_order(context, country_id, province, unit, order):
         if unit.get("air_cargo"):
             raise ValueError("Release cargo before disbanding its carrier.")
         return {"type": "DISBAND", "turns_left": 1}
-    if kind == "REPAIR":
-        if queries.is_nation_in_combat_here(country_id, province, world_state.nation_data):
-            raise ValueError("Units cannot repair in combat.")
-        cost = repair_costs(context, unit)
-        return {"type": "REPAIR", "turns_left": 1, "refund": cost, "realtime_cost": cost}
-    if kind == "UPGRADE":
-        target_type = order.get("target_type")
-        unit_library = queries.get_unit_library(context)
-        research = world_state.nation_data[country_id].get("research", {})
-        if (not isinstance(target_type, str) or target_type not in unit_library
-                or target_type != queries.get_upgrade_target(unit.get("type", ""), research,
-                                                     unit_library, queries.get_tech_tree(context))
-                or not queries.is_unit_unlocked(target_type, research, context=context)
-                or not queries.has_industry(province)
-                or queries.is_nation_in_combat_here(country_id, province, world_state.nation_data)):
+    if kind in ("REPAIR", "UPGRADE", "CONVERT"):
+        proposed = maintenance_order(context, country_id, province, unit, kind)
+        if kind == "UPGRADE" and order.get("target_type") != proposed["target_type"]:
             raise ValueError("Invalid unit upgrade.")
-        return {"type": "UPGRADE", "turns_left": 1, "target_type": target_type, "refund": {}}
-    if kind == "CONVERT":
-        source = unit.get("type", "")
-        if queries.is_nation_in_combat_here(country_id, province, world_state.nation_data):
-            raise ValueError("Units cannot convert in combat.")
-        air_conversion = queries.air_conversion_order(unit, context=context)
-        if air_conversion:
-            if queries.is_water_province(province):
-                raise ValueError("Aircraft conversion requires land.")
-            if queries.is_air_unit(unit, context=context) and not province.get("is_coastal", False):
-                raise ValueError("Convoy conversion requires a coast.")
-            expected, turns = air_conversion["to"], air_conversion["turns_left"]
-        elif source.startswith("Convoy"):
-            expected, turns = "Land Unit", 1
-        elif source.startswith("Truck") or queries.is_naval_unit(source, context=context):
-            conversion = queries.truck_ship_conversion_order(unit, world_state.scenario_settings, context=context)
-            if (conversion["to"] == "Truck"
-                    and world_state.nation_data[country_id].get("research", {}).get("trucks", 0) < 1):
-                raise ValueError("Trucks research is required for this conversion.")
-            expected, turns = conversion["to"], conversion["turns_left"]
-        else:
-            expected, turns = "Convoy", 1
-        if order.get("to") != expected:
-            raise ValueError("Invalid unit conversion.")
-        existing = unit.get("order")
-        if (expected in ("Truck", "Ship") and isinstance(existing, dict)
-                and existing.get("type") == "CONVERT" and existing.get("to") == expected
-                and type(existing.get("turns_left")) is int and existing["turns_left"] > 0):
-            # A new draft cannot shorten or restart host-owned progress.
-            return copy.deepcopy(existing)
-        return {"type": "CONVERT", "turns_left": turns, "to": expected}
+        if kind == "CONVERT":
+            target = order.get("to")
+            if target is not AUTO_CONVERSION_TARGET and target != proposed["to"]:
+                raise ValueError("Invalid unit conversion.")
+            existing = unit.get("order")
+            if (proposed["to"] in ("Truck", "Ship") and isinstance(existing, dict)
+                    and existing.get("type") == kind and existing.get("to") == proposed["to"]
+                    and type(existing.get("turns_left")) is int and existing["turns_left"] > 0):
+                return copy.deepcopy(existing)
+        return proposed
     raise ValueError("Unknown unit order.")

@@ -962,7 +962,7 @@ def process_ai_economy_decisions(context, *, countries=None, prioritize_naval_re
                                        state["disband_deficits"], unit_library, all_values)
 
         if prioritize_naval_repairs and not state["at_war"]:
-            ai_movement.repair_docked_warships(context, ai_name, world.units_by_owner.get(ai_name, ()), unit_library)
+            ai_movement.repair_docked_warships(context, ai_name, world.units_by_owner.get(ai_name, ()))
 
         # --- Panic Builds & Combat Queue Clearing ---
         force_tally = _panic_build_and_tally_forces(

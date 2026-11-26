@@ -363,11 +363,9 @@ class Orders_Screen(UnitCommandControls, Screen):
         Return reserved repair resources before replacing an order.
         """
         candidates = []
-        combat_by_province = {}
+        combat_cache = {}
         launch_by_base = {}
         indexes_by_province = {}
-        player_research = self.map_screen.world.nation_data.get(
-            self.map_screen.session.player_country, {}).get("research", {})
         if records is None:
             records = self.map_screen.selected_unit_records()
         for unit, province in records:
@@ -375,24 +373,17 @@ class Orders_Screen(UnitCommandControls, Screen):
                     or self._command_blocked_silent(unit)):
                 continue
             province_key = id(province)
-            if command in ("REPAIR", "UPGRADE"):
-                if province_key not in combat_by_province:
-                    combat_by_province[province_key] = queries.is_nation_in_combat_here(
-                        self.map_screen.session.player_country, province, self.map_screen.world.nation_data)
-                in_combat = combat_by_province[province_key]
             if command == "DISBAND":
                 if not unit.get("air_cargo"):
                     candidates.append((unit, province))
-            elif command == "REPAIR":
-                if (not in_combat and queries.has_industry(province)
-                        and unit.get("health", 0) < unit.get("max_health", 1)):
-                    candidates.append((unit, province))
-            elif command == "UPGRADE":
-                target = queries.get_upgrade_target(
-                    unit.get("type", ""), player_research, self.unit_library,
-                    queries.get_tech_tree(self.map_screen))
-                if not in_combat and queries.has_industry(province) and target:
-                    candidates.append((unit, province, target))
+            elif command in ("REPAIR", "UPGRADE"):
+                try:
+                    order = unit_actions.maintenance_order(
+                        self.map_screen, unit["owner"], province, unit, command, combat_cache=combat_cache)
+                except ValueError:
+                    continue
+                candidate = (unit, province, order["target_type"]) if command == "UPGRADE" else (unit, province)
+                candidates.append(candidate)
             elif command == "MISSION":
                 if not queries.is_air_unit(unit, context=self.map_screen):
                     continue
@@ -629,7 +620,6 @@ class Orders_Screen(UnitCommandControls, Screen):
 
         is_tactical = self.map_screen.session.tactical_mode
         player_country = self.map_screen.session.player_country
-        player_research = self.map_screen.world.nation_data.get(player_country, {}).get("research", {})
         rows = initial_rows
         player_units = [unit for _key, unit, _province, _index in rows
                         if self.map_screen.is_unit_selected(unit)]
@@ -831,13 +821,7 @@ class Orders_Screen(UnitCommandControls, Screen):
             if not self.map_screen.is_unit_selected(unit):
                 continue
 
-            row_in_combat = queries.is_nation_in_combat_here(
-                player_country, province, self.map_screen.world.nation_data)
-            self._build_unit_action_buttons(
-                row_key, index, unit, province, row_y, row_guard,
-                row_in_combat, queries.is_water_province(province),
-                province.get("is_coastal", False), queries.has_industry(province),
-                player_research)
+            self._build_unit_action_buttons(row_key, index, unit, province, row_y, row_guard)
 
     def clear_all_orders(self):
         """Cancels the displayed units' orders. Returns whether the cancel sound played."""
