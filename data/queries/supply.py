@@ -28,11 +28,13 @@ def _add_resources(total, amounts, scale=1):
 
 
 def supply_fractions(production, demand, unit_demand):
-    manpower, materials, fuel = (min(1.0, max(0.0, production[resource] / demand[resource]))
-                                 if unit_demand[resource] > 0 and demand[resource] > 0 else 1.0
-                                 for resource in c.ECON_RESOURCE_KEYS)
-    # Summing proportional conversion output can land just below a full fuel allotment.
-    return manpower, materials, 1.0 if isclose(fuel, 1.0, rel_tol=1e-12) else fuel
+    # Summing proportional conversion output can land just below a full allotment.
+    return tuple(
+        1.0 if isclose(fraction, 1.0, rel_tol=1e-12) else fraction
+        for fraction in (min(1.0, max(0.0, production[resource] / demand[resource]))
+                         if unit_demand[resource] > 0 and demand[resource] > 0 else 1.0
+                         for resource in c.ECON_RESOURCE_KEYS)
+    )
 
 
 def supply_fraction(fractions, unit_demand):
@@ -205,7 +207,7 @@ class SupplySnapshot:
             }
             self.occupied = tuple(key for key, province in self.provinces.items() if province.get("units"))
             self.production = queries.ProvinceProduction(self.nations, context)
-            self.fuel_conversions = {}
+            self.income_conversions = {}
             self.land_access = {}
             self.country_enemies = {}
             self.allies = {}
@@ -221,7 +223,7 @@ class SupplySnapshot:
             self.neighbors = source.neighbors
             self.occupied = source.occupied
             self.production = source.production
-            self.fuel_conversions = source.fuel_conversions
+            self.income_conversions = source.income_conversions
             # Access, enemies and supply-sharing groups read only diplomacy,
             # which fog does not hide, so every view of one phase shares them.
             self.land_access = source.land_access
@@ -310,15 +312,15 @@ class SupplySnapshot:
         self.unit_facts[key] = entry
         return entry[1], entry[2]
 
-    def fuel_conversion_for(self, country, recaptured=None):
+    def income_conversions_for(self, country, recaptured=None):
         owned = self.owned_provinces.get(country, ())
         if recaptured and any(owner == country or self.provinces[key]["owner"] == country for key, owner in recaptured.items()):
             provinces = [self.provinces[key] for key in owned if key not in recaptured]
             provinces.extend(dict(self.provinces[key], owner=owner, units=()) for key, owner in recaptured.items() if owner == country)
-            return self.production.fuel_conversion_by_province(country, provinces)
-        if country not in self.fuel_conversions:
-            self.fuel_conversions[country] = self.production.fuel_conversion_by_province(country, (self.provinces[key] for key in owned))
-        return self.fuel_conversions[country]
+            return self.production.income_conversions_by_province(country, provinces)
+        if country not in self.income_conversions:
+            self.income_conversions[country] = self.production.income_conversions_by_province(country, (self.provinces[key] for key in owned))
+        return self.income_conversions[country]
 
     def _permitted_land_owners(self, country):
         if country not in self.land_access:
@@ -626,7 +628,7 @@ class SupplySnapshot:
         network = SupplyNetwork(province_area=province_area, areas={key: SupplyArea() for key in anchors})
         estimated = self.visible_provinces is not None and country != self.visible_to
         # A fog-limited view estimates foreign production without private conversion rates.
-        conversions = {} if estimated else self.fuel_conversion_for(country, recaptured)
+        conversions = {} if estimated else self.income_conversions_for(country, recaptured)
         land_units = self.land_units.get(country, {})
         recaptured = recaptured or {}
         producing = [key for key in self.owned_land.get(country, ()) if key not in recaptured]
@@ -644,8 +646,7 @@ class SupplySnapshot:
             else:
                 production = self._estimate_province_output(key) if estimated else self.production.total_output(province)
             if (conversion := conversions.get(key)) is not None:
-                production = {**production, "materials": production["materials"] + conversion["materials"],
-                              "fuel": production["fuel"] + conversion["fuel"]}
+                production = {resource: production[resource] + conversion[resource] for resource in c.ECON_RESOURCE_KEYS}
             network.production_tiles[key] = production
             _add_resources(network.areas[area_id].production, production)
         for key, identities in land_units.items():

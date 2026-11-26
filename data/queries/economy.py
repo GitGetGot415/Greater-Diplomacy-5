@@ -834,7 +834,7 @@ class ProvinceProduction:
 
     def country(self, owner):
         if owner not in self.countries:
-            research = self.nation_data[owner].get("research", {})
+            research = self.nation_data.get(owner, {}).get("research", {})
             self.countries[owner] = {
                 "dynamic_yields": {**c.BASE_YIELDS, "manpower": c.BASE_YIELDS["manpower"] + research.get("general_recruitment", 0) * c.GENERAL_RECRUITMENT_BONUS},
                 "resource_mult": 1.0 + research.get("resource_refining", 0) * c.RESOURCE_REFINING_BONUS_PER_LVL,
@@ -846,16 +846,23 @@ class ProvinceProduction:
             }
         return self.countries[owner]
 
-    def breakdown(self, province):
-        if is_province_in_active_combat(province, self.nation_data):
-            return {}
-        owner = province["owner"]
+    def tile_yield(self, province):
+        """Return (is_core, territory_multipliers, base_tile_yields) for one province."""
+        owner = province.get("owner", "Unclaimed")
         economy = self.country(owner)
         is_core = queries.has_core(owner, province)
         territory = {resource: 1.0 if is_core else c.NON_CORE_MULTIPLIERS[resource] * economy["non_core_province_multiplier"]
                      for resource in c.ECON_RESOURCE_KEYS}
         yields = {resource: territory[resource] * economy["dynamic_yields"][resource] for resource in c.ECON_RESOURCE_KEYS}
         yields["manpower"] *= economy["tile_manpower_multiplier"]
+        return is_core, territory, yields
+
+    def breakdown(self, province):
+        if is_province_in_active_combat(province, self.nation_data):
+            return {}
+        owner = province["owner"]
+        economy = self.country(owner)
+        is_core, territory, yields = self.tile_yield(province)
 
         deposits = dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)
         resources = province.get("resources", {})
@@ -880,14 +887,15 @@ class ProvinceProduction:
             self.totals[key] = {resource: sum(output[resource] for output in breakdown.values()) for resource in c.ECON_RESOURCE_KEYS}
         return self.totals[key]
 
-    def fuel_conversion_by_province(self, owner, provinces):
-        """Attribute the national conversion to material sources before checking supply routes."""
+    def income_conversions_by_province(self, owner, provinces):
+        """Attribute national conscription and fuel conversions to owned land provinces."""
         country = self.nation_data.get(owner, {})
-        if owner in c.UNPLAYABLE_NATIONS or get_fuel_conversion_rate(country) <= 0:
+        if owner in c.UNPLAYABLE_NATIONS or (get_conscription_rate(country) >= 1.0 and get_fuel_conversion_rate(country) <= 0):
             return {}
         breakdown = empty_income_breakdown()
         for resource in ("manpower", "materials"):
             breakdown[resource]["base"] = c.COUNTRY_BASE_YIELDS[resource]
+        land_manpower = {}
         land_materials = {}
         for province in provinces:
             output = self._cached_breakdown(province)
@@ -895,25 +903,54 @@ class ProvinceProduction:
                 continue
             _add_province_income(breakdown, output)
             if not is_water_province(province):
-                land_materials[province["id"]] = self.total_output(province)["materials"]
+                total = self.total_output(province)
+                land_manpower[province["id"]] = total["manpower"]
+                land_materials[province["id"]] = total["materials"]
         if not land_materials:
             return {}
+        gross_manpower = sum(breakdown["manpower"].values())
         gross_materials = _apply_income_conversions(breakdown, country)
-        materials = breakdown["materials"]["conversion"]
-        fuel = breakdown["fuel"]["conversion"]
-        if not materials:
+        con_man = breakdown["manpower"]["conscription"]
+        con_mat = breakdown["materials"]["conscription"]
+        fuel_mat = breakdown["materials"]["conversion"]
+        fuel_out = breakdown["fuel"]["conversion"]
+        if not (con_man or con_mat or fuel_mat or fuel_out):
             return {}
-        # Base income and conscription have no local supply source. Spread their
-        # fuel across owned land and charge local supply only for local materials.
-        national_share = max(0, gross_materials - fsum(land_materials.values())) / len(land_materials)
-        return {key: {"materials": materials * amount / gross_materials,
-                      "fuel": fuel * (amount + national_share) / gross_materials}
-                for key, amount in land_materials.items()}
+
+        tile_count = len(land_materials)
+        national_man_share = max(0, gross_manpower - fsum(land_manpower.values())) / tile_count if gross_manpower > 0 else 0
+        # Attribute conscription materials to land tiles first so fuel conversion shares the same local sources.
+        conscription = {}
+        local_materials = {}
+        for key in land_materials:
+            man_amount = land_manpower[key]
+            man_delta = con_man * man_amount / gross_manpower if gross_manpower > 0 and con_man else 0.0
+            mat_delta = con_mat * (man_amount + national_man_share) / gross_manpower if gross_manpower > 0 and con_mat else 0.0
+            conscription[key] = {"manpower": man_delta, "materials": mat_delta}
+            local_materials[key] = land_materials[key] + mat_delta
+
+        # National base materials have no local source; spread their fuel across owned land
+        # and charge local supply only for local and conscription-attributed materials.
+        national_mat_share = max(0, gross_materials - fsum(local_materials.values())) / tile_count if gross_materials > 0 else 0
+        conversions = {}
+        for key, mat_amount in local_materials.items():
+            con_entry = conscription[key]
+            mat_spent = fuel_mat * mat_amount / gross_materials if gross_materials > 0 and fuel_mat else 0.0
+            fuel_gained = fuel_out * (mat_amount + national_mat_share) / gross_materials if gross_materials > 0 and fuel_out else 0.0
+            fuel_entry = {"materials": mat_spent, "fuel": fuel_gained}
+            conversions[key] = {
+                "manpower": con_entry["manpower"],
+                "materials": con_entry["materials"] + mat_spent,
+                "fuel": fuel_gained,
+                "conscription": con_entry,
+                "conversion": fuel_entry,
+            }
+        return conversions
 
     def building_output(self, province):
         owner = province["owner"]
         economy = self.country(owner)
-        research = self.nation_data[owner].get("research", {})
+        research = self.nation_data.get(owner, {}).get("research", {})
         if owner not in self.country_buildings:
             self.country_buildings[owner] = get_building_output_modifiers(research, self.library, context=self.context, cache=self.buildings)
         return queries.get_province_building_output(

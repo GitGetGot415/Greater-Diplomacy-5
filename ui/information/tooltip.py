@@ -7,23 +7,25 @@ from ui.rendering import overlay_renderer
 UNIT_PREVIEW_LIMIT = 5
 
 
-def _fuel_conversion_key(map_screen):
+def _conversion_key(map_screen):
     session = map_screen.session
     if not (session.is_editor or session.tactical_mode or session.selection_mode):
         return session.mode, session.player_country, queries.get_viewing_country(map_screen), map_screen._presentation_cache_revision
 
 
 def prepare_building_yields(map_screen):
-    """Cache visible building yields and fuel conversion at hover or state changes."""
+    """Cache visible tile, building, and conversion yields at hover or state changes."""
     province = map_screen.hovered_province
     visible = bool(province and map_screen.secondary_mode == "ECONOMY"
                    and queries.is_province_visible(map_screen, province["id"]))
-    conversion_key = _fuel_conversion_key(map_screen) if visible else None
+    conversion_key = _conversion_key(map_screen) if visible else None
     stamp = (id(province), map_screen._presentation_cache_revision, map_screen.secondary_mode, visible, conversion_key)
     if map_screen._tooltip_building_stamp == stamp:
         return
     map_screen._tooltip_building_stamp = stamp
     map_screen._tooltip_building_yields = []
+    map_screen._tooltip_tile_yields = None
+    map_screen._tooltip_tile_is_core = True
     map_screen._tooltip_tile_in_combat = False
     if not visible:
         return
@@ -31,35 +33,50 @@ def prepare_building_yields(map_screen):
     world = map_screen.world
     if queries.is_province_in_active_combat(province, world.nation_data):
         map_screen._tooltip_tile_in_combat = True
-        map_screen._tooltip_building_yields = [(name, dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)) for name in province.get("buildings", [])]
+        zero = dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)
+        map_screen._tooltip_building_yields = [(name, dict(zero)) for name in province.get("buildings", [])]
+        for project in province.get("building_queue", []):
+            if project.get("item_name") == "Basic Factory":
+                map_screen._tooltip_building_yields.append(("Basic Factory (Under Construction)", dict(zero)))
         return
     country = world.nation_data.get(owner, {})
+    production = queries.ProvinceProduction(world.nation_data, map_screen)
+    is_core, _territory, tile_yields = production.tile_yield(province)
+    map_screen._tooltip_tile_is_core = is_core
+    map_screen._tooltip_tile_yields = tile_yields
     if conversion_key:
-        cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
+        cached_key, countries = getattr(map_screen, "_tooltip_conversions", (None, {}))
         if conversion_key != cached_key:
             countries = {}
-            map_screen._tooltip_fuel_conversions = conversion_key, countries
+            map_screen._tooltip_conversions = conversion_key, countries
         if owner not in countries:
             conversions = {}
             session = map_screen.session
             # Network projections preserve full province economy inputs for the player.
             has_source_data = not session.is_networked or owner == session.player_country == queries.get_viewing_country(map_screen)
-            if has_source_data and queries.can_view_country_economy(map_screen, owner) and queries.get_fuel_conversion_rate(country) > 0:
-                production = queries.ProvinceProduction(world.nation_data, map_screen)
+            if (has_source_data and queries.can_view_country_economy(map_screen, owner)
+                    and (queries.get_conscription_rate(country) < 1.0 or queries.get_fuel_conversion_rate(country) > 0)):
                 provinces = (tile for tile in world.map_data.values() if tile.get("owner") == owner)
-                conversions = production.fuel_conversion_by_province(owner, provinces)
+                conversions = production.income_conversions_by_province(owner, provinces)
             countries[owner] = conversions
     research = country.get("research", {})
     library = queries.get_building_library(map_screen)
     modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
-    factory_multiplier = politics.factory_output_multiplier(map_screen.world.nation_data, owner)
-    non_core_multiplier = politics.axis_effect(map_screen.world.nation_data, owner, "non_core_building_output")
+    factory_multiplier = politics.factory_output_multiplier(world.nation_data, owner)
+    non_core_multiplier = politics.axis_effect(world.nation_data, owner, "non_core_building_output")
     for name in province.get("buildings", []):
         building_province = dict(province, buildings=[name], building_queue=[])
         output = queries.get_province_building_output(building_province, research, library,
                                                       context=map_screen, modifiers=modifiers, factory_multiplier=factory_multiplier,
                                                       non_core_multiplier=non_core_multiplier)
         map_screen._tooltip_building_yields.append((name, output))
+    for project in province.get("building_queue", []):
+        if project.get("item_name") == "Basic Factory":
+            construction_province = dict(province, buildings=[], building_queue=[project])
+            output = queries.get_province_building_output(construction_province, research, library,
+                                                          context=map_screen, modifiers=modifiers, factory_multiplier=factory_multiplier,
+                                                          non_core_multiplier=non_core_multiplier)
+            map_screen._tooltip_building_yields.append(("Basic Factory (Under Construction)", output))
 
 
 def _province_tooltip_lines(map_screen, prov):
@@ -164,49 +181,43 @@ def _province_tooltip_lines(map_screen, prov):
                 lines.append("No Natural Resources")
 
     elif map_screen.secondary_mode == "ECONOMY":
-        # Base production from the tile itself dynamically calculated
-        owner_data = map_screen.world.nation_data.get(owner_id, {})
-        research_data = owner_data.get("research", {})
-
-        # Calculate dynamic bonuses based on tech
-        gen_rec_lvl = research_data.get("general_recruitment", 0)
-        manpower_bonus = gen_rec_lvl * c.GENERAL_RECRUITMENT_BONUS
-
-        # Base yields including tech bonuses
-        base_man = c.BASE_YIELDS['manpower'] + manpower_bonus
-        base_mat = c.BASE_YIELDS['materials']
-        base_fuel = c.BASE_YIELDS['fuel']
-
-        # Apply core/non-core penalties to give the player the EXACT true yield
-        is_core = queries.has_core(owner_id, prov)
-        man_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"]
-        mat_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"]
-        fuel_mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]
-
         in_combat = is_visible and map_screen._tooltip_tile_in_combat
-        if in_combat:
+        if not is_visible:
+            lines.append("Tile Yield: (Hidden by Fog of War)")
+        elif in_combat:
             lines.append("No income during battle")
         else:
-            actual_man = int(base_man * man_mult)
-            actual_mat = int(base_mat * mat_mult)
-            actual_fuel = int(base_fuel * fuel_mult)
-            lines.append(f"Tile Yield: +{queries.format_number(actual_man)}Man, +{queries.format_number(actual_mat)}Mat, +{queries.format_number(actual_fuel)}Fuel")
+            tile_yields = getattr(map_screen, "_tooltip_tile_yields", None)
+            if tile_yields is None:
+                is_core, _territory, tile_yields = queries.ProvinceProduction(map_screen.world.nation_data, map_screen).tile_yield(prov)
+            else:
+                is_core = getattr(map_screen, "_tooltip_tile_is_core", queries.has_core(owner_id, prov))
+            lines.append(
+                f"Tile Yield: +{queries.format_number(tile_yields['manpower'])}Man, "
+                f"+{queries.format_number(tile_yields['materials'])}Mat, "
+                f"+{queries.format_number(tile_yields['fuel'])}Fuel"
+            )
             if not is_core and owner_id not in c.UNPLAYABLE_NATIONS:
                 lines.append("  *(Non-Core Penalties Applied)*")
 
-        if is_visible and not in_combat:
-            cached_key, countries = getattr(map_screen, "_tooltip_fuel_conversions", (None, {}))
-            if cached_key and cached_key == _fuel_conversion_key(map_screen):
+            cached_key, countries = getattr(map_screen, "_tooltip_conversions", (None, {}))
+            if cached_key and cached_key == _conversion_key(map_screen):
                 conversion = countries.get(owner_id, {}).get(prov["id"])
-                if conversion and any(conversion.values()):
-                    amounts = []
-                    for resource, label in (("materials", "Materials"), ("fuel", "Fuel")):
-                        if amount := conversion[resource]:
-                            formatted = f"{amount:+,.2f}".rstrip("0").rstrip(".")
-                            if round(amount, 2) == 0:
-                                formatted = f"{amount:+.2g}"
-                            amounts.append(f"{formatted} {label}")
-                    lines.append(f"Fuel conversion: {', '.join(amounts)}")
+                if conversion:
+                    for key, title, fields in (
+                        ("conscription", "Conscription", (("manpower", "Manpower"), ("materials", "Materials"))),
+                        ("conversion", "Fuel conversion", (("materials", "Materials"), ("fuel", "Fuel"))),
+                    ):
+                        entry = conversion.get(key, {})
+                        amounts = []
+                        for resource, label in fields:
+                            if amount := entry.get(resource):
+                                formatted = f"{amount:+,.2f}".rstrip("0").rstrip(".")
+                                if round(amount, 2) == 0:
+                                    formatted = f"{amount:+.2g}"
+                                amounts.append(f"{formatted} {label}")
+                        if amounts:
+                            lines.append(f"{title}: {', '.join(amounts)}")
 
         lines.append("--- Buildings ---")
         if not is_visible:
