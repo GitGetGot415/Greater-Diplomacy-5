@@ -71,10 +71,10 @@ Implementing a Conversion
    share research_years. Keep gameplay, UI, and AI reading the current format.
 4. Check tournament and real-time multiplayer separately. Tournament moves
    contain partial player data. A different or missing version stamp requires
-   host approval; conversion still passes normal authentication, permission,
-   session, turn, and duplicate checks. Keep snapshot_moves.py for moves
-   without player_intents. Real-time players must match the host's version;
-   the server owns state and filters snapshots for each recipient.
+   host approval for an intent move. Apply authentication, permission, session,
+   turn, and duplicate checks. Follow the [Tournament Moves](MIGRATIONS.md#tournament-moves)
+   format rules. Real-time players must match the host's version. The server owns
+   state and filters snapshots for each recipient.
 5. Use the shared readers in validation.py before traversing known saved fields.
    Prioritize a playable local save: recover readable values, default unreadable
    optional containers, and drop only broken entries. Preserve valid paid orders

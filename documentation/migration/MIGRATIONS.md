@@ -50,7 +50,6 @@ Callers import names from the package: `from data import migrations`.
 | `settings.py` | Older settings names and mouse-button controls. |
 | `repairs.py` | Load repairs for buildings, production orders, and faction rosters. |
 | `tournament.py` | Older tournament projections and encrypted-file payloads. |
-| `snapshot_moves.py` | The reader for snapshot moves, from v46 and every earlier release. See [Snapshot Moves](#snapshot-moves). |
 
 Other modules own related data:
 
@@ -132,8 +131,7 @@ They also keep support for older save formats that v46 accepted.
 - Unnumbered named equipment stages become level I, including vehicle infantry and heavy artillery.
 - Units select the latest stage at or before their older equipment year.
 - Transport names, aircraft cargo, production queues, upgrade targets, custom production lists, and scripted spawns use the same conversion.
-- Map overlays, a selected history snapshot, and tournament move intents receive these conversions.
-- Older tournament move formats convert to the snapshot move shape. See [Move Conversion Rules](#move-conversion-rules).
+- Map overlays, selected history snapshots, and [tournament intent moves](#tournament-moves) receive these conversions.
 - Duplicate custom production entries combine when their older units become the same stage.
 - Flags and portraits that releases through v48 stored as raw RGBA or RGB pixels become Base64 PNG text.
   `flag_data` and `portrait_data` keep their names because PNG text starts with the PNG signature, so the rule can tell the formats apart.
@@ -212,7 +210,7 @@ A scenario can select different libraries. This conversion uses the libraries th
 - `grant_research_prerequisites` gives countries the prerequisite levels of technologies they already have.
   Older saves have technologies whose prerequisites were added later.
   Without them a country cannot research further levels of what it owns.
-  The grant uses the active research tree. It covers live countries, default research, and snapshot moves.
+  The grant uses the active research tree for live countries and default research.
   Equipment tracks are not changed, and no prerequisite uses them.
 - `queries.refresh_unit_stats` copies unit statistics from the active unit library.
 
@@ -329,7 +327,6 @@ Also keep each older family in `equipment_stage_aliases`.
    Example: "Factory Lvl 50" becomes the highest Factory level. `migrations.clamp_building_level` does this.
    Queued building orders follow the same rule (`migrations.clamp_building_queue`). A paid order keeps its progress and refund.
    Gaps in the library's levels select the nearest existing level. Equal distances select the lower level.
-   A snapshot move receives the same clamp, so its queue matches the host's queue.
    A building with no family in the library is still dropped.
 8. `refresh_unit_stats` copies unit statistics from the active unit library. Health keeps its fraction of maximum health.
 9. Faction roster repair removes members that cannot be in their faction.
@@ -484,143 +481,32 @@ No-context library access reads defaults. Active gameplay passes its explicit wo
 
 ## Tournament Moves
 
-Moves convert like saves. A move from any older release converts. No release is the oldest supported move.
-Conversion uses the rules in `conversions.py`. No file converts one version to another.
-Only a move from a newer version is refused.
-
-### Two Move Formats
-
-A move file has one of two formats:
-
-- An **intent move** holds `player_intents`, a list of player choices.
-  Examples are "give unit X this order" and "this province's unit queue holds these items".
-  The host checks each choice against its own state.
-  Health, resources, and research progress always come from the host.
-  Releases after v46 write intent moves.
-- A **snapshot move** has no `player_intents`. It holds a copy of the player's state at export.
-  The copy has the country record, the queues of the player's provinces, and the player's ground units with their statistics.
-  The host checks the copy against its own state. It then puts the copy in place of its records for that country.
-  v46 and every earlier release wrote snapshot moves.
-
-An intent move also holds the snapshot sections: `nation_data`, `provinces`, `aircraft_orders`, `air_transport`, and `release_subjects`.
-The host only compares these sections with the intents. Only the intents change game state.
+The current exporter writes `player_intents`, a list of choices such as unit orders or province queues.
+The host rejects snapshot-format moves without `player_intents`, including files from v46 and earlier.
+Players with a snapshot-format move must export again with the current game.
 
 ### How the Host Loads a Move
 
-`load_move_files` in `data/multiplayer/tournament/files.py` does these steps:
+After authentication, `load_move_files` in `data/multiplayer/tournament/files.py` processes each move in this order.
 
-1. `move_version` reads `game_version`. It refuses a move from a newer version.
-   This rejection cannot be overridden. It tells the player to update the game.
-2. A move whose stamp differs from the host's version, or has no stamp, stops with a "version" override.
-   The rejection does not change host state.
-3. The host selects Convert or Reject.
-4. `upgrade_move` runs every conversion rule on the move, whatever version wrote it.
-   Malformed containers encountered during conversion produce a normal rejection before host state changes.
-5. The converted move passes every normal check, including session, turn, faction, permission, and duplicate checks.
-6. An intent move goes through the shared validation in `PlayerActions`.
-7. A snapshot move goes to `snapshot_moves.py`.
-   When its statistics differ from the host's state, the host gets a "stats" override.
-
-A move with the host's version needs no host question. The rules still run, and do nothing.
+1. Reads the stamp with `move_version` and rejects newer versions and snapshot-format moves.
+2. Requires host approval for a different or missing stamp.
+3. Runs `upgrade_move` on all intent moves, including moves with the host's stamp.
+4. Checks the session, turn, and duplicate submissions. Older intent moves may omit session or turn fields.
+5. Rejects faction-record replacement and verifies any compatibility projections with `tournament_player_intents`.
+6. Validates the complete draft with the shared `PlayerActions` service and applies the choices only if validation succeeds.
 
 ### Move Conversion Rules
 
-`convert_move` in `conversions.py` converts moves.
-Each rule finds an older shape and does nothing to current data. The version stamp never selects a rule.
+In `conversions.py`, `convert_move` normalizes older order and production identifiers, preferences, and appearance fields by shape.
+It also applies the shared country, province, and unit conversions to compatibility projections carried by some older intent files.
+Malformed known fields are rejected before the host applies the draft.
 
-These rules convert older move formats:
+Compatibility projections are compared with the intents. Intent commands alone change host state.
+Unchanged paid orders preserve progress and payment. Cancellation refunds are applied before the combined production and order costs are collected.
 
-- A move without `nation_data`, `provinces`, and `player_intents` holds only a country record. The oldest moves have this shape.
-  The rule moves the record into `nation_data` and adds empty `provinces`.
-  The fields in `MOVE_FIELDS`, such as `tournament_turn`, stay at the top of the move.
-- A move without `release_subjects` takes them from the country's `release_puppet_queue`.
-  If the country record has no queue, the host keeps its own queue.
-- A move without `aircraft_orders` holds whole aircraft records in its provinces.
-  The rule copies only the order and the name of each aircraft. The host keeps its own aircraft statistics and positions.
-- A move without `unit_snapshot` replaces the country's units only when it lists provinces. This keeps the earlier behavior.
-
-`convert_move` also applies the country, province, and unit rules for saves to the move's records.
-See [Current Conversion Rules](#current-conversion-rules).
-
-Some older shapes need host state, so the snapshot reader converts them:
-
-- A move without `tournament_session` or `tournament_turn` skips those checks. The summary counts it as `legacy`.
-- A move without `faction_renames` can rename a faction through its leader's record.
-  The host accepts this only when the country is still the faction leader.
-
-### Why Moves Have a Separate Entry Point
-
-Saves and moves use the same rules.
-In `conversions.py`, `convert_save` and `convert_move` call the same country, province, and unit functions.
-The entry points are different because the files are different:
-
-- A save holds the whole world and its history. A move holds one country and the provinces that it changed.
-- A move has no terrain data. Host validation checks each converted unit against the host's state.
-- A save belongs to the player who opens it. A move is input from another player.
-  The host must approve the conversion, and the move must pass all normal checks.
-
-### Intent Moves
-
-Intent moves use the shared real-time domain commands.
-The host validates the complete draft before applying its choices.
-Ground units use identity and order intents. Omitted unit records cannot create or destroy units through this path.
-Unchanged paid orders preserve progress and payment. Combined production and repair costs use one affordability check.
-Cancellation refunds become available before the combined payment is collected.
-A complete intent draft is rejected when one of its choices is not valid.
-
-`tournament_player_intents` in `tournament.py` compares the snapshot sections with the intents.
-Conflicting unit, cargo, production, research, army, or appearance choices are rejected.
-
-### Snapshot Moves
-
-`data/migrations/snapshot_moves.py` reads every snapshot move.
-It is the reader for a file format, not for one version.
-The conversion rules bring every older snapshot to one shape before the reader gets it.
-A later release does not need a new reader or a new file. It adds rules to `conversions.py`.
-
-A snapshot cannot become a list of intents through a change of field names.
-A snapshot holds results, such as unit statistics and paid queue entries.
-The intent path matches paid queue entries exactly and ignores submitted statistics.
-Thus snapshot moves keep their own reader and host review.
-
-The reader does these steps:
-
-1. It converts the move's research levels to the active research tree by year.
-   It then applies `clamp_research_levels` and `grant_research_prerequisites`.
-2. It clamps building queues as the host's own load did, so the queues match.
-3. It gives the move's ground units the statistics of the active unit library, as the host's load did.
-   Health keeps its fraction. Thus a library change gives no warning, and accepted units do not bring older statistics into the game.
-4. It validates releases, administrative orders, production, aircraft orders, cargo, and units against host state.
-   Differences in statistics, timing, or refunds become warnings for the "stats" override.
-5. It drops a new production order that the current rules refuse. The drop is a warning for the same override.
-   An older release can allow an order that the current rules refuse.
-   The country record gets back the payment of each dropped order, as a cancellation does.
-   A foreign order, or a move over its budget, is still rejected.
-6. `legacy_player_country` in `tournament.py` prepares the country record.
-   The host keeps its faction fields, policy timers, travelling requests, and treaty rounds.
-   Invalid diplomatic drafts are discarded. Other choices in the move are kept.
-7. It applies the move. It replaces the country record, applies faction renames, appearance, siphon, and cargo changes, and applies aircraft orders.
-   When `unit_snapshot` is true, it replaces the country's ground units with the move's units.
-
-Review acceptance re-reads and revalidates the file. Real-time clients cannot request these overrides.
-Units without IDs are kept. They cannot be compared with host units, so they give no warnings.
-Held volunteer units in the country record keep their statistics until the next load refreshes them.
-
-### Removing Snapshot Support
-
-Keep snapshot support while players can have snapshot moves. Remove it only when the user asks.
-To remove it, do these steps:
-
-1. Delete `snapshot_moves.py` and its branch in `load_move_files`.
-   Make `load_move_files` refuse a move without `player_intents`.
-2. Remove the snapshot sections from `export_move_file`, and the conflict checks from `tournament_player_intents`.
-3. Remove the older move format rules from `convert_move`. Keep the country, province, and unit rules.
-
-### Other Owners
-
-The move adapters keep session checks, turn checks, duplicate detection, and submission replacement.
-Tournament encryption, fog policy, file downloads, and storage synchronization stay with the tournament input and output module.
-The real-time adapter keeps server authority, identity checks, recipient filtering, submission locks, and network limits.
+Tournament encryption, fog policy, and storage synchronization live in the tournament adapter.
+The real-time adapter uses the same action service and owns identity checks, submission locks, and recipient filtering.
 
 ## Released Names
 

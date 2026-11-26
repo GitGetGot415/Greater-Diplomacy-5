@@ -29,7 +29,6 @@
 - measure which parts of the game are slow before looking into C++ or vectorization
 - check whether saving during tournament move entry is allowed
 - check whether sending military access and then declaring war while the request is pending works
-- check whether snapshot_moves.py can be deleted `(maybe sometime in the future)`
 - check whether low-health units should deal less damage `(lane targeting already spreads damage across the front rank, and the AI already rotates badly damaged units out)`
 - check whether overkill can kill a unit before the rest of the damage is applied
 - check the maximum country-data length `(search for max_length)`
