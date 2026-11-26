@@ -102,11 +102,38 @@ class SupplyTests(SupplyFixture):
               patch.object(c, "CONSCRIPTION_RATIO", 0.25),
               patch.object(queries, "get_max_fuel_conversion", return_value=0.5)):
             economy = queries.calculate_all_economies(world.world.map_data, world.world.nation_data, context=world)["A"]
-            actual = queries.SupplySnapshot(world).fuel_conversion_for("A")[tile["id"]]
+            snapshot = queries.SupplySnapshot(world)
+            actual = snapshot.income_conversions_for("A")[tile["id"]]
+            production = snapshot.for_country("A").production_tiles[tile["id"]]
             self.assertEqual(economy["gross_materials"], 257)
             self.assertEqual(economy["breakdown"]["materials"]["conversion"], -120)
+            self.assertEqual(actual["manpower"], -20)
+            self.assertEqual(actual["conscription"]["materials"], 10)
             self.assertEqual(actual["fuel"], economy["breakdown"]["fuel"]["conversion"])
-            self.assertAlmostEqual(actual["materials"], -120 * 147 / 257)
+            self.assertAlmostEqual(actual["materials"], 10 - 120 * 157 / 257)
+            self.assertEqual(production["manpower"], 20)
+            self.assertAlmostEqual(production["materials"], 157 - 120 * 157 / 257)
+            self.assertEqual(production["fuel"], economy["breakdown"]["fuel"]["conversion"])
+
+    def test_conscription_conversion_updates_manpower_and_materials_supply_without_fuel_conversion(self):
+        front = province(1, "A", [2], output=(60, 0, 0))
+        rear = province(2, "A", [1], output=(40, 0, 0))
+        unit = division(front, kind="Supply Test Infantry")
+        world = game(front, rear)
+        world.world.nation_data["A"].update(mat_to_fuel_slider=0, conscription_slider=0.4)
+        self.library[unit["type"]].update(cost_manpower=40, cost_materials=12)
+        with (patch.object(c, "COUNTRY_BASE_YIELDS", dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)),
+              patch.object(c, "CONSCRIPTION_RATIO", 0.2)):
+            snapshot = queries.SupplySnapshot(world)
+            network = snapshot.for_country("A")
+            self.assertEqual(network.production_tiles[front["id"]]["manpower"], 24)
+            self.assertEqual(network.production_tiles[rear["id"]]["manpower"], 16)
+            self.assertAlmostEqual(network.production_tiles[front["id"]]["materials"], 7.2)
+            self.assertAlmostEqual(network.production_tiles[rear["id"]]["materials"], 4.8)
+            self.assertEqual(snapshot.fractions(unit), (1.0, 1.0, 1.0))
+            world.world.nation_data["A"]["conscription_slider"] = 0.0
+            drained = queries.SupplySnapshot(world)
+            self.assertEqual(drained.fractions(unit), (0.0, 1.0, 1.0))
 
     def test_fractional_province_conversion_can_cover_exact_fuel_demand(self):
         front = province(1, "A", [2, 3], output=(100, 32, 0))
