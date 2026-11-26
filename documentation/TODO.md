@@ -14,6 +14,10 @@
 - **have years on infantry names** or at least make that an option
 - consider making core removal a policy
 
+- reconsider (swap) planned and market economy in terms of how they handle non-core territory
+- rebellion / garrison system so taking non core territory has consequences
+- also makes puppets potentially able to revolt
+
 ## Edgecases
 
 - if you're playing as a 1 province nation, and you're attacked, because provinces being fought over produce 0 resources, all your units can't fight back and you will lose without dealing any damage
