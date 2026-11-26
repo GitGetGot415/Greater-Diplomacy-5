@@ -340,14 +340,8 @@ class FuelGuardTests(unittest.TestCase):
             "role_counts": {},
         }
 
-        real_sites = ai_construction._recruit_sites
-        ai_construction._recruit_sites = lambda *a: {"militia": provs, "factory": provs,
-                                                     "naval": provs}
-        try:
-            ai_construction._run_purchase_loop(
-                screen, "Avaria", data, provs, LIBRARY, {}, state)
-        finally:
-            ai_construction._recruit_sites = real_sites
+        ai_construction._run_purchase_loop(
+            screen, "Avaria", data, provs, LIBRARY, {}, state)
         return [q["unit_type"] for q in provs[0]["unit_queue"]]
 
     def test_a_nation_within_its_fuel_budget_buys_the_unit_it_rates_best(self):

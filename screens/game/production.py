@@ -363,25 +363,16 @@ class Production_Screen(Screen):
             if not target:
                 continue
 
-            # Dynamically calculate the visual cost for the player
+            if production_actions.building_prerequisite_error(province, target, group_id, research):
+                continue
             data = queries.get_building_cost(target, owner, self.map_screen.world.map_data, self.building_library,
-                                             self.map_screen.world.nation_data)
+                                             self.map_screen.world.nation_data, context=self.map_screen)
             # Compare this building chain only; unrelated buildings retain their yields.
             output, data["previous_yields"] = queries.group_yields(
                 province, target, research, self.building_library, context=self.map_screen,
                 factory_multiplier=factory_multiplier, non_core_multiplier=non_core_multiplier)
             data.update({f"prod_{res}": amount for res, amount in output.items()})
             is_building = any(q.get("group") == data["group"] for q in building_queue)
-            req_tech, req_lvl = queries.get_building_required_tech(target)
-
-            if req_tech and research.get(req_tech, 0) < req_lvl:
-                continue
-
-            # --- ENFORCE FACTORY DEPENDENCY ---
-            if data["group"] in ["recruitment"]:
-                if not queries.has_basic_factory(province):
-                    continue
-
             if is_building:
                 btn_txt = "Building..."
                 cb = _no_action
@@ -402,16 +393,19 @@ class Production_Screen(Screen):
             self._list_y += ROW_STEP_Y
 
     def _add_unit_row(self, unit_name, btn_color, x_offset=0):
-        factory = queries.get_unit_metadata(unit_name, self.unit_library, context=self.map_screen)["recruitment"]["industry"]
-        can_build = (factory == "none" or (queries.has_industry(self.target_province)
-                     if factory == "industry" else queries.has_basic_factory(self.target_province)))
-
-        if self._spectator_locked():
-            final_btn_color = "grey"
-            cb = _no_action
-        else:
-            final_btn_color = btn_color if can_build else "grey"
+        final_btn_color = "grey"
+        cb = _no_action
+        if not self._spectator_locked():
             cb = lambda n=unit_name: self.buy_unit(n)
+            try:
+                production_actions.prepare_production(
+                    self.map_screen, self.target_province.get("owner"), self.target_province,
+                    "unit_queue", {"unit_type": unit_name}, unit_library=self.unit_library)
+            except ValueError:
+                # The click still explains why this displayed unit cannot be built here.
+                pass
+            else:
+                final_btn_color = btn_color
 
         self._add_scroll_button(LIST_X + x_offset, self._list_y, final_btn_color,
                                 queries.get_condensed_unit_name(unit_name, self.unit_library), cb)
