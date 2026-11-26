@@ -22,7 +22,7 @@ from types import SimpleNamespace
 
 from map_logic.ai import ai_tuning
 from map_logic.ai import ai_candidates, ai_diplomacy, ai_opinion, ai_world
-from map_logic.diplomacy import deal, deal_effects, diplomacy_messages, peace_scope, war_actions
+from map_logic.diplomacy import deal, deal_effects, diplomacy_messages, peace_scope, war_actions, war_score
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -226,6 +226,45 @@ class OccupationAppetiteTests(unittest.TestCase):
         for prov in provs:
             prov["owner"] = "FOE"
         self.assertGreater(appetite(), intact)
+
+
+class TreatyFrontAppetiteTests(unittest.TestCase):
+    def test_the_belligerents_matter_even_if_the_signatory_has_no_front(self):
+        game = StubMapScreen(("A", "B", "Delegate", "Neutral"), human_players=())
+        game.world.scenario_settings["fog_of_war"] = False
+        game.set_war("A", "B")
+        a, b = game.home_of("A"), game.home_of("B")
+        game.border(a["id"], b["id"])
+        a["units"] = [{"owner": "A", "attack": 300, "health": 100},
+                      {"owner": "Neutral", "attack": 2000, "health": 100}]
+        b["units"] = [{"owner": "B", "attack": 100, "health": 100}]
+        game.home_of("Delegate")["units"] = [{"owner": "Delegate", "attack": 5000, "health": 100}]
+        world = ai_world.build(game)
+        ordinary = deal.ceasefire_deal("A", "B")
+        delegated = deal.ceasefire_deal("A", "Delegate", side_b=["Delegate", "B"])
+        front = world.treaty_front_strength("A", ["A"], ["Delegate", "B"])
+        self.assertGreater(front[0], front[1])
+        self.assertGreater(front[1], 0)
+        expected = ai_opinion.peace_appetite(world, "A", "B", agreement=ordinary)
+        self.assertEqual(ai_opinion.peace_appetite(world, "A", "Delegate", agreement=delegated), expected)
+        self.assertEqual(war_score.for_treaty(world, "A", delegated, world)["sides"], (["A"], ["B"]))
+
+    def test_no_land_front_uses_overall_strength(self):
+        game = StubMapScreen(("A", "B"), human_players=())
+        game.world.scenario_settings["fog_of_war"] = False
+        game.set_war("A", "B")
+        game.home_of("A")["units"] = [{"owner": "A", "attack": 200, "health": 100}]
+        game.home_of("B")["units"] = [{"owner": "B", "attack": 50, "health": 100}]
+        world = ai_world.build(game)
+        agreement = deal.ceasefire_deal("A", "B")
+        self.assertEqual(world.treaty_front_strength("A", ["A"], ["B"]), (0.0, 0.0))
+        appetite = ai_opinion.peace_appetite(world, "A", "B", agreement=agreement)
+        with patch.object(world, "treaty_front_strength", return_value=(300, 75)):
+            strong_front = ai_opinion.peace_appetite(world, "A", "B", agreement=agreement)
+        with patch.object(world, "treaty_front_strength", return_value=(0, 75)):
+            losing_front = ai_opinion.peace_appetite(world, "A", "B", agreement=agreement)
+        self.assertGreater(losing_front, appetite)
+        self.assertLess(strong_front, appetite)
 
 
 class SeparatePeaceVerdictTests(unittest.TestCase):

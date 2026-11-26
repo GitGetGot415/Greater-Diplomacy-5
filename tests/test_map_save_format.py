@@ -15,6 +15,7 @@ from data.map import history_io, load_map, save_map
 import data.constants as c
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from map_logic import politics
+from map_logic.diplomacy import faction_records
 from map_logic.system32.turn_processor import snapshot_history
 from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
@@ -64,6 +65,42 @@ class MapSaveFormatTests(unittest.TestCase):
             self.assertEqual(politics.drift(older.world.nation_data, country), -1)
             self.assertEqual(politics.economic_value(older.world.nation_data, country), c.POLITICS_START)
             self.assertEqual(politics.economic_drift(older.world.nation_data, country), 0)
+
+    def test_treaty_border_correction_survives_save_and_selected_history(self):
+        context = sample_map_screen()
+        world = context.world
+        home = next(iter(world.map_data.values()))
+        home.update(units=[], unit_queue=[])
+        for tile, owner in ((8, "Borland"), (9, "Carrow")):
+            province = dict(home, id=tile, json_key=f"({tile}, 0, 0)", map_color=[tile, 0, 0],
+                            owner=owner, cores=[owner])
+            world.map_data[(tile, 0, 0)] = province
+            world.id_to_province[tile] = province
+            world.nation_data[owner] = {"name": owner}
+
+        world.nation_data["Avaria"]["at_war_with"] = ["Carrow"]
+        world.nation_data["Borland"]["at_war_with"] = ["Carrow"]
+        world.nation_data["Carrow"]["at_war_with"] = ["Avaria", "Borland"]
+        world.nation_data["WAR_PRE_MAPS"] = {"Avaria": {str(home["id"]): "Avaria"}}
+        world.time_manager.get_date_string = lambda: "Fixture date"
+        before = world.time_manager.total_turns
+        snapshot_history(context)
+        world.time_manager.total_turns += 1
+        home["owner"] = "Borland"
+        faction_records.record_treaty_transfers(world.nation_data, {home["id"]: "Borland"})
+        snapshot_history(context)
+
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(queries, "get_settings", return_value={}):
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_save_dict(context, include_provinces=False), handle)
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_map_data_save(context), handle)
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            history_io.write(directory, world.history)
+            for turn, expected in ((None, "Borland"), (before + 1, "Borland"), (before, "Avaria")):
+                with self.subTest(turn=turn):
+                    loaded = load_map.load_backend_state(directory, history_turn=turn, skip_initial_income=True)
+                    self.assertEqual(faction_records.recorded_pre_war_owner(loaded.world.nation_data, home["id"]), expected)
 
     def test_save_and_selected_history_repair_retired_military_access(self):
         context = sample_map_screen()

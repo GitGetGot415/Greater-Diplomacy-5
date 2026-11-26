@@ -95,6 +95,8 @@ class BlocPeaceTests(unittest.TestCase):
         self.assertEqual(self.game.world.nation_data["S"]["truces"]["T"], c.TRUCE_TURNS)
 
     def test_a_leader_can_cede_a_members_territory(self):
+        self.game.world.scenario_settings["fog_of_war"] = False
+        self.game.home_of("S")["units"].append({"owner": "S", "attack": 1000, "health": 100})
         theirs_prov = self.game.add_province("T", cores=["T"])
         self.game.border(self.game.home_of("S")["id"], theirs_prov["id"])
         mine, theirs = self.sides()

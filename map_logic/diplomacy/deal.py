@@ -429,23 +429,8 @@ def tile_value_between(prov, giver, receiver, nation_data, perspective=RECEIVER)
 
 
 def prewar_index(nation_data):
-    """{province id (as str): owner when the war began}, across every snapshot.
-
-    Two sources, neither overlapping the other: save_faction_pre_war_map records
-    a faction's own members' provinces when it goes to war, and WAR_PRE_MAPS does
-    the same one nation at a time for belligerents with no faction to snapshot
-    them -- see war_actions.finalize_war.
-
-    Lives here rather than in war_score because valuation needs it too and
-    war_score already imports this module; the other direction would be a cycle.
-    war_score re-exports both of these for its own callers.
-    """
-    merged = {}
-    for war_maps in (faction_records.pre_war_maps(nation_data), nation_data.get("WAR_PRE_MAPS") or {}):
-        for snapshot in war_maps.values():
-            if isinstance(snapshot, dict):
-                merged.update(snapshot)
-    return merged
+    """The shared province ownership baseline for occupation and negotiation."""
+    return faction_records.pre_war_index(nation_data)
 
 
 def original_owner(prov, prewar):

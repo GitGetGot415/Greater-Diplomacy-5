@@ -132,6 +132,7 @@ class AIWorld:
         self._perceived_military = {}
         self._perceived_econ = {}
         self._perceived_ratio = {}
+        self._treaty_fronts = {}
         #: Who is playing, so "a country the player would notice" can be
         #: answered. Empty is fine -- a spectator notices everyone equally.
         self.human_players = list(human_players or ())
@@ -282,13 +283,28 @@ class AIWorld:
         return result
 
     def _front_strength(self, prov_ids, evaluating_nation, opposing_nation, viewer=None):
-        """`evaluating_nation`'s side's strength on these tiles.
+        friendly = queries.get_all_friendly_nations(evaluating_nation, self.nation_data)
+        return self._strength_on_front(prov_ids, friendly, {opposing_nation}, viewer=viewer)
 
-        With a `viewer`, only what that country can see counts: tiles outside
-        its vision and units hidden from it (submarines) are left out.
-        """
+    def treaty_front_strength(self, viewer, mine, theirs):
+        """Perceived strength where the actual sides of a treaty face each other."""
+        friendly, opposing = frozenset(mine), frozenset(theirs)
+        key = (viewer, friendly, opposing)
+        if key not in self._treaty_fronts:
+            tiles = set()
+            for ours in friendly:
+                for foe in opposing:
+                    if queries.are_at_war(ours, foe, self.nation_data):
+                        tiles.update(self.border_tiles.get(frozenset((ours, foe)), ()))
+            self._treaty_fronts[key] = (
+                self._strength_on_front(tiles, friendly, opposing, viewer=viewer),
+                self._strength_on_front(tiles, opposing, friendly, viewer=viewer),
+            )
+        return self._treaty_fronts[key]
+
+    def _strength_on_front(self, prov_ids, friendly, opposing, *, viewer=None):
+        """Count the combat front and relief from the specified countries."""
         nation_data = self.nation_data
-        friendly = queries.get_all_friendly_nations(evaluating_nation, nation_data)
         visible = self.visible_provinces(viewer) if viewer is not None else None
         strength = 0
 
@@ -311,7 +327,8 @@ class AIWorld:
                 owner = u.get("owner")
                 for other_u in units:
                     other_owner = other_u.get("owner")
-                    if other_owner != opposing_nation and queries.are_at_war(owner, other_owner, nation_data):
+                    if (other_owner not in opposing and queries.are_at_war(owner, other_owner, nation_data)
+                            and (visible is None or queries.is_unit_visible_to(other_u, viewer, prov, nation_data))):
                         base_str *= c.AI_BORDER_DISTRACTION_MULTIPLIER
                         break
                 strength += base_str

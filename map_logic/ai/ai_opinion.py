@@ -148,7 +148,7 @@ def wars_to_join(world, fighter, joiner):
             if may_reopen_war(world, joiner, enemy)]
 
 
-def peace_appetite(world, nation, enemy, scenario_settings=None, *, agreement=None):
+def peace_appetite(world, nation, enemy, scenario_settings=None, *, agreement=None, scores=None):
     """How much this nation wants out of its war with `enemy`, 0..1.
 
     Losing and cautious push toward the table. There was a third term, war
@@ -164,20 +164,18 @@ def peace_appetite(world, nation, enemy, scenario_settings=None, *, agreement=No
     nation with most of its land overrun but an army still comparable to the
     enemy's never wanted to talk. See AI_W_PEACE_OCCUPIED for how they combine.
 
-    The military balance is this nation's own reading of it
-    (AIWorld.perceived_power_ratio): under fog of war it sees the enemy units in
-    view and guesses the rest. Occupation is on the public map.
+    Military strength and occupation use the sides covered by the treaty.
+    Under fog of war the AI estimates enemy power. When the front supplies no
+    strength estimate, overall power provides the military balance.
     """
     person = traits(world, nation, scenario_settings)
-    if agreement is not None and (peace_scope.departing_member(nation, enemy, world.nation_data)
-                                  or peace_scope.departing_member(enemy, nation, world.nation_data)):
-        scores = war_score.for_treaty(world, nation, agreement, world, viewer=nation)
-        ratio = scores["parts"]["strength"] / max(1e-9, scores["their_parts"]["strength"])
-    else:
-        border_ratio, global_ratio = world.perceived_power_ratio(nation, enemy)
-        ratio = (border_ratio + global_ratio) / 2.0
-        scores = (war_score.for_treaty(world, nation, agreement, world) if agreement is not None
-                  else war_score.between(world, nation, enemy, world))
+    if scores is None:
+        scores = (war_score.for_treaty(world, nation, agreement, world, viewer=nation) if agreement is not None
+                  else war_score.between(world, nation, enemy, world, viewer=nation))
+    ratio = scores["parts"]["strength"] / max(1e-9, scores["their_parts"]["strength"])
+    our_front, their_front = world.treaty_front_strength(nation, *scores["sides"])
+    if our_front or their_front:
+        ratio = (ratio + our_front / max(1.0, their_front)) / 2.0
     outgunned = 1.0 - _sigmoid(ratio, 1.0, ai_tuning.AI_ODDS_STEEPNESS)
     occupied = scores["their_parts"]["occupation"]
     losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(ai_tuning.AI_W_PEACE_OCCUPIED * occupied))
@@ -331,7 +329,7 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     # war_score.leverage on `viewer`.
     scores = war_score.for_treaty(world, nation, agreement, world, viewer=nation)
     occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
-    appetite = peace_appetite(world, nation, proposer, scenario_settings, agreement=agreement)
+    appetite = peace_appetite(world, nation, proposer, scenario_settings, scores=scores)
     willingness = (ai_tuning.AI_PEACE_LEVERAGE_SHARE * scores["theirs"]
                    + (1.0 - ai_tuning.AI_PEACE_LEVERAGE_SHARE) * appetite)
     war_prize = ai_tuning.AI_PEACE_PRIZE_W * scores["mine"]
@@ -490,9 +488,9 @@ def ratifies(world, member, deal, map_data, scenario_settings=None):
         return True
 
     enemies = deal_mod.opponents_of(deal, member)
-    appetite = max((peace_appetite(world, member, enemy, scenario_settings)
-                    for enemy in enemies), default=0.0)
-
+    if not enemies:
+        return False
+    appetite = peace_appetite(world, member, enemies[0], scenario_settings, agreement=deal)
     return appetite >= loss * ai_tuning.AI_RATIFY_STRICTNESS
 
 

@@ -217,11 +217,10 @@ def faction_request_leadership_error(sender, target, action, nation_data):
 
 
 def get_historical_owner(province, faction_name, nation_data):
+    """Read the shared baseline, retaining the faction argument for callers."""
     """Returns the pre-war owner of a tile if a faction war is active, otherwise the primary core."""
-    pre_war = faction_records.pre_war_map(nation_data, faction_name)
-    if pre_war is not None:
-        return pre_war.get(str(province["id"])) or pre_war.get(province["id"])
-    return province.get("cores", [None])[0] if province.get("cores") else None
+    recorded = faction_records.recorded_pre_war_owner(nation_data, province["id"])
+    return recorded or next(iter(province.get("cores") or ()), None)
 
 
 def get_faction_core_transfer_target(capturer, province, nation_data):
@@ -237,15 +236,14 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
     if not faction_name:
         return capturer
 
-    original_owner = get_historical_owner(province, faction_name, nation_data)
     faction_members = get_faction_members(faction_name, nation_data)
+    recorded = faction_records.recorded_pre_war_owner(nation_data, province["id"])
+    if recorded:
+        return recorded if recorded in faction_members else capturer
 
-    # 1. Check Pre-War Faction Map First
-    if original_owner and original_owner != capturer and original_owner in faction_members:
-        return original_owner
-
-    # 2. Fallback to standard core logic
     tile_cores = province.get("cores", [])
+    if tile_cores and tile_cores[0] in faction_members:
+        return tile_cores[0]
     faction_cores_on_tile = [m for m in faction_members if m in tile_cores]
 
     if len(faction_cores_on_tile) == 1:
