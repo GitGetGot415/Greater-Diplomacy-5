@@ -81,6 +81,7 @@ HIDDEN_IMPORTS = (
     "map_logic.tactical_rules", "map_logic.tactical_units",
     "map_logic.battle_terrain",
     "map_logic.naval_battle",
+    "map_logic.imports.save_output",
     "screens.game.tactical_orders",
     "screens.editors.unit_stats_editor",
     "map_logic.system32.unit_events",

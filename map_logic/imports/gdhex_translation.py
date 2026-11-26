@@ -12,15 +12,13 @@ import json
 import math
 import os
 import random
-import shutil
 from datetime import datetime
 
 import pygame
 
 import data.constants as c
 from data import queries
-from data.map import history_io
-from data.platform import sync_persisted_dir
+from map_logic.imports.save_output import write_imported_save
 
 
 RESOURCE_SCALE = 100
@@ -501,22 +499,10 @@ def translate_file(source_path, saves_dir=None):
         raise GDHEXTranslationError(f"could not read {os.path.basename(source_path)}") from error
 
     payload, raw_map, assets, notes = build_save_payload(parsed)
-    saves_dir = saves_dir or c.SAVES_DIR
-    os.makedirs(saves_dir, exist_ok=True)
-    destination = queries.import_destination_path(source_path, saves_dir, "GD HEX", "GD Hex Import")
-    os.makedirs(destination)
-    try:
-        saved_provinces = payload.pop("provinces")
-        raw_map = queries.map_data_with_saved_provinces(raw_map, saved_provinces)
-        queries.compact_save_nation_data(payload, raw_map)
-        with open(os.path.join(destination, "meta.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_compact_text(payload))
-        with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_compact_text(raw_map))
-        for name, surface in zip(("terrain.png", "id_map.png"), assets):
-            pygame.image.save(surface, os.path.join(destination, name))
-    except Exception:
-        shutil.rmtree(destination, ignore_errors=True)
-        raise
-    sync_persisted_dir(saves_dir)
+    images = dict(zip(("terrain.png", "id_map.png"), assets))
+
+    def write_image(name, destination):
+        pygame.image.save(images[name], destination)
+
+    destination = write_imported_save(source_path, saves_dir, "GD HEX", "GD Hex Import", payload, raw_map, write_image)
     return destination, notes

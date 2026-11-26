@@ -17,8 +17,7 @@ from datetime import datetime
 
 import data.constants as c
 from data import queries
-from data.map import history_io
-from data.platform import sync_persisted_dir
+from map_logic.imports.save_output import write_imported_save
 
 
 DIVIDER = "\u239a"
@@ -507,22 +506,8 @@ def translate_file(source_path, saves_dir=None, base_map_dir=None):
     payload, notes = build_save_payload(parsed, base_map_dir)
     with open(os.path.join(base_map_dir, "map_data.json"), encoding="utf-8") as handle:
         raw_map = json.load(handle)
-    raw_map = queries.map_data_with_saved_provinces(
-        raw_map, payload.pop("provinces"))
-    queries.compact_save_nation_data(payload, raw_map)
-    saves_dir = saves_dir or c.SAVES_DIR
-    os.makedirs(saves_dir, exist_ok=True)
-    destination = queries.import_destination_path(source_path, saves_dir, "GD4", "GD4 Import")
-    os.makedirs(destination)
-    try:
-        with open(os.path.join(destination, "meta.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_compact_text(payload))
-        with open(os.path.join(destination, "map_data.json"), "w", encoding="utf-8") as handle:
-            handle.write(history_io.dump_compact_text(raw_map))
-        for asset in ("terrain.png", "id_map.png"):
-            shutil.copy2(os.path.join(base_map_dir, asset), os.path.join(destination, asset))
-    except Exception:
-        shutil.rmtree(destination, ignore_errors=True)
-        raise
-    sync_persisted_dir(saves_dir)
+    def write_image(name, destination):
+        shutil.copy2(os.path.join(base_map_dir, name), destination)
+
+    destination = write_imported_save(source_path, saves_dir, "GD4", "GD4 Import", payload, raw_map, write_image)
     return destination, notes
