@@ -206,6 +206,23 @@ class FactionInvitationButtonTests(unittest.TestCase):
         self.map_buttons.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
 
+    def test_join_wars_button_follows_truce_rules_and_keeps_draft_cancellation(self):
+        game = self.game
+        nations = game.world.nation_data
+        game.selected_province = next(p for p in game.world.map_data.values() if p.get("owner") == self.leader)
+        nations[self.leader]["at_war_with"] = [self.outsider]
+        nations[self.outsider]["at_war_with"] = [self.leader]
+        self.map_buttons.update_button_states(game)
+        self.assertFalse(game.btn_join_wars.disabled)
+        nations[self.member]["truces"] = {self.outsider: 2}
+        self.map_buttons.update_button_states(game)
+        self.assertTrue(game.btn_join_wars.disabled)
+        nations[self.member]["pending_diplomacy"][self.leader] = {"action": "JOIN_WARS", "turns": 0}
+        self.map_buttons.update_button_states(game)
+        self.assertFalse(game.btn_join_wars.disabled)
+        game.btn_join_wars.callback()
+        self.assertNotIn(self.leader, nations[self.member]["pending_diplomacy"])
+
     def test_spectator_invite_is_clickable_for_leaders_and_members(self):
         game = self.game
         game.session.player_country = "Spectator"
