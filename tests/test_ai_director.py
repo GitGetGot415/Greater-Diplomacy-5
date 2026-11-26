@@ -286,6 +286,11 @@ class EndToEndTests(NoNetworkTestCase):
         game = StubMapScreen(["A", "B", "C"], human_players=[])
         game.set_war("A", "B")
         game.set_war("A", "C")
+        for nation, country in game.world.nation_data.items():
+            country["war_durations"] = {enemy: ai_tuning.MIN_TURNS_FOR_CEASEFIRE
+                                        for enemy in country.get("at_war_with", ())}
+            if nation in ("B", "C"):
+                game.home_of(nation)["units"] = [{"owner": nation, "health": 100, "attack": 200}]
         return game
 
     def run_pass(self, game):

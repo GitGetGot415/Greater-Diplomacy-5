@@ -370,6 +370,9 @@ AI_SCORE_CLAIM_LEADERSHIP = 0.70        # six turns in the making; do not sit on
 # waits a little longer than it would to say yes.
 AI_PEACE_OFFER_THRESHOLD = 0.62
 
+AI_SEPARATE_PEACE_OCCUPATION = 0.25
+AI_PEACE_CONCESSION_LEVERAGE = 0.40
+AI_PEACE_ALLIED_RELIEF_TURNS = 2
 MIN_TURNS_FOR_CEASEFIRE = 6 # Turns that must occur before the ai allows ceasefires
 
 # ==========================================

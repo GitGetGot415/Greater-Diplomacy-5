@@ -42,6 +42,8 @@ import random
 import data.constants as c
 from map_logic.ai import ai_tuning
 from data import queries
+from data.queries import supply
+from map_logic.system32 import movement_processor
 from map_logic.ai import ai_personality
 from map_logic.diplomacy import deal as deal_mod
 
@@ -50,7 +52,7 @@ class AIWorld:
     """Per-turn snapshot of the map, with memoised strength/relation queries."""
 
     def __init__(self, map_data, nation_data, id_to_province, total_turns=0,
-                 human_players=(), scenario_settings=None, *, current_date=None):
+                 human_players=(), scenario_settings=None, *, current_date=None, context=None):
         self.map_data = map_data
         self.nation_data = nation_data
         if scenario_settings is None:
@@ -58,6 +60,9 @@ class AIWorld:
             scenario_settings = nation_data.world.scenario_settings if isinstance(nation_data, WorldNations) else {}
         self.scenario_settings = scenario_settings
         self.id_to_province = id_to_province
+        self.context = context if context is not None else (nation_data.world if isinstance(nation_data, WorldNations) else None)
+        self._relief_supply = None
+        self._allied_relief = {}
         self.total_turns = total_turns
         time_manager = nation_data.world.time_manager if isinstance(nation_data, WorldNations) else None
         self.current_date = current_date or (time_manager.get_date_string() if time_manager is not None else None)
@@ -517,6 +522,63 @@ class AIWorld:
             self._reachable[key] = cached
         return cached
 
+    def allied_relief_value(self, nation, contested):
+        """Estimate the value of homeland nearby, supplied faction forces can retake."""
+        if self.context is None:
+            return 0.0
+        key = (nation, frozenset(contested))
+        if key in self._allied_relief:
+            return self._allied_relief[key]
+
+        data = self.nation_data
+        faction = queries.get_country_faction(nation, data)
+        allies = set(queries.get_faction_members(faction, data)) - {nation}
+        visible = self.visible_provinces(nation)
+        contested = {tile: prov for tile, prov in contested.items() if tile in visible}
+        attackers = collections.defaultdict(list)
+        library = queries.get_unit_library(self.context)
+        if allies and contested and self._relief_supply is None:
+            self._relief_supply = supply.SupplySnapshot(self.context)
+
+        for ally in sorted(allies):
+            targets = {tile for tile, prov in contested.items()
+                       if queries.are_at_war(ally, prov["owner"], data)
+                       and queries.get_faction_core_transfer_target(ally, prov, data) == nation}
+            if not targets:
+                continue
+            for unit, origin in self.units_by_owner.get(ally, ()):
+                if (origin["id"] not in visible or unit.get("health", 0) <= 0
+                        or unit.get("type", "").startswith("Convoy")
+                        or not movement_processor.is_land_unit(unit, library)):
+                    continue
+                status = self._relief_supply.status(unit)
+                if status is None or status.readiness <= 0:
+                    continue
+                max_steps = int(supply.unit_movement_speed(unit, supply=self._relief_supply)
+                                * ai_tuning.AI_PEACE_ALLIED_RELIEF_TURNS)
+                routes = queries.find_unit_move_paths_to_destinations(
+                    unit, origin, targets, self.id_to_province, data, context=self.context, max_steps=max_steps)
+                if routes:
+                    tile = min(routes, key=lambda candidate: (len(routes[candidate]), candidate))
+                    attackers[tile].append((unit, status.readiness))
+
+        recovered = 0.0
+        for tile, forces in attackers.items():
+            province = contested[tile]
+            readiness = {id(unit): fraction for unit, fraction in forces}
+            front = queries.get_front_and_relief([unit for unit, _ in forces], terrain=province.get("terrain"))
+            attack = sum(queries.calculate_unit_strength(unit) * readiness[id(unit)] for unit in front)
+            defenders = [unit for unit in province.get("units", ())
+                         if unit.get("health", 0) > 0 and queries.are_at_war(nation, unit.get("owner"), data)
+                         and queries.is_unit_visible_to(unit, nation, province, data)]
+            defense = sum(queries.calculate_unit_strength(unit)
+                          for unit in queries.get_front_and_relief(defenders, terrain=province.get("terrain")))
+            if attack > defense:
+                recovered += (deal_mod.tile_value_between(province, nation, None, data)
+                              * attack / (attack + defense))
+        self._allied_relief[key] = recovered
+        return recovered
+
     def homeland_border_threatened(self, nation, enemy):
         """Visible ground combat strength across a border with our core land."""
         visible = self.visible_provinces(nation)
@@ -544,11 +606,17 @@ class AIWorld:
 
         return strength(enemy_tiles, {enemy}) > strength(own_tiles, defenders)
 
+    def _enemy_perimeter(self, enemy):
+        return {neighbor for province in self.provs_by_owner[enemy]
+                for neighbor in self.neighbor_ids[province["id"]]
+                if self.id_to_province[neighbor].get("owner") != enemy}
+
+    def can_reach_enemy_front(self, nation, enemy):
+        return any(tile in self._transit_routes(nation, None) for tile in self._enemy_perimeter(enemy))
+
     def access_improves_route(self, nation, grantor, enemy):
         """Compare routes to the enemy's perimeter with and without passage."""
-        targets = {neighbor for province in self.provs_by_owner[enemy]
-                   for neighbor in self.neighbor_ids[province["id"]]
-                   if self.id_to_province[neighbor].get("owner") != enemy}
+        targets = self._enemy_perimeter(enemy)
         if not targets:
             return False
         existing = self._transit_routes(nation, None)
@@ -698,7 +766,8 @@ def build(context):
                    world_state.id_to_province, total_turns,
                    human_players=session_for(context).active_players,
                    scenario_settings=world_state.scenario_settings,
-                   current_date=time_manager.get_date_string() if time_manager is not None else None)
+                   current_date=time_manager.get_date_string() if time_manager is not None else None,
+                   context=context)
 
 
 def for_screen(context):

@@ -340,15 +340,6 @@ def execute(context, deal, escrowed=None):
             if clause["grantee"] not in granted:
                 granted.append(clause["grantee"])
 
-        elif kind == deal_mod.FACTION_EXIT:
-            # FACTION_EXIT is a separate-peace term.  The builder used to add
-            # it to ordinary trades made by faction members, and malformed
-            # offers can remain in saves written before that was fixed.
-            if deal.get("kind") != deal_mod.KIND_PEACE:
-                continue
-            if queries.get_country_faction(clause['nation'], nation_data):
-                finalize_faction_leave(nation_data, clause["nation"])
-
         elif kind == deal_mod.WAR_EXIT:
             remove_enemy(nation_data, clause["nation"], clause["against"])
             remove_enemy(nation_data, clause["against"], clause["nation"])
@@ -358,8 +349,13 @@ def execute(context, deal, escrowed=None):
         dropped.extend(restore_occupied(context, deal, set(transfers)))
         for ours in deal["sides"]["a"]:
             for theirs in deal["sides"]["b"]:
-                _clear_wargoals(nation_data, ours, theirs)
-                finalize_neutral(nation_data, ours, theirs)
+                if queries.are_at_war(ours, theirs, nation_data):
+                    _clear_wargoals(nation_data, ours, theirs)
+                    finalize_neutral(nation_data, ours, theirs)
+        # Settlement still needs the original faction's pre-war borders.
+        for clause in deal_mod.clauses(deal):
+            if clause["type"] == deal_mod.FACTION_EXIT and queries.get_country_faction(clause["nation"], nation_data):
+                finalize_faction_leave(nation_data, clause["nation"])
 
     return dropped
 

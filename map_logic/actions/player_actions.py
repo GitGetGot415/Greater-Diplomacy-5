@@ -786,6 +786,13 @@ class PlayerActions:
             available = availability(self.context, country_id, target, entry["action"], responses=canonical_responses)
             if not available.allowed:
                 raise PlayerActionError(available.reason)
+            if entry["action"] in peace_scope.PEACE_ACTIONS:
+                agreement = peace_scope.prepare_offer(country_id, target, entry, self.world.nation_data)
+                if agreement is None:
+                    raise PlayerActionError("Invalid parties or terms for this peace offer.")
+                if entry["action"] == "CEASEFIRE":
+                    entry["action"] = peace_scope.action_for(agreement)
+                entry["parameters"] = agreement
 
         canonical_lists = {}
         for target, messages in draft_lists.items():

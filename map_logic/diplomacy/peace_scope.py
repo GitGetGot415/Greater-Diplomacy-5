@@ -21,7 +21,7 @@ The rules, in the order they are decided:
     them their membership.
   * A faction leader and an individual member of the opposing faction may make
     a MEMBER_SEPARATE_PEACE. The leader speaks for their own bloc, but the
-    named enemy member alone settles; neither side is ejected from its faction.
+    named enemy member alone settles and leaves its faction.
     This is the limited peace needed when a single ally wants to leave that
     particular front without deciding its whole faction's war.
   * A non-leader may otherwise sue for a SEPARATE peace with the entire enemy
@@ -46,7 +46,7 @@ BLOC_LEADER = "BLOC_LEADER"
 #: A faction member buying its own way out. Signing costs it its membership.
 SEPARATE_PEACE = "SEPARATE_PEACE"
 #: A faction leader's bloc settling with one named member of the enemy bloc.
-#: The member remains in its faction; only its war against this bloc ends.
+#: The member leaves its faction and only its war against this bloc ends.
 MEMBER_SEPARATE_PEACE = "MEMBER_SEPARATE_PEACE"
 #: Nobody's bloc is involved; the old two-nation deal.
 BILATERAL = "BILATERAL"
@@ -172,8 +172,57 @@ def binds_whole_bloc(role):
 
 
 def costs_membership(role):
-    """Whether signing this deal takes the proposer out of its own faction."""
-    return role == SEPARATE_PEACE
+    """Whether signing this deal takes an individual member out of its faction."""
+    return role in (SEPARATE_PEACE, MEMBER_SEPARATE_PEACE)
+
+
+def departing_member(sender, target, nation_data):
+    """Which signatory is settling on its own authority and owes its membership."""
+    role = negotiation_role(sender, target, nation_data)
+    if role == SEPARATE_PEACE:
+        return sender
+    if role == MEMBER_SEPARATE_PEACE:
+        return target if queries.is_faction_leader(sender, nation_data) else sender
+    return None
+
+
+def _has_treaty_shape(agreement):
+    if not deal_mod.is_deal(agreement) or not deal_mod.ends_war(agreement):
+        return False
+    sides = agreement["sides"]
+    return (isinstance(sides, dict) and set(sides) == {"a", "b"}
+            and all(isinstance(side, list) and side and all(isinstance(name, str) for name in side)
+                    for side in sides.values())
+            and isinstance(agreement["clauses"], list)
+            and all(isinstance(clause, dict) and clause.get("type") in deal_mod.CLAUSE_TYPES
+                    for clause in agreement["clauses"]))
+
+
+def with_separate_peace_cost(agreement, sender, target, nation_data):
+    if not _has_treaty_shape(agreement):
+        return agreement
+    member = departing_member(sender, target, nation_data)
+    existing = deal_mod.clauses(agreement)
+    exits = [clause for clause in existing if clause.get("type") == deal_mod.FACTION_EXIT]
+    required = [{"type": deal_mod.FACTION_EXIT, "nation": member}] if member else []
+    if exits == required:
+        return agreement
+    clauses = [clause for clause in existing if clause.get("type") != deal_mod.FACTION_EXIT]
+    return deal_mod.with_clauses(agreement, clauses + required or [deal_mod.white_peace()])
+
+
+def has_current_terms(agreement, sender, target, nation_data):
+    """A published treaty must still name the authorized parties and departure."""
+    if (not _has_treaty_shape(agreement) or not has_settleable_war(sender, target, nation_data)
+            or not queries.can_negotiate_peace(target, sender, nation_data)):
+        return False
+    parties = deal_mod.side_of(agreement, sender)
+    if not parties:
+        return False
+    mine, theirs = deal_sides(sender, target, nation_data)
+    return (set(agreement["sides"][parties]) == set(mine)
+            and set(deal_mod.opponents_of(agreement, sender)) == set(theirs)
+            and agreement == with_separate_peace_cost(agreement, sender, target, nation_data))
 
 
 def is_member_separate_peace(role):
@@ -230,11 +279,27 @@ def bound_members(deal_sides_for_proposer, proposer):
     return [n for n in deal_sides_for_proposer if n != proposer]
 
 
-def offered_peace(sender, target, action, params, nation_data):
+def offered_peace(sender, target, action, params, nation_data, *, message=""):
+    """Read the existing terms, preserving the white-peace meaning of CEASEFIRE."""
     if action == "CEASEFIRE":
         ours, theirs = deal_sides(sender, target, nation_data)
         return deal_mod.new(deal_mod.KIND_PEACE, ours, theirs, [deal_mod.white_peace()])
-    return deal_mod.coerce(params, sender, target, kind=deal_mod.KIND_PEACE)
+    if deal_mod.is_deal(params):
+        return params
+    if isinstance(params, dict):
+        params = params.get("peace_type") or params.get("terms")
+    legacy = deal_mod.coerce(params or message, sender, target, kind=deal_mod.KIND_PEACE)
+    ours, theirs = deal_sides(sender, target, nation_data)
+    return deal_mod.new(deal_mod.KIND_PEACE, ours, theirs, deal_mod.clauses(legacy))
+
+
+def action_for(agreement):
+    return "CEASEFIRE" if deal_mod.is_white_peace(agreement) else "PEACE_TREATY"
+
+
+def recorded_offer(sender, target, request, nation_data):
+    return offered_peace(sender, target, request["action"], request.get("parameters"), nation_data,
+                         message=request.get("message", ""))
 
 
 def live_war_pairs(agreement, nation_data):
@@ -251,9 +316,30 @@ def live_war_pairs(agreement, nation_data):
             if isinstance(ours, str) and isinstance(theirs, str) and queries.are_at_war(ours, theirs, nation_data)}
 
 
+def prepare_offer(sender, target, request, nation_data):
+    agreement = recorded_offer(sender, target, request, nation_data)
+    agreement = with_separate_peace_cost(agreement, sender, target, nation_data)
+    return agreement if has_current_terms(agreement, sender, target, nation_data) else None
+
+
+def war_age(agreement, nation, opponent, nation_data):
+    """The direct war age, or the oldest active front the leaders represent."""
+    durations = nation_data.get(nation, {}).get("war_durations", {})
+    if queries.are_at_war(nation, opponent, nation_data):
+        return durations.get(opponent, 0)
+    ages = [durations.get(opponent, 0)]
+    for pair in live_war_pairs(agreement, nation_data):
+        if len(pair) == 2:
+            a, b = pair
+            ages.extend((nation_data[a].get("war_durations", {}).get(b, 0),
+                         nation_data[b].get("war_durations", {}).get(a, 0)))
+    return max(ages)
+
+
 def offer_wars(sender, target, request, nation_data):
-    agreement = offered_peace(sender, target, request["action"], request.get("parameters"), nation_data)
-    return live_war_pairs(agreement, nation_data)
+    agreement = recorded_offer(sender, target, request, nation_data)
+    return (live_war_pairs(agreement, nation_data)
+            if has_current_terms(agreement, sender, target, nation_data) else set())
 
 
 def ratification_covers(wars, nation_data):

@@ -26,7 +26,7 @@ from data import queries
 from map_logic.ai import ai_personality
 from map_logic.diplomacy import guarantees, war_calls
 
-from map_logic.diplomacy import deal as deal_mod, war_score
+from map_logic.diplomacy import deal as deal_mod, peace_scope, war_score
 from map_logic.ai import ai_unit_eval
 
 
@@ -148,7 +148,7 @@ def wars_to_join(world, fighter, joiner):
             if may_reopen_war(world, joiner, enemy)]
 
 
-def peace_appetite(world, nation, enemy, scenario_settings=None):
+def peace_appetite(world, nation, enemy, scenario_settings=None, *, agreement=None):
     """How much this nation wants out of its war with `enemy`, 0..1.
 
     Losing and cautious push toward the table. There was a third term, war
@@ -169,9 +169,17 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     view and guesses the rest. Occupation is on the public map.
     """
     person = traits(world, nation, scenario_settings)
-    border_ratio, global_ratio = world.perceived_power_ratio(nation, enemy)
-    outgunned = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, ai_tuning.AI_ODDS_STEEPNESS)
-    occupied = war_score.between(world, nation, enemy, world)["their_parts"]["occupation"]
+    if agreement is not None and (peace_scope.departing_member(nation, enemy, world.nation_data)
+                                  or peace_scope.departing_member(enemy, nation, world.nation_data)):
+        scores = war_score.for_treaty(world, nation, agreement, world, viewer=nation)
+        ratio = scores["parts"]["strength"] / max(1e-9, scores["their_parts"]["strength"])
+    else:
+        border_ratio, global_ratio = world.perceived_power_ratio(nation, enemy)
+        ratio = (border_ratio + global_ratio) / 2.0
+        scores = (war_score.for_treaty(world, nation, agreement, world) if agreement is not None
+                  else war_score.between(world, nation, enemy, world))
+    outgunned = 1.0 - _sigmoid(ratio, 1.0, ai_tuning.AI_ODDS_STEEPNESS)
+    occupied = scores["their_parts"]["occupation"]
     losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(ai_tuning.AI_W_PEACE_OCCUPIED * occupied))
 
     return clamp01(ai_tuning.AI_PEACE_LOSING_SHARE * losing
@@ -255,17 +263,27 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     strict in exactly the situation it was written for -- see the note there.
     """
 
-    if not deal_mod.is_deal(agreement):
-        agreement = deal_mod.coerce(agreement, proposer, nation, kind=deal_mod.KIND_PEACE)
-
     nation_data = world.nation_data
+    if not deal_mod.is_deal(agreement):
+        agreement = peace_scope.offered_peace(proposer, nation, "PEACE_TREATY", agreement, nation_data)
+        agreement = peace_scope.with_separate_peace_cost(agreement, proposer, nation, nation_data)
+
     map_data = getattr(world, "map_data", {}) or {}
-    duration = nation_data.get(nation, {}).get("war_durations", {}).get(proposer, 0)
+    departing = (peace_scope.departing_member(nation, proposer, nation_data)
+                 or peace_scope.departing_member(proposer, nation, nation_data))
+    duration = peace_scope.war_age(agreement, nation, proposer, nation_data)
+    if departing == nation:
+        held = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data,
+                                          whole_side=False, prewar_only=True)
+        if held < ai_tuning.AI_SEPARATE_PEACE_OCCUPATION:
+            return _verdict(False, _REFUSED_FLAT,
+                            f"{{we}} will consider leaving {{our}} faction when at least "
+                            f"{_pct(ai_tuning.AI_SEPARATE_PEACE_OCCUPATION)} of {{our}} homeland is occupied")
 
     # Stopping a war we have barely started is its own decision. This used to be
     # waived for anyone offering us something, which is precisely how a war two
     # turns old was settled for a single material.
-    if duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
+    if not departing and duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
         return _verdict(False, _REFUSED_FLAT,
                         f"{{we}} have been at war {duration} "
                         f"{'turn' if duration == 1 else 'turns'}; "
@@ -291,8 +309,16 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     # occupation reintroduces exactly the mismatch _land_cap_breach exists to
     # avoid: a member-sized loss weighed against a bloc-sized grip. Each level
     # is checked against itself inside.
-    breach = _land_cap_breach(agreement, nation, map_data, nation_data,
-                              max(0.0, bloc_demand - sweetener))
+    # Membership has a political cost in the verdict and never uses land allowance.
+    land_agreement = deal_mod.with_clauses(agreement, [
+        clause for clause in deal_mod.clauses(agreement) if clause["type"] != deal_mod.FACTION_EXIT
+    ]) if departing else agreement
+    exit_value = (sum(deal_mod.clause_value(clause, map_data, nation_data)
+                      for clause in deal_mod.clauses(agreement)
+                      if clause["type"] == deal_mod.FACTION_EXIT and clause.get("nation") == nation)
+                  if departing == nation else 0.0)
+    breach = _land_cap_breach(land_agreement, nation, map_data, nation_data,
+                              max(0.0, bloc_demand - exit_value / worth - sweetener))
     if breach:
         whose, asked, occupied = breach
         land = "{our} land" if whose is None else f"{whose}'s land"
@@ -303,21 +329,47 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
 
     # This nation's own reading of the war, not the exact figures: see
     # war_score.leverage on `viewer`.
-    scores = war_score.between(world, nation, proposer, world, viewer=nation)
+    scores = war_score.for_treaty(world, nation, agreement, world, viewer=nation)
     occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
-    appetite = peace_appetite(world, nation, proposer, scenario_settings)
+    appetite = peace_appetite(world, nation, proposer, scenario_settings, agreement=agreement)
     willingness = (ai_tuning.AI_PEACE_LEVERAGE_SHARE * scores["theirs"]
                    + (1.0 - ai_tuning.AI_PEACE_LEVERAGE_SHARE) * appetite)
     war_prize = ai_tuning.AI_PEACE_PRIZE_W * scores["mine"]
+    restored, allied_relief = _peace_continuation_value(world, nation, agreement, departing, worth)
+    war_prize = max(war_prize, restored) + allied_relief
 
     caution = traits(world, nation, scenario_settings).get("caution", 0.5)
     margin = ai_tuning.AI_PEACE_MARGIN_BASE + ai_tuning.AI_PEACE_MARGIN_CAUTION * caution
 
     slack = (willingness + sweetener) - (demand + war_prize + margin)
     # The sentence quotes the exact share, which the leverage bar also draws.
-    exact_share = war_score.between(world, nation, proposer, world)["mine"]
-    return _verdict(slack >= 0, slack,
-                    _peace_reason(slack, demand, war_prize, exact_share, occupied))
+    exact_share = war_score.for_treaty(world, nation, agreement, world)["mine"]
+    detail = ("{our} allies could help {us} recover the land this treaty would cede"
+              if slack < 0 <= slack + allied_relief
+              else _peace_reason(slack, demand, war_prize, exact_share, occupied))
+    return _verdict(slack >= 0, slack, detail)
+
+
+def _peace_continuation_value(world, nation, agreement, departing, worth):
+    """Value of holdings being returned and recoverable homeland being conceded."""
+    map_data, data = world.map_data, world.nation_data
+    prewar = deal_mod.prewar_index(data)
+    transfers = deal_mod.tile_transfers(agreement, map_data, data)
+    baseline = deal_mod.baseline_owners(agreement, map_data, data, prewar=prewar)
+    opponents = set(deal_mod.opponents_of(agreement, nation))
+    side = deal_mod.side_of(agreement, nation)
+    ours = set(agreement["sides"][side]) if side else {nation}
+    restored = 0.0
+    at_risk = {}
+    for province in map_data.values():
+        tile, holder = province["id"], province.get("owner")
+        settled_owner = transfers.get(tile, baseline.get(tile, holder))
+        if holder in ours and settled_owner in opponents and baseline.get(tile) == settled_owner:
+            restored += deal_mod.tile_value(province)
+        if (departing == nation and holder in opponents and settled_owner != nation
+                and deal_mod.original_owner(province, prewar) == nation):
+            at_risk[tile] = province
+    return restored / worth, world.allied_relief_value(nation, at_risk) / worth if at_risk else 0.0
 
 
 #: Slack reported for a refusal that no amount of sweetening fixes -- the war is

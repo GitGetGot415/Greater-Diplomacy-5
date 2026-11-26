@@ -191,7 +191,7 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
 
 
 def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
-                                         id_to_province, nation_data, *, context=None):
+                                         id_to_province, nation_data, *, context=None, max_steps=None):
     """Find all requested legal routes in one breadth-first search."""
     if context is None:
         context = nation_data
@@ -205,8 +205,11 @@ def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
 
     frontier = collections.deque([start_id])
     previous = {start_id: None}
+    steps = {start_id: 0} if max_steps is not None else None
     while frontier and remaining:
         current_id = frontier.popleft()
+        if steps is not None and steps[current_id] >= max_steps:
+            continue
         current = id_to_province.get(current_id)
         if not current:
             continue
@@ -217,6 +220,8 @@ def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
             if not can_unit_move_step(unit, current, neighbor, nation_data, context=context):
                 continue
             previous[neighbor_id] = current_id
+            if steps is not None:
+                steps[neighbor_id] = steps[current_id] + 1
             remaining.discard(neighbor_id)
             if not remaining:
                 break

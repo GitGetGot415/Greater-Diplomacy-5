@@ -169,6 +169,7 @@
   "WAR_REQUEST_CLOSED": "{reason} The request to join {fighter}'s wars was closed.",
   "ACCESS_ALLIED_CONFLICT": "We cannot grant passage while one of us is fighting the other's allies or subjects.",
   "ACCESS_NO_SHARED_ENEMY": "We no longer share an enemy that would justify military access.",
+  "PEACE_TERMS_CHANGED": "The parties or faction membership terms have changed. Send a new treaty.",
   "INVALID_MILITARY_ACCESS": "We cannot grant military access under the current conditions.",
   "TRADE_AT_WAR": "We are at war. There will be no trade between us.",
   "GLOBAL_RULE_FORBIDS": "We cannot agree to this: {reason}.",

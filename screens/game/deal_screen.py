@@ -385,13 +385,11 @@ class Deal_Screen(MapOverlayScreen):
             clauses.append({"type": deal_mod.MILITARY_ACCESS,
                             "grantor": self.target_nation, "grantee": self.player})
 
-        # A member settling behind its bloc's back leaves the bloc. Shown as a
-        # term rather than sprung on them at signing -- treaty_effects adds it
-        # regardless, so the screen had better say so.
-        if self.is_peace and peace_scope.costs_membership(self.role):
-            clauses.append({"type": deal_mod.FACTION_EXIT, "nation": self.player})
-
-        return deal_mod.new(self.kind, self.my_side, self.their_side, clauses)
+        agreement = deal_mod.new(self.kind, self.my_side, self.their_side, clauses)
+        if self.is_peace:
+            agreement = peace_scope.with_separate_peace_cost(
+                agreement, self.player, self.target_nation, self.map_screen.world.nation_data)
+        return agreement
 
     def would_receive(self, prov, side):
         """Who this province would actually go to if it were picked for `side`.
@@ -985,8 +983,7 @@ class Deal_Screen(MapOverlayScreen):
             self.map_screen.show_feedback(problems[0])
             return
 
-        action = "TRADE" if not self.is_peace else (
-            "CEASEFIRE" if deal_mod.is_white_peace(agreement) else "PEACE_TREATY")
+        action = peace_scope.action_for(agreement) if self.is_peace else "TRADE"
         if self.is_peace:
             available = availability(self.map_screen, self.player, self.target_nation, action)
             if not available.allowed:
@@ -1036,18 +1033,16 @@ class Deal_Screen(MapOverlayScreen):
         if not self.is_peace:
             return "Trade Agreement: " + queries.get_country_display_name(
                 self.target_nation, self.map_screen.world.nation_data)
-        if peace_scope.is_member_separate_peace(self.role):
-            mine = _bloc_name(self.map_screen.world.nation_data, self.my_side)
-            theirs = _bloc_name(self.map_screen.world.nation_data, self.their_side)
-            return f"Separate Peace: {mine} vs {theirs} (member only)"
+        data = self.map_screen.world.nation_data
+        departing = peace_scope.departing_member(self.player, self.target_nation, data)
+        if departing:
+            name = queries.get_country_display_name(departing, data)
+            return f"Separate Peace: {name} Leaves Faction"
         if peace_scope.binds_whole_bloc(self.role) and len(self.my_side) > 1:
             mine = _bloc_name(self.map_screen.world.nation_data, self.my_side)
             theirs = _bloc_name(self.map_screen.world.nation_data, self.their_side)
             count = len(self.my_side) + len(self.their_side)
             return f"Peace: {mine} vs {theirs} ({count} nations)"
-        if peace_scope.costs_membership(self.role):
-            return "Separate Peace: " + queries.get_country_display_name(
-                self.target_nation, self.map_screen.world.nation_data) + " (leaves your faction)"
         return "Peace Terms: " + queries.get_country_display_name(
             self.target_nation, self.map_screen.world.nation_data)
 

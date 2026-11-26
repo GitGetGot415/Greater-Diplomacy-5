@@ -203,6 +203,16 @@ def between(context, nation, opponent, world=None, viewer=None):
             "sides": (side_mine, side_theirs)}
 
 
+def for_treaty(context, nation, agreement, world=None, viewer=None):
+    """Leverage for the countries named by this agreement."""
+    side = deal_mod.side_of(agreement, nation)
+    mine = agreement["sides"][side] if side else [nation]
+    theirs = deal_mod.opponents_of(agreement, nation)
+    values = leverage(context, mine, theirs, world, viewer)
+    return {"mine": values["a"], "theirs": values["b"],
+            "parts": values["parts"]["a"], "their_parts": values["parts"]["b"]}
+
+
 def summary_line(parts):
     """The breakdown printed under the leverage bar."""
     return "  ".join(f"{name} {int(round(value * 100))}%"

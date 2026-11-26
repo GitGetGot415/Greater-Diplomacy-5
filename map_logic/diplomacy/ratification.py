@@ -188,7 +188,8 @@ def expire_obsolete_rounds(nation_data):
     reserved_wars = set()
     for signatory, treaty in sorted(rounds, key=lambda entry: entry[1].get("turns", 0), reverse=True):
         wars = peace_scope.live_war_pairs(treaty.get("deal", {}), nation_data)
-        if not wars or wars & reserved_wars:
+        if (not wars or wars & reserved_wars
+                or not peace_scope.has_current_terms(treaty.get("deal"), signatory, treaty.get("opponent"), nation_data)):
             _cancel_round(nation_data, signatory, treaty)
         else:
             reserved_wars.update(wars)
@@ -210,7 +211,7 @@ def process_ratifications(context):
         treaty = data.get("pending_treaty")
         if not isinstance(treaty, dict):
             continue
-        if not peace_scope.live_war_pairs(treaty.get("deal", {}), nation_data):
+        if not peace_scope.has_current_terms(treaty.get("deal"), signatory, treaty.get("opponent"), nation_data):
             _cancel_round(nation_data, signatory, treaty)
             continue
 

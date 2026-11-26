@@ -815,7 +815,7 @@ def homeland_losses(deal, nation, map_data, nation_data, baseline=None):
             if is_home_ground(nation, prov)]
 
 
-def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True):
+def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True, *, prewar_only=False):
     """How much of `nation` -- or its whole side -- the other side is standing on.
 
     Priced exactly the way demand_fraction prices a loss, because the two get
@@ -838,13 +838,16 @@ def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True):
     theirs = set(deal["sides"]["b" if side == "a" else "a"])
     prewar = prewar_index(nation_data)
 
-    held = 0.0
+    held = homeland = 0.0
     for prov in map_data.values():
         was = original_owner(prov, prewar)
-        if was in mine and prov.get("owner") in theirs:
-            held += tile_value_between(prov, was, None, nation_data)
+        if was in mine:
+            value = tile_value_between(prov, was, None, nation_data)
+            homeland += value
+            if prov.get("owner") in theirs:
+                held += value
 
-    worth = side_worth(deal, nation, map_data, nation_data, whole_side)
+    worth = max(1.0, homeland) if prewar_only else side_worth(deal, nation, map_data, nation_data, whole_side)
     return max(0.0, min(1.0, held / worth))
 
 

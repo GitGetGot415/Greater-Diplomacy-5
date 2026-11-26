@@ -20,7 +20,7 @@ from data import queries
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import diplomacy_messages
 
-from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches, war_actions, war_calls
+from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches, peace_scope, war_actions, war_calls
 
 
 def _to_int(value, default=0):
@@ -467,34 +467,10 @@ def _confidence(slack):
     return max(0.15, min(1.0, abs(slack) * 2.5))
 
 
-def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
-    """The deal being offered, whatever shape it was stored in.
-
-    This used to return a *string* and hand it to will_ai_accept_peace, which
-    worked only while the terms and the message were the same text. Anything
-    that attached prose to a peace proposal -- a script, or the AI's own
-    proactive offers, which never set parameters at all -- made every
-    startswith() check silently false, and the offer was then accepted by
-    accepts_peace's catch-all. The proposal's own parameters win where they
-    exist; the message is the fallback, and coerce reads free prose as the white
-    peace such an offer always executed as anyway.
-    """
-
+def _peace_terms(nation_data, sender_nation, ai_nation, action, custom_msg):
     pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
-    params = pending.get("parameters")
-
-    if deal_mod.is_deal(params):
-        return params
-    if isinstance(params, dict):
-        declared = params.get("peace_type") or params.get("terms")
-        if declared:
-            params = str(declared)
-        else:
-            params = custom_msg or ""
-    elif not params:
-        params = custom_msg or ""
-
-    return deal_mod.coerce(params, sender_nation, ai_nation, kind=deal_mod.KIND_PEACE)
+    return peace_scope.offered_peace(sender_nation, ai_nation, action, pending.get("parameters"),
+                                   nation_data, message=pending.get("message") or custom_msg)
 
 
 def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type,
@@ -620,7 +596,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
                                      {prov["id"]: prov for prov in map_data.values()},
                                      scenario_settings=scenario_settings)
 
-        terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
+        terms = _peace_terms(nation_data, sender_nation, ai_nation, action_type, custom_msg)
         # One number decides and explains, so the sentence under the player's
         # verdict bar and the answer the engine gives cannot drift apart. The
         # confidence used to be derived from peace_appetite alone -- a quantity

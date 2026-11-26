@@ -13,7 +13,6 @@ from map_logic.ai import ai_tuning
 from map_logic.diplomacy import (
     peace_scope,
     deal as deal_mod,
-    treaty_effects,
     war_score,
 )
 
@@ -343,56 +342,12 @@ def _decrement_diplo_cooldowns(data):
 
 
 def _may_settle(nation_data, ai_name, enemy):
-    """Both sides must be free to settle their own wars.
-
-    A puppet's wars are its master's business, in both directions -- there is no
-    point offering terms to a subject that cannot agree to them either. The same
-    now goes for a faction: only its leader can be negotiated with, and only its
-    leader can negotiate, so an AI no longer opens talks with a member who has
-    no authority to answer. That used to be the only rule here, which is how the
-    proactive pass could aim a ceasefire at one nation of a bloc.
-    """
-
-    return (peace_scope.negotiation_role(ai_name, enemy, nation_data) is not None
+    return (peace_scope.has_settleable_war(ai_name, enemy, nation_data)
             and queries.can_negotiate_peace(enemy, ai_name, nation_data))
 
 
 def _white_peace_terms(context, ai_name, enemy):
-    """The status-quo deal, between whichever blocs are actually fighting.
-
-    Every AI peace offer has to carry real terms now. They never did: the
-    proactive sections queued a proposal with no `parameters` at all, so the
-    recipient's accepts_peace was handed the sentence the leader had said, fell
-    through every test to a catch-all `return True`, and agreed -- and
-    treaty_effects, finding nothing in the parameters either, executed the
-    "peace treaty" as a white peace that transferred nothing.
-    """
-    world_state = world_for(context)
-
-    mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
-    return _with_the_price_of_walking_out(
-        context, ai_name, enemy,
-        deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, [deal_mod.white_peace()]))
-
-
-def _with_the_price_of_walking_out(context, ai_name, enemy, deal):
-    """The offer, plus the faction membership it costs us if we are a member.
-
-    A non-leader can only settle by leaving its bloc (peace_scope.SEPARATE_PEACE)
-    and treaty_effects writes that into the treaty -- but it did so at execution,
-    after both sides had already made up their minds, so the clause was in
-    nobody's ledger while anybody was still deciding. The nation walking out
-    never weighed the thing it was giving up, and the side accepting never saw
-    what it was being handed.
-
-    saves/oh my god germany italy wtf is five of those in one turn: Italy,
-    Hungary, Romania, Bulgaria and Finland each bought their way out of the war
-    with the Allies, and the Axis was empty by the morning.
-    """
-    world_state = world_for(context)
-
-    return treaty_effects.with_separate_peace_cost(deal, ai_name, enemy,
-                                                  world_state.nation_data)
+    return _peace_deal(context, ai_name, enemy, [deal_mod.white_peace()])
 
 
 def _victors_terms(context, ai_name, enemy, leverage):
@@ -427,9 +382,8 @@ def _peace_deal(context, ai_name, enemy, clauses):
     """These tile clauses as a peace between the two blocs, membership cost included."""
     world_state = world_for(context)
     mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
-    return _with_the_price_of_walking_out(
-        context, ai_name, enemy,
-        deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses))
+    agreement = deal_mod.new(deal_mod.KIND_PEACE, mine, theirs, clauses)
+    return peace_scope.with_separate_peace_cost(agreement, ai_name, enemy, world_state.nation_data)
 
 
 def _held_provinces(context, holder_side, original_side):
@@ -482,58 +436,27 @@ def _victors_clauses(context, ai_name, enemy, leverage):
 
 
 def _seek_ceasefire_if_unreachable(bag, context, ai_name, my_enemies, active_nations, world):
-    """Section 1: offers a ceasefire to any enemy we can no longer physically reach.
-
-    On the terms the hand justifies, not on a blank white peace. This was once
-    the only peace a winning nation could propose (section 1.3,
-    _offer_terms_when_winning, now covers a winner it can reach), and it used to
-    hand back every occupied province by saying nothing about them. Worse, a bloc
-    leader proposes for the whole bloc: Russia could not reach Switzerland, so
-    Russia signed away the four Swiss provinces France was standing on.
-
-    Being unable to reach an enemy is a reason to stop fighting them. It is not
-    a reason to give back ground the bloc has already taken, and -- see the
-    membership check below -- it is not a reason to walk out of the bloc either.
-    """
+    """Consider settlement when none of the covered fronts can be reached."""
     world_state = world_for(context)
-
+    data = world_state.nation_data
     for enemy in my_enemies:
-        if enemy not in active_nations: continue
-        if not _may_settle(world_state.nation_data, ai_name, enemy): continue
-        if not world.reachable(ai_name, enemy):
-            # A member cannot settle without leaving its faction, and cannot
-            # settle with one enemy without settling with that enemy's whole
-            # bloc. So "we cannot reach the United Kingdom" was a standing
-            # reason for any Axis minor to resign from the Axis -- which is
-            # half of why saves/oh my god germany italy wtf ends with Germany
-            # leading nobody. Unreachability is the bloc leader's argument to
-            # make; a member has to actually want out, which is the section
-            # below.
-            role = peace_scope.negotiation_role(ai_name, enemy, world_state.nation_data)
-            if peace_scope.costs_membership(role):
-                continue
-            if ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "CEASEFIRE"):
-                leverage = war_score.between(context, ai_name, enemy, world, viewer=ai_name)["mine"]
-                bag.add(ai_candidates.make(
-                    "CEASEFIRE", enemy, ai_tuning.AI_SCORE_CEASEFIRE_UNREACHABLE,
-                    "we cannot reach them to fight them, and the war costs us anyway",
-                    parameters=_victors_terms(context, ai_name, enemy, leverage)))
+        if enemy not in active_nations or not _may_settle(data, ai_name, enemy):
+            continue
+        mine, theirs = peace_scope.deal_sides(ai_name, enemy, data)
+        if any(world.can_reach_enemy_front(ours, foe) for ours in mine for foe in theirs
+               if queries.are_at_war(ours, foe, data)):
+            continue
+        scope = _white_peace_terms(context, ai_name, enemy)
+        leverage = war_score.for_treaty(context, ai_name, scope, world, viewer=ai_name)["mine"]
+        appetite = ai_opinion.peace_appetite(world, ai_name, enemy, world_state.scenario_settings, agreement=scope)
+        _add_peace_offer(bag, context, ai_name, enemy,
+                         _proactive_peace_terms(context, ai_name, enemy, appetite, leverage),
+                         ai_tuning.AI_SCORE_CEASEFIRE_UNREACHABLE,
+                         "none of the fronts covered by the treaty can be reached", world)
 
 
 def _concession_terms(context, ai_name, enemy, appetite, leverage):
-    """What a losing nation offers: more of the land it has lost, the worse it wants out.
-
-    Read from its own wish for peace alone -- it does not know what the other
-    side would accept. Just past AI_PEACE_OFFER_THRESHOLD it concedes nothing
-    and offers what its own holdings justify (_victors_clauses), which is a white
-    peace when it holds nothing. At full desperation it concedes every province
-    the enemy side holds of its side. In between, that share of them, least
-    valuable first, so it keeps its best land the longest.
-
-    A white peace hands every occupied province back to its pre-war owner
-    (deal_effects.restore_occupied), so the conceded provinces are named
-    outright. A demand never exceeds what the other side occupies.
-    """
+    """Offer occupied territory in ascending order of value."""
     world_state = world_for(context)
     mine, theirs = peace_scope.deal_sides(ai_name, enemy, world_state.nation_data)
 
@@ -544,9 +467,17 @@ def _concession_terms(context, ai_name, enemy, appetite, leverage):
             for (was, holder), provs in _held_provinces(context, theirs, mine).items()
             for prov in provs]
     lost.sort(key=lambda item: (deal_mod.tile_value(item[2]), str(item[2]["id"])))
+    clearly_losing = leverage <= ai_tuning.AI_PEACE_CONCESSION_LEVERAGE
+    if clearly_losing and share:
+        share += (1.0 - share) * share * (1.0 - leverage)
+    budget = share * sum(deal_mod.tile_value(prov) for _, _, prov in lost)
     conceded = {}
-    for was, holder, prov in lost[:int(share * len(lost))]:
+    for was, holder, prov in lost:
+        value = deal_mod.tile_value(prov)
+        if value > budget and (conceded or not clearly_losing):
+            break
         conceded.setdefault((was, holder), []).append(prov["id"])
+        budget -= value
 
     clauses = _victors_clauses(context, ai_name, enemy, leverage)
     clauses += [deal_mod.tiles_clause(was, holder, ids)
@@ -554,6 +485,30 @@ def _concession_terms(context, ai_name, enemy, appetite, leverage):
     if not clauses:
         return _white_peace_terms(context, ai_name, enemy)
     return _peace_deal(context, ai_name, enemy, clauses)
+
+
+def _proactive_peace_terms(context, ai_name, enemy, appetite, leverage):
+    if (appetite >= ai_tuning.AI_PEACE_OFFER_THRESHOLD
+            or leverage <= ai_tuning.AI_PEACE_CONCESSION_LEVERAGE):
+        return _concession_terms(context, ai_name, enemy, appetite, leverage)
+    return _victors_terms(context, ai_name, enemy, leverage)
+
+
+def _add_peace_offer(bag, context, ai_name, enemy, terms, score, reason, world, *, initiative=False):
+    data = world_for(context).nation_data
+    action = peace_scope.action_for(terms)
+    if not ai_candidates.not_on_cooldown(data, ai_name, enemy, action):
+        return
+    if not _offer_is_viable(context, ai_name, enemy, terms, world):
+        # A losing side may still be able to afford the smallest concession.
+        smaller = _proactive_peace_terms(context, ai_name, enemy, ai_tuning.AI_PEACE_OFFER_THRESHOLD,
+                                        war_score.for_treaty(context, ai_name, terms, world, viewer=ai_name)["mine"])
+        if (smaller == terms or peace_scope.action_for(smaller) != action
+                or not _offer_is_viable(context, ai_name, enemy, smaller, world)):
+            return
+        terms = smaller
+    add = bag.add_initiative if initiative else bag.add
+    add(ai_candidates.make(action, enemy, score, reason, parameters=terms))
 
 
 def _offer_is_viable(context, ai_name, enemy, terms, world):
@@ -569,75 +524,49 @@ def _offer_is_viable(context, ai_name, enemy, terms, world):
 
 
 def _offer_peace_when_losing(bag, context, ai_name, my_enemies, active_nations, world):
-    """Section 1.2: sues for peace in a war going badly.
-
-    The terms are _concession_terms: the more this nation wants out, the more
-    of its lost land it gives up. They are sent only when this nation would sign
-    them itself (_offer_is_viable).
-    """
+    """Sue for peace when the AI wants out, or the member qualifies to leave its faction."""
     world_state = world_for(context)
-
+    data = world_state.nation_data
     for enemy in my_enemies:
-        if enemy not in active_nations: continue
-        if not _may_settle(world_state.nation_data, ai_name, enemy): continue
-        if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "PEACE_TREATY"):
+        if enemy not in active_nations or not _may_settle(data, ai_name, enemy):
             continue
-
-        # The receiving side has refused to talk for the first couple of turns
-        # of a war since MIN_TURNS_FOR_CEASEFIRE was introduced; the offering
-        # side never knew, and spent those turns proposing into a wall.
-        duration = world_state.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
-        if duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
+        scope = _white_peace_terms(context, ai_name, enemy)
+        appetite = ai_opinion.peace_appetite(world, ai_name, enemy, world_state.scenario_settings, agreement=scope)
+        if (peace_scope.departing_member(ai_name, enemy, data) != ai_name
+                and appetite < ai_tuning.AI_PEACE_OFFER_THRESHOLD):
             continue
-
-        appetite = ai_opinion.peace_appetite(world, ai_name, enemy, world_state.scenario_settings)
-        if appetite < ai_tuning.AI_PEACE_OFFER_THRESHOLD:
-            continue
-
-        # What the offer costs *us* -- land, and for a faction member suing
-        # separately the bloc it walks out of -- is priced by our own verdict
-        # inside _offer_is_viable, in the same currency as everything else.
-        leverage = war_score.between(context, ai_name, enemy, world, viewer=ai_name)["mine"]
-        terms = _concession_terms(context, ai_name, enemy, appetite, leverage)
-        if _offer_is_viable(context, ai_name, enemy, terms, world):
-            bag.add(ai_candidates.make(
-                "PEACE_TREATY", enemy, appetite,
-                f"this war with {enemy} is going badly and has run long enough",
-                parameters=terms))
+        leverage = war_score.for_treaty(context, ai_name, scope, world, viewer=ai_name)["mine"]
+        _add_peace_offer(bag, context, ai_name, enemy, _concession_terms(context, ai_name, enemy, appetite, leverage),
+                         appetite, f"this war with {enemy} is going badly", world)
 
 
 def _offer_terms_when_winning(bag, context, ai_name, my_enemies, active_nations, world):
-    """Section 1.3: a nation ahead in a war offers to keep what it has taken.
-
-    A winning AI never proposed peace before -- only a ceasefire to an enemy it
-    could not reach -- so a war against a clear winner ran until the loser was
-    gone. It offers its victor's terms when it would sign them itself, on its
-    own reading of the war: peace_verdict's margin grows with caution, and a
-    nation still far ahead expects more from fighting on (its war_prize).
-    A nation that also wants out on its own account is handled by section 1.2.
-    """
+    """Offer to secure occupied territory when the AI is ahead."""
     world_state = world_for(context)
-    settings = world_state.scenario_settings
-
+    data = world_state.nation_data
     for enemy in my_enemies:
-        if enemy not in active_nations: continue
-        if not _may_settle(world_state.nation_data, ai_name, enemy): continue
-        if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, enemy, "PEACE_TREATY"):
+        if enemy not in active_nations or not _may_settle(data, ai_name, enemy):
             continue
-        duration = world_state.nation_data.get(ai_name, {}).get("war_durations", {}).get(enemy, 0)
-        if duration < ai_tuning.MIN_TURNS_FOR_CEASEFIRE:
+        scope = _white_peace_terms(context, ai_name, enemy)
+        leverage = war_score.for_treaty(context, ai_name, scope, world, viewer=ai_name)["mine"]
+        if leverage <= 0.5 or ai_opinion.peace_appetite(
+                world, ai_name, enemy, world_state.scenario_settings, agreement=scope) >= ai_tuning.AI_PEACE_OFFER_THRESHOLD:
             continue
-        leverage = war_score.between(context, ai_name, enemy, world, viewer=ai_name)["mine"]
-        if leverage <= 0.5:
-            continue
-        if ai_opinion.peace_appetite(world, ai_name, enemy, settings) >= ai_tuning.AI_PEACE_OFFER_THRESHOLD:
-            continue
-        terms = _victors_terms(context, ai_name, enemy, leverage)
-        if _offer_is_viable(context, ai_name, enemy, terms, world):
-            bag.add(ai_candidates.make(
-                "PEACE_TREATY", enemy, ai_tuning.AI_PEACE_OFFER_THRESHOLD,
-                f"we are winning the war with {enemy} and these terms secure it",
-                parameters=terms))
+        _add_peace_offer(bag, context, ai_name, enemy, _victors_terms(context, ai_name, enemy, leverage),
+                         ai_tuning.AI_PEACE_OFFER_THRESHOLD, "these terms secure our gains", world)
+
+
+def _prefer_bloc_peace(candidates, nation, data):
+    bloc_wars = set()
+    for candidate in candidates:
+        if (candidate.action in peace_scope.PEACE_ACTIONS
+                and not ai_candidates.is_initiative(candidate)
+                and peace_scope.negotiation_role(nation, candidate.target, data) == peace_scope.BLOC_LEADER):
+            bloc_wars.update(peace_scope.live_war_pairs(candidate.payload["parameters"], data))
+    return [candidate for candidate in candidates
+            if candidate.action not in peace_scope.PEACE_ACTIONS
+            or peace_scope.negotiation_role(nation, candidate.target, data) != peace_scope.MEMBER_SEPARATE_PEACE
+            or not (bloc_wars & peace_scope.live_war_pairs(candidate.payload["parameters"], data))]
 
 
 def _seek_defensive_faction(bag, context, ai_name, pending, my_enemies, active_nations, world):
@@ -1139,14 +1068,13 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
             offers.append(("JOIN_WARS", 0.0, f"our help against {theirs[0]}",
                            {"context_target": theirs[0]}))
 
-        duration = nation_data.get(ai_name, {}).get("war_durations", {}).get(other, 0)
-        if (queries.are_at_war(ai_name, other, nation_data) and _may_settle(nation_data, ai_name, other)
-                and duration >= ai_tuning.MIN_TURNS_FOR_CEASEFIRE):
-            leverage = war_score.between(context, ai_name, other, world, viewer=ai_name)["mine"]
-            appetite = ai_opinion.peace_appetite(world, ai_name, other, settings)
-            offers.append(("PEACE_TREATY", appetite,
-                           f"our staff rate our wish for peace at {appetite:.2f}",
-                           {"parameters": _victors_terms(context, ai_name, other, leverage)}))
+        if _may_settle(nation_data, ai_name, other):
+            scope = _white_peace_terms(context, ai_name, other)
+            leverage = war_score.for_treaty(context, ai_name, scope, world, viewer=ai_name)["mine"]
+            appetite = ai_opinion.peace_appetite(world, ai_name, other, settings, agreement=scope)
+            _add_peace_offer(bag, context, ai_name, other,
+                             _proactive_peace_terms(context, ai_name, other, appetite, leverage), appetite,
+                             f"our staff rate our wish for peace at {appetite:.2f}", world, initiative=True)
 
         for action, score, rationale, payload in offers:
             if ai_candidates.not_on_cooldown(nation_data, ai_name, other, action):
@@ -1315,10 +1243,20 @@ def _run_basic_proactive_ai(context):
         # nothing anywhere compared the two.
         bag = ai_candidates.Collector(ai_name, pending, context=context)
 
-        if is_already_at_war:
-            _seek_ceasefire_if_unreachable(bag, context, ai_name, my_enemies, active_nations, world)
-            _offer_peace_when_losing(bag, context, ai_name, my_enemies, active_nations, world)
-            _offer_terms_when_winning(bag, context, ai_name, my_enemies, active_nations, world)
+        peace_targets = set(my_enemies)
+        if my_faction and queries.is_faction_leader(ai_name, world_state.nation_data):
+            for member in queries.get_faction_members(my_faction, world_state.nation_data):
+                for foe in queries.get_enemies(member, world_state.nation_data):
+                    peace_targets.add(foe)
+                    faction = queries.get_country_faction(foe, world_state.nation_data)
+                    leader = queries.get_faction_leader(faction, world_state.nation_data) if faction else None
+                    if leader:
+                        peace_targets.add(leader)
+        if peace_targets:
+            targets = sorted(peace_targets)
+            _seek_ceasefire_if_unreachable(bag, context, ai_name, targets, active_nations, world)
+            _offer_peace_when_losing(bag, context, ai_name, targets, active_nations, world)
+            _offer_terms_when_winning(bag, context, ai_name, targets, active_nations, world)
 
         if is_already_at_war and not my_faction and not queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
             _seek_defensive_faction(bag, context, ai_name, pending, my_enemies, active_nations, world)
@@ -1351,7 +1289,7 @@ def _run_basic_proactive_ai(context):
         # Held rather than executed. The director pass runs next and gives each
         # nation's leader the chance to pick differently from its staff; without
         # a model, or after a Force Skip, `chosen` is what actually happens.
-        ranked = bag.ranked()
+        ranked = _prefer_bloc_peace(bag.ranked(), ai_name, world_state.nation_data)
         if ranked:
             session_state.proactive_choices.append({
                 "nation": ai_name,

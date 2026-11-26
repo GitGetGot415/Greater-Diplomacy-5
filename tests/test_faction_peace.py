@@ -352,20 +352,34 @@ class MemberSeparatePeaceTests(unittest.TestCase):
     """S settles only with the enemy leader's bloc while remaining an ally."""
 
     def setUp(self):
-        self.game = two_blocs(human_players=("S",))
+        self.game = two_blocs(human_players=("S", "G"))
         old_enough_to_settle(self.game)
 
-    def test_a_member_settling_with_an_enemy_leader_keeps_its_faction(self):
+    def test_a_member_settling_with_an_enemy_leader_leaves_its_faction(self):
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
         self.game.propose("S", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
+        self.game.answer("G", "S", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
-        self.assertEqual(self.game.world.nation_data["S"]["faction"], "Entente")
+        self.assertEqual(self.game.world.nation_data["S"]["faction"], "")
         self.assertFalse(at_war(self.game, "S", "G"))
         self.assertFalse(at_war(self.game, "S", "T"))
+
+    def test_an_old_delivered_offer_without_exit_closes_and_refunds(self):
+        data = self.game.world.nation_data
+        mine, theirs = peace_scope.deal_sides("S", "G", data)
+        agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
+        diplomacy_messages.set_pending(data, "S", "G", "PEACE_TREATY", parameters=agreement)
+        pending = diplomacy_messages.get_pending(data, "S", "G")
+        pending.update(turns=1, escrow={"materials": 10})
+        before = data["S"]["materials"]
+        treaty_effects.expire_obsolete_peace(data)
+        self.assertFalse(diplomacy_messages.get_pending(data, "S", "G"))
+        self.assertEqual(data["S"]["materials"], before + 10)
+        self.assertEqual(data["S"]["faction"], "Entente")
 
     def test_its_faction_fights_the_enemy_leader_on(self):
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.world.nation_data)
@@ -373,19 +387,21 @@ class MemberSeparatePeaceTests(unittest.TestCase):
 
         self.game.propose("S", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
+        self.game.answer("G", "S", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
         self.assertTrue(at_war(self.game, "A", "G"))
 
-    def test_no_faction_exit_is_added_to_a_member_level_peace(self):
-        """A leader-member settlement does not quietly eject either party."""
+    def test_membership_exit_is_part_of_the_delivered_terms(self):
+        """The member and opposing leader see who leaves before agreeing."""
         agreement = deal.new(deal.KIND_PEACE, ["S"], ["G", "T"], [deal.white_peace()])
 
         self.game.propose("S", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
-        self.game.run_turn()
-
-        self.assertEqual(self.game.world.nation_data["S"]["faction"], "Entente")
+        data = self.game.world.nation_data
+        offer = diplomacy_messages.get_pending(data, "S", "G")
+        self.assertIn({"type": deal.FACTION_EXIT, "nation": "S"}, offer["parameters"]["clauses"])
+        self.assertEqual(data["S"]["faction"], "Entente")
 
 
 class LeaderToMemberPeaceTests(unittest.TestCase):
@@ -409,7 +425,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
                              f"{ours} should be at peace with the named member")
             self.assertTrue(at_war(self.game, ours, "G"),
                             f"{ours} should still be fighting the enemy leader")
-        self.assertEqual(self.game.world.nation_data["T"]["faction"], "Alliance")
+        self.assertEqual(self.game.world.nation_data["T"]["faction"], "")
 
     def test_map_peace_button_routes_to_terms_when_only_an_ally_fights(self):
         self.game.world.nation_data["A"]["at_war_with"].remove("T")
@@ -421,7 +437,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
 
         open_menu.assert_called_once_with(self.game, "T")
 
-    def test_leader_can_accept_a_members_offer_without_ejecting_them(self):
+    def test_leader_can_accept_a_members_offer_to_leave(self):
         mine, theirs = peace_scope.deal_sides("T", "A", self.game.world.nation_data)
         agreement = deal.new(deal.KIND_PEACE, mine, theirs, [deal.white_peace()])
 
@@ -436,7 +452,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
         self.assertFalse(at_war(self.game, "T", "A"))
         self.assertFalse(at_war(self.game, "T", "S"))
         self.assertTrue(at_war(self.game, "G", "A"))
-        self.assertEqual(self.game.world.nation_data["T"]["faction"], "Alliance")
+        self.assertEqual(self.game.world.nation_data["T"]["faction"], "")
 
 
 class AlliesAreNotTrucedTests(unittest.TestCase):
