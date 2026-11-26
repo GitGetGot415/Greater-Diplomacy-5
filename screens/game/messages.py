@@ -786,25 +786,29 @@ class Messages_Screen(Screen):
 
         row_height = MSG_NEW_CONTACT_ROW_H if self.show_all_contacts else MSG_CONTACT_ROW_H
         row_step = row_height + MSG_CONTACT_ROW_GAP
-        self.scroll.limit = min(0, self.scroll.content_rect.height - len(display_list) * row_step)
-        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
-        for index, country in enumerate(display_list):
-            y = MSG_CONTACT_LIST_TOP_Y + index * row_step + self.scroll.value
+        contact_rect = self.scroll.content_rect
+        limit = min(0, contact_rect.height - len(display_list) * row_step)
+        self.scroll.value = max(limit, min(0, self.scroll.value))
+        click_guard = self.content_hover_guard()
+        for index, y in self.layout_list_rows(len(display_list), row_step, contact_rect.top,
+                                              cull_top=contact_rect.top, cull_bottom=contact_rect.bottom):
+            if y + row_height <= contact_rect.top:
+                continue
+            country = display_list[index]
             display_name = queries.get_country_display_name(country, self.map_screen.world.nation_data)
             unread = unread_counts.get(country, 0)
             # Unanswered requests use the same unread rule as the map badge.
             if queries.has_unanswered_request(self.map_screen.session.player_country, country, self.map_screen.world.nation_data):
                 unread += 1
             callback = self.select_new_contact if self.show_all_contacts else self.select_recipient
-            row = ConversationRow(MSG_MARGIN, y, self.scroll.content_rect.width,
+            row = ConversationRow(contact_rect.x, y, contact_rect.width,
                                   display_name, previews.get(country, ""), unread,
                                   self.selected_recipient == country,
                                   lambda target=country, select=callback: select(target),
                                   flag=flag_icons.flag_surface(country, self.map_screen.world.nation_data, MSG_CONTACT_FLAG_SIZE),
                                   compact=self.show_all_contacts, theme_color=colors.get(country))
-            row.is_scrollable = True
-            row.click_guard = self.content_hover_guard()
-            self.elements.append(row)
+            self.add_list_row(row)
+            row.click_guard = click_guard
 
         is_tactical = self.map_screen.session.tactical_mode
         queue_button = Button(c.SCREEN_WIDTH - MSG_MARGIN - MSG_QUEUE_W,

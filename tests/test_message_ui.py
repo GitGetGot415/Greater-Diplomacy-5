@@ -366,26 +366,45 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertIsNone(screen.selected_recipient)
 
     def test_new_contact_picker_can_scroll_to_and_open_the_last_country(self):
-        from screens.game.messages import ConversationRow
+        from screens.game import messages as messages_module
 
         screen = self.make_screen()
-        for index in range(20):
-            country = f"C{index:02}"
-            screen.map_screen.world.nation_data[country] = nation(name=f"Country {index:02}", is_playable=True)
+        for index in range(200):
+            country = f"C{index:03}"
+            screen.map_screen.world.nation_data[country] = nation(name=f"Country {index:03}", is_playable=True)
             screen.map_screen.world.map_data[100 + index] = {"owner": country}
-        screen.toggle_add_contact()
-        screen.scroll.value = screen.scroll.limit
-        screen.refresh_ui()
-        row = next(element for element in screen.elements if isinstance(element, ConversationRow) and element.text == "Country 19")
-        screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+        add_button = next(element for element in screen.elements if element.sound_kind == "new_contact")
+        point = add_button.rect.center
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=point), \
+                mock.patch.object(messages_module.sound_effects, "play_ui_sound") as play_sound, \
+                mock.patch.object(messages_module.flag_icons, "flag_surface", return_value=pygame.Surface((16, 12))) as load_flag:
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point)])
+        play_sound.assert_called_once_with("new_contact")
+        self.assertTrue(screen.show_all_contacts)
+        rows = [element for element in screen.elements if isinstance(element, messages_module.ConversationRow)]
+        self.assertTrue(rows)
+        self.assertEqual(load_flag.call_count, len(rows))
+        self.assertTrue(all(row.rect.colliderect(screen.scroll.content_rect) for row in rows))
+
+        screen.draw(pygame.display.get_surface())
+        track = screen.scroll.track
+        point = (track.centerx, track.bottom - 1)
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=point):
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point)])
+        row = next(element for element in screen.elements
+                   if isinstance(element, messages_module.ConversationRow) and element.text == "Country 199")
         with mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
             screen.handle_events([
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=row.rect.center),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=row.rect.center)])
-        self.assertEqual(screen.selected_recipient, "C19")
+        self.assertEqual(screen.selected_recipient, "C199")
         self.assertFalse(screen.show_all_contacts)
         self.assertTrue(screen.text_input_active)
-        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "C19"), {})
+        self.assertEqual(dm.get_pending(screen.map_screen.world.nation_data, "P", "C199"), {})
 
     def test_fixed_controls_cannot_scroll_or_activate_hidden_thread_actions(self):
         screen = self.make_screen()
