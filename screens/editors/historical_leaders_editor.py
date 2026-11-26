@@ -434,39 +434,33 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
         row1_y = y + ROW1_Y_OFFSET
         row2_y = y + ROW2_Y_OFFSET
 
-        def mk(key, x, y_pos, w, numeric=False):
+        def add_field(key, x, y_pos, w, numeric=False):
             field = TextField(x, y_pos, w, FIELD_H, str(entry.get(key, "")), numeric=numeric)
             field.entry_ref = entry
             field.entry_key = key
-            field.pane = "timeline"
-            field.click_guard = self.pane("timeline").guard
-            return field
+            self.add_pane_row("timeline", field)
 
-        self.elements.append(mk("year", fx["year"], row1_y, 52, True))
-        self.elements.append(mk("month", fx["month"], row1_y, 44, True))
-        self.elements.append(mk("day", fx["day"], row1_y, 44, True))
-        self.elements.append(mk("name", fx["name"], row1_y, 152, False))
-        self.elements.append(mk("adjective", fx["adjective"], row1_y, 152, False))
-        self.elements.append(mk("leader_name", fx["leader_name"], row2_y, 280, False))
-        self.elements.append(mk("leader_title", fx["leader_title"], row2_y, 280, False))
+        add_field("year", fx["year"], row1_y, 52, True)
+        add_field("month", fx["month"], row1_y, 44, True)
+        add_field("day", fx["day"], row1_y, 44, True)
+        add_field("name", fx["name"], row1_y, 152, False)
+        add_field("adjective", fx["adjective"], row1_y, 152, False)
+        add_field("leader_name", fx["leader_name"], row2_y, 280, False)
+        add_field("leader_title", fx["leader_title"], row2_y, 280, False)
 
         color = entry.get("color")
         swatch = Button(fx["color"], row1_y - 1, "tiny_square", "grey", "",
                         lambda e=entry: self.pick_color(e), show_text=False)
         swatch.rect.size = (COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE)
         swatch.set_colors(tuple(color) if color else (55, 60, 65))
-        swatch.pane = "timeline"
-        swatch.click_guard = self.pane("timeline").guard
-        self.elements.append(swatch)
+        self.add_pane_row("timeline", swatch)
 
         clear_btn = Button(fx["color"] + COLOR_SWATCH_SIZE + 8, row1_y - 1, "tiny_square", "orange", "Clear",
                            lambda e=entry: self.clear_color(e), font_preset="button_small")
         clear_btn.rect.size = (60, COLOR_SWATCH_SIZE)
         if not color:
             clear_btn.apply_state(enabled=False)
-        clear_btn.pane = "timeline"
-        clear_btn.click_guard = self.pane("timeline").guard
-        self.elements.append(clear_btn)
+        self.add_pane_row("timeline", clear_btn)
 
         for key, size, is_portrait, preview_size, pick_cb, clear_cb in (
             ("flag", c.FLAG_SIZE, False, FLAG_PREVIEW_SIZE, self.pick_flag, self.clear_flag),
@@ -479,27 +473,21 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
             img_btn = Button(fx[key], row2_y - 1, "tiny_square", "grey", "",
                              lambda e=entry, cb=pick_cb: cb(e), image=preview, show_text=False)
             img_btn.rect.size = (IMAGE_SWATCH_SIZE, IMAGE_SWATCH_SIZE)
-            img_btn.pane = "timeline"
-            img_btn.click_guard = self.pane("timeline").guard
-            self.elements.append(img_btn)
+            self.add_pane_row("timeline", img_btn)
 
             img_clear_btn = Button(fx[key] + IMAGE_SWATCH_SIZE + 8, row2_y - 1, "tiny_square", "orange", "Clear",
                                    lambda e=entry, cb=clear_cb: cb(e), font_preset="button_small")
             img_clear_btn.rect.size = (60, IMAGE_SWATCH_SIZE)
             if not has_override:
                 img_clear_btn.apply_state(enabled=False)
-            img_clear_btn.pane = "timeline"
-            img_clear_btn.click_guard = self.pane("timeline").guard
-            self.elements.append(img_clear_btn)
+            self.add_pane_row("timeline", img_clear_btn)
 
         # Kept well clear of the card's own right edge (timeline_rect.right - 20,
         # see the card_rect built in draw_elements) and the scrollbar track
         # beside it -- previously this sat past the card's edge entirely.
         del_btn = Button(self.timeline_rect.right - 65, row1_y - 4, "tiny_square", "red", "X",
                          lambda e=entry: self.delete_entry(e), font_preset="button_small")
-        del_btn.pane = "timeline"
-        del_btn.click_guard = self.pane("timeline").guard
-        self.elements.append(del_btn)
+        self.add_pane_row("timeline", del_btn)
 
     def refresh_ui(self):
         self._layout()
@@ -523,15 +511,11 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
                                      country == self.active_country, lambda cc=country: self.select_country(cc),
                                      font_preset="button_small", sound_kind="select_category")
             btn.rect.width = self.roster_rect.width - 50
-            btn.pane = "roster"
-            btn.click_guard = self.pane("roster").guard
-            self.elements.append(btn)
+            self.add_pane_row("roster", btn)
 
             rm_btn = Button(self.roster_rect.right - 44, y + 3, "tiny_square", "red", "x",
                             lambda cc=country: self.remove_country(cc), font_preset="button_small")
-            rm_btn.pane = "roster"
-            rm_btn.click_guard = self.pane("roster").guard
-            self.elements.append(rm_btn)
+            self.add_pane_row("roster", rm_btn)
 
         if self.active_country:
             # "editor_ui" is 300px wide -- anchored off timeline_rect.right so

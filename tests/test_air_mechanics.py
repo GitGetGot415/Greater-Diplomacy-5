@@ -1482,8 +1482,7 @@ class AirMissionSelectionTests(unittest.TestCase):
 
     def buttons(self):
         with patch.object(self.screen, "_add_action_button", side_effect=lambda *a, **k: Mock()) as add:
-            self.screen._build_unit_action_buttons(0, 0, self.unit, self.base, 0, None,
-                False, False, False, True, self.game.world.nation_data["A"]["research"])
+            self.screen._build_unit_action_buttons(0, 0, self.unit, self.base, 0, None)
         return {call.args[2]: call for call in add.call_args_list}
 
     def test_icon_tracks_each_mission_and_upgrade_stays_separate(self):

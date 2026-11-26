@@ -568,34 +568,23 @@ def naval_need(land_border_count, sea_border_count):
     return float(sea_border_count) * ai_tuning.AI_NAVY_PER_COAST_TILE
 
 
-def _recruit_sites(context, ai_name, my_provs):
-    """Where each kind of unit can be built, worked out once for the whole turn.
-
-    The same gates the Production screen applies to a player -- cored, not in
-    combat, the right industry, and a coast for anything that floats -- but
-    there are only three answers, not one per unit. Deriving them per candidate
-    per iteration meant rescanning every province the nation owns up to six
-    hundred times a turn, which was most of what this pass cost.
-    """
-    world_state = world_for(context)
-    usable = [p for p in my_provs
-              if queries.has_core(ai_name, p)
-              and not queries.is_nation_in_combat_here(ai_name, p, world_state.nation_data)]
-
-    militia = [p for p in usable if queries.has_industry(p)]
-    factory = [p for p in usable if queries.has_basic_factory(p)]
-    naval = [p for p in factory if p.get("is_coastal", False)
-             and queries.borders_ocean(p, world_state.id_to_province)]
-    return {"militia": militia, "factory": factory, "naval": naval}
-
-
-def _sites_for(sites, unit_name):
-    """Which of the three lists this unit is allowed to be built in."""
-    if queries.is_naval_unit(unit_name):
-        return sites["naval"]
-    if queries.get_base_unit_name(unit_name) == "Militia":
-        return sites["militia"]
-    return sites["factory"]
+def _recruit_sites(context, ai_name, my_provs, unit_names, unit_library):
+    """Group eligible sites by recruitment requirements for this purchase pass."""
+    world = world_for(context)
+    usable = [p for p in my_provs if queries.has_core(ai_name, p)
+              and not queries.is_nation_in_combat_here(ai_name, p, world.nation_data)]
+    by_requirements = {}
+    sites = {}
+    for name in unit_names:
+        requirements = production_actions.recruitment_requirements(context, name, unit_library)
+        needs_ocean = queries.is_naval_unit(name, context=context)
+        key = (*requirements, needs_ocean)
+        if key not in by_requirements:
+            by_requirements[key] = [
+                p for p in usable if not production_actions.recruitment_site_error(p, *requirements)
+                and (not needs_ocean or queries.borders_ocean(p, world.id_to_province))]
+        sites[name] = by_requirements[key]
+    return sites
 
 
 def _affordable_within(stats, data, econ, turns):
@@ -653,8 +642,7 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
     best_overall = max((v.score for v in values.values()), default=0.0)
     floor = best_overall * ai_tuning.AI_MARGINAL_FLOOR
 
-    sites = _recruit_sites(context, ai_name, my_provs)
-    deployable = {name: _sites_for(sites, name) for name in values}
+    deployable = _recruit_sites(context, ai_name, my_provs, values, unit_library)
     values = {n: v for n, v in values.items() if deployable[n]}
     if not values:
         return
@@ -806,14 +794,8 @@ def _construction_options(context, ai_name, data, my_provs, building_library, ec
                 or _is_frontline(context, ai_name, prov)):
             continue
         for group_id in _AI_BUILDING_GROUPS:
-            # The Production screen's factory dependency.
-            if group_id == "recruitment" and not queries.has_basic_factory(prov):
-                continue
             target = queries.next_building_in_group(group_id, prov.get("buildings", []), building_library)
-            if not target:
-                continue
-            req_tech, req_lvl = queries.get_building_required_tech(target)
-            if req_tech and research.get(req_tech, 0) < req_lvl:
+            if not target or production_actions.building_prerequisite_error(prov, target, group_id, research):
                 continue
             if modifiers is None:
                 modifiers = queries.get_building_output_modifiers(research, building_library, context=context)
@@ -823,7 +805,7 @@ def _construction_options(context, ai_name, data, my_provs, building_library, ec
                 non_core_multiplier=econ.get("non_core_building_multiplier"), modifiers=modifiers)
             gain = sum(prices[res] * (new.get(res, 0) - previous.get(res, 0)) for res in ai_unit_eval.RESOURCES)
             cost = queries.get_building_cost(target, ai_name, world_state.map_data, building_library,
-                                             world_state.nation_data)
+                                             world_state.nation_data, context=context)
             value = ai_tech_eval.building_net_value(
                 gain, sum(prices[res] * cost.get(f"cost_{res}", 0) for res in ai_unit_eval.RESOURCES))
             if value > 0:
@@ -858,7 +840,7 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
         # Priced again here, since a building bought a moment ago can change
         # it: a Basic Factory costs more for every factory the nation has.
         cost = queries.get_building_cost(target, ai_name, world_state.map_data, building_library,
-                                         world_state.nation_data)
+                                         world_state.nation_data, context=context)
         if not all(data.get(res, 0) >= cost.get(f"cost_{res}", 0)
                    and _runway(data.get(res, 0) - cost.get(f"cost_{res}", 0), upkeep[res], income[res])
                    >= ai_tuning.AI_CONSTRUCTION_RESERVE_TURNS
@@ -962,7 +944,7 @@ def process_ai_economy_decisions(context, *, countries=None, prioritize_naval_re
                                        state["disband_deficits"], unit_library, all_values)
 
         if prioritize_naval_repairs and not state["at_war"]:
-            ai_movement.repair_docked_warships(context, ai_name, world.units_by_owner.get(ai_name, ()), unit_library)
+            ai_movement.repair_docked_warships(context, ai_name, world.units_by_owner.get(ai_name, ()))
 
         # --- Panic Builds & Combat Queue Clearing ---
         force_tally = _panic_build_and_tally_forces(

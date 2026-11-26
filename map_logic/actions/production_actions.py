@@ -48,6 +48,29 @@ def canonical_queue_entry(queue, *, name, cost, order_type="BUILDING", group=Non
             "group": group if group is not None else cost["group"], "refund": refund}
 
 
+def recruitment_requirements(context, name, unit_library):
+    requirements = queries.get_unit_metadata(name, unit_library, context=context)["recruitment"]
+    return requirements["industry"], requirements["coastal"]
+
+
+def recruitment_site_error(province, industry, coastal):
+    if coastal and not province.get("is_coastal", False):
+        return "Naval units require a coastal province."
+    if ((industry == "industry" and not queries.has_industry(province))
+            or (industry == "basic_factory" and not queries.has_basic_factory(province))):
+        return "That province cannot recruit this unit."
+    return ""
+
+
+def building_prerequisite_error(province, name, group, research):
+    requirement, level = queries.get_building_required_tech(name)
+    if requirement and research.get(requirement, 0) < level:
+        return "Required building research is not complete."
+    if group == "recruitment" and not queries.has_basic_factory(province):
+        return "Recruitment buildings require a basic factory."
+    return ""
+
+
 def prepare_production(context, country_id, province, queue, intent, *,
                        unit_library=None, building_library=None):
     """Query current legality, cost, and canonical order without changing state."""
@@ -65,13 +88,8 @@ def prepare_production(context, country_id, province, queue, intent, *,
         if not queries.has_core(country_id, province):
             raise ValueError("Must core territory before recruiting!")
         stats = library[name]
-        requirements = queries.get_unit_metadata(name, library, context=context)["recruitment"]
-        if requirements["coastal"] and not province.get("is_coastal", False):
-            raise ValueError("Naval units require a coastal province.")
-        factory = requirements["industry"]
-        if ((factory == "industry" and not queries.has_industry(province)) or
-                (factory == "basic_factory" and not queries.has_basic_factory(province))):
-            raise ValueError("That province cannot recruit this unit.")
+        if error := recruitment_site_error(province, *recruitment_requirements(context, name, library)):
+            raise ValueError(error)
         if not queries.is_unit_unlocked(name, country.get("research", {}), library, context=context):
             raise ValueError("Required unit research is not complete.")
         if not restrictions.can_raise_units(country_id, world.nation_data):
@@ -112,11 +130,10 @@ def prepare_production(context, country_id, province, queue, intent, *,
             raise ValueError("Invalid building order.")
         if not queries.has_core(country_id, province):
             raise ValueError("Must core territory before producing!")
-        requirement, level = queries.get_building_required_tech(name)
-        if requirement and country.get("research", {}).get(requirement, 0) < level:
-            raise ValueError("Required building research is not complete.")
-        cost = queries.get_building_cost(name, country_id, world.map_data, library, world.nation_data)
-        group = cost.get("group", "")
+        group = library[name].get("group", "")
+        if error := building_prerequisite_error(province, name, group, country.get("research", {})):
+            raise ValueError(error)
+        cost = queries.get_building_cost(name, country_id, world.map_data, library, world.nation_data, context=context)
     else:
         raise ValueError("Invalid building order.")
     order = canonical_queue_entry(queue, name=name, cost=cost, order_type=order_type, group=group)

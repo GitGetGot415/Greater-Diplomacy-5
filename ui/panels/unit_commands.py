@@ -417,9 +417,7 @@ class UnitCommandControls:
         self.action_buttons.append(button)
         return button
 
-    def _build_unit_action_buttons(self, row_key, index, unit, province, row_y, row_guard,
-                                   in_combat, is_water, is_coastal,
-                                   is_factory, player_research):
+    def _build_unit_action_buttons(self, row_key, index, unit, province, row_y, row_guard):
         """Builds the six HOI-style icon commands for one visible roster row."""
         unit_name = unit.get("type", "")
         order = unit.get("order", {})
@@ -431,6 +429,7 @@ class UnitCommandControls:
         is_naval = queries.is_naval_unit(unit_name, context=self.map_screen)
         is_tactical = self.map_screen.session.tactical_mode
         buttons = []
+        combat_cache = {}
 
         def add(slot, color, help_text, callback, icon_name, enabled=True, sound_kind="click"):
             button = self._add_action_button(
@@ -439,6 +438,18 @@ class UnitCommandControls:
             button.sound_kind = sound_kind
             buttons.append(button)
             return button
+
+        def add_maintenance(kind, slot, icon, active_color, start_color, label, start):
+            if order_type == kind:
+                return add(slot, active_color, f"Cancel {label}", lambda: self.cancel_unit_order(index, province),
+                           icon, sound_kind=None)
+            try:
+                prepared = unit_actions.maintenance_order(
+                    self.map_screen, unit["owner"], province, unit, kind, combat_cache=combat_cache)
+            except ValueError as error:
+                return add(slot, "grey", str(error), lambda: None, icon, enabled=False)
+            help_text, callback = start(prepared)
+            return add(slot, start_color, help_text, callback, icon)
 
         # Convert between land, convoy, truck and ship forms.
         if is_convoy:
@@ -450,50 +461,16 @@ class UnitCommandControls:
         else:
             convert_icon = "Convoying"
 
-        if order_type == "CONVERT":
-            btn_conv = add(ACTION_COL_CONVERT, "red", "Cancel conversion",
-                           lambda idx=index, p=province: self.cancel_unit_order(idx, p), convert_icon, sound_kind=None)
-        elif in_combat:
-            btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: unavailable in combat",
-                           lambda: None, convert_icon, enabled=False)
-        elif queries.air_conversion_order(unit, context=self.map_screen):
-            conversion = queries.air_conversion_order(unit, context=self.map_screen)
-            enabled = not is_water and (is_convoy or is_coastal)
-            btn_conv = add(ACTION_COL_CONVERT, "blue" if enabled else "grey",
-                           f"Convert to {conversion['to']} ({conversion['turns_left']} turn)"
-                           if enabled else "Aircraft Convoy conversion requires a coast; unloading requires land",
-                           lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon,
-                           enabled=enabled)
-        elif is_convoy:
-            if not is_water:
-                btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert convoy to land unit",
-                               lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
+        def conversion_button(prepared):
+            target = prepared["to"]
+            if queries.is_air_unit(unit, context=self.map_screen) or queries.is_air_transport(unit, context=self.map_screen):
+                label = f"Convert to {target} ({prepared['turns_left']} turn)"
             else:
-                btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: convoy needs land",
-                               lambda: None, convert_icon, enabled=False)
-        elif is_truck:
-            if is_coastal or is_water:
-                btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert truck to ship",
-                               lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
-            else:
-                btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
-                               lambda: None, convert_icon, enabled=False)
-        elif not is_naval:
-            if is_coastal or is_water:
-                btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert land unit to convoy",
-                               lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
-            else:
-                btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
-                               lambda: None, convert_icon, enabled=False)
-        elif player_research.get("trucks", 0) < 1:
-            btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires Trucks research",
-                           lambda: None, convert_icon, enabled=False)
-        elif is_coastal or not is_water:
-            btn_conv = add(ACTION_COL_CONVERT, "blue", "Convert ship to truck",
-                           lambda idx=index, p=province: self.convert_unit(idx, p), convert_icon)
-        else:
-            btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: requires a coast",
-                           lambda: None, convert_icon, enabled=False)
+                label = {"Land Unit": "Convert convoy to land unit", "Ship": "Convert truck to ship",
+                         "Truck": "Convert ship to truck", "Convoy": "Convert land unit to convoy"}[target]
+            return label, lambda: self.convert_unit(index, province)
+
+        add_maintenance("CONVERT", ACTION_COL_CONVERT, convert_icon, "red", "blue", "conversion", conversion_button)
 
         if order_type == "DISBAND":
             btn_disband = add(ACTION_COL_DISBAND, "red", "Cancel disband order",
@@ -508,23 +485,8 @@ class UnitCommandControls:
             btn_disband = add(ACTION_COL_DISBAND, "red", "Disband unit",
                               lambda idx=index, p=province: self.disband_unit(idx, p), "Disbanding")
 
-        hp = int(unit.get("health", 0))
-        max_hp = int(unit.get("max_health", 1))
-        if order_type == "REPAIR":
-            btn_repair = add(ACTION_COL_REPAIR, "orange", "Cancel repair order",
-                             lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Repairing", sound_kind=None)
-        elif hp >= max_hp:
-            btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: unit is at full HP",
-                             lambda: None, "Repairing", enabled=False)
-        elif in_combat:
-            btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: unavailable in combat",
-                             lambda: None, "Repairing", enabled=False)
-        elif not is_factory:
-            btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: requires a factory",
-                             lambda: None, "Repairing", enabled=False)
-        else:
-            btn_repair = add(ACTION_COL_REPAIR, "green", "Repair unit",
-                             lambda idx=index, p=province: self.repair_unit(idx, p), "Repairing")
+        add_maintenance("REPAIR", ACTION_COL_REPAIR, "Repairing", "orange", "green", "repair order",
+                        lambda _: ("Repair unit", lambda: self.repair_unit(index, province)))
 
         if self.renaming_unit_index == row_key:
             btn_rename = add(ACTION_COL_CONVERT, "green", "Save unit name (Enter)",
@@ -533,26 +495,11 @@ class UnitCommandControls:
             btn_rename = add(ACTION_COL_RENAME, "blue", "Rename unit",
                              lambda idx=index, p=province, key=row_key: self.start_renaming(idx, p, key), "Text")
 
-        if order_type == "UPGRADE":
-            btn_upgrade = add(ACTION_COL_UPGRADE, "red", "Cancel upgrade order",
-                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Upgrading", sound_kind=None)
-        else:
-            upgrade_target = queries.get_upgrade_target(
-                unit_name, player_research, self.unit_library, queries.get_tech_tree(self.map_screen))
-            if not upgrade_target:
-                btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: maximum level reached",
-                                  lambda: None, "Upgrading", enabled=False)
-            elif in_combat:
-                btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: unavailable in combat",
-                                  lambda: None, "Upgrading", enabled=False)
-            elif not is_factory:
-                btn_upgrade = add(ACTION_COL_UPGRADE, "grey", "Upgrade: requires a factory",
-                                  lambda: None, "Upgrading", enabled=False)
-            else:
-                btn_upgrade = add(
-                    ACTION_COL_UPGRADE, "orange", f"Upgrade to {upgrade_target}",
-                    lambda idx=index, target=upgrade_target, p=province: self.upgrade_unit(idx, target, p),
-                    "Upgrading")
+        def upgrade_button(prepared):
+            target = prepared["target_type"]
+            return f"Upgrade to {target}", lambda: self.upgrade_unit(index, target, province)
+
+        add_maintenance("UPGRADE", ACTION_COL_UPGRADE, "Upgrading", "red", "orange", "upgrade order", upgrade_button)
 
         if queries.is_air_unit(unit, context=self.map_screen):
             mission = queries.air_unit_mission_icon(unit)
@@ -571,7 +518,7 @@ class UnitCommandControls:
         elif not queries.can_bombard(unit_name, context=self.map_screen):
             btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: unit has no bombardment",
                               lambda: None, "Bombardment Arrows", enabled=False)
-        elif is_water and not is_naval:
+        elif queries.is_water_province(province) and not is_naval:
             btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: land guns cannot fire at sea",
                               lambda: None, "Bombardment Arrows", enabled=False)
         elif self.bombarding_unit_index == row_key:
@@ -680,62 +627,29 @@ class UnitCommandControls:
         self.refresh_ui()
 
     def repair_unit(self, index, province=None):
+        self._apply_maintenance(index, province, {"type": "REPAIR"},
+                                lambda order: f"Repair ordered ({order['turns_left']} turn).")
+
+    def upgrade_unit(self, index, target_type, province=None):
+        name = queries.get_unit_display_name(target_type, self.unit_library)
+        self._apply_maintenance(index, province, {"type": "UPGRADE", "target_type": target_type},
+                                lambda order: f"Upgrade to {name} ordered ({order['turns_left']} turn).")
+
+    def _apply_maintenance(self, index, province, order, feedback):
         province = province or self.target_province
-        in_combat = queries.is_nation_in_combat_here(self.map_screen.session.player_country, province, self.map_screen.world.nation_data)
-        if in_combat:
-            self.map_screen.show_feedback("Cannot repair during combat!")
-            return
-
         units = province.get("units", [])
-        if not (0 <= index < len(units)): return
-
+        if not 0 <= index < len(units):
+            return
         unit = units[index]
         if self._command_blocked(unit):
             return
         try:
-            unit_actions.apply_action(self.map_screen, self.map_screen.session.player_country,
-                                      province, unit, {"type": "REPAIR"})
+            result = unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
             return
         self._mark_draft_changed()
-        self.map_screen.show_feedback("Repair ordered (1 turn).")
-        self.refresh_ui()
-
-    def upgrade_unit(self, index, target_type, province=None):
-        province = province or self.target_province
-        in_combat = queries.is_nation_in_combat_here(self.map_screen.session.player_country, province, self.map_screen.world.nation_data)
-        if in_combat:
-            self.map_screen.show_feedback("Cannot upgrade during combat!")
-            return
-
-        # The button is already greyed out as "Needs Factory" without one; this
-        # is the same check standing behind it, so the rule holds whatever
-        # reaches this method.
-        if not queries.has_industry(province):
-            self.map_screen.show_feedback("Cannot upgrade without a factory!")
-            return
-
-        units = province.get("units", [])
-        if not (0 <= index < len(units)): return
-
-        unit = units[index]
-        if self._command_blocked(unit):
-            return
-        research = self.map_screen.world.nation_data[unit["owner"]].get("research", {})
-        expected = queries.get_upgrade_target(unit.get("type", ""), research,
-                                             self.unit_library, queries.get_tech_tree(self.map_screen))
-        if expected is None or target_type != expected:
-            self.map_screen.show_feedback("No legal numbered-unit upgrade is available.")
-            return
-        unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {
-            "type": "UPGRADE",
-            "turns_left": 1,
-            "target_type": target_type,
-            "refund": {}
-        })
-        self._mark_draft_changed()
-        self.map_screen.show_feedback(f"Upgrade to {queries.get_unit_display_name(target_type, self.unit_library)} ordered (1 turn).")
+        self.map_screen.show_feedback(feedback(result.order))
         self.refresh_ui()
 
     def start_bombard_targeting(self, index, province=None, row_key=None):
@@ -828,51 +742,8 @@ class UnitCommandControls:
             self.refresh_ui()
 
     def convert_unit(self, index, province=None):
-        province = province or self.target_province
-        # --- Prevent conversion during combat just in case ---
-        player_country = self.map_screen.session.player_country
-        in_combat = queries.is_nation_in_combat_here(player_country, province, self.map_screen.world.nation_data)
-        if in_combat:
-            self.map_screen.show_feedback("Cannot convert during combat!")
-            return
-        # -----------------------------------------------------
-
-        units = province.get("units", [])
-        if 0 <= index < len(units):
-            unit = units[index]
-            if self._command_blocked(unit):
-                return
-            u_type = unit.get("type", "")
-
-            air_conversion = queries.air_conversion_order(unit, context=self.map_screen)
-            if air_conversion:
-                try:
-                    air_conversion = queries.canonical_unit_order(
-                        self.map_screen, unit["owner"], province, unit, air_conversion)
-                except ValueError as exc:
-                    self.map_screen.show_feedback(str(exc))
-                    return
-                target_type, turns = air_conversion["to"], air_conversion["turns_left"]
-            elif u_type.startswith("Convoy"):
-                target_type = "Land Unit"
-                turns = 1
-            elif (conversion := queries.truck_ship_conversion_order(unit, self.map_screen.world.scenario_settings, context=self.map_screen)):
-                try:
-                    conversion = queries.canonical_unit_order(
-                        self.map_screen, unit["owner"], province, unit, conversion)
-                except ValueError as exc:
-                    self.map_screen.show_feedback(str(exc))
-                    return
-                target_type, turns = conversion["to"], conversion["turns_left"]
-            else:
-                target_type = "Convoy"
-                turns = 1
-
-            unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {"type": "CONVERT", "turns_left": turns, "to": target_type})
-
-            self._mark_draft_changed()
-            self.map_screen.show_feedback(f"Converting to {target_type} ({turns} turns)")
-            self.refresh_ui()
+        self._apply_maintenance(index, province, {"type": "CONVERT", "to": unit_actions.AUTO_CONVERSION_TARGET},
+                                lambda order: f"Converting to {order['to']} ({order['turns_left']} turns)")
 
     def open_air_mission_select(self, index, province, row_key=None):
         units = province.get("units", [])

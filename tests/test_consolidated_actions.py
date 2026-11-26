@@ -232,6 +232,31 @@ class SharedActionTests(unittest.TestCase):
         unit_actions.cancel_action(context, "A", province, unit)
         self.assertEqual(context.world.nation_data["A"], before)
 
+    def test_new_repairs_need_industry_but_an_existing_repair_can_be_kept(self):
+        context = game()
+        province = context.world.map_data[1]
+        unit = province["units"][0]
+        order = {"type": "REPAIR"}
+        command = {"type": "unit_order", "province_id": 1, "unit_id": unit["unit_id"], "order": order}
+        province["buildings"] = []
+        with self.assertRaisesRegex(ValueError, "requires a factory"):
+            unit_actions.apply_action(context, "A", province, unit, order)
+        with self.assertRaisesRegex(ValueError, "requires a factory"):
+            MapRealtimeDriver(context).validate_draft("A", [command])
+        client = copy.deepcopy(context)
+        client.world.map_data[1]["units"][0]["order"] = order
+        with tempfile.TemporaryDirectory() as directory:
+            move = str(Path(directory, "fixture.gd5move"))
+            tournament_files.export_move_file(client, move, "fixture-key")
+            with patch.object(tournament_files, "run_with_progress", synchronous_progress):
+                result = tournament_files.load_move_files(context, [move], {"A": "fixture-key"})
+        self.assertEqual(result["rejected"], 1)
+        self.assertIn("requires a factory", result["rejections"][0]["reason"])
+        unit["order"] = {"type": "REPAIR", "turns_left": 2, "refund": {"cost_materials": 10}}
+        result = unit_actions.prepare_action(context, "A", province, unit, order)
+        self.assertEqual(result.order, unit["order"])
+        self.assertFalse(result.changed)
+
     def test_tactical_division_repairs_cost_nothing_for_any_country(self):
         context = game()
         province = context.world.map_data[1]

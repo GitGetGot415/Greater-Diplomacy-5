@@ -246,16 +246,15 @@ def _aircraft_repair_order(context, country, unit, base, threatened, candidates)
     world_state = world_for(context)
     if _health_fraction(unit) >= ai_tuning.AI_REPAIR_ON_SITE_FRACTION:
         return None
-    nation = world_state.nation_data[country]
-    if (base.get("owner") == country and queries.has_industry(base)
-            and base["id"] not in threatened):
-        if queries.can_afford(nation, unit_actions.repair_costs(context, unit)):
-            return {"type": "REPAIR"}
-        return None
+    if (base.get("owner") == country and base["id"] not in threatened
+            and not unit_actions.repair_site_error(context, country, base)):
+        repair = {"type": "REPAIR"}
+        result = unit_actions.prepare_action(context, country, base, unit, repair)
+        return repair if queries.can_afford(world_state.nation_data[country], result.cost) else None
     factories = [order for order in candidates
                  if order["type"] == "AIR_REPOSITION" and order["target_id"] not in threatened
                  and world_state.id_to_province[order["target_id"]].get("owner") == country
-                 and queries.has_industry(world_state.id_to_province[order["target_id"]])]
+                 and not unit_actions.repair_site_error(context, country, world_state.id_to_province[order["target_id"]])]
     if not factories:
         return None
     return min(factories, key=lambda order: (
@@ -416,8 +415,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
                 and _health_fraction(unit) >= ai_tuning.AI_REPAIR_ON_SITE_FRACTION):
             target = world.upgrade_target(country, unit["type"], unit_library, tech_tree)
             if target:
-                unit_actions.apply_action(context, country, base, unit, queries.canonical_unit_order(context, country, base, unit,
-                    {"type": "UPGRADE", "target_type": target}), authority="ai")
+                unit_actions.apply_action(context, country, base, unit, {"type": "UPGRADE", "target_type": target}, authority="ai")
                 continue
         pool.append((unit, base, candidates))
 
@@ -2528,32 +2526,9 @@ def _assign_unit_orders(context, ai_name, units_info, ctx, allowed_prov_ids, wat
 
 
 def _repair_havens(context, ai_name, my_provs):
-    """Tiles where this nation could repair a unit: industry, and no enemy on it.
-
-    Exactly the two conditions the player's own orders panel applies -- "Needs
-    Factory" (queries.has_industry) and "In Combat" -- and deliberately nothing
-    else. Whether a tile is somewhere you would *march* a wounded unit to is a
-    different question, asked separately in _march_havens; conflating the two is
-    what stopped a Soviet Heavy Tank III sitting at 4% health on top of its own
-    factory in province 295 from repairing (saves/NOT REPAIRING). That tile
-    borders four German provinces, so it is a war border, so it was not a haven,
-    so the tank marched off to take empty ground instead.
-
-    A unit already standing on a factory is not choosing where to be. It is not
-    in combat, it is holding the tile either way -- REPAIR blocks movement, not
-    fighting -- and at 4% health it is contributing almost nothing to holding
-    it. Repairing is simply the best thing it can do with the turn, and where
-    the tile sits on the map has no bearing on that.
-    """
-    world_state = world_for(context)
-    havens = set()
-    for prov in my_provs:
-        if not queries.has_industry(prov):
-            continue
-        if queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data):
-            continue
-        havens.add(prov["id"])
-    return havens
+    """Factories where repairs can start, including factories on the front line."""
+    return {province["id"] for province in my_provs
+            if not unit_actions.repair_site_error(context, ai_name, province)}
 
 
 def _march_havens(havens, ctx):
@@ -2577,16 +2552,16 @@ def _port_havens(context, ai_name, march_targets):
                                         world_state.nation_data)}
 
 
-def _start_repair(context, ai_name, province, unit, unit_library):
-    costs = unit_actions.repair_costs(context, unit, unit_library)
-    if not queries.can_afford(world_for(context).nation_data[ai_name], costs):
+def _start_repair(context, ai_name, province, unit):
+    try:
+        unit_actions.apply_action(context, ai_name, province, unit, {"type": "REPAIR"}, authority="ai")
+    except ValueError:
         return False
-    unit_actions.apply_action(context, ai_name, province, unit, {"type": "REPAIR"}, authority="ai")
     unit.pop("repair_trip", None)
     return True
 
 
-def repair_docked_warships(context, ai_name, units_info, unit_library):
+def repair_docked_warships(context, ai_name, units_info):
     """Book affordable peacetime naval repairs before recruitment spends the stockpile."""
     candidates = [(unit, province) for unit, province in units_info
                   if province.get("owner") == ai_name and province.get("is_coastal", False)
@@ -2596,7 +2571,7 @@ def repair_docked_warships(context, ai_name, units_info, unit_library):
     havens = _repair_havens(context, ai_name, (province for _, province in candidates))
     for unit, province in candidates:
         if province["id"] in havens:
-            _start_repair(context, ai_name, province, unit, unit_library)
+            _start_repair(context, ai_name, province, unit)
 
 
 def _may_leave_the_line(context, ai_name, unit, prov, ctx):
@@ -2772,7 +2747,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
                 unit.pop("repair_trip", None)
                 trips -= 1
             elif curr_id == trip:
-                if not in_combat and _start_repair(context, ai_name, prov, unit, unit_library):
+                if _start_repair(context, ai_name, prov, unit):
                     trips -= 1
                     continue
             else:
@@ -2806,7 +2781,7 @@ def _assign_maintenance_orders(context, ai_name, units_info, ctx,
         if curr_id in havens:
             if _health_fraction(unit) < ai_tuning.AI_REPAIR_ON_SITE_FRACTION:
                 wants_repair = True
-                if _start_repair(context, ai_name, prov, unit, unit_library):
+                if _start_repair(context, ai_name, prov, unit):
                     continue
         elif (travels
                 and trip_targets

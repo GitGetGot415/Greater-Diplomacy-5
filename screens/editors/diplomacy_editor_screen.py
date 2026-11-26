@@ -298,9 +298,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                             lambda cc=cid: self.select_nation(cc))
             btn.is_selected = cid == self.target
             btn.sound_kind = "select_category"
-            btn.pane = "nations"
-            btn.click_guard = self.pane("nations").guard
-            self.elements.append(btn)
+            self.add_pane_row("nations", btn)
 
         if not self.target:
             return
@@ -315,9 +313,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                 btn = self._row(col_x, y, self.COL_W - 24, toggle_color(checked), label,
                                 lambda n=name, cb=on_click: cb(n))
                 btn.is_selected = checked
-                btn.pane = region
-                btn.click_guard = self.pane(region).guard
-                self.elements.append(btn)
+                self.add_pane_row(region, btn)
 
         core_button = make_choice_button(self.cols_x, self.row_a_y - 2, "editor_ui", "Wars, Factions & Puppets",
                                          self.relationship_view == "core",

@@ -143,13 +143,8 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
             self._player_row_key = row_key
             self._cache_row_icon(row_key, unit)
             self._row_order_summaries[row_key] = self._order_summary(row_key, unit)
-            research = map_ref.world.nation_data.get(player_country, {}).get("research", {})
             # A fixed row passes no scroll guard.
-            self._build_unit_action_buttons(
-                row_key, index, unit, province, PANEL_Y + UNIT_ROW_OFFSET_Y, None,
-                queries.is_nation_in_combat_here(player_country, province, map_ref.world.nation_data),
-                queries.is_water_province(province), province.get("is_coastal", False),
-                queries.has_industry(province), research)
+            self._build_unit_action_buttons(row_key, index, unit, province, PANEL_Y + UNIT_ROW_OFFSET_Y, None)
 
         target = self.target_province
         player_unit = self._player_record[0] if self._player_record else None

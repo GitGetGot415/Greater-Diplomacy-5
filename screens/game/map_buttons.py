@@ -730,9 +730,6 @@ def bilateral_response_indicator(map_screen, target, action):
         return None
     if not availability(map_screen, map_screen.session.player_country, target, action).allowed:
         return "NO"
-    if queries.faction_request_leadership_error(
-            map_screen.session.player_country, target, action, map_screen.world.nation_data):
-        return "NO"
     human_players = set(map_screen.session.active_players or ())
     if target in human_players:
         return "MAYBE"
@@ -1213,94 +1210,84 @@ def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
     return not attached and not pending_attache and not pending_withdraw_attache
 
 
-def _update_faction_offer_buttons(map_screen, owner, set_offer, at_war, in_same_faction):
-    """Update the faction buttons and return what each proposal can forecast."""
-    my_faction = queries.get_country_faction(map_screen.session.player_country, map_screen.world.nation_data)
-    target_faction = queries.get_country_faction(owner, map_screen.world.nation_data)
-    i_am_leader = queries.is_faction_leader(map_screen.session.player_country, map_screen.world.nation_data)
-    factions_disabled = queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.world.scenario_settings)
+def _update_faction_offer_buttons(map_screen, owner, set_offer, at_war):
+    nations = map_screen.world.nation_data
+    player = map_screen.session.player_country
+    my_faction = queries.get_country_faction(player, nations)
+    target_faction = queries.get_country_faction(owner, nations)
+    factions_enabled = not queries.get_scenario_flag(
+        "disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.world.scenario_settings)
 
-    # A puppet's alignment is its master's, both ways round: it may
-    # not be invited in, and may not ask to join. Greyed out here so
-    # the option never appears, rather than being refused later.
-    they_are_free = queries.can_choose_own_faction(owner, map_screen.world.nation_data)
-    i_am_free = queries.can_choose_own_faction(map_screen.session.player_country, map_screen.world.nation_data)
-
-    # Keep membership controls clickable so refusal feedback is reachable.
-    can_try_invite = bool(not factions_disabled and my_faction and not target_faction
-                          and not at_war and they_are_free)
-    can_try_req_join = bool(not factions_disabled and not my_faction and target_faction
-                            and not at_war and i_am_free)
-    can_kick = bool(not factions_disabled and in_same_faction and i_am_leader)
-    can_create_fac = bool(not factions_disabled and not my_faction and not target_faction and not at_war)
-
-    forecasts = [
-        (map_screen.btn_fac_invite, "FACTION_INVITE",
-         set_offer(map_screen.btn_fac_invite, "FACTION_INVITE", "INVITE", "Invite to Faction", "green", can_try_invite)),
-        (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
-         set_offer(map_screen.btn_fac_join_req, "JOIN_FACTION_REQ", "JOIN REQ", "Req. Join Faction", "green", can_try_req_join)),
-    ]
-    set_offer(map_screen.btn_fac_kick, "KICK_FACTION_MEMBER", "KICK", "Kick from Faction", "red", can_kick)
-    forecasts.append((map_screen.btn_fac_create, "CREATE_FACTION",
-                      set_offer(map_screen.btn_fac_create, "CREATE_FACTION", "CREATE", "Create Faction", "blue", can_create_fac)))
-    return forecasts
+    # For those two membership buttons a click can still explain who has to make the request.
+    explain_invite = bool(factions_enabled and my_faction and not target_faction
+                          and queries.can_choose_own_faction(owner, nations))
+    explain_join = bool(factions_enabled and target_faction and not my_faction
+                        and queries.can_choose_own_faction(player, nations))
+    offers = (
+        (map_screen.btn_fac_invite, "FACTION_INVITE", "INVITE", "Invite to Faction", "green", explain_invite),
+        (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ", "JOIN REQ", "Req. Join Faction", "green", explain_join),
+        (map_screen.btn_fac_create, "CREATE_FACTION", "CREATE", "Create Faction", "blue", False),
+    )
+    set_offer(map_screen.btn_fac_kick, "KICK_FACTION_MEMBER", "KICK", "Kick from Faction", "red",
+              allow_fresh_offer=factions_enabled)
+    return [(button, action, set_offer(button, action, status, label, color,
+                                       allow_fresh_offer=not at_war, explain_leadership=explain))
+            for button, action, status, label, color, explain in offers]
 
 
-def _update_access_buttons(map_screen, owner, set_offer, at_war, in_same_faction):
-    """Update the military access buttons and return whether a request can be forecast."""
+def _update_access_buttons(map_screen, owner, set_offer):
+    """Update access buttons and return whether a fresh request can be forecast."""
     has_access_to_them = queries.has_military_access(map_screen.session.player_country, owner, map_screen.world.nation_data)
     they_have_access_to_me = queries.has_military_access(owner, map_screen.session.player_country, map_screen.world.nation_data)
 
     forecast_request = False
     if has_access_to_them:
-        set_offer(map_screen.btn_cancel_mil_access, "CANCEL_MILITARY_ACCESS", "CANCEL ACCESS", "Cancel Mil. Access", "orange", True)
+        set_offer(map_screen.btn_cancel_mil_access, "CANCEL_MILITARY_ACCESS", "CANCEL ACCESS", "Cancel Mil. Access", "orange")
         set_btn(map_screen.btn_req_mil_access, False, False, "", "blue")
     else:
         set_btn(map_screen.btn_cancel_mil_access, False, False, "", "orange")
-        can_req_access = not at_war and not in_same_faction
-        forecast_request = set_offer(map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS", "REQ ACCESS", "Request Mil. Access", "blue", can_req_access)
+        forecast_request = set_offer(map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS", "REQ ACCESS", "Request Mil. Access", "blue")
 
     if they_have_access_to_me:
-        set_offer(map_screen.btn_revoke_mil_access, "REVOKE_MILITARY_ACCESS", "REVOKE ACCESS", "Revoke Mil. Access", "red", True)
+        set_offer(map_screen.btn_revoke_mil_access, "REVOKE_MILITARY_ACCESS", "REVOKE ACCESS", "Revoke Mil. Access", "red")
     else:
         set_btn(map_screen.btn_revoke_mil_access, False, False, "", "red")
     return forecast_request
 
 
 def _update_foreign_country_buttons(map_screen, owner):
-    at_war = queries.are_at_war(map_screen.session.player_country, owner, map_screen.world.nation_data)
-    in_same_faction = queries.are_in_same_faction(map_screen.session.player_country, owner, map_screen.world.nation_data)
-    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.session.player_country, owner, map_screen.world.nation_data)
+    player = map_screen.session.player_country
+    nations = map_screen.world.nation_data
+    at_war = queries.are_at_war(player, owner, nations)
+    pending_action, pending_turns = queries.get_diplomatic_status(player, owner, nations)
 
-    is_unilateral_pending = pending_action in UNILATERAL_ACTIONS
-    if is_unilateral_pending and pending_turns > 0:
+    if pending_action in UNILATERAL_ACTIONS and pending_turns > 0:
         pending_action = ""
         pending_turns = 0
 
-    def set_offer(button, action, status, label, color, allowed):
-        """Show one offer button and return whether its reply can be forecast."""
-        pending = pending_action == action
-        if pending:
+    def set_offer(button, action, status, label, color, *, allow_fresh_offer=True, explain_leadership=False):
+        """Show the draft state or use the shared rule for a fresh offer."""
+        if pending_action == action:
             label = f"UNDO {status}" if pending_turns == 0 else "WAITING..."
-        set_btn(button, True, allowed or pending, label, color)
-        return allowed and not pending
+            set_btn(button, True, True, label, color)
+            return False
+        result = availability(map_screen, player, owner, action) if allow_fresh_offer else None
+        allowed = result is not None and result.allowed
+        leadership_error = queries.faction_request_leadership_error(player, owner, action, nations) if explain_leadership else None
+        feedback = result is not None and leadership_error and result.reason == leadership_error
+        set_btn(button, True, bool(allowed or feedback), label, color)
+        return bool(allowed or feedback)
 
     _update_war_button(map_screen, owner, pending_action, pending_turns, at_war)
-
-    target_wars = queries.get_enemies(owner, map_screen.world.nation_data)
-    player_wars = queries.get_enemies(map_screen.session.player_country, map_screen.world.nation_data)
-    can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
-    forecast_join_wars = set_offer(map_screen.btn_join_wars, "JOIN_WARS", "JOIN WARS", "Join Wars", "orange", can_join_wars)
-
-    can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
-    forecast_call_to_arms = set_offer(map_screen.btn_call_to_arms, "CALL_TO_ARMS", "CALL TO ARMS", "Call to Arms", "red", can_call_to_arms)
+    forecast_join_wars = set_offer(map_screen.btn_join_wars, "JOIN_WARS", "JOIN WARS", "Join Wars", "orange")
+    forecast_call_to_arms = set_offer(map_screen.btn_call_to_arms, "CALL_TO_ARMS", "CALL TO ARMS", "Call to Arms", "red")
 
     volunteer_state = _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns)
     _update_guarantee_button(map_screen, owner, pending_action, pending_turns)
     can_forecast_attache = _update_attache_buttons(map_screen, owner, pending_action, pending_turns)
 
-    faction_forecasts = _update_faction_offer_buttons(map_screen, owner, set_offer, at_war, in_same_faction)
-    forecast_access = _update_access_buttons(map_screen, owner, set_offer, at_war, in_same_faction)
+    faction_forecasts = _update_faction_offer_buttons(map_screen, owner, set_offer, at_war)
+    forecast_access = _update_access_buttons(map_screen, owner, set_offer)
 
     # Forecast every offer this menu can send to the selected
     # country. Indicators are hidden while a button is performing

@@ -118,6 +118,21 @@ class ProductionActionTests(unittest.TestCase):
                                                 building_library=fixture)
         self.assertEqual(result.cost["cost_manpower"], fixture["Fixture Building"]["cost_manpower"])
 
+    def test_recruitment_building_requires_a_basic_factory_for_new_entries(self):
+        fixture = {"Fixture Recruitment": {"group": "recruitment", "time": 2}}
+        intent = {"order_type": "BUILDING", "item_name": "Fixture Recruitment"}
+        with self.assertRaisesRegex(ValueError, "require a basic factory"):
+            actions.prepare_production(self.context, "A", self.province, "building_queue", intent,
+                                       building_library=fixture)
+        self.province["buildings"] = ["Basic Factory"]
+        result = actions.prepare_production(self.context, "A", self.province, "building_queue", intent,
+                                            building_library=fixture)
+        self.province["building_queue"] = [result.order]
+        self.province["buildings"] = []
+        draft = actions.reconstruct_queue(self.context, "A", self.province, "building_queue", [result.order])
+        self.assertEqual(draft["items"], [result.order])
+        self.assertEqual(draft["new_costs"], [])
+
     def test_ai_buildings_pay_manpower_and_wait_until_it_is_affordable(self):
         from map_logic.ai import ai_construction
         # Output worth far more than the cost, so affordability alone decides.
