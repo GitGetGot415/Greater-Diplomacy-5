@@ -35,6 +35,20 @@ REJECT = diplomacy_messages.RESPONSE_REJECT
 
 
 class SubmittedTurnDiplomacyTests(unittest.TestCase):
+    def test_imported_peace_cannot_bind_an_unauthorized_country(self):
+        game = StubMapScreen(["A", "B", "C"], human_players=["A"])
+        game.set_war("A", "B")
+        game.set_war("C", "B")
+        forged = deal.new(deal.KIND_PEACE, ["A", "C"], ["B"], [deal.white_peace()])
+        command = {"type": "country_diplomacy",
+                   "pending": {"B": {"action": "PEACE_TREATY", "parameters": forged}}}
+        actions = PlayerActions(game)
+        with self.assertRaises(PlayerActionError):
+            actions.validate_draft("A", [command])
+        command["pending"]["B"]["parameters"] = deal.new(
+            deal.KIND_PEACE, ["A"], ["B"], [deal.white_peace()])
+        self.assertTrue(actions.validate_draft("A", [command]))
+
     def test_submitted_player_cannot_call_a_faction_member_to_arms(self):
         game = StubMapScreen(["A", "B", "C"], human_players=["A"])
         game.set_faction("Pact", "A", "B")
@@ -403,9 +417,10 @@ class SameOutcomeMergeTests(unittest.TestCase):
         self.assertEqual([inbox[0]["sender"] for inbox in notices], ["B", "A"])
 
     def test_call_to_arms_and_join_wars_merge(self):
-        game = StubMapScreen(["A", "B", "C"], human_players=["A", "B"])
+        game = StubMapScreen(["A", "B", "C", "D"], human_players=["A", "B"])
         game.set_faction("Pact", "A", "B")
         game.set_war("A", "C")
+        game.set_war("B", "D")
 
         game.propose("A", "B", "CALL_TO_ARMS", message="Aid us!")
         game.propose("B", "A", "JOIN_WARS", message="We join your fight!")
@@ -413,6 +428,8 @@ class SameOutcomeMergeTests(unittest.TestCase):
 
         self.assertIn("C", game.world.nation_data["B"]["at_war_with"],
                       "the merged call to arms should have pulled B into A's war")
+        self.assertNotIn("D", game.world.nation_data["A"]["at_war_with"])
+        self.assertEqual(game.world.nation_data["B"]["war_durations"]["C"], 0)
 
 
 class RejectionAndCooldownTests(unittest.TestCase):

@@ -18,10 +18,11 @@ ai_opinion.peace_verdict itself (tests/test_ai_opinion.py covers that).
 
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from map_logic.ai import ai_tuning
 from map_logic.ai import ai_candidates, ai_diplomacy, ai_opinion, ai_world
-from map_logic.diplomacy import deal, deal_effects, war_actions
+from map_logic.diplomacy import deal, deal_effects, diplomacy_messages, peace_scope, war_actions, war_score
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -68,7 +69,7 @@ class Overrun:
     def offers(self, section, nation, enemy, *, appetite, leverage):
         bag = ai_candidates.Collector(nation, {})
         with patch.object(ai_opinion, "peace_appetite", return_value=appetite), \
-                patch.object(ai_diplomacy.war_score, "between",
+                patch.object(ai_diplomacy.war_score, "for_treaty",
                              return_value={"mine": leverage, "theirs": 1.0 - leverage}):
             section(bag, self.game, nation, [enemy], [nation, enemy], self.world)
         return [candidate for candidate in bag.ranked() if candidate.action == "PEACE_TREATY"]
@@ -88,15 +89,18 @@ class Overrun:
 class ConcessionTests(Overrun, unittest.TestCase):
     """The more a loser wants out, the more of its lost land it gives up."""
 
-    def test_just_past_the_threshold_it_concedes_nothing(self):
-        self.assertEqual(self.conceded(ai_tuning.AI_PEACE_OFFER_THRESHOLD), set())
+    def test_a_clearly_losing_ai_offers_at_least_one_tile_at_the_threshold(self):
+        self.assertEqual(self.conceded(ai_tuning.AI_PEACE_OFFER_THRESHOLD), self.ids(self.taken[:1]))
 
     def test_at_full_desperation_it_concedes_everything_occupied(self):
         self.assertEqual(self.conceded(1.0), self.ids(self.taken))
 
     def test_in_between_it_gives_up_the_least_valuable_land_first(self):
         halfway = (ai_tuning.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
-        self.assertEqual(self.conceded(halfway), self.ids(self.taken[:2]))
+        selected = self.conceded(halfway)
+        self.assertGreater(len(selected), 1)
+        self.assertLess(len(selected), len(self.taken))
+        self.assertEqual(selected, self.ids(self.taken[:len(selected)]))
 
     def test_the_concession_never_shrinks_as_desperation_grows(self):
         steps = [ai_tuning.AI_PEACE_OFFER_THRESHOLD + (1.0 - ai_tuning.AI_PEACE_OFFER_THRESHOLD) * k / 8
@@ -111,9 +115,10 @@ class ConcessionTests(Overrun, unittest.TestCase):
         """Through the same execution path a signed treaty takes. The rest of
         the occupied land goes home, as a white peace sends it."""
         halfway = (ai_tuning.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
-        deal_effects.execute(self.game, ai_diplomacy._concession_terms(
-            self.game, "AV", "FOE", halfway, 0.2))
-        self.assertEqual([p["owner"] for p in self.taken], ["FOE", "FOE", "AV", "AV"])
+        terms = ai_diplomacy._concession_terms(self.game, "AV", "FOE", halfway, 0.2)
+        ceded = self.moved(terms)
+        deal_effects.execute(self.game, terms)
+        self.assertEqual(self.ids(p for p in self.taken if p["owner"] == "FOE"), ceded)
         self.assertEqual(self.kept["owner"], "AV")
 
 
@@ -145,6 +150,33 @@ class OwnJudgementTests(Overrun, unittest.TestCase):
     def test_a_winner_that_would_rather_fight_on_offers_nothing(self):
         with self.judge(lambda nation, terms: False):
             self.assertEqual(self.winning_offers(), [])
+
+    def test_a_loser_concedes_its_single_occupied_province(self):
+        for province in self.taken[1:]:
+            province["owner"] = "AV"
+        with self.judge(lambda nation, terms: True):
+            offers = self.losing_offers(appetite=ai_tuning.AI_PEACE_OFFER_THRESHOLD)
+        self.assertEqual(len(offers), 1)
+        self.assertEqual(self.moved(offers[0].payload["parameters"]), self.ids(self.taken[:1]))
+
+    def test_itemized_offer_is_displayed_and_applied_with_the_same_terms(self):
+        self.game.session.active_players = ["FOE"]
+        self.game.session.player_country = "FOE"
+        for province in self.taken[1:]:
+            province["owner"] = "AV"
+        with self.judge(lambda nation, terms: True):
+            offers = self.losing_offers(appetite=ai_tuning.AI_PEACE_OFFER_THRESHOLD)
+        pending = self.game.world.nation_data["AV"].setdefault("pending_diplomacy", {})
+        ai_diplomacy._execute_candidates(self.game, "AV", pending, offers)
+        self.game.run_turn()
+        inbox = self.game.world.nation_data["FOE"]["inbox"]
+        delivered = next(message for message in inbox
+                         if message["sender"] == "AV" and message.get("action") == "PEACE_TREATY")
+        self.assertEqual(self.moved(delivered["parameters"]), self.ids(self.taken[:1]))
+        self.game.answer("FOE", "AV", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.run_turn()
+        self.assertEqual(self.taken[0]["owner"], "FOE")
+        self.assertNotIn("FOE", self.game.world.nation_data["AV"]["at_war_with"])
 
     def test_a_winner_with_little_leverage_offers_nothing(self):
         with self.judge(lambda nation, terms: True):
@@ -194,6 +226,110 @@ class OccupationAppetiteTests(unittest.TestCase):
         for prov in provs:
             prov["owner"] = "FOE"
         self.assertGreater(appetite(), intact)
+
+
+class TreatyFrontAppetiteTests(unittest.TestCase):
+    def test_the_belligerents_matter_even_if_the_signatory_has_no_front(self):
+        game = StubMapScreen(("A", "B", "Delegate", "Neutral"), human_players=())
+        game.world.scenario_settings["fog_of_war"] = False
+        game.set_war("A", "B")
+        a, b = game.home_of("A"), game.home_of("B")
+        game.border(a["id"], b["id"])
+        a["units"] = [{"owner": "A", "attack": 300, "health": 100},
+                      {"owner": "Neutral", "attack": 2000, "health": 100}]
+        b["units"] = [{"owner": "B", "attack": 100, "health": 100}]
+        game.home_of("Delegate")["units"] = [{"owner": "Delegate", "attack": 5000, "health": 100}]
+        world = ai_world.build(game)
+        ordinary = deal.ceasefire_deal("A", "B")
+        delegated = deal.ceasefire_deal("A", "Delegate", side_b=["Delegate", "B"])
+        front = world.treaty_front_strength("A", ["A"], ["Delegate", "B"])
+        self.assertGreater(front[0], front[1])
+        self.assertGreater(front[1], 0)
+        expected = ai_opinion.peace_appetite(world, "A", "B", agreement=ordinary)
+        self.assertEqual(ai_opinion.peace_appetite(world, "A", "Delegate", agreement=delegated), expected)
+        self.assertEqual(war_score.for_treaty(world, "A", delegated, world)["sides"], (["A"], ["B"]))
+
+    def test_no_land_front_uses_overall_strength(self):
+        game = StubMapScreen(("A", "B"), human_players=())
+        game.world.scenario_settings["fog_of_war"] = False
+        game.set_war("A", "B")
+        game.home_of("A")["units"] = [{"owner": "A", "attack": 200, "health": 100}]
+        game.home_of("B")["units"] = [{"owner": "B", "attack": 50, "health": 100}]
+        world = ai_world.build(game)
+        agreement = deal.ceasefire_deal("A", "B")
+        self.assertEqual(world.treaty_front_strength("A", ["A"], ["B"]), (0.0, 0.0))
+        appetite = ai_opinion.peace_appetite(world, "A", "B", agreement=agreement)
+        with patch.object(world, "treaty_front_strength", return_value=(300, 75)):
+            strong_front = ai_opinion.peace_appetite(world, "A", "B", agreement=agreement)
+        with patch.object(world, "treaty_front_strength", return_value=(0, 75)):
+            losing_front = ai_opinion.peace_appetite(world, "A", "B", agreement=agreement)
+        self.assertGreater(losing_front, appetite)
+        self.assertLess(strong_front, appetite)
+
+
+class SeparatePeaceVerdictTests(unittest.TestCase):
+    def setUp(self):
+        self.game = StubMapScreen(("Member", "Ally", "Enemy", "Opponent"), human_players=())
+        self.game.set_faction("Pact", "Ally", "Member")
+        self.game.set_faction("Opposition", "Enemy", "Opponent")
+        for country in ("Ally", "Member"):
+            self.game.set_war(country, "Enemy")
+        self.data = self.game.world.nation_data
+        self.taken = self.game.add_province("Member", cores=["Member"])
+        for _ in range(2):
+            self.game.add_province("Member", cores=["Member"])
+        self.game.home_of("Member")["cores"] = ["Member"]
+        self.game.border(self.game.home_of("Ally")["id"], self.taken["id"])
+        war_actions.save_own_pre_war_map(self.game.world.map_data, self.data, "Member")
+        self.taken["owner"] = "Enemy"
+
+    def terms(self, proposer, receiver, *clauses):
+        mine, theirs = peace_scope.deal_sides(proposer, receiver, self.data)
+        agreement = deal.new(deal.KIND_PEACE, mine, theirs, clauses or [deal.white_peace()])
+        return peace_scope.with_separate_peace_cost(agreement, proposer, receiver, self.data)
+
+    def verdict(self, agreement):
+        world = ai_world.build(self.game)
+        return ai_opinion.peace_verdict(world, "Member", "Enemy", agreement)
+
+    def test_exactly_one_quarter_qualifies_in_both_directions_even_in_a_new_war(self):
+        directions = (("Enemy", "Member"), ("Member", "Enemy"))
+        with patch.object(ai_tuning, "AI_PEACE_MARGIN_BASE", 0), \
+                patch.object(ai_tuning, "AI_PEACE_MARGIN_CAUTION", 0), \
+                patch.object(ai_tuning, "AI_PEACE_PRIZE_W", 0), \
+                patch.object(deal, "clause_value", return_value=0):
+            for proposer, receiver in directions:
+                self.assertTrue(self.verdict(self.terms(proposer, receiver)).accepted)
+            self.game.add_province("Member", cores=["Member"])
+            for proposer, receiver in directions:
+                self.assertFalse(self.verdict(self.terms(proposer, receiver)).accepted)
+
+    def test_supplied_allies_in_range_raise_the_value_of_fighting_for_ceded_land(self):
+        from data.queries import supply
+
+        tile = self.taken["id"]
+        terms = self.terms("Enemy", "Member", deal.tiles_clause("Member", "Enemy", [tile]))
+        restored = self.terms("Enemy", "Member")
+        ally = self.game.home_of("Ally")
+        ally["units"].append({"owner": "Ally", "type": "", "health": 100, "attack": 20,
+                              "defense": 20, "speed": 1})
+        with patch.object(supply, "SupplySnapshot", return_value=SimpleNamespace(
+                status=lambda _unit: supply.SupplyStatus((1.0, 1.0, 1.0), 1.0))):
+            world = ai_world.build(self.game)
+            worth = deal.side_worth(terms, "Member", world.map_data, self.data)
+            _, aid = ai_opinion._peace_continuation_value(world, "Member", terms, "Member", worth)
+            self.assertGreater(aid, 0)
+            self.assertEqual(ai_opinion._peace_continuation_value(
+                world, "Member", restored, "Member", worth)[1], 0)
+            after = ai_opinion.peace_verdict(world, "Member", "Enemy", terms)
+            with patch.object(world, "allied_relief_value", return_value=0):
+                before = ai_opinion.peace_verdict(world, "Member", "Enemy", terms)
+            self.assertLess(after.slack, before.slack)
+            margin = ai_tuning.AI_PEACE_MARGIN_BASE + (before.slack + after.slack) / 2
+            with patch.object(ai_tuning, "AI_PEACE_MARGIN_BASE", margin):
+                self.assertFalse(ai_opinion.peace_verdict(world, "Member", "Enemy", terms).accepted)
+                with patch.object(world, "allied_relief_value", return_value=0):
+                    self.assertTrue(ai_opinion.peace_verdict(world, "Member", "Enemy", terms).accepted)
 
 
 if __name__ == "__main__":

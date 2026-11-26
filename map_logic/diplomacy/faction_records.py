@@ -102,6 +102,56 @@ def pre_war_maps(nation_data):
             if record.get("pre_war_borders")}
 
 
+def _war_border_maps(nation_data):
+    return (*pre_war_maps(nation_data).values(), *(nation_data.get("WAR_PRE_MAPS") or {}).values())
+
+
+def pre_war_index(nation_data):
+    """Resolve overlapping snapshots in the same order for every border reader."""
+    owners = {}
+    for borders in _war_border_maps(nation_data):
+        if isinstance(borders, dict):
+            owners.update((str(tile), owner) for tile, owner in borders.items())
+    return owners
+
+
+def recorded_pre_war_owner(nation_data, province_id):
+    """Look up one province without rebuilding the whole pre-war map."""
+    tile = str(province_id)
+    for borders in reversed(_war_border_maps(nation_data)):
+        if isinstance(borders, dict):
+            owner = borders.get(tile) or borders.get(province_id)
+            if owner:
+                return owner
+    return None
+
+
+def record_treaty_transfers(nation_data, transfers):
+    """Replace wartime claims to ceded tiles with their new settled ownership."""
+    if not transfers:
+        return
+    for borders in _war_border_maps(nation_data):
+        if not isinstance(borders, dict):
+            continue
+        for province_id, owner in transfers.items():
+            tile = str(province_id)
+            if tile in borders or province_id in borders:
+                borders.pop(province_id, None)
+                borders[tile] = owner
+
+    for province_id, owner in transfers.items():
+        record = country_record(nation_data, owner)
+        faction = record["name"] if record is not None else nation_data.get(owner, {}).get("faction")
+        if faction:
+            borders = pre_war_map(nation_data, faction)
+            if borders is None:
+                borders = {}
+                set_pre_war_map(nation_data, faction, borders)
+        else:
+            borders = nation_data.setdefault("WAR_PRE_MAPS", {}).setdefault(owner, {})
+        borders[str(province_id)] = owner
+
+
 def saved_country_projection(nation_data):
     """Supply the old name-keyed border view to existing save consumers."""
     result = dict(nation_data)

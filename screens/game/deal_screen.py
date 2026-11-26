@@ -385,13 +385,11 @@ class Deal_Screen(MapOverlayScreen):
             clauses.append({"type": deal_mod.MILITARY_ACCESS,
                             "grantor": self.target_nation, "grantee": self.player})
 
-        # A member settling behind its bloc's back leaves the bloc. Shown as a
-        # term rather than sprung on them at signing -- treaty_effects adds it
-        # regardless, so the screen had better say so.
-        if self.is_peace and peace_scope.costs_membership(self.role):
-            clauses.append({"type": deal_mod.FACTION_EXIT, "nation": self.player})
-
-        return deal_mod.new(self.kind, self.my_side, self.their_side, clauses)
+        agreement = deal_mod.new(self.kind, self.my_side, self.their_side, clauses)
+        if self.is_peace:
+            agreement = peace_scope.with_separate_peace_cost(
+                agreement, self.player, self.target_nation, self.map_screen.world.nation_data)
+        return agreement
 
     def would_receive(self, prov, side):
         """Who this province would actually go to if it were picked for `side`.
@@ -851,15 +849,12 @@ class Deal_Screen(MapOverlayScreen):
         times a second -- accepts_peace prices every clause against every
         province the deal names.
         """
-        self.leverage = None
-        if self.is_peace:
-            self.leverage = war_score.leverage(self.map_screen, self.my_side,
-                                               self.their_side, self.world)
-
         self.balance_terms = ""
         self.balance_reading = ""
 
         agreement = self.build_deal()
+        self.leverage = (war_score.for_treaty(self.map_screen, self.player, agreement, self.world)
+                         if self.is_peace else None)
         self.problems = deal_mod.validate(agreement, self.map_screen.world.map_data,
                                           self.map_screen.world.nation_data,
                                           reach_index=self.reach)
@@ -985,8 +980,7 @@ class Deal_Screen(MapOverlayScreen):
             self.map_screen.show_feedback(problems[0])
             return
 
-        action = "TRADE" if not self.is_peace else (
-            "CEASEFIRE" if deal_mod.is_white_peace(agreement) else "PEACE_TREATY")
+        action = peace_scope.action_for(agreement) if self.is_peace else "TRADE"
         if self.is_peace:
             available = availability(self.map_screen, self.player, self.target_nation, action)
             if not available.allowed:
@@ -1036,18 +1030,16 @@ class Deal_Screen(MapOverlayScreen):
         if not self.is_peace:
             return "Trade Agreement: " + queries.get_country_display_name(
                 self.target_nation, self.map_screen.world.nation_data)
-        if peace_scope.is_member_separate_peace(self.role):
-            mine = _bloc_name(self.map_screen.world.nation_data, self.my_side)
-            theirs = _bloc_name(self.map_screen.world.nation_data, self.their_side)
-            return f"Separate Peace: {mine} vs {theirs} (member only)"
+        data = self.map_screen.world.nation_data
+        departing = peace_scope.departing_member(self.player, self.target_nation, data)
+        if departing:
+            name = queries.get_country_display_name(departing, data)
+            return f"Separate Peace: {name} Leaves Faction"
         if peace_scope.binds_whole_bloc(self.role) and len(self.my_side) > 1:
             mine = _bloc_name(self.map_screen.world.nation_data, self.my_side)
             theirs = _bloc_name(self.map_screen.world.nation_data, self.their_side)
             count = len(self.my_side) + len(self.their_side)
             return f"Peace: {mine} vs {theirs} ({count} nations)"
-        if peace_scope.costs_membership(self.role):
-            return "Separate Peace: " + queries.get_country_display_name(
-                self.target_nation, self.map_screen.world.nation_data) + " (leaves your faction)"
         return "Peace Terms: " + queries.get_country_display_name(
             self.target_nation, self.map_screen.world.nation_data)
 
@@ -1121,7 +1113,7 @@ class Deal_Screen(MapOverlayScreen):
         surface.blit(font.render(text, True, color), (x, y))
 
     def _draw_leverage(self, surface):
-        mine = self.leverage["a"]
+        mine = self.leverage["mine"]
         left = self.panel_rect.x + self.PAD
         bar = pygame.Rect(left + self.LABEL_W, self.panel_rect.y + self.Y_BAR, 420, 14)
 
@@ -1132,12 +1124,12 @@ class Deal_Screen(MapOverlayScreen):
 
         self._line(surface, "LEVERAGE", left, bar.y, c.COLOR_GOLD_HIGHLIGHT)
         self._line(surface, f"You {int(round(mine * 100))}%   "
-                            f"Them {int(round(self.leverage['b'] * 100))}%",
+                            f"Them {int(round(self.leverage['theirs'] * 100))}%",
                    bar.right + 12, bar.y, c.UI_TEXT_LIGHT)
 
         # The rosters live here, where a long one can be trimmed, rather than in
         # the title, where one could not.
-        line = war_score.summary_line(self.leverage["parts"]["a"])
+        line = war_score.summary_line(self.leverage["parts"])
         if self.bound:
             line += f"   also binds {deal_mod.roster(self.bound)}"
         self._line(surface, line, bar.x, self.panel_rect.y + self.Y_BREAKDOWN,

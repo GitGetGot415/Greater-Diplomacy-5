@@ -64,7 +64,7 @@ class BlocTests(unittest.TestCase):
         """Only T settles; G and the rest of the Alliance fight on."""
         role = peace_scope.negotiation_role("A", "T", self.game.world.nation_data)
         self.assertEqual(role, peace_scope.MEMBER_SEPARATE_PEACE)
-        self.assertFalse(peace_scope.costs_membership(role))
+        self.assertTrue(peace_scope.costs_membership(role))
         self.assertEqual(peace_scope.refusal_reason("A", "T", self.game.world.nation_data), "")
         mine, theirs = peace_scope.deal_sides("A", "T", self.game.world.nation_data)
         self.assertEqual(sorted(mine), ["A", "S"])
@@ -73,7 +73,7 @@ class BlocTests(unittest.TestCase):
     def test_a_member_may_offer_the_leader_the_same_limited_peace(self):
         role = peace_scope.negotiation_role("S", "G", self.game.world.nation_data)
         self.assertEqual(role, peace_scope.MEMBER_SEPARATE_PEACE)
-        self.assertFalse(peace_scope.costs_membership(role))
+        self.assertTrue(peace_scope.costs_membership(role))
         mine, theirs = peace_scope.deal_sides("S", "G", self.game.world.nation_data)
         self.assertEqual(mine, ["S"])
         self.assertEqual(sorted(theirs), ["G", "T"])

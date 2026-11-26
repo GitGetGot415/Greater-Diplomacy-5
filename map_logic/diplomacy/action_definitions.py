@@ -167,9 +167,8 @@ def _check_join_wars(context, sender, target, action_type, nation_data, sender_d
     from map_logic.diplomacy import war_calls
     if not queries.are_in_same_faction(sender, target, nation_data):
         return (False, 'the countries are not in the same faction')
-    if not war_calls.is_honest(action_type, sender, target, nation_data):
-        return (False, 'there is no unshared war to join')
-    return True, ""
+    reason = war_calls.request_block_reason(action_type, sender, target, nation_data)
+    return not reason, reason
 
 def _check_leave_faction(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
@@ -259,7 +258,7 @@ ACTION_DEFINITIONS = {
     ),
     "JOIN_WARS": ActionDefinition(
         "bilateral", "reply", _check_join_wars,
-        send_handler="_send_join_wars", acceptance_effect="_accept_join_wars", retaliation_handler="_retaliate_join_wars",
+        send_handler="_send_join_wars", acceptance_effect="_accept_war_request", retaliation_handler="_retaliate_join_wars",
         announcement=("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
         lite_response="ACCEPTED_HELP",
         proactive_context="mobilizing our forces to join your war against {target}",
@@ -292,7 +291,7 @@ ACTION_DEFINITIONS = {
     ),
     "CALL_TO_ARMS": ActionDefinition(
         "bilateral", "reply", _check_join_wars,
-        send_handler="_send_announcement", acceptance_effect="_accept_call_to_arms", retaliation_handler="_retaliate_call_to_arms",
+        send_handler="_send_announcement", acceptance_effect="_accept_war_request", retaliation_handler="_retaliate_call_to_arms",
         announcement="We request your aid in our ongoing conflicts!",
         lite_response="ANSWERED_CALL",
         proactive_context="calling you to arms in our war against {target}",

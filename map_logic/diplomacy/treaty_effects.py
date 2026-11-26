@@ -21,13 +21,14 @@ The processor calls this shared implementation for both player and AI acceptance
 
 from typing import NamedTuple
 
-from map_logic.ai import ai_prompts
+from map_logic.ai import ai_opinion, ai_prompts, ai_world
 from map_logic.diplomacy import deal as deal_mod
-from map_logic.diplomacy import war_calls
+from map_logic.diplomacy import war_actions, war_calls
 
 from data import queries
 from data.state_access import session_for
 from map_logic.diplomacy import peace_scope, deal_effects, global_rules, ratification, military_attaches, volunteers
+from map_logic.diplomacy.peace_scope import with_separate_peace_cost  # Public compatibility alias.
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy.action_definitions import handlers_for
 from map_logic.diplomacy.faction_actions import finalize_create_faction, finalize_faction_join, join_faction_wars
@@ -98,7 +99,9 @@ def expire_obsolete_peace(nation_data):
                     or not isinstance(round_.get("round_id"), str)
                     or not all(isinstance(offer, dict) and offer.get("action") in peace_scope.PEACE_ACTIONS
                                and deal_mod.is_deal(offer.get("deal")) for offer in offers.values())
-                    or not any(peace_scope.live_war_pairs(offer["deal"], nation_data) for offer in offers.values())):
+                    or not all(peace_scope.has_current_terms(offer["deal"], proposer,
+                               target if proposer == sender else sender, nation_data)
+                               for proposer, offer in offers.items())):
                 close_peace_choice(nation_data, sender, target)
             elif not isinstance(round_.get("selected"), str) or round_["selected"] not in offers:
                 round_.pop("selected", None)
@@ -118,31 +121,6 @@ def close_peace_choice(nation_data, country, opponent):
         data.pop("peace_choices", None)
     if isinstance(round_, dict) and isinstance(round_.get("escrow"), dict):
         deal_effects.release_escrow(nation_data, round_["escrow"], country)
-
-
-def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
-    """A member that settles behind its bloc's back leaves the bloc.
-
-    The screens add this clause themselves, but it is the price of the whole
-    manoeuvre rather than a term either side chose, so it is guaranteed here
-    too -- the same reason the puppet check above is repeated at this level.
-
-    Public, and idempotent, because the price has to be on the paper *before*
-    anybody weighs it. Adding it here alone meant it went on after both sides
-    had already decided: a nation suing for a separate peace never saw that the
-    offer cost it its faction (DEAL_VALUE_FACTION_EXIT, the single most
-    expensive clause in the game), and the side answering never saw what it was
-    being handed. ai_diplomacy builds its offers through this for that reason,
-    and this call stays as the backstop it always was.
-    """
-
-    role = peace_scope.negotiation_role(proposer, accepter, nation_data)
-    if not peace_scope.costs_membership(role):
-        return agreement
-    if any(clause.get("type") == deal_mod.FACTION_EXIT and clause.get("nation") == proposer
-           for clause in deal_mod.clauses(agreement)):
-        return agreement
-    return deal_mod.add_clause(agreement, {"type": deal_mod.FACTION_EXIT, "nation": proposer})
 
 
 def _accept_faction_invite(host, action, proposer, accepter, params, escrow):
@@ -203,7 +181,9 @@ def _accept_peace(host, action, proposer, accepter, params, escrow, *, chosen_de
     blocked = peace_scope.settlement_block(peace_scope.live_war_pairs(agreement, nation_data), nation_data)
     if blocked:
         return _blocked(blocked)
-    agreement = with_separate_peace_cost(agreement, proposer, accepter, nation_data)
+    agreement = peace_scope.with_separate_peace_cost(agreement, proposer, accepter, nation_data)
+    if not peace_scope.has_current_terms(agreement, proposer, accepter, nation_data):
+        return _blocked("PEACE_TERMS_CHANGED")
 
     # Whoever the leader bound gets a say before it takes effect. In an
     # ordinary game every bound member is an AI and answers on the spot, so
@@ -228,48 +208,46 @@ def _accept_trade(host, action, proposer, accepter, params, escrow):
     return _canned("ACCEPT_TRADE")
 
 
-def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
-    nation_data = host.world.nation_data
-    # The backstop for war_calls, at the point every path converges -- the
-    # same place the puppet-peace rule is enforced, and for the same reason:
-    # an offer sits in the inbox for turns, and the wars it was about can
-    # end while it waits. Answering a call to arms that has nothing left to
-    # answer used to run join_faction_wars over an empty list and announce
-    # an escalation that had not happened.
-    reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
-    if reason:
-        return TreatyOutcome("blocked", blocked=reason)
-    join_faction_wars(host.world.map_data, nation_data, accepter, proposer)
-    log_global_event(nation_data,
-                     f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
-    return _APPLIED
-
-
-def _accept_join_wars(host, action, proposer, accepter, params, escrow):
+def _accept_war_request(host, action, proposer, accepter, params, escrow, *, scripted=False, proposer_scripted=False):
     nation_data = host.world.nation_data
     reason = war_calls.request_block_reason(action, proposer, accepter, nation_data)
     if reason:
         return TreatyOutcome("blocked", blocked=reason)
-    join_faction_wars(host.world.map_data, nation_data, proposer, accepter)
-    log_global_event(nation_data,
-                     f"ESCALATION: {proposer} has joined the wars of {accepter}!")
+    fighter, joiner = war_calls.parties(action, proposer, accepter)
+    joining_scripted = scripted if action == war_calls.CALL_TO_ARMS else proposer_scripted
+    enemies = war_calls.unshared_wars(fighter, joiner, nation_data)
+    if (global_rules.is_ai_controlled(host, joiner) and not joining_scripted
+            and any(war_calls.recently_settled(joiner, enemy, nation_data) for enemy in enemies)):
+        enemies = ai_opinion.wars_to_join(ai_world.for_screen(host), fighter, joiner)
+        if not enemies:
+            return _blocked("WAR_REQUEST_RECENT_PEACE")
+    joined = join_faction_wars(host.world.map_data, nation_data, joiner, fighter, enemies=enemies)
+    if joined:
+        log_global_event(nation_data, f"ESCALATION: {joiner} joined the wars of {fighter}.")
     return _APPLIED
 
 
-def _accept_military_access(host, action, proposer, accepter, params, escrow):
+def _accept_military_access(host, action, proposer, accepter, params, escrow, *, scripted=False):
     nation_data = host.world.nation_data
     # The accepter grants the proposer passage through their territory.
     # Deliberately one-way: the proposer gets no say over the reverse.
     if proposer == accepter or queries.are_at_war(proposer, accepter, nation_data):
         return _blocked("INVALID_MILITARY_ACCESS")
-    granted = nation_data.setdefault(accepter, {}).setdefault("military_access", [])
+    automatic = global_rules.is_ai_controlled(host, accepter) and not scripted
+    if automatic:
+        _, reason = war_actions.shared_war_access(proposer, accepter, nation_data)
+        if reason:
+            return _blocked(reason)
+
+    granted = nation_data[accepter].setdefault("military_access", [])
     if proposer not in granted:
         granted.append(proposer)
-
-    shared_enemy = bool(set(queries.get_enemies(accepter, nation_data)) &
-                        set(queries.get_enemies(proposer, nation_data)))
-    if shared_enemy:
-        nation_data[accepter].setdefault("military_access_reasons", {})[proposer] = "war"
+        host.world.diplomacy_revision += 1
+    reasons = nation_data[accepter].setdefault("military_access_reasons", {})
+    if automatic:
+        reasons[proposer] = "war"
+    else:
+        reasons.pop(proposer, None)
 
     return _canned("ACCEPT_MILITARY_ACCESS")
 
@@ -295,7 +273,7 @@ _ACCEPTANCE_EFFECTS = handlers_for("acceptance_effect", globals())
 _ACCEPTANCES_WITH_OWN_EVENTS = {"CEASEFIRE", "PEACE_TREATY", "CREATE_FACTION", "CALL_TO_ARMS", "JOIN_WARS", "SEND_MILITARY_ATTACHE"}
 
 
-def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False, chosen_deal=None):
+def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False, proposer_scripted=False, chosen_deal=None):
     """Applies an accepted proposal and returns a TreatyOutcome.
 
     `proposer` offered the deal and `accepter` agreed to it, whichever side is
@@ -321,6 +299,11 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return TreatyOutcome("blocked", blocked=_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden))
     if chosen_deal is not None:
         outcome = effect(host, action, proposer, accepter, params, escrow, chosen_deal=chosen_deal)
+    elif action in war_calls.WAR_REQUESTS:
+        outcome = effect(host, action, proposer, accepter, params, escrow,
+                         scripted=scripted, proposer_scripted=proposer_scripted)
+    elif action == "REQ_MILITARY_ACCESS":
+        outcome = effect(host, action, proposer, accepter, params, escrow, scripted=scripted)
     else:
         outcome = effect(host, action, proposer, accepter, params, escrow)
     if escrow and action in peace_scope.PEACE_ACTIONS and outcome.status == "blocked":

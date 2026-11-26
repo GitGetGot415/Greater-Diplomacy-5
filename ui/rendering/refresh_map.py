@@ -488,7 +488,7 @@ def refresh_faction_territories_map(map_screen):
         if is_at_war:
             if str(data["id"]) in pre_war_map:
                 owner = pre_war_map[str(data["id"])]
-                color = map_screen.nation_colors.get(owner, UNOWNED_COLOR)
+                color = map_screen.nation_colors.get(owner, UNOWNED_COLOR) if owner in members else BYSTANDER_COLOR
             else:
                 if curr_owner in members:
                     possible_cores = [c for c in data.get("cores", []) if c not in members]

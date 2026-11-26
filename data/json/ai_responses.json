@@ -141,7 +141,7 @@
 
   "CROSS_FACTION_JOIN": "The matching requests united the countries in one faction.",
   "CROSS_CEASEFIRE": "Mutual ceasefire agreements signed.",
-  "CROSS_CALL_TO_ARMS": "The matching requests brought both countries into each other's wars.",
+  "CROSS_CALL_TO_ARMS": "The matching requests brought the requested ally into the war.",
   "CROSS_WAR_DECLARATION": "Your diplomat proposing a {action} was executed. We are at WAR!",
 
   "ACCEPT_GENERIC": ["We accepted your {action}.", "Your {action} is agreed."],
@@ -164,8 +164,12 @@
   "WAR_REQUEST_OPPOSING_SIDES": "{fighter} and {joiner} are at war with each other.",
   "WAR_REQUEST_ALREADY_FIGHTING": "{joiner} is already fighting all of {fighter}'s current enemies.",
   "WAR_REQUEST_TRUCES": "Truces prevent {joiner} from joining any of {fighter}'s remaining wars.",
-  "WAR_REQUEST_DIRECTION_CHANGED": "The rules give priority to {fighter} joining {joiner}'s wars when both countries have wars the other can join.",
+  "WAR_REQUEST_CONTACT_OVERLORD": "{master} decides whether {joiner} joins a war.",
+  "WAR_REQUEST_RECENT_PEACE": "We recently made peace and see no reason to reopen that war.",
   "WAR_REQUEST_CLOSED": "{reason} The request to join {fighter}'s wars was closed.",
+  "ACCESS_ALLIED_CONFLICT": "We cannot grant passage while one of us is fighting the other's allies or subjects.",
+  "ACCESS_NO_SHARED_ENEMY": "We no longer share an enemy that would justify military access.",
+  "PEACE_TERMS_CHANGED": "The parties or faction membership terms have changed. Send a new treaty.",
   "INVALID_MILITARY_ACCESS": "We cannot grant military access under the current conditions.",
   "TRADE_AT_WAR": "We are at war. There will be no trade between us.",
   "GLOBAL_RULE_FORBIDS": "We cannot agree to this: {reason}.",

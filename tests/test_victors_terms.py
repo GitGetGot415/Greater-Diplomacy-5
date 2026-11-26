@@ -23,7 +23,7 @@ import unittest
 
 
 from map_logic.ai import ai_tuning
-from map_logic.ai import ai_diplomacy
+from map_logic.ai import ai_diplomacy, ai_opinion
 from map_logic.diplomacy import deal, ratification, war_actions
 from tests.stub_map_screen import StubMapScreen
 
@@ -150,11 +150,14 @@ class SeparatePeacePriceTests(unittest.TestCase):
         from map_logic.ai import ai_candidates, ai_world
 
         world = ai_world.for_screen(self.game)
-        world.reachable = lambda *_: False
+        from unittest.mock import patch
 
+        world.can_reach_enemy_front = lambda *_: False
+        self.game.world.nation_data["LEADER"]["war_durations"] = {"FOE": ai_tuning.MIN_TURNS_FOR_CEASEFIRE}
         bag = ai_candidates.Collector(proposer, {})
-        ai_diplomacy._seek_ceasefire_if_unreachable(
-            bag, self.game, proposer, ["FOE"], ["FOE"], world)
+        with patch.object(ai_opinion, "peace_appetite", return_value=1.0):
+            ai_diplomacy._seek_ceasefire_if_unreachable(
+                bag, self.game, proposer, ["FOE"], ["FOE"], world)
         return [candidate.action for candidate in bag.ranked()]
 
     def test_a_member_will_not_resign_merely_because_it_cannot_reach_them(self):

@@ -78,7 +78,7 @@ class ShapeTests(VerdictTestCase):
     def test_a_rule_with_no_judgement_in_it_is_certain(self):
         for action in ("JOIN_WARS", "REQ_MILITARY_ACCESS"):
             v = self.verdict(action)
-            self.assertEqual((v.confidence, v.reason), (1.0, ""), action)
+            self.assertEqual(v.confidence, 1.0, action)
 
     def test_a_peace_call_reports_how_close_it_was(self):
         """A marginal call is exactly where a leader's own judgement should be
@@ -131,6 +131,10 @@ class FactionTests(VerdictTestCase):
     def test_faction_mates_get_help(self):
         self.nation_data["Avaria"]["faction"] = "Entente"
         self.nation_data["Borland"]["faction"] = "Entente"
+        self.nation_data["Carrow"] = nation()
+        self.nation_data["Dunmar"] = nation()
+        self.nation_data["Avaria"]["at_war_with"] = ["Carrow"]
+        self.nation_data["Borland"]["at_war_with"] = ["Dunmar"]
         self.assertTrue(self.accepts("JOIN_WARS"))
         self.assertTrue(self.accepts("CALL_TO_ARMS"))
 

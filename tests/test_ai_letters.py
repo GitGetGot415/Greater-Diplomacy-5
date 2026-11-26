@@ -516,16 +516,21 @@ class InitiativeTests(LetterTestCase):
         return {(cand.action, cand.target): cand for cand in self.menu()["A"]["candidates"]
                 if ac.is_initiative(cand)}
 
-    def test_access_is_offered_only_toward_an_enemy_next_door(self):
-        """About half the access requests in the extensive testing save went
-        between countries with no enemy to reach."""
-        self.write("B", "A", "Shall we stand together?")
-        self.assertNotIn(("REQ_MILITARY_ACCESS", "B"), self.initiatives())
+    def test_access_is_offered_when_passage_improves_a_shared_front(self):
+        from map_logic.ai import ai_world
+
         self.game.set_war("A", "C")
-        self.assertNotIn(("REQ_MILITARY_ACCESS", "B"), self.initiatives())
-        self.game.border(self.game.home_of("B")["id"], self.game.home_of("C")["id"])
-        offered = self.initiatives()[("REQ_MILITARY_ACCESS", "B")]
-        self.assertEqual(offered.payload["context_target"], "C")
+        self.game.set_war("B", "C")
+        a, b, c = (self.game.home_of(nation)["id"] for nation in ("A", "B", "C"))
+        self.game.border(b, c)
+        world = ai_world.build(self.game)
+        self.assertFalse(world.access_improves_route("A", "B", "C"))
+        self.game.border(a, b)
+        world = ai_world.build(self.game)
+        self.assertTrue(world.access_improves_route("A", "B", "C"))
+        self.game.border(a, c)
+        world = ai_world.build(self.game)
+        self.assertFalse(world.access_improves_route("A", "B", "C"))
 
     def test_no_proposal_mirrors_one_waiting_for_an_answer(self):
         """France refused the Soviet Union's request for access and asked it for

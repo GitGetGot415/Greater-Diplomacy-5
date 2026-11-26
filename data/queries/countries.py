@@ -432,16 +432,11 @@ def get_active_ai_nations(context, *, randomize=True):
 def was_original_owner(prov, nation, nation_data):
     """True if the tile belonged to `nation` before the current war started.
 
-    Prefers the faction's pre-war border snapshot; without one it falls back to
-    cores. Shared by the projected-peace preview and the treaty execution in
-    the war actions, which used to keep separate copies of this rule and
-    could therefore disagree about what a treaty was going to do.
+    The shared war border records account for signed cessions. Cores supply
+    the legacy fallback for provinces without a recorded owner.
     """
-    fac = queries.get_country_faction(nation, nation_data)
-    pre_war = faction_records.pre_war_map(nation_data, fac)
-    if pre_war is not None and str(prov["id"]) in pre_war:
-        return pre_war[str(prov["id"])] == nation
-    return nation in prov.get("cores", [])
+    recorded = faction_records.recorded_pre_war_owner(nation_data, prov["id"])
+    return recorded == nation if recorded else nation in prov.get("cores", [])
 
 
 def parse_peace_frozen_ids(peace_type):

@@ -913,9 +913,15 @@ class Messages_Screen(Screen):
             if is_peace:
                 wars = peace_scope.offer_wars(target, player, request, nation_data)
                 acceptable = not peace_scope.settlement_block(wars, nation_data)
+                params = peace_scope.recorded_offer(target, player, request, nation_data)
+            departing = peace_scope.departing_member(target, player, nation_data) if is_peace else None
+            fallback = diplomacy_messages.announcement_for(action)
+            if departing and wars:
+                country = queries.get_country_display_name(departing, nation_data)
+                fallback = f"{country} leaves its faction if this treaty takes effect."
             offers.append({
                 "action": action, "request_id": request.get("request_id"),
-                "fallback": diplomacy_messages.announcement_for(action),
+                "fallback": fallback,
                 "buttons": [
                     # Replies remain independent of our outgoing diplomat's travel state.
                     self._offer_button("green", "Undo Accept" if accepted else f"Accept {name}",

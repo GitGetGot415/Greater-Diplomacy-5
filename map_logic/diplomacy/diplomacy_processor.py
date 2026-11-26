@@ -22,7 +22,6 @@ from map_logic.diplomacy.faction_actions import (
     finalize_disband_faction,
     finalize_faction_join,
     finalize_faction_leave,
-    join_faction_wars,
     finalize_faction_kick,
     why_an_ai_may_not_leave,
 )
@@ -351,20 +350,25 @@ def _resolve_simultaneous_clashes(context):
             elif (a_action == "CEASEFIRE" and b_action == "CEASEFIRE"
                   and not peace_scope.offer_block_reason(nation_a, nation_b, world_state.nation_data)
                   and not _crossing_forbidden(context, nation_a, nation_b, a_action, a_info, b_info)):
-                finalize_neutral(world_state.nation_data, nation_a, nation_b)
-                log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
-                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
+                # Separate peace must show the departure before either side accepts.
+                if not peace_scope.departing_member(nation_a, nation_b, world_state.nation_data):
+                    outcome = treaty_effects.apply_treaty_effect(context, "CEASEFIRE", nation_a, nation_b)
+                    if outcome.status in ("applied", "awaiting_ratification"):
+                        _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
 
-            elif (((a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS")
-                   or (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"))
-                  # Each country joins the other's wars.
-                  and not _crossing_forbidden(context, nation_a, nation_b, "JOIN_WARS", a_info, b_info)
-                  and not _crossing_forbidden(context, nation_b, nation_a, "JOIN_WARS", b_info, a_info)):
-
-                join_faction_wars(world_state.map_data, world_state.nation_data, nation_a, nation_b)
-                join_faction_wars(world_state.map_data, world_state.nation_data, nation_b, nation_a)
-                log_global_event(world_state.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
-                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
+            elif {a_action, b_action} == set(war_calls.WAR_REQUESTS):
+                if a_action == war_calls.CALL_TO_ARMS:
+                    fighter, joiner, calling, joining = nation_a, nation_b, a_info, b_info
+                else:
+                    fighter, joiner, calling, joining = nation_b, nation_a, b_info, a_info
+                if (_crossing_forbidden(context, fighter, joiner, war_calls.CALL_TO_ARMS, calling, joining)
+                        or _crossing_forbidden(context, joiner, fighter, war_calls.JOIN_WARS, joining, calling)):
+                    continue
+                outcome = treaty_effects.apply_treaty_effect(
+                    context, war_calls.JOIN_WARS, joiner, fighter,
+                    scripted=calling.get("scripted", False), proposer_scripted=joining.get("scripted", False))
+                if outcome.status == "applied":
+                    _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
 
 
 def _forward_war_declaration_to_masters(context, declared_country, declarer,
@@ -932,7 +936,8 @@ def _resolve_queued_response(context, country_name, sender, resp):
         return None
     if _close_obsolete_war_request(context, sender, country_name, their_request):
         return None
-    params = their_request.get("parameters", resp.get("parameters"))
+    params = (peace_scope.recorded_offer(sender, country_name, their_request, world_state.nation_data)
+              if orig_action in peace_scope.PEACE_ACTIONS else their_request.get("parameters", resp.get("parameters")))
 
     outcome = None
     if verdict == RESPONSE_ACCEPT:
@@ -943,7 +948,8 @@ def _resolve_queued_response(context, country_name, sender, resp):
         # pass below runs the same rules -- see treaty_effects.
         outcome = treaty_effects.apply_treaty_effect(
             context, orig_action, sender, country_name, params,
-            escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False))
+            escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False),
+            proposer_scripted=their_request.get("scripted", False))
         if outcome.blocked:
             msg_text = outcome.blocked
             wrote_it = False
@@ -1035,6 +1041,10 @@ def _send_justify_wargoal(send):
 
 def _send_war_declaration(send):
     world = send.world
+    if (global_rules.is_ai_controlled(send.context, send.country) and not send.info.get("scripted", False)
+            and war_calls.recently_settled(send.country, send.target, world.nation_data)
+            and not ai_opinion.may_reopen_war(ai_world.for_screen(send.context), send.country, send.target)):
+        return True
     # Store active wargoal in war data
     world.nation_data[send.country].setdefault("wargoals", {})[send.target] = {"type": send.custom_msg}
     log_global_event(world.nation_data, f"WAR DECLARED: {send.country} has declared war on {send.target}!")
@@ -1155,9 +1165,7 @@ def _send_take_puppets(send):
 
 def _send_cancel_military_access(send):
     # We are cancelling our access to their country (target's list)
-    target_list = send.world.nation_data.get(send.target, {}).setdefault("military_access", [])
-    if send.country in target_list:
-        target_list.remove(send.country)
+    war_actions.revoke_military_access(send.world.nation_data, send.target, send.country)
     log_global_event(send.world.nation_data, f"{send.country} cancelled their military access to {send.target}.")
     _announce(send)
     return True
@@ -1165,9 +1173,7 @@ def _send_cancel_military_access(send):
 
 def _send_revoke_military_access(send):
     # We are revoking their access to our country (our list)
-    our_list = send.world.nation_data.get(send.country, {}).setdefault("military_access", [])
-    if send.target in our_list:
-        our_list.remove(send.target)
+    war_actions.revoke_military_access(send.world.nation_data, send.country, send.target)
     log_global_event(send.world.nation_data, f"{send.country} revoked {send.target}'s military access.")
     _announce(send)
     return True
@@ -1324,6 +1330,14 @@ def _process_pass1_immediate_actions(context):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
+                if action in peace_scope.PEACE_ACTIONS:
+                    agreement = peace_scope.prepare_offer(country_name, target, info, world_state.nation_data)
+                    if agreement is None:
+                        treaty_effects.withdraw_peace_offer(world_state.nation_data, country_name, target, info)
+                        continue
+                    if action == "CEASEFIRE":
+                        action = info["action"] = peace_scope.action_for(agreement)
+                    info["parameters"] = agreement
                 available = availability(context, country_name, target, action, phase="send",
                                          scripted=info.get("scripted", False))
                 if not available.allowed:
@@ -1500,8 +1514,10 @@ def _resolve_ai_answer(context, ai_results, active_nations_list, delayed_respons
         # wrote its own reply, so only a blocked agreement
         # replaces it.
         outcome = treaty_effects.apply_treaty_effect(
-            context, action, sender, target, info.get("parameters"),
-            escrow=info.pop("escrow", None))
+            context, action, sender, target,
+            peace_scope.recorded_offer(sender, target, info, context.world.nation_data)
+            if action in peace_scope.PEACE_ACTIONS else info.get("parameters"),
+            escrow=info.pop("escrow", None), proposer_scripted=info.get("scripted", False))
         if outcome.blocked:
             message = outcome.blocked
             wrote_it = False
@@ -1539,14 +1555,17 @@ def _open_peace_choices(context, ai_results):
                     and _accepts_delivered_peace(nation_data, players, ai_results, target, sender, reverse)):
                 continue
 
-            first = peace_scope.offered_peace(sender, target, request["action"], request.get("parameters"), nation_data)
-            second = peace_scope.offered_peace(target, sender, reverse["action"], reverse.get("parameters"), nation_data)
+            first = peace_scope.recorded_offer(sender, target, request, nation_data)
+            second = peace_scope.recorded_offer(target, sender, reverse, nation_data)
+            if (not peace_scope.has_current_terms(first, sender, target, nation_data)
+                    or not peace_scope.has_current_terms(second, target, sender, nation_data)):
+                continue
             wars = peace_scope.live_war_pairs(first, nation_data) & peace_scope.live_war_pairs(second, nation_data)
             if not wars or peace_scope.ratification_covers(wars, nation_data):
                 continue
             offers = {
-                sender: {"action": request["action"], "deal": treaty_effects.with_separate_peace_cost(first, sender, target, nation_data)},
-                target: {"action": reverse["action"], "deal": treaty_effects.with_separate_peace_cost(second, target, sender, nation_data)},
+                sender: {"action": request["action"], "deal": first},
+                target: {"action": reverse["action"], "deal": second},
             }
             if _same_peace_terms(*(offer["deal"] for offer in offers.values())):
                 # Both accepted the same terms. The existing reply pass settles
@@ -1801,6 +1820,25 @@ def _process_scheduled_ai_volunteer_send_homes(context):
                      "DIPLOMACY", extra={"action": volunteers.SEND_HOME_ACTION})
 
 
+def reconcile_ai_wartime_access(context):
+    """Review automatic grants against the wars and alliances that now exist."""
+    nation_data = world_for(context).nation_data
+    for grantor, data in nation_data.items():
+        if not global_rules.is_ai_controlled(context, grantor):
+            continue
+        reasons = data.get("military_access_reasons")
+        if not isinstance(reasons, dict):
+            continue
+        for grantee, source in list(reasons.items()):
+            if source != "war":
+                continue
+            _, reason = war_actions.shared_war_access(grantee, grantor, nation_data)
+            if reason and war_actions.revoke_military_access(nation_data, grantor, grantee):
+                log_global_event(nation_data, f"{grantor} revoked {grantee}'s military access.")
+                send_message(context, grantor, grantee, ai_prompts.AI_FALLBACK_RESPONSES[reason],
+                             "DIPLOMACY", extra={"action": "REVOKE_MILITARY_ACCESS"})
+
+
 def _schedule_conflicting_ai_attache_revocations(context):
     """Record new AI attaché conflicts for processing on the next turn."""
     world_state = world_for(context)
@@ -1881,6 +1919,7 @@ def _process_diplomacy_turn(context):
     # helpers. Keep temporary diplomatic state valid even on those paths.
     guarantees.reconcile(world_state.nation_data)
     war_actions.reconcile_military_access(world_state.nation_data)
+    reconcile_ai_wartime_access(context)
     military_attaches.reconcile(world_state.nation_data)
     _schedule_conflicting_ai_attache_revocations(context)
     _schedule_conflicting_ai_volunteer_send_homes(context)

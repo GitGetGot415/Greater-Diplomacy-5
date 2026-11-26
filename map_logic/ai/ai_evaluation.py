@@ -20,7 +20,7 @@ from data import queries
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import diplomacy_messages
 
-from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches
+from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches, peace_scope, war_actions, war_calls
 
 
 def _to_int(value, default=0):
@@ -352,7 +352,7 @@ def _day_number(date):
 _WAR_START_SLACK_TURNS = 2
 
 
-def war_origin(nation_data, nation, enemy, current_date=None, days_per_turn=None):
+def war_origin(nation_data, nation, enemy, current_date=None, days_per_turn=None, *, max_age=None):
     """("they" or "you", date) for the declaration that began this war, or None.
 
     Read from the newest WAR_DECLARATION between the two in `nation`'s mailbox,
@@ -371,7 +371,10 @@ def war_origin(nation_data, nation, enemy, current_date=None, days_per_turn=None
         return None
     data = nation_data.get(nation) or {}
     duration = (data.get("war_durations") or {}).get(enemy, 0)
-    earliest = today - (duration + _WAR_START_SLACK_TURNS) * (days_per_turn or c.DEFAULT_DAYS_PER_TURN)
+    window = duration + _WAR_START_SLACK_TURNS
+    if max_age is not None:
+        window = min(window, max_age)
+    earliest = today - window * (days_per_turn or c.DEFAULT_DAYS_PER_TURN)
     for msg in data.get("inbox") or []:
         if msg.get("action") != "WAR_DECLARATION":
             continue
@@ -464,34 +467,10 @@ def _confidence(slack):
     return max(0.15, min(1.0, abs(slack) * 2.5))
 
 
-def _peace_terms(nation_data, sender_nation, ai_nation, custom_msg):
-    """The deal being offered, whatever shape it was stored in.
-
-    This used to return a *string* and hand it to will_ai_accept_peace, which
-    worked only while the terms and the message were the same text. Anything
-    that attached prose to a peace proposal -- a script, or the AI's own
-    proactive offers, which never set parameters at all -- made every
-    startswith() check silently false, and the offer was then accepted by
-    accepts_peace's catch-all. The proposal's own parameters win where they
-    exist; the message is the fallback, and coerce reads free prose as the white
-    peace such an offer always executed as anyway.
-    """
-
+def _peace_terms(nation_data, sender_nation, ai_nation, action, custom_msg):
     pending = nation_data.get(sender_nation, {}).get("pending_diplomacy", {}).get(ai_nation, {})
-    params = pending.get("parameters")
-
-    if deal_mod.is_deal(params):
-        return params
-    if isinstance(params, dict):
-        declared = params.get("peace_type") or params.get("terms")
-        if declared:
-            params = str(declared)
-        else:
-            params = custom_msg or ""
-    elif not params:
-        params = custom_msg or ""
-
-    return deal_mod.coerce(params, sender_nation, ai_nation, kind=deal_mod.KIND_PEACE)
+    return peace_scope.offered_peace(sender_nation, ai_nation, action, pending.get("parameters"),
+                                   nation_data, message=pending.get("message") or custom_msg)
 
 
 def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_type,
@@ -545,17 +524,23 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
             if not queries.are_at_war(ai_nation, sender_nation, nation_data):
                 accepted = True
 
-    # Accept calls to arms and requests to join wars if in the same faction
-    if action_type in ["JOIN_WARS", "CALL_TO_ARMS"]:
-        if queries.are_in_same_faction(ai_nation, sender_nation, nation_data):
-            accepted = True
+    if action_type in war_calls.WAR_REQUESTS:
+        reason = war_calls.request_block_reason(action_type, sender_nation, ai_nation, nation_data)
+        if reason:
+            return Verdict(False, 1.0, reason)
+        if action_type == war_calls.CALL_TO_ARMS:
+            world = world or ai_world.AIWorld(map_data, nation_data,
+                                             {prov["id"]: prov for prov in map_data.values()},
+                                             scenario_settings=scenario_settings)
+            if not ai_opinion.wars_to_join(world, sender_nation, ai_nation):
+                return Verdict(False, 1.0, ai_prompts.AI_FALLBACK_RESPONSES["WAR_REQUEST_RECENT_PEACE"])
+        return Verdict(True, 1.0, "")
 
     # Accept Military Access requests from nations fighting the same enemies as us,
     # even across faction lines, so co-belligerents can cross each other's territory.
     if action_type == "REQ_MILITARY_ACCESS":
-        ai_enemies = set(ai_stats.get("at_war_with", []))
-        sender_enemies = set(queries.get_enemies(sender_nation, nation_data))
-        accepted = bool(ai_enemies & sender_enemies)
+        enemies, reason = war_actions.shared_war_access(sender_nation, ai_nation, nation_data)
+        return Verdict(bool(enemies), 1.0, ai_prompts.AI_FALLBACK_RESPONSES.get(reason, ""))
 
     # NEW: AI Master-Puppet Faction Acceptance
     my_master = ai_stats.get("master", "")
@@ -611,7 +596,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
                                      {prov["id"]: prov for prov in map_data.values()},
                                      scenario_settings=scenario_settings)
 
-        terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
+        terms = _peace_terms(nation_data, sender_nation, ai_nation, action_type, custom_msg)
         # One number decides and explains, so the sentence under the player's
         # verdict bar and the answer the engine gives cannot drift apart. The
         # confidence used to be derived from peace_appetite alone -- a quantity

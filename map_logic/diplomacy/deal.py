@@ -429,23 +429,8 @@ def tile_value_between(prov, giver, receiver, nation_data, perspective=RECEIVER)
 
 
 def prewar_index(nation_data):
-    """{province id (as str): owner when the war began}, across every snapshot.
-
-    Two sources, neither overlapping the other: save_faction_pre_war_map records
-    a faction's own members' provinces when it goes to war, and WAR_PRE_MAPS does
-    the same one nation at a time for belligerents with no faction to snapshot
-    them -- see war_actions.finalize_war.
-
-    Lives here rather than in war_score because valuation needs it too and
-    war_score already imports this module; the other direction would be a cycle.
-    war_score re-exports both of these for its own callers.
-    """
-    merged = {}
-    for war_maps in (faction_records.pre_war_maps(nation_data), nation_data.get("WAR_PRE_MAPS") or {}):
-        for snapshot in war_maps.values():
-            if isinstance(snapshot, dict):
-                merged.update(snapshot)
-    return merged
+    """The shared province ownership baseline for occupation and negotiation."""
+    return faction_records.pre_war_index(nation_data)
 
 
 def original_owner(prov, prewar):
@@ -815,7 +800,7 @@ def homeland_losses(deal, nation, map_data, nation_data, baseline=None):
             if is_home_ground(nation, prov)]
 
 
-def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True):
+def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True, *, prewar_only=False):
     """How much of `nation` -- or its whole side -- the other side is standing on.
 
     Priced exactly the way demand_fraction prices a loss, because the two get
@@ -838,13 +823,16 @@ def occupied_fraction(deal, nation, map_data, nation_data, whole_side=True):
     theirs = set(deal["sides"]["b" if side == "a" else "a"])
     prewar = prewar_index(nation_data)
 
-    held = 0.0
+    held = homeland = 0.0
     for prov in map_data.values():
         was = original_owner(prov, prewar)
-        if was in mine and prov.get("owner") in theirs:
-            held += tile_value_between(prov, was, None, nation_data)
+        if was in mine:
+            value = tile_value_between(prov, was, None, nation_data)
+            homeland += value
+            if prov.get("owner") in theirs:
+                held += value
 
-    worth = side_worth(deal, nation, map_data, nation_data, whole_side)
+    worth = max(1.0, homeland) if prewar_only else side_worth(deal, nation, map_data, nation_data, whole_side)
     return max(0.0, min(1.0, held / worth))
 
 

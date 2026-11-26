@@ -22,7 +22,8 @@ honour says so out loud.
 import unittest
 
 
-from map_logic.diplomacy import deal, deal_effects, war_actions
+from data import queries
+from map_logic.diplomacy import deal, deal_effects, faction_records, war_actions, war_score
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -97,6 +98,50 @@ class RestoreOccupiedTests(unittest.TestCase):
         self.assertEqual(self.game.owner_of(self.theirs["id"]), "A", "war conquest untouched")
 
 
+class ReopenedWarTests(unittest.TestCase):
+    def test_a_later_bloc_peace_honors_cessions_and_returns_new_occupations(self):
+        game = StubMapScreen(["France", "Britain", "Germany", "Italy", "Other"])
+        data = game.world.nation_data
+        provinces = game.world.map_data
+        game.set_faction("Allies", "Britain", "France")
+        game.set_faction("Axis", "Germany", "Italy")
+        ceded = game.add_province("France", cores=["France"])
+        new_occupation = game.add_province("France", cores=["France"])
+        third_party = game.add_province("Other", cores=["Other"])
+        game.border(game.home_of("Germany")["id"], ceded["id"], new_occupation["id"])
+        queries.save_faction_pre_war_map("Allies", provinces, data)
+        queries.save_faction_pre_war_map("Axis", provinces, data)
+        war_actions.save_own_pre_war_map(provinces, data, "Other")
+        game.set_war("France", "Germany")
+        game.set_war("Britain", "Other")
+        game.set_war("Germany", "Other")
+        ceded["owner"] = "Germany"
+        third_party["owner"] = "Germany"
+        first = deal.new(deal.KIND_PEACE, ["France"], ["Germany"],
+                         [deal.tiles_clause("France", "Germany", [ceded["id"]])])
+        deal_effects.execute(game, first)
+
+        self.assertEqual(deal.original_owner(ceded, deal.prewar_index(data)), "Germany")
+        self.assertFalse(queries.was_original_owner(ceded, "France", data))
+        self.assertTrue(queries.was_original_owner(ceded, "Germany", data))
+        self.assertEqual(queries.get_faction_core_transfer_target("Italy", ceded, data), "Germany")
+        self.assertEqual(queries.get_faction_core_transfer_target("Britain", ceded, data), "Britain")
+
+        game.set_war("France", "Germany")
+        new_occupation["owner"] = "Germany"
+        first_holding, _ = war_score.occupation(game, ["Germany"], ["France"])
+        self.assertGreater(first_holding, 0)
+        second = deal.ceasefire_deal("Britain", "Germany", side_a=["Britain", "France"])
+        preview = deal.baseline_owners(second, provinces, data)
+        self.assertEqual(preview[ceded["id"]], "Germany")
+        self.assertEqual(preview[new_occupation["id"]], "France")
+        deal_effects.execute(game, second)
+        self.assertEqual(ceded["owner"], "Germany")
+        self.assertEqual(new_occupation["owner"], "France")
+        self.assertEqual(third_party["owner"], "Germany")
+        self.assertEqual(faction_records.recorded_pre_war_owner(data, third_party["id"]), "Other")
+
+
 class StaleTermTests(unittest.TestCase):
     """Terms the world moved out from under between offer and signature."""
 
@@ -132,6 +177,7 @@ class StaleTermTests(unittest.TestCase):
 
         self.assertEqual(self.game.owner_of(self.promised["id"]), "Outsider")
         self.assertTrue(any("could not be given" in note for note in notes), notes)
+        self.assertNotEqual(deal.prewar_index(self.game.world.nation_data).get(str(self.promised["id"])), "A")
 
 
 class PreWarSnapshotTests(unittest.TestCase):

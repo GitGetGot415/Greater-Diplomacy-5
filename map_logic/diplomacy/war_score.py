@@ -186,6 +186,20 @@ def _raw(parts):
             + WAR_SCORE_W_STRENGTH * parts["strength"])
 
 
+def _assess_sides(context, mine, theirs, world, viewer):
+    """Assess live belligerents. An inactive signatory represents the side."""
+    data = _map_and_countries(context).nation_data
+    pairs = [(a, b) for a in mine for b in theirs if queries.are_at_war(a, b, data)]
+    if pairs:
+        our_fighters, their_fighters = map(set, zip(*pairs))
+        mine = [country for country in mine if country in our_fighters]
+        theirs = [country for country in theirs if country in their_fighters]
+    scores = leverage(context, mine, theirs, world, viewer)
+    return {"mine": scores["a"], "theirs": scores["b"],
+            "parts": scores["parts"]["a"], "their_parts": scores["parts"]["b"],
+            "sides": (mine, theirs)}
+
+
 def between(context, nation, opponent, world=None, viewer=None):
     """Leverage from `nation`'s point of view, sides resolved from the war itself.
 
@@ -197,10 +211,15 @@ def between(context, nation, opponent, world=None, viewer=None):
     world_state = _map_and_countries(context)
 
     side_mine, side_theirs = peace_scope.war_sides(nation, opponent, world_state.nation_data)
-    scores = leverage(context, side_mine, side_theirs, world, viewer)
-    return {"mine": scores["a"], "theirs": scores["b"],
-            "parts": scores["parts"]["a"], "their_parts": scores["parts"]["b"],
-            "sides": (side_mine, side_theirs)}
+    return _assess_sides(context, side_mine, side_theirs, world, viewer)
+
+
+def for_treaty(context, nation, agreement, world=None, viewer=None):
+    """Leverage for the countries named by this agreement."""
+    side = deal_mod.side_of(agreement, nation)
+    mine = agreement["sides"][side] if side else [nation]
+    theirs = deal_mod.opponents_of(agreement, nation)
+    return _assess_sides(context, mine, theirs, world, viewer)
 
 
 def summary_line(parts):

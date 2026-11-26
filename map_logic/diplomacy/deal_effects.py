@@ -18,7 +18,7 @@ from contextvars import ContextVar
 
 from data.state_access import world_for, session_for
 import data.constants as c
-from map_logic.diplomacy import deal as deal_mod
+from map_logic.diplomacy import deal as deal_mod, faction_records
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.territory import ownership
 from data import queries
@@ -261,6 +261,9 @@ def execute(context, deal, escrowed=None):
     nation_data = world_state.nation_data
     by_id = _provinces_by_id(context)
 
+    ends_war = deal_mod.ends_war(deal)
+    baseline = deal_mod.baseline_owners(deal, world_state.map_data, nation_data) if ends_war else None
+
     # --- 1. Territory ---
     transfers = deal_mod.tile_transfers(deal, world_state.map_data, nation_data)
     for prov_id, receiver in transfers.items():
@@ -340,31 +343,31 @@ def execute(context, deal, escrowed=None):
             if clause["grantee"] not in granted:
                 granted.append(clause["grantee"])
 
-        elif kind == deal_mod.FACTION_EXIT:
-            # FACTION_EXIT is a separate-peace term.  The builder used to add
-            # it to ordinary trades made by faction members, and malformed
-            # offers can remain in saves written before that was fixed.
-            if deal.get("kind") != deal_mod.KIND_PEACE:
-                continue
-            if queries.get_country_faction(clause['nation'], nation_data):
-                finalize_faction_leave(nation_data, clause["nation"])
-
         elif kind == deal_mod.WAR_EXIT:
             remove_enemy(nation_data, clause["nation"], clause["against"])
             remove_enemy(nation_data, clause["against"], clause["nation"])
 
     # --- 4. The war itself ---
-    if deal_mod.ends_war(deal):
-        dropped.extend(restore_occupied(context, deal, set(transfers)))
+    if ends_war:
+        dropped.extend(restore_occupied(context, deal, set(transfers), baseline=baseline))
+        faction_records.record_treaty_transfers(nation_data, {
+            tile: receiver for tile, receiver in transfers.items()
+            if tile in by_id and by_id[tile].get("owner") == receiver
+        })
         for ours in deal["sides"]["a"]:
             for theirs in deal["sides"]["b"]:
-                _clear_wargoals(nation_data, ours, theirs)
-                finalize_neutral(nation_data, ours, theirs)
+                if queries.are_at_war(ours, theirs, nation_data):
+                    _clear_wargoals(nation_data, ours, theirs)
+                    finalize_neutral(nation_data, ours, theirs)
+        # Settlement still needs the original faction's pre-war borders.
+        for clause in deal_mod.clauses(deal):
+            if clause["type"] == deal_mod.FACTION_EXIT and queries.get_country_faction(clause["nation"], nation_data):
+                finalize_faction_leave(nation_data, clause["nation"])
 
     return dropped
 
 
-def restore_occupied(context, deal, ceded):
+def restore_occupied(context, deal, ceded, *, baseline=None):
     """Hands back every province one side holds of the other's and did not win
     in the treaty. Returns notes for the settlement message.
 
@@ -390,7 +393,8 @@ def restore_occupied(context, deal, ceded):
     priced, drew and explained a different treaty from the one it carried out.
     """
     world_state = world_for(context)
-    baseline = deal_mod.baseline_owners(deal, world_state.map_data, world_state.nation_data)
+    if baseline is None:
+        baseline = deal_mod.baseline_owners(deal, world_state.map_data, world_state.nation_data)
 
     returned = 0
     for prov in world_state.map_data.values():

@@ -21,24 +21,43 @@ from map_logic.diplomacy import guarantees, military_attaches
 # written out three or four times below with a different guard style, and the
 # odd one out was the one that could raise.
 
-def sever_military_access(nation_data, a, b):
-    """Drops granted or requested passage and its reasons between two nations.
+def revoke_military_access(nation_data, grantor, grantee):
+    """Remove one grant and its automatic renewal reason."""
+    data = nation_data.get(grantor, {})
+    if not isinstance(data, dict):
+        return False
+    access = data.get("military_access")
+    removed = isinstance(access, list) and grantee in access
+    if removed:
+        access[:] = [country for country in access if country != grantee]
+        if isinstance(nation_data, WorldNations):
+            nation_data.world.diplomacy_revision += 1
+    reasons = data.get("military_access_reasons")
+    if isinstance(reasons, dict):
+        reasons.pop(grantee, None)
+    return removed
 
-    Done when nations become allies/subjects (where a standing grant is
-    redundant), become enemies, or retire. In-flight access requests end with
-    the grants.
-    """
-    for country, other in ((a, b), (b, a)):
-        data = nation_data.get(country)
-        if not isinstance(data, dict):
-            continue
-        access = data.get("military_access")
-        if isinstance(access, list) and other in access:
-            access[:] = [grantee for grantee in access if grantee != other]
-        reasons = data.get("military_access_reasons")
-        if isinstance(reasons, dict):
-            reasons.pop(other, None)
-        clear_pending(nation_data, country, other, only_actions=["REQ_MILITARY_ACCESS"])
+
+def sever_military_access(nation_data, a, b):
+    """Drop passage and outstanding requests in both directions."""
+    for grantor, grantee in ((a, b), (b, a)):
+        revoke_military_access(nation_data, grantor, grantee)
+        clear_pending(nation_data, grantee, grantor, only_actions=["REQ_MILITARY_ACCESS"])
+
+
+def shared_war_access(grantee, grantor, nation_data):
+    """Common enemies that justify AI passage, and the refusal reason if none."""
+    def allies(country):
+        friendly = queries.get_all_friendly_nations(country, nation_data)
+        return friendly | {subject for member in friendly
+                           for subject in nation_data.get(member, {}).get("puppets", ())}
+
+    grantee_enemies = set(queries.get_enemies(grantee, nation_data))
+    grantor_enemies = set(queries.get_enemies(grantor, nation_data))
+    if grantee_enemies & allies(grantor) or grantor_enemies & allies(grantee):
+        return set(), "ACCESS_ALLIED_CONFLICT"
+    mutual = grantee_enemies & grantor_enemies
+    return mutual, "" if mutual else "ACCESS_NO_SHARED_ENEMY"
 
 
 def reconcile_retired_military_access(nation_data, active_nations):
@@ -92,7 +111,8 @@ def link_war(nation_data, a, b):
     """
     sever_military_access(nation_data, a, b)
     for country, other in ((a, b), (b, a)):
-        add_enemy(nation_data, country, other)
+        if add_enemy(nation_data, country, other):
+            nation_data[country].setdefault("war_durations", {})[other] = 0
 
 
 def reconcile_military_access(nation_data):
