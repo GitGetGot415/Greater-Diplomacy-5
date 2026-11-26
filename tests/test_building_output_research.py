@@ -111,7 +111,7 @@ class OutputBonusTests(unittest.TestCase):
             screen._relations_viewpoint = "A"
             screen._relations_scores = {}
             self.assertIn("-15 Materials, +3 Fuel", hover(own)[0])
-            with patch.object(queries.ProvinceProduction, "fuel_conversion_by_province", side_effect=AssertionError("recomputed")):
+            with patch.object(queries.ProvinceProduction, "income_conversions_by_province", side_effect=AssertionError("recomputed")):
                 self.assertIn("-5 Materials, +1 Fuel", hover(other_own)[0])
                 self.assertEqual(hover(foreign), [])
                 screen.visible_provinces = set()
@@ -142,6 +142,46 @@ class OutputBonusTests(unittest.TestCase):
             screen.world.nation_data["A"]["mat_to_fuel_slider"] = 0
             screen._presentation_cache_revision += 1
             self.assertEqual(hover(own), [])
+
+    def test_economy_hover_hides_fogged_tile_yield_and_shows_conscription_and_politics(self):
+        own = {"id": 1, "owner": "A", "cores": [], "buildings": [],
+               "building_queue": [{"order_type": "BUILDING", "item_name": "Basic Factory",
+                                   "turns_remaining": c.BASIC_FACTORY_TURNS}]}
+        fogged = {"id": 2, "owner": "B", "cores": ["B"], "buildings": []}
+        screen = map_double(
+            hovered_province=own, secondary_mode="ECONOMY", base_layer="POLITICAL",
+            _presentation_cache_revision=0, _tooltip_building_stamp=None, player_country="A",
+            visible_provinces={1}, scenario_settings={"fog_of_war": True},
+            nation_data={
+                "A": {"conscription_slider": 0.5, "mat_to_fuel_slider": 0.0, "research": {}},
+                "B": {"conscription_slider": 1.0, "mat_to_fuel_slider": 0.0, "research": {"general_recruitment": 4}},
+            },
+            map_data={"1": own, "2": fogged},
+        )
+        non_core_axis = politics.EFFECT_AXES["non_core_province_output"]
+        tile_man_axis = politics.EFFECT_AXES["tile_manpower"]
+        politics.set_axis_value(screen.world.nation_data, "A", non_core_axis, c.POLITICS_MIN)
+        politics.set_axis_value(screen.world.nation_data, "A", tile_man_axis, c.POLITICS_MIN)
+        with (patch.object(c, "COUNTRY_BASE_YIELDS", dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)),
+              patch.object(c, "BASE_YIELDS", {"manpower": 100, "materials": 20, "fuel": 10}),
+              patch.object(c, "NON_CORE_MULTIPLIERS", {"manpower": 0.5, "materials": 0.5, "fuel": 0.5}),
+              patch.object(c, "CONSCRIPTION_RATIO", 0.2)):
+            tooltip.prepare_building_yields(screen)
+            own_lines = tooltip._province_tooltip_lines(screen, own)
+            expected_man = queries.format_number(
+                100 * 0.5 * politics.effect_at("non_core_province_output", c.POLITICS_MIN)
+                * politics.effect_at("tile_manpower", c.POLITICS_MIN)
+            )
+            self.assertTrue(any(line.startswith(f"Tile Yield: +{expected_man}Man") for line in own_lines))
+            self.assertTrue(any(line.startswith("Conscription:") and "Manpower" in line and "Materials" in line for line in own_lines))
+            self.assertTrue(any("Basic Factory (Under Construction)" in line for line in own_lines))
+
+            screen.hovered_province = fogged
+            tooltip.prepare_building_yields(screen)
+            fogged_lines = tooltip._province_tooltip_lines(screen, fogged)
+            self.assertIn("Tile Yield: (Hidden by Fog of War)", fogged_lines)
+            self.assertFalse(any("Man," in line for line in fogged_lines))
+            self.assertFalse(any(line.startswith("Conscription:") for line in fogged_lines))
 
     def output(self, name, research):
         return queries.get_building_output(name, research, self.library)
@@ -389,7 +429,7 @@ class OutputBonusTests(unittest.TestCase):
             tile["units"].append({"owner": "B", "health": 100})
             self.assertEqual(economy(provinces)["breakdown"], safe_income["breakdown"])
             supply = queries.SupplySnapshot(game)
-            actual = supply.fuel_conversion_for("A")
+            actual = supply.income_conversions_for("A")
             self.assertEqual(set(actual), {2})
             self.assertEqual(actual[2]["fuel"], safe_income["breakdown"]["fuel"]["conversion"])
             self.assertNotIn(1, supply.for_country("A").production_tiles)

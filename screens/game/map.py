@@ -435,6 +435,8 @@ class Map(StateAccess, Screen):
         self.selected_province = self.hovered_province = self.last_hovered_id = None
         self._tooltip_building_stamp = None
         self._tooltip_building_yields = []
+        self._tooltip_tile_yields = None
+        self._tooltip_tile_is_core = True
         self._tooltip_tile_in_combat = False
         self._relation_indicator_cache = None
         self.hover_glow_surf = self.hover_glow_rect = None
