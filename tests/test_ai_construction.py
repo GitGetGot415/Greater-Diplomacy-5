@@ -13,8 +13,9 @@ Every building here is a fixture; nothing reads the real library.
 import unittest
 from unittest.mock import patch
 
+import data.constants as c
 from data import queries
-from map_logic.ai import ai_construction, ai_tuning
+from map_logic.ai import ai_construction, ai_tuning, ai_unit_eval
 from tests.stub_map_screen import map_double
 
 
@@ -136,6 +137,65 @@ class ConstructionTests(unittest.TestCase):
         prepare.assert_called_once_with(research, LIBRARY, context=screen)
         self.assertEqual(yields.call_count, 2)
         self.assertIs(yields.call_args_list[0].kwargs["modifiers"], yields.call_args_list[1].kwargs["modifiers"])
+
+
+class RecruitmentSavingsTests(unittest.TestCase):
+    def plan(self, materials, *, at_war):
+        home = province(1)
+        uncored = province(2)
+        uncored.update(cores=[], is_coastal=True)
+        data = {"research": {}, "at_war_with": ["Borland"] if at_war else [],
+                "materials": materials, "manpower": 1000, "fuel": 100}
+        screen = map_double(map_data={1: home, 2: uncored}, id_to_province={1: home, 2: uncored},
+                            nation_data={"Avaria": data, "Borland": {"at_war_with": ["Avaria"] if at_war else []}})
+        units = {}
+        values = {}
+        for name, score, man, mat in (("Fixture Tank", 10, 100, 300), ("Fixture Rifles", 3, 5, 40)):
+            stats = {
+                "production_time": 2, "cost_manpower": man, "cost_materials": mat, "cost_fuel": 0,
+                "metadata": {"family": name, "tier_order": 0, "research": {"tech": "fixture", "level": 0},
+                             "requirements": [], "recruitment": {"industry": "none", "coastal": False}},
+            }
+            units[name] = stats
+            values[name] = ai_unit_eval.UnitValue(name, ai_unit_eval.ROLE_LINE, score, 1, 1, 1, 1, 1, stats, False)
+        buildings = {
+            "Fixture Works": building("industry", materials=50),
+            "Fixture Hall": {**building("recruitment", manpower=50), "cost_materials": 0, "cost_manpower": 40},
+        }
+        options = [(2, home, "Fixture Works"), (1, home, "Fixture Hall")]
+        income = {"manpower": 100, "materials": 110, "fuel": 100}
+        upkeep = {**NOTHING, "materials": 70}
+        core_cost = {"cost_manpower": 950, "time": 1}
+        with (
+            patch.multiple(queries, get_unit_library=lambda *_: units, get_building_library=lambda *_: buildings,
+                           get_tech_tree=lambda *_: {}, calculate_all_economies=lambda *_, **__: {"Avaria": economy(income, upkeep)["econ"]},
+                           get_unit_upkeep=lambda *_, **__: NOTHING, get_building_required_tech=lambda _: (None, 0),
+                           get_building_cost=lambda target, *_, **__: buildings[target], get_core_cost=lambda *_: core_cost),
+            patch.object(ai_unit_eval, "evaluate", return_value=values),
+            patch.object(ai_construction, "_construction_options", return_value=options),
+            patch.object(c, "AI_UPKEEP_TARGETS", dict.fromkeys(ai_unit_eval.RESOURCES, 0.8)),
+            patch.multiple(ai_tuning, AI_MARGINAL_FLOOR=0.15, AI_SAVE_UP_THRESHOLD=0.6,
+                           AI_MAX_BUILDINGS_PER_TURN=2, AI_SURPLUS_MANPOWER_FOR_CORING=500),
+        ):
+            ai_construction.process_ai_economy_decisions(screen, countries=["Avaria"])
+        return home, uncored, data
+
+    def test_wartime_savings_protect_the_tank_budget_from_construction(self):
+        home, uncored, data = self.plan(260, at_war=True)
+        self.assertEqual(home["unit_queue"], [])
+        self.assertEqual([entry["item_name"] for entry in home["building_queue"]], ["Fixture Hall"])
+        self.assertEqual(uncored["building_queue"], [])
+        self.assertEqual((data["materials"], data["manpower"]), (260, 960))
+
+    def test_wartime_recruitment_buys_now_if_net_income_needs_two_turns(self):
+        home, _, _ = self.plan(220, at_war=True)
+        self.assertTrue(home["unit_queue"])
+        self.assertEqual(home["unit_queue"][0]["unit_type"], "Fixture Rifles")
+
+    def test_peacetime_recruitment_can_wait_two_turns(self):
+        home, _, data = self.plan(220, at_war=False)
+        self.assertEqual(home["unit_queue"], [])
+        self.assertEqual(data["materials"], 220)
 
 
 if __name__ == "__main__":

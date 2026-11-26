@@ -502,10 +502,11 @@ AI_MARGINAL_FLOOR = 0.15
 
 # Saving up. If the best unit the nation cannot yet afford is worth more than
 # this much more than the best it can, it banks the turn's budget instead --
-# but only when income actually closes the gap inside AI_SAVE_UP_TURNS, so a
-# nation with no industry never sits waiting for a tank it will never afford.
+# but only when income after upkeep closes the gap. In war, wait only if the
+# preferred unit is expected to be affordable next turn.
 AI_SAVE_UP_THRESHOLD = 0.6
 AI_SAVE_UP_TURNS = 4
+AI_WAR_SAVE_UP_TURNS = 1
 
 # Fallback for how hard the enemy hits when a nation is at peace and has no
 # frontline to measure, expressed as a multiple of the mean buildable attack.

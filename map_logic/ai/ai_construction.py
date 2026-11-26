@@ -587,20 +587,23 @@ def _recruit_sites(context, ai_name, my_provs, unit_names, unit_library):
     return sites
 
 
-def _affordable_within(stats, data, econ, turns):
-    """Whether this nation's income closes the gap on this unit inside `turns`.
+def _recruitment_reserve(stats, data, net_income, turns):
+    """Stock to protect if the unit will be affordable within the waiting window."""
+    costs = {res: stats.get(f"cost_{res}", 0) for res in ai_unit_eval.RESOURCES}
+    costs = {res: cost for res, cost in costs.items() if cost > 0}
+    for turn in range(1, turns + 1):
+        if all(data.get(res, 0) + net_income[res] * turn >= cost for res, cost in costs.items()):
+            # Also protect enough to cover any upkeep deficit before the purchase.
+            return {res: min(data.get(res, 0), cost + max(0, -net_income[res] * turn))
+                    for res, cost in costs.items()}
+    return None
 
-    The guard on saving up: a nation with no materials income must never sit on
-    its hands waiting for a tank it will never be able to buy.
-    """
-    for res in ai_unit_eval.RESOURCES:
-        shortfall = stats.get(f"cost_{res}", 0) - data.get(res, 0)
-        if shortfall <= 0:
-            continue
-        income = econ.get("total_inc", {}).get(res, 0)
-        if income <= 0 or shortfall / income > turns:
-            return False
-    return True
+
+def _can_afford_with_reserve(data, cost, reserve):
+    if reserve:
+        cost = {f"cost_{res}": cost.get(f"cost_{res}", 0) + reserve.get(res, 0)
+                for res in ai_unit_eval.RESOURCES}
+    return queries.can_afford(data, cost)
 
 
 def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree, state):
@@ -647,6 +650,8 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
     if not values:
         return
 
+    save_up_turns = ai_tuning.AI_WAR_SAVE_UP_TURNS if state["at_war"] else ai_tuning.AI_SAVE_UP_TURNS
+    recruitment_reserve = None
     failsafe = 0
     while failsafe < 50:
         failsafe += 1
@@ -694,19 +699,16 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
                    if not (out_of_fuel and v.stats.get("cost_fuel", 0) > 0)}
         best_any, best_any_marginal = ai_unit_eval.pick_next(savable, have, targets)
         if (best_any and best_any_marginal >= floor
-                and (not pick or marginal < best_any_marginal * ai_tuning.AI_SAVE_UP_THRESHOLD)
-                and _affordable_within(best_any.stats, data, state["econ"], ai_tuning.AI_SAVE_UP_TURNS)):
-            break
+                and (not pick or marginal < best_any_marginal * ai_tuning.AI_SAVE_UP_THRESHOLD)):
+            net_income = {"manpower": inc_man - upk_man, "materials": inc_mat - upk_mat, "fuel": inc_fuel - upk_fuel}
+            recruitment_reserve = _recruitment_reserve(best_any.stats, data, net_income, save_up_turns)
+            if recruitment_reserve is not None:
+                break
 
         if not pick or marginal < floor:
             break
 
-        stats = pick.stats
-        cost_mat = stats.get("cost_materials", 0)
-        cost_man = stats.get("cost_manpower", 0)
-        cost_fuel = stats.get("cost_fuel", 0)
-
-        upkeep = queries.get_unit_upkeep(stats, world_for(context).nation_data, ai_name)
+        upkeep = queries.get_unit_upkeep(pick.stats, world_state.nation_data, ai_name)
         upk_man += upkeep["manpower"]
         upk_mat += upkeep["materials"]
         upk_fuel += upkeep["fuel"]
@@ -726,9 +728,10 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
 
     state["upk_man"], state["upk_mat"], state["upk_fuel"] = upk_man, upk_mat, upk_fuel
     state["role_counts"] = have
+    return recruitment_reserve
 
 
-def _apply_coring_priority(context, ai_name, data, my_provs):
+def _apply_coring_priority(context, ai_name, data, my_provs, *, recruitment_reserve=None):
     """Section: AI CORING PRIORITY -- spends surplus manpower coring the best
     available uncored province (prioritizing ones with factories)."""
     world_state = world_for(context)
@@ -754,7 +757,7 @@ def _apply_coring_priority(context, ai_name, data, my_provs):
     target_core_prov = valid_uncored[0]
     core_data = queries.get_core_cost(ai_name, world_state.map_data, world_state.scenario_settings,
                                       world_state.nation_data)
-    if queries.can_afford(data, core_data):
+    if _can_afford_with_reserve(data, core_data, recruitment_reserve):
         production_actions.submit_production(
             context, ai_name, target_core_prov, "building_queue", {"order_type": "CORE"}, authority="ai")
 
@@ -815,15 +818,14 @@ def _construction_options(context, ai_name, data, my_provs, building_library, ec
     return options
 
 
-def _apply_construction_logic(context, ai_name, data, my_provs, building_library, state):
+def _apply_construction_logic(context, ai_name, data, my_provs, building_library, state, *, recruitment_reserve=None):
     """Section: EVALUATE CONSTRUCTION LOGIC -- puts up the buildings worth the
     most to this nation (_construction_options), at most
     AI_MAX_BUILDINGS_PER_TURN a turn and one per province.
 
     Runs after the purchase loop, so the army is paid for first. A building is
-    only bought when every resource keeps AI_CONSTRUCTION_RESERVE_TURNS of
-    runway afterwards, measured as the disband rule measures it (_runway), at
-    the upkeep and income `state` holds after this turn's purchases.
+    only bought if it leaves the recruitment reserve intact and every resource
+    keeps AI_CONSTRUCTION_RESERVE_TURNS of runway at the projected upkeep.
     """
     world_state = world_for(context)
     upkeep = {"manpower": state["upk_man"], "materials": state["upk_mat"], "fuel": state["upk_fuel"]}
@@ -841,8 +843,9 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
         # it: a Basic Factory costs more for every factory the nation has.
         cost = queries.get_building_cost(target, ai_name, world_state.map_data, building_library,
                                          world_state.nation_data, context=context)
-        if not all(data.get(res, 0) >= cost.get(f"cost_{res}", 0)
-                   and _runway(data.get(res, 0) - cost.get(f"cost_{res}", 0), upkeep[res], income[res])
+        if not _can_afford_with_reserve(data, cost, recruitment_reserve):
+            continue
+        if not all(_runway(data.get(res, 0) - cost.get(f"cost_{res}", 0), upkeep[res], income[res])
                    >= ai_tuning.AI_CONSTRUCTION_RESERVE_TURNS
                    for res in ai_unit_eval.RESOURCES):
             continue
@@ -962,14 +965,15 @@ def process_ai_economy_decisions(context, *, countries=None, prioritize_naval_re
             values=buildable_values)
 
         # Allow the AI to purchase multiple units per turn until its budget maxes out
-        _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree, state)
+        recruitment_reserve = _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree, state)
 
         # After the purchases, so it can see what was actually ordered.
         _disband_peacetime_militia(ai_name, my_provs, state["at_war"],
                                    protected=tactical_player_unit(context), context=context)
 
         # --- AI CORING PRIORITY ---
-        _apply_coring_priority(context, ai_name, data, my_provs)
+        _apply_coring_priority(context, ai_name, data, my_provs, recruitment_reserve=recruitment_reserve)
 
         # --- 2. EVALUATE CONSTRUCTION LOGIC ---
-        _apply_construction_logic(context, ai_name, data, my_provs, building_library, state)
+        _apply_construction_logic(context, ai_name, data, my_provs, building_library, state,
+                                  recruitment_reserve=recruitment_reserve)

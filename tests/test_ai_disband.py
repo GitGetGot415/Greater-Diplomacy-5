@@ -330,6 +330,7 @@ class FuelGuardTests(unittest.TestCase):
         values = {"Scout Car": value("Scout Car", 9.0),   # burns fuel, rated best
                   "Rifles": value("Rifles", 5.0)}         # burns none
         state = {
+            "at_war": False,
             "target_man": 0.8, "target_mat": 0.6, "target_fuel": target_fuel,
             "inc_man": 1000.0, "inc_mat": 1000.0, "inc_fuel": 1000.0,
             "upk_man": 0.0, "upk_mat": 0.0, "upk_fuel": ratio_fuel * 1000.0,
