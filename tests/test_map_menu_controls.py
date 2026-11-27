@@ -110,6 +110,69 @@ class MapMenuControlTests(unittest.TestCase):
             clicked.assert_not_called()
             self.assertFalse(button.is_pressed)
 
+    def test_country_selection_player_slider_updates_session_and_respects_mode(self):
+        game = self.map
+        saved = {attr: getattr(state_owner(game, attr), attr) for attr in (
+            "selection_mode", "pending_selection", "tactical_mode", "num_players", "active_players")}
+        self.addCleanup(map_buttons.update_button_states, game)
+        for attr, value in saved.items():
+            self.addCleanup(setattr, state_owner(game, attr), attr, value)
+
+        game.session.selection_mode = True
+        game.pending_selection = None
+        game.session.tactical_mode = False
+        game.session.num_players = 1
+        game.session.active_players = []
+        map_buttons.update_button_states(game)
+
+        slider = game.slider_num_players
+        self.assertTrue(slider.visible)
+        self.assertFalse(slider.disabled)
+        self.assertTrue(game.bot_bar_rect.contains(slider.rect))
+        self.assertGreater(slider.rect.x, game.bot_bar_rect.centerx)
+
+        slider.callback(3 / 7.0)
+        map_buttons.update_button_states(game)
+        self.assertEqual(game.session.num_players, 4)
+        self.assertEqual(slider.text, "Players: 4")
+        self.assertTrue(game.btn_tactical.disabled)
+
+        # Dragging the slider handle through Map.handle_events also updates num_players.
+        start_pos = slider.handle_rect.center
+        drag_pos = (slider.rect.right, slider.handle_rect.centery)
+        with mock.patch("pygame.mouse.get_pressed", return_value=(True, False, False)):
+            game.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start_pos, button=1),
+                pygame.event.Event(pygame.MOUSEMOTION, pos=drag_pos, buttons=(1, 0, 0)),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=drag_pos, button=1),
+            ])
+        map_buttons.update_button_states(game)
+        self.assertEqual(game.session.num_players, 8)
+        self.assertEqual(slider.text, "Players: 8")
+        self.addCleanup(map_buttons.render_buttons, game)
+
+        slider.callback(0.0)
+        game.session.tactical_mode = True
+        map_buttons.update_button_states(game)
+        self.assertTrue(slider.disabled)
+        self.assertEqual(slider.get_display_string(), "Players: OFF")
+        slider.callback(1.0)
+        self.assertEqual(game.session.num_players, 1)
+
+        game.session.tactical_mode = False
+        game.pending_selection = next(iter(game.world.nation_data))
+        map_buttons.update_button_states(game)
+        self.assertFalse(slider.visible)
+
+        game.pending_selection = None
+        game.session.active_players = [next(iter(game.world.nation_data))]
+        map_buttons.update_button_states(game)
+        self.assertFalse(slider.visible)
+
+        game.session.selection_mode = False
+        map_buttons.update_button_states(game)
+        self.assertFalse(slider.visible)
+
 
 if __name__ == "__main__":
     unittest.main()

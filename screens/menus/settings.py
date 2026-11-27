@@ -62,7 +62,6 @@ SETTINGS_BACKGROUND_COLOR = (32, 34, 40)
 GENERAL_SECTION_Y = SETTINGS_FIRST_Y - 30
 GENERAL_ROW_GAP = 36
 GENERAL_OPTION_SIZE = (SETTINGS_OPTION_SIZE[0], 30)
-GENERAL_PLAYER_SLIDER_GAP = 64
 GENERAL_SHORTCUT_GAP = 50
 GENERAL_SLIDER_GAP = 52
 GENERAL_FIRST_SLIDER_Y = SETTINGS_FIRST_Y + 3 * GENERAL_ROW_GAP + 30
@@ -164,7 +163,7 @@ def render_settings_buttons(settings_screen):
     if not screen.is_standalone:
         screen.elements.extend(ui_elements.make_choice_button(SETTINGS_MARGIN + 12, SETTINGS_PANEL_TOP + 24 + index * SETTINGS_NAV_GAP, SETTINGS_NAV_SIZE, label, screen.sub_state == category, lambda value=category: screen.set_sub_state(value), idle_color="grey", font_preset="small", sound_kind="select_category") for index, (category, label) in enumerate(screen.categories()))
     screen.ai_fields = {}
-    screen.player_slider = screen.fps_slider = screen.ai_thread_slider = None
+    screen.fps_slider = screen.ai_thread_slider = None
     screen.checkerboard_gradient_slider = screen.checkerboard_speed_slider = None
 
     if screen.sub_state == "GENERAL":
@@ -186,12 +185,7 @@ def render_settings_buttons(settings_screen):
             y = values_y + index * GENERAL_ROW_GAP
             screen.elements.append(Button(screen.content_x, y, GENERAL_OPTION_SIZE, "purple", label, callback, font_preset="small"))
             screen.add_setting_info(key, y, height=GENERAL_OPTION_SIZE[1])
-        player_y = y + GENERAL_PLAYER_SLIDER_GAP
-        screen.player_slider = Slider(screen.content_x, player_y, SETTINGS_SLIDER_WIDTH, f"Players: {screen.num_players}", (screen.num_players - 1) / 7.0, screen.set_players)
-        # A live game's participant count cannot be changed from Settings.
-        screen.player_slider.visible = screen.back_state != "MAP"
-        screen.elements.append(screen.player_slider)
-        shortcuts_y = player_y + GENERAL_SHORTCUT_GAP
+        shortcuts_y = y + GENERAL_SHORTCUT_GAP
         screen.elements.extend([
             Button(screen.content_x, shortcuts_y, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png", scale=0.6), font_preset="small"),
             Button(screen.content_x + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, shortcuts_y, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.4, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), font_preset="small"),
@@ -257,7 +251,6 @@ def render_settings_buttons(settings_screen):
 class Settings(Screen):
     preview = False
     title = "Settings"
-    player_slider = None
     fps_slider = None
     ai_thread_slider = None
     #: The active provider's TextField per box type, rebuilt with the buttons.
@@ -283,7 +276,7 @@ class Settings(Screen):
 
     # Category resets retain credentials, models, URLs, audio, and Unit Art.
     CATEGORY_RESET_FIELDS = {
-        "GENERAL": ("num_players", "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations", "map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen", "target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
+        "GENERAL": ("show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations", "map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen", "target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
         "AI": ("ai_mode", "ai_immersion_level", "ai_threads"),
         "FILES": tuple(DIR_FIELDS),
     }
@@ -312,7 +305,6 @@ class Settings(Screen):
         self.back_state = "MENU"
 
         self.sfx_volume = self.controller.sfx_volume
-        self.num_players = self.controller.num_players
         self.ai_mode = self.controller.ai_mode
         self.ai_immersion_level = self.controller.ai_immersion_level
         self.ai_modes = self.AI_MODES
@@ -523,11 +515,6 @@ class Settings(Screen):
         # Silently save whenever the slider moves
         self.save_settings()
 
-    def update(self):
-        super().update()
-        if self.player_slider is not None:
-            self.player_slider.visible = (self.back_state != "MAP")
-
     def set_ai_mode(self, mode):
         self.ai_mode = mode
         self.controller.ai_mode = mode
@@ -578,7 +565,7 @@ class Settings(Screen):
         # Preserve this control's scope: provider credentials, audio and the
         # other preferences outside this list are not part of this reset.
         names = (
-            "target_fps", "ai_threads", "num_players", "show_fps",
+            "target_fps", "ai_threads", "show_fps",
             "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed",
             "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "map_navigation_mode", "control_mode",
             "battle_display_mode", "army_group_animations", "mouse_button_actions",
@@ -588,8 +575,6 @@ class Settings(Screen):
     def reset_category_defaults(self):
         """Reset only this category, preserving API keys, models, URLs and audio."""
         names = self.CATEGORY_RESET_FIELDS[self.sub_state]
-        if self.sub_state == "GENERAL" and self.back_state == "MAP":
-            names = tuple(name for name in names if name != "num_players")
         if self.sub_state == "GENERAL":
             self.controller.keybinds = default_keybinds()
             self.controller.touch_input.cancel()
@@ -707,12 +692,6 @@ class Settings(Screen):
                 surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_BOX_X, box_y - 30))
             for label, y in (("Provider", SETTINGS_AI_PROVIDER_Y), ("Immersion", SETTINGS_AI_IMMERSION_Y)):
                 surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (self.content_x, y - 30))
-
-    def set_players(self, val):
-        self.num_players = 1 + int(val * 7)
-        self.controller.num_players = self.num_players
-        if self.player_slider is not None:
-            self.player_slider.text = f"Players: {self.num_players}"
 
     def save_and_go_back(self, execute_exit=True):
         self.save_settings()

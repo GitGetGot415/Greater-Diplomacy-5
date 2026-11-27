@@ -93,6 +93,10 @@ EDITOR_STATS_BUTTON_SIZE = (150, 40)
 # --- Mode buttons on the country-selection screen ---
 BTN_SPECTATOR_Y = c.SCREEN_HEIGHT - 55
 BTN_TACTICAL_OFFSET_X = 240
+PLAYER_SLIDER_WIDTH = 300
+PLAYER_SLIDER_RIGHT_MARGIN = 30
+PLAYER_SLIDER_X = c.SCREEN_WIDTH - PLAYER_SLIDER_WIDTH - PLAYER_SLIDER_RIGHT_MARGIN
+PLAYER_SLIDER_Y = c.SCREEN_HEIGHT - 30
 
 # --- Province action buttons ---
 ACTION_BTN_X = 200          # Spectator god-power column
@@ -611,6 +615,10 @@ def _build_general_buttons(map_screen):
 
     map_screen.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", start_spectator_action)
     map_screen.btn_tactical = Button(LEFT_UI_BAR_X + BTN_TACTICAL_OFFSET_X, BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
+    num_players = max(1, min(8, map_screen.session.num_players))
+    map_screen.slider_num_players = Slider(
+        PLAYER_SLIDER_X, PLAYER_SLIDER_Y, PLAYER_SLIDER_WIDTH,
+        f"Players: {num_players}", (num_players - 1) / 7.0, map_screen.set_players)
     map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province, sound_kind="back")
     map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu, sound_kind="back")
     map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X + 30, c.TOP_BAR_UI_CENTER_Y + 120,
@@ -659,7 +667,7 @@ def render_buttons(map_screen):
         map_screen.btn_spectator, map_screen.btn_tactical, map_screen.btn_close_info, map_screen.btn_exit_to_menu, map_screen.btn_realtime_details,
         map_screen.btn_view_foreign_politics,
         map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys,
-        map_screen.slider_camera_tilt
+        map_screen.slider_camera_tilt, map_screen.slider_num_players
     ]
 
     for el in map_screen.elements:
@@ -813,6 +821,10 @@ def _update_selection_mode_buttons(map_screen):
     map_screen.btn_spectator.visible = show_mode_buttons
     # A standalone game has no tactical mode.
     map_screen.btn_tactical.visible = show_mode_buttons and not standalone_game.IS_STANDALONE
+    map_screen.slider_num_players.visible = show_mode_buttons and not map_screen.session.active_players
+    map_screen.slider_num_players.disabled = map_screen.session.tactical_mode
+    num_players = max(1, min(8, map_screen.session.num_players))
+    map_screen.slider_num_players.text = f"Players: {num_players}"
 
     is_multiplayer = map_screen.session.num_players > 1
 

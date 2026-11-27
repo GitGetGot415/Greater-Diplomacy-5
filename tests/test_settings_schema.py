@@ -590,7 +590,7 @@ class SettingsCategoryTests(unittest.TestCase):
     def test_category_resets_only_its_preferences_and_saves(self):
         from screens.menus.keybinds import default_keybinds
         changes = dict(target_fps=41, show_fps=True, num_players=7, ai_threads=3, ai_mode="GEMINI", ai_immersion_level="ABSOLUTE", gemini_api_key="kept-key", gemini_model="kept-model", ollama_base_url="http://fixture", music_volume=0.21, unit_art_style="kept-art", control_mode="DESKTOP", saves_dir="fixture-saves", custom_scenarios_dir="fixture-maps", tournament_saves_dir="fixture-tournaments")
-        reset_changes = {"GENERAL": ("num_players", "control_mode", "target_fps", "show_fps"), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
+        reset_changes = {"GENERAL": ("control_mode", "target_fps", "show_fps"), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
         for category, reset_fields in reset_changes.items():
             with self.subTest(category=category):
                 for key, value in changes.items():
@@ -612,11 +612,11 @@ class SettingsCategoryTests(unittest.TestCase):
                     if key in c.RUNTIME_SETTINGS:
                         self.assertEqual(getattr(c, c.RUNTIME_SETTINGS[key]), after[key])
 
-    def test_game_reset_cannot_change_live_player_count(self):
-        self.controller.num_players = self.screen.num_players = 7
-        self.screen.back_state = "MAP"
+    def test_settings_has_no_player_slider_and_reset_preserves_num_players(self):
+        self.controller.num_players = 7
         self.screen.refresh_ui()
-        self.assertFalse(self.screen.player_slider.visible)
+        self.assertFalse(hasattr(self.screen, "player_slider"))
+        self.assertFalse(any(element.text.startswith("Players:") for element in self.screen.elements))
         self.screen.reset_category_defaults()
         self.assertEqual(self.controller.num_players, 7)
 

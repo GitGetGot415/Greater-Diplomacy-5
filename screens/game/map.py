@@ -113,6 +113,7 @@ class Map(StateAccess, Screen):
     unit_view_bar_offset = 0
     unit_view_animation_start = None
     unit_view_animation_from = 1.0
+    slider_num_players = None
     btn_unit_view_toggle = None
     _ignore_left_until_release = False
     _ignore_right_until_release = False
@@ -545,6 +546,15 @@ class Map(StateAccess, Screen):
     @property
     def player_fuel(self):
         return self.world.nation_data.get(self.session.player_country, {}).get("fuel", 0)
+
+    def set_players(self, val):
+        """Update the local player count during country selection."""
+        if self.session.tactical_mode or self.session.active_players:
+            return
+        num_players = max(1, min(8, 1 + int(val * 7)))
+        self.session.num_players = num_players
+        if self.slider_num_players is not None:
+            self.slider_num_players.text = f"Players: {num_players}"
 
     def set_camera_tilt(self, val):
         """Callback for the manual camera tilt slider."""
