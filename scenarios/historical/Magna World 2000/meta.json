@@ -1,6 +1,6 @@
 {
   "version": "v51",
-  "generated_at": "2026-11-27T13:37:45.172229",
+  "generated_at": "2026-11-27T13:50:20.417533",
   "date": {"day": 15, "month": 0, "year": 2000, "total_turns": 0},
   "loop_map": true,
   "player_country": "Editor",
@@ -4967,12 +4967,16 @@
       "flag_data": "DEFAULT",
       "portrait_data": "DEFAULT",
       "adjective": "Eritrean",
-      "at_war_with": ["Ethiopia"],
+      "at_war_with": [],
       "military_attaches": [],
       "pending_diplomacy": {},
       "diplo_responses": {},
       "armies": [],
-      "color": [155, 155, 255]
+      "color": [155, 155, 255],
+      "faction": "",
+      "is_faction_leader": false,
+      "master": "",
+      "puppet_type": ""
     },
     "Estonia": {
       "name": "Estonia",
@@ -5246,7 +5250,7 @@
       "flag_data": "DEFAULT",
       "portrait_data": "DEFAULT",
       "adjective": "Ethiopian",
-      "at_war_with": ["Eritrea"],
+      "at_war_with": [],
       "military_attaches": [],
       "pending_diplomacy": {},
       "diplo_responses": {},

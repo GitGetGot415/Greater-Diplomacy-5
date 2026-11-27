@@ -78517,7 +78517,9 @@
         "attack": 10000,
         "defense": 500,
         "level": 0,
-        "order": {"type": "MOVE", "path": []}
+        "order": {"type": "MOVE", "path": []},
+        "naval_unit": false,
+        "custom_name": "1st Main Battle Tank Division (XI)"
       }
     ],
     "building_queue": [],
@@ -80731,7 +80733,9 @@
         "attack": 1100,
         "defense": 0,
         "level": 0,
-        "order": {"type": "MOVE", "path": []}
+        "order": {"type": "MOVE", "path": []},
+        "naval_unit": false,
+        "custom_name": "1st Infantry Division (2000)"
       }
     ],
     "building_queue": [],
@@ -82566,7 +82570,9 @@
         "attack": 1100,
         "defense": 0,
         "level": 0,
-        "order": {"type": "MOVE", "path": []}
+        "order": {"type": "MOVE", "path": []},
+        "naval_unit": false,
+        "custom_name": "1st Infantry Division (2000)"
       }
     ],
     "building_queue": [],
@@ -83337,7 +83343,9 @@
         "attack": 1100,
         "defense": 0,
         "level": 0,
-        "order": {"type": "MOVE", "path": []}
+        "order": {"type": "MOVE", "path": []},
+        "naval_unit": false,
+        "custom_name": "2nd Infantry Division (2000)"
       }
     ],
     "building_queue": [],
