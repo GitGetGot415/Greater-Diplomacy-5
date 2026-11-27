@@ -824,20 +824,6 @@
         "custom_name": "1st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "0c6ee030678b47a2bf366ad023bc657e"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Russia",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "73c2b73385854a6095023cdff23a6153"
       }
     ],
     "building_queue": [],
@@ -1058,7 +1044,22 @@
     "center": [3674, 133],
     "neighbors": [37, 9, 74, 48, 60],
     "owner": "Russia",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Russia",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "73c2b73385854a6095023cdff23a6153"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -3176,48 +3177,6 @@
         "custom_name": "10th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "c8adabfd0f1c42ef85639b1319f29aaf"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Russia",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "9230f2b7dfaa43479245ae6a1ab015aa"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Russia",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "ab6c4823b61b4ef3b84a609542474eb1"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Russia",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "3rd Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "2b7d0835394b483e9ef05d999a815a47"
       }
     ],
     "building_queue": [],
@@ -4986,6 +4945,48 @@
         "custom_name": "3rd Armored Car Division (XXI)",
         "unit_id": "3ee8511ff5624835bd9fc9bd26453f74",
         "naval_unit": false
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Russia",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "9230f2b7dfaa43479245ae6a1ab015aa"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Russia",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "ab6c4823b61b4ef3b84a609542474eb1"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Russia",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "3rd Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "2b7d0835394b483e9ef05d999a815a47"
       }
     ],
     "building_queue": [],
@@ -6087,6 +6088,48 @@
         "custom_name": "19th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "b49346513c1344ddacc193586cdf9f46"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Russia",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "6th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "daa38e79971242358d1a63aa9e709fad"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Russia",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "7th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "97f203f130ac42d891e6dbebb8b888c2"
+      },
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Russia",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "02f9af10a99141f58a36119a829f4349"
       }
     ],
     "building_queue": [],
@@ -8040,48 +8083,6 @@
         "custom_name": "2nd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "25a13b25fcf54046b28421a75fca9829"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Russia",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "6th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "daa38e79971242358d1a63aa9e709fad"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Russia",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "7th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "97f203f130ac42d891e6dbebb8b888c2"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Russia",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "02f9af10a99141f58a36119a829f4349"
       }
     ],
     "building_queue": [],
@@ -9302,34 +9303,6 @@
         "custom_name": "1st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "f0a519ce8d5c4ff4bbf22f7d932860cd"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "United Kingdom",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "5379c7fa27704108987d0063525446de"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "United Kingdom",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "415b188916d44600846743ddd820d971"
       }
     ],
     "building_queue": [],
@@ -9376,6 +9349,34 @@
         "custom_name": "3rd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "83519f79aa1641729a82a5e0e97eff7b"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "United Kingdom",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "5379c7fa27704108987d0063525446de"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "United Kingdom",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "415b188916d44600846743ddd820d971"
       }
     ],
     "building_queue": [],
@@ -13308,7 +13309,22 @@
     "center": [3059, 348],
     "neighbors": [678, 555, 720, 625, 724, 347, 637],
     "owner": "United Kingdom",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United Kingdom",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "3rd Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "ff3e7ca636434313b55cc12549862256"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -15686,20 +15702,6 @@
         "custom_name": "18th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "e196e834595d4875b6b93e1d760b7c80"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United Kingdom",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "3rd Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "ff3e7ca636434313b55cc12549862256"
       }
     ],
     "building_queue": [],
@@ -18710,48 +18712,6 @@
         "custom_name": "23rd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "fc6c460e5d244a7387239f7001fa8566"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "3rd Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "9d4e4020addd49c9b18212215e5cbc22"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "4th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "85842b73e38a4bf3b4bc3741a213f40c"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "5th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "ec75604e97c8491d9e7064eac3226673"
       }
     ],
     "building_queue": [],
@@ -19085,7 +19045,22 @@
     "center": [3012, 389],
     "neighbors": [750, 947, 821, 890, 860, 606],
     "owner": "United Kingdom",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United Kingdom",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "4th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "32ba4afd56d643da90f1bc9b9ea00172"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -19130,20 +19105,6 @@
         "custom_name": "25th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "d4730e5e0a3c46a188b111bb49259763"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United Kingdom",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "4th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "32ba4afd56d643da90f1bc9b9ea00172"
       }
     ],
     "building_queue": [],
@@ -21212,7 +21173,50 @@
     "center": [3074, 402],
     "neighbors": [897, 900, 741, 978, 955],
     "owner": "United Kingdom",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "3rd Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "9d4e4020addd49c9b18212215e5cbc22"
+      },
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "4th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "85842b73e38a4bf3b4bc3741a213f40c"
+      },
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "5th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "ec75604e97c8491d9e7064eac3226673"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -22415,20 +22419,6 @@
         "custom_name": "66th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "650e90c1e0a040a1b49c139557150b2c"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Russia",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "8th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "78731732d54d42f888b761ea56042546"
       },
       {
         "type": "Main Battle Tank XI",
@@ -28630,34 +28620,6 @@
         "unit_id": "46ec45073633454d9a9bf142380d87d0"
       },
       {
-        "type": "Submarine XXIII",
-        "owner": "United States of America",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "6th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "502dd0b0223443fcb0aaa62829d878fc"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "United States of America",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "7th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "6c905d574aac4a63b025927c1f71355c"
-      },
-      {
         "type": "Main Battle Tank XI",
         "owner": "United States of America",
         "health": 10000.0,
@@ -31717,7 +31679,50 @@
     "center": [865, 467],
     "neighbors": [1380, 747, 1484, 1303, 1304],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Submarine XXIII",
+        "owner": "United States of America",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "6th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "502dd0b0223443fcb0aaa62829d878fc"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "United States of America",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "7th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "6c905d574aac4a63b025927c1f71355c"
+      },
+      {
+        "type": "Aircraft Carrier XIV",
+        "owner": "United States of America",
+        "health": 3200.0,
+        "max_health": 3200,
+        "speed": 1,
+        "attack": 2250,
+        "defense": 460,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Aircraft Carrier (XIV)",
+        "naval_unit": true,
+        "unit_id": "2b9ec45a2be9492ba1a0fb9bf4486cf6"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -33432,6 +33437,20 @@
         "custom_name": "67th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "58b542081a794a709ef9cbab6700604c"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Russia",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "8th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "78731732d54d42f888b761ea56042546"
       }
     ],
     "building_queue": [],
@@ -33481,20 +33500,6 @@
         "custom_name": "17th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "b40b83a849514422a3847ef42c335059"
-      },
-      {
-        "type": "Aircraft Carrier XIV",
-        "owner": "United States of America",
-        "health": 3200.0,
-        "max_health": 3200,
-        "speed": 1,
-        "attack": 2250,
-        "defense": 460,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Aircraft Carrier (XIV)",
-        "naval_unit": true,
-        "unit_id": "2b9ec45a2be9492ba1a0fb9bf4486cf6"
       }
     ],
     "building_queue": [],
@@ -40006,34 +40011,6 @@
         "custom_name": "5th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "047377fb71dc41c1adc1d4e02a3b814e"
-      },
-      {
-        "type": "Aircraft Carrier XIV",
-        "owner": "United States of America",
-        "health": 3200.0,
-        "max_health": 3200,
-        "speed": 1,
-        "attack": 2250,
-        "defense": 460,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "3rd Aircraft Carrier (XIV)",
-        "naval_unit": true,
-        "unit_id": "605cf8e1963048f0b310e0839098ff18"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Italy",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "3ba1e5c88cbe4923b4ede9834d8511ea"
       }
     ],
     "building_queue": [],
@@ -41405,6 +41382,34 @@
         "custom_name": "10th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "17545e3f81e74d7287fbe0f356b31b48"
+      },
+      {
+        "type": "Aircraft Carrier XIV",
+        "owner": "United States of America",
+        "health": 3200.0,
+        "max_health": 3200,
+        "speed": 1,
+        "attack": 2250,
+        "defense": 460,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "3rd Aircraft Carrier (XIV)",
+        "naval_unit": true,
+        "unit_id": "605cf8e1963048f0b310e0839098ff18"
+      },
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Italy",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "3ba1e5c88cbe4923b4ede9834d8511ea"
       }
     ],
     "building_queue": [],
@@ -43891,20 +43896,6 @@
         "custom_name": "29th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "ef017a4ac71049718fc3411bf6aeead5"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "United States of America",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "naval_unit": true,
-        "custom_name": "1st Submarine (XXIII)",
-        "unit_id": "612f8d9193804fdcadea67f3db35f3fb"
       }
     ],
     "building_queue": [],
@@ -45111,20 +45102,6 @@
         "custom_name": "16th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "9826922e6e3340299e2cef6d2fece5fe"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "France",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "6th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "fdfda0e9e1104a9b96679c8810b1baa7"
       }
     ],
     "building_queue": [],
@@ -46565,20 +46542,6 @@
         "custom_name": "18th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "055bf1950dd74913857e06f1650b9a5d"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "France",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "8th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "7c51466c6fd849d5b3ad45386fc57e19"
       }
     ],
     "building_queue": [],
@@ -47207,7 +47170,22 @@
     "center": [3195, 544],
     "neighbors": [1962, 2064, 1971, 1972, 1949],
     "owner": "France",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "France",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "6th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "fdfda0e9e1104a9b96679c8810b1baa7"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -47567,7 +47545,22 @@
     "center": [3126, 549],
     "neighbors": [2026, 2156, 1934, 2064, 2004, 2133, 1979],
     "owner": "France",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "France",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "8th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "7c51466c6fd849d5b3ad45386fc57e19"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -49970,20 +49963,6 @@
         "unit_id": "480e762a89354d6f8d1cd069cb02a844"
       },
       {
-        "type": "Destroyer XXIII",
-        "owner": "Communist China",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "701efdfffa744c7d965f8f13826a1640"
-      },
-      {
         "type": "Main Battle Tank XI",
         "owner": "Communist China",
         "health": 10000.0,
@@ -51958,20 +51937,6 @@
         "custom_name": "1st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "bbc246426cef46bfaca7c0db4334cf92"
-      },
-      {
-        "type": "Aircraft Carrier XIV",
-        "owner": "Communist China",
-        "health": 3200.0,
-        "max_health": 3200,
-        "speed": 1,
-        "attack": 2250,
-        "defense": 460,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Aircraft Carrier (XIV)",
-        "naval_unit": true,
-        "unit_id": "f44d7a69b98d415891418fd8129d48dd"
       },
       {
         "type": "Main Battle Tank XI",
@@ -56273,7 +56238,22 @@
     "center": [5263, 595],
     "neighbors": [2465, 2338, 2515, 2261, 2359],
     "owner": "Communist China",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Communist China",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "701efdfffa744c7d965f8f13826a1640"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -58186,20 +58166,6 @@
         "custom_name": "61st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "792542a27c9d417989242133972036f3"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "7th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "5e276c57bc4845448aac0e19b6d3b183"
       }
     ],
     "building_queue": [],
@@ -58960,20 +58926,6 @@
         "custom_name": "65th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "04f4e7178dd94399bc187d770d22a968"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "8th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "a4b91e36f64f4678a16432f44361ecf3"
       },
       {
         "type": "Main Battle Tank XI",
@@ -59741,7 +59693,22 @@
     "center": [2924, 612],
     "neighbors": [2595, 2030, 2421, 2678, 2490, 2651],
     "owner": "Portugal",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Portugal",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "e209154e3de64170ae2b1853417a3730"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -60374,6 +60341,20 @@
         "custom_name": "10th Submarine (XXIII)",
         "naval_unit": true,
         "unit_id": "905dd398244141eea9ba60e4d30b8357"
+      },
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "7th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "5e276c57bc4845448aac0e19b6d3b183"
       }
     ],
     "building_queue": [],
@@ -61655,20 +61636,6 @@
         "custom_name": "66th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "5b75045a53154682b311e32bcd68dbaf"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "United States of America",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "naval_unit": true,
-        "custom_name": "2nd Submarine (XXIII)",
-        "unit_id": "0d2ad36113094d47817134d135bb9d21"
       }
     ],
     "building_queue": [],
@@ -61715,20 +61682,6 @@
         "custom_name": "10th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "bf76de68547548aa8cbce29deafbb682"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Portugal",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "e209154e3de64170ae2b1853417a3730"
       }
     ],
     "building_queue": [],
@@ -61927,20 +61880,6 @@
         "custom_name": "19th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "f0ec0711659f4ac9b25402f08bc134de"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "12th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "641484043b9e401eb44b0614acea45ed"
       }
     ],
     "building_queue": [],
@@ -62861,6 +62800,62 @@
         "custom_name": "40th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "061332fdfb8b4ec0bb26fd103a2eec25"
+      },
+      {
+        "type": "Aircraft Carrier XIV",
+        "owner": "Communist China",
+        "health": 3200.0,
+        "max_health": 3200,
+        "speed": 1,
+        "attack": 2250,
+        "defense": 460,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Aircraft Carrier (XIV)",
+        "naval_unit": true,
+        "unit_id": "f44d7a69b98d415891418fd8129d48dd"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Communist China",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "c6b84b5670694a87aaf23b8e223f4a87"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Communist China",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "c24564fa7670437ba5fd35ac30d7c0e7"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Communist China",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "3rd Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "43ab1e3e09cf425eb679823ef351d8bb"
       }
     ],
     "building_queue": [],
@@ -62995,48 +62990,6 @@
         "custom_name": "2nd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "e9dde4d261e84476a4cad76c0c5332eb"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Communist China",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "c6b84b5670694a87aaf23b8e223f4a87"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Communist China",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "c24564fa7670437ba5fd35ac30d7c0e7"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Communist China",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "3rd Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "43ab1e3e09cf425eb679823ef351d8bb"
       }
     ],
     "building_queue": [],
@@ -64487,20 +64440,6 @@
         "custom_name": "21st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "5ac9bec4d39a49abaac2f8ab9eb14d01"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Spain",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "0a2188e449f34bf2a9685b4e50da860f"
       }
     ],
     "building_queue": [],
@@ -64793,20 +64732,6 @@
         "unit_id": "f59b407af72d46be87cf32a79a82aa16"
       },
       {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "10th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "260df416c0d94a8599c77f52cc7122f5"
-      },
-      {
         "type": "Main Battle Tank XI",
         "owner": "United States of America",
         "health": 10000.0,
@@ -65054,6 +64979,20 @@
         "custom_name": "8th Infantry Fighting Vehicle Division (2000)",
         "unit_id": "78de10e7a5ae4d7aa70af76a26ad5dbd",
         "naval_unit": false
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "United States of America",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "naval_unit": true,
+        "custom_name": "2nd Submarine (XXIII)",
+        "unit_id": "0d2ad36113094d47817134d135bb9d21"
       }
     ],
     "building_queue": [],
@@ -65615,7 +65554,22 @@
     "center": [3045, 646],
     "neighbors": [2660, 2759, 2894, 2895, 2832, 2064, 2743],
     "owner": "Spain",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "12th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "641484043b9e401eb44b0614acea45ed"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -66215,7 +66169,22 @@
     "center": [864, 652],
     "neighbors": [2724, 2954, 2576, 2577, 2557],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "8th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "a4b91e36f64f4678a16432f44361ecf3"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -67583,7 +67552,22 @@
     "center": [3021, 657],
     "neighbors": [2920, 2894, 2768, 2832, 2064],
     "owner": "Spain",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Spain",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "0a2188e449f34bf2a9685b4e50da860f"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -70281,20 +70265,6 @@
         "custom_name": "81st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "2fc7832b6c6648f48fee8f1e0460ed2f"
-      },
-      {
-        "type": "Aircraft Carrier XIV",
-        "owner": "United States of America",
-        "health": 3200.0,
-        "max_health": 3200,
-        "speed": 1,
-        "attack": 2250,
-        "defense": 460,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "5th Aircraft Carrier (XIV)",
-        "naval_unit": true,
-        "unit_id": "b897cbe712664fbfb2f9e135981e51ad"
       }
     ],
     "building_queue": [],
@@ -73902,7 +73872,22 @@
     "center": [1671, 698],
     "neighbors": [3107, 3144, 3057, 3090, 2966, 3228],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Aircraft Carrier XIV",
+        "owner": "United States of America",
+        "health": 3200.0,
+        "max_health": 3200,
+        "speed": 1,
+        "attack": 2250,
+        "defense": 460,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "5th Aircraft Carrier (XIV)",
+        "naval_unit": true,
+        "unit_id": "b897cbe712664fbfb2f9e135981e51ad"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -75977,7 +75962,22 @@
     "center": [954, 721],
     "neighbors": [3113, 3179, 3342, 2576, 3185, 3440, 3068],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "10th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "260df416c0d94a8599c77f52cc7122f5"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -76630,20 +76630,6 @@
         "custom_name": "90th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "bfd06dd0c667423d83f1cae45f926d66"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "13th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "ebb06fd8bd934f67b60a15ee390f5505"
       },
       {
         "type": "Main Battle Tank XI",
@@ -79064,7 +79050,22 @@
     "center": [1611, 739],
     "neighbors": [3492, 3375, 3312, 3348, 3452, 3324],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "13th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "ebb06fd8bd934f67b60a15ee390f5505"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -79431,20 +79432,6 @@
         "custom_name": "97th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "a210036cad684ccfaad6297645ca9598"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "14th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "b2aedfdb76cc4aacb867768e57c38fb1"
       }
     ],
     "building_queue": [],
@@ -82089,20 +82076,6 @@
         "custom_name": "3rd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "248548853e3b4dfc8e42a1d8c70aa517"
-      },
-      {
-        "type": "Aircraft Carrier XIV",
-        "owner": "Communist China",
-        "health": 3200.0,
-        "max_health": 3200,
-        "speed": 1,
-        "attack": 2250,
-        "defense": 460,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Aircraft Carrier (XIV)",
-        "naval_unit": true,
-        "unit_id": "e598d98f9b304d01a500d6473a9751a3"
       }
     ],
     "building_queue": [],
@@ -82562,20 +82535,6 @@
         "custom_name": "98th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "a5731a83656f4eb6b9c6837398a118cc"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "United States of America",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "15th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "88a66179355f4a47bd01a9a76453936d"
       }
     ],
     "building_queue": [],
@@ -83054,20 +83013,6 @@
         "custom_name": "101st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "57a5a8f9c08c44e7a23773dcc5c26a70"
-      },
-      {
-        "type": "Aircraft Carrier XIV",
-        "owner": "United States of America",
-        "health": 3200.0,
-        "max_health": 3200,
-        "speed": 1,
-        "attack": 2250,
-        "defense": 460,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "6th Aircraft Carrier (XIV)",
-        "naval_unit": true,
-        "unit_id": "1ef59e12fe3140c09711d8fb2829159b"
       },
       {
         "type": "Main Battle Tank XI",
@@ -83922,7 +83867,22 @@
     "center": [1458, 774],
     "neighbors": [3521, 3620, 3461, 3662, 3612],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Submarine XXIII",
+        "owner": "United States of America",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "naval_unit": true,
+        "custom_name": "1st Submarine (XXIII)",
+        "unit_id": "612f8d9193804fdcadea67f3db35f3fb"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -84892,7 +84852,22 @@
     "center": [1479, 775],
     "neighbors": [3521, 3662, 3631, 3547, 3580],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "14th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "b2aedfdb76cc4aacb867768e57c38fb1"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -85118,7 +85093,22 @@
     "center": [5274, 776],
     "neighbors": [3588, 3685, 3567, 3537, 3666, 3409, 3509, 3679],
     "owner": "Communist China",
-    "units": [],
+    "units": [
+      {
+        "type": "Aircraft Carrier XIV",
+        "owner": "Communist China",
+        "health": 3200.0,
+        "max_health": 3200,
+        "speed": 1,
+        "attack": 2250,
+        "defense": 460,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Aircraft Carrier (XIV)",
+        "naval_unit": true,
+        "unit_id": "e598d98f9b304d01a500d6473a9751a3"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -85729,7 +85719,22 @@
     "center": [1400, 784],
     "neighbors": [3530, 3662, 3540, 3669, 3638, 3611],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "United States of America",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "15th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "88a66179355f4a47bd01a9a76453936d"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -87532,7 +87537,22 @@
     "center": [1341, 802],
     "neighbors": [3649, 3690, 3786, 3610, 3742],
     "owner": "United States of America",
-    "units": [],
+    "units": [
+      {
+        "type": "Aircraft Carrier XIV",
+        "owner": "United States of America",
+        "health": 3200.0,
+        "max_health": 3200,
+        "speed": 1,
+        "attack": 2250,
+        "defense": 460,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "6th Aircraft Carrier (XIV)",
+        "naval_unit": true,
+        "unit_id": "1ef59e12fe3140c09711d8fb2829159b"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -89853,7 +89873,22 @@
     "center": [4123, 842],
     "neighbors": [3907, 3720, 3884, 3856, 3698, 3796, 3711],
     "owner": "Iran",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Iran",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "9c40d364271449e6bee35675a18325d4"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -90070,20 +90105,6 @@
         "custom_name": "87th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "efb7e14a75ba40a59356c7ac4dfbbdb4"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Communist China",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "4th Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "2db5d417a447472eb432a2a6922285c8"
       }
     ],
     "building_queue": [],
@@ -90822,20 +90843,6 @@
         "custom_name": "23rd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "749d745a4a7e4223b8bf5641ec085ff2"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Iran",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Destroyer (XXIII)",
-        "naval_unit": true,
-        "unit_id": "9c40d364271449e6bee35675a18325d4"
       }
     ],
     "building_queue": [],
@@ -91511,7 +91518,22 @@
     "center": [5251, 844],
     "neighbors": [3814, 3950, 3888, 3409, 3954, 3828, 3898],
     "owner": "Communist China",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Communist China",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "4th Destroyer (XXIII)",
+        "naval_unit": true,
+        "unit_id": "2db5d417a447472eb432a2a6922285c8"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -93423,34 +93445,6 @@
         "custom_name": "4th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "d8f4c2763d2144c8aed0290028cc6b0a"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Communist China",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "4th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "3e76b8c4315642afbf80f22cde85c722"
-      },
-      {
-        "type": "Submarine XXIII",
-        "owner": "Communist China",
-        "health": 5600.0,
-        "max_health": 5600,
-        "speed": 1,
-        "attack": 2800,
-        "defense": 0,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "5th Submarine (XXIII)",
-        "naval_unit": true,
-        "unit_id": "b5184ca65bcd4b048450a9a75f55131f"
       }
     ],
     "building_queue": [],
@@ -96448,7 +96442,36 @@
     "center": [5147, 904],
     "neighbors": [4128, 4129, 4160, 4072, 4049, 4082, 4181, 4022],
     "owner": "Communist China",
-    "units": [],
+    "units": [
+      {
+        "type": "Submarine XXIII",
+        "owner": "Communist China",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "4th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "3e76b8c4315642afbf80f22cde85c722"
+      },
+      {
+        "type": "Submarine XXIII",
+        "owner": "Communist China",
+        "health": 5600.0,
+        "max_health": 5600,
+        "speed": 1,
+        "attack": 2800,
+        "defense": 0,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "5th Submarine (XXIII)",
+        "naval_unit": true,
+        "unit_id": "b5184ca65bcd4b048450a9a75f55131f"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -100715,20 +100738,6 @@
         "custom_name": "45th Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "cd9e5ff0b81140eeb726fd4900bd6cf2"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "India",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Destroyer (XXIII)",
-        "unit_id": "e72b9b1e61ac4d5fb0362fc45f19c96d",
-        "naval_unit": true
       }
     ],
     "building_queue": [],
@@ -101516,7 +101525,22 @@
     "center": [4632, 967],
     "neighbors": [4292, 4329, 4173, 4270, 4271, 4285],
     "owner": "India",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "India",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Destroyer (XXIII)",
+        "unit_id": "e72b9b1e61ac4d5fb0362fc45f19c96d",
+        "naval_unit": true
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -105972,7 +105996,22 @@
     "center": [4548, 1038],
     "neighbors": [4494, 4433, 4434, 4436, 4504],
     "owner": "India",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "India",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "4th Destroyer (XXIII)",
+        "unit_id": "893a4d48bf73499cbd17b45a7b214667",
+        "naval_unit": true
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -106270,20 +106309,6 @@
         "custom_name": "52nd Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "8eec2a5d44db414daa8682ac78d381fd"
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "India",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "4th Destroyer (XXIII)",
-        "unit_id": "893a4d48bf73499cbd17b45a7b214667",
-        "naval_unit": true
       }
     ],
     "building_queue": [],
@@ -109726,7 +109751,22 @@
     "center": [2784, 1096],
     "neighbors": [4633, 4542, 4582, 4692],
     "owner": "Senegal",
-    "units": [],
+    "units": [
+      {
+        "type": "Aircraft Carrier IV",
+        "owner": "France",
+        "health": 1200.0,
+        "max_health": 1200,
+        "speed": 1,
+        "attack": 750,
+        "defense": 260,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Aircraft Carrier (IV)",
+        "naval_unit": true,
+        "unit_id": "60f1aa9aaf4c412da87442f62add9e27"
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -110074,20 +110114,6 @@
         "custom_name": "2nd Infantry Fighting Vehicle Division (2000)",
         "naval_unit": false,
         "unit_id": "55acc68a90104ecebf782db8ed4644e9"
-      },
-      {
-        "type": "Aircraft Carrier IV",
-        "owner": "France",
-        "health": 1200.0,
-        "max_health": 1200,
-        "speed": 1,
-        "attack": 750,
-        "defense": 260,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Aircraft Carrier (IV)",
-        "naval_unit": true,
-        "unit_id": "60f1aa9aaf4c412da87442f62add9e27"
       },
       {
         "type": "Light Tank XXI",
@@ -126413,20 +126439,6 @@
         "custom_name": "6th Mechanized Infantry Division (2000)",
         "unit_id": "f0947f74882d449580b10d4ce5dadf20",
         "naval_unit": false
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Indonesia",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "1st Destroyer (XXIII)",
-        "unit_id": "c6853ca300e44b90b4e18435f1b63ebc",
-        "naval_unit": true
       }
     ],
     "building_queue": [],
@@ -127177,7 +127189,22 @@
     "center": [5129, 1385],
     "neighbors": [5376, 5351, 5307, 5308, 5341],
     "owner": "Indonesia",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Indonesia",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "1st Destroyer (XXIII)",
+        "unit_id": "c6853ca300e44b90b4e18435f1b63ebc",
+        "naval_unit": true
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -145278,20 +145305,6 @@
         "custom_name": "4th Infantry Fighting Vehicle Division (2000)",
         "unit_id": "48c697010613430da6d0ee66f0d8dd4c",
         "naval_unit": false
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Australia",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "2nd Destroyer (XXIII)",
-        "unit_id": "ac430e37dc1e4984bb1d694e08fdcad4",
-        "naval_unit": true
       }
     ],
     "building_queue": [],
@@ -145542,7 +145555,22 @@
     "center": [5197, 1893],
     "neighbors": [6088, 6089, 6157, 6006, 6143],
     "owner": "Australia",
-    "units": [],
+    "units": [
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Australia",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "2nd Destroyer (XXIII)",
+        "unit_id": "ac430e37dc1e4984bb1d694e08fdcad4",
+        "naval_unit": true
+      }
+    ],
     "building_queue": [],
     "unit_queue": [],
     "orders": [],
@@ -148085,20 +148113,6 @@
         "custom_name": "6th Infantry Fighting Vehicle Division (2000)",
         "unit_id": "d40c5daa14824838b11fda2a05030bf8",
         "naval_unit": false
-      },
-      {
-        "type": "Destroyer XXIII",
-        "owner": "Australia",
-        "health": 11200.0,
-        "max_health": 11200,
-        "speed": 1,
-        "attack": 7800,
-        "defense": 640,
-        "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "custom_name": "3rd Destroyer (XXIII)",
-        "unit_id": "2243f6170ee44131a368c303e625e4c9",
-        "naval_unit": true
       }
     ],
     "building_queue": [],
@@ -148710,6 +148724,20 @@
         "custom_name": "31st Infantry Division (2000)",
         "naval_unit": false,
         "unit_id": "e5d8a57ba4af4398a032dc85211021e6"
+      },
+      {
+        "type": "Destroyer XXIII",
+        "owner": "Australia",
+        "health": 11200.0,
+        "max_health": 11200,
+        "speed": 1,
+        "attack": 7800,
+        "defense": 640,
+        "level": 0,
+        "order": {"type": "MOVE", "path": []},
+        "custom_name": "3rd Destroyer (XXIII)",
+        "unit_id": "2243f6170ee44131a368c303e625e4c9",
+        "naval_unit": true
       }
     ],
     "building_queue": [],
