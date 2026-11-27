@@ -19,6 +19,7 @@
 - also makes puppets potentially able to revolt
 
 - make puppets less weird to work with `(essentially, try to cut down on unessecary tag creations and messages that are sent by one tag only to never have that tag send you messages ever again)`
+- ok what is the policy on emojis in commit messages here
 
 ## Check First
 
