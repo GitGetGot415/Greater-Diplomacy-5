@@ -62,6 +62,7 @@ SETTINGS_BACKGROUND_COLOR = (32, 34, 40)
 GENERAL_SECTION_Y = SETTINGS_FIRST_Y - 30
 GENERAL_ROW_GAP = 36
 GENERAL_OPTION_SIZE = (SETTINGS_OPTION_SIZE[0], 30)
+GENERAL_PLAYER_SLIDER_GAP = 64
 GENERAL_SHORTCUT_GAP = 50
 GENERAL_SLIDER_GAP = 52
 GENERAL_FIRST_SLIDER_Y = SETTINGS_FIRST_Y + 3 * GENERAL_ROW_GAP + 30
@@ -185,7 +186,7 @@ def render_settings_buttons(settings_screen):
             y = values_y + index * GENERAL_ROW_GAP
             screen.elements.append(Button(screen.content_x, y, GENERAL_OPTION_SIZE, "purple", label, callback, font_preset="small"))
             screen.add_setting_info(key, y, height=GENERAL_OPTION_SIZE[1])
-        shortcuts_y = y + GENERAL_SHORTCUT_GAP
+        shortcuts_y = y + GENERAL_PLAYER_SLIDER_GAP + GENERAL_SHORTCUT_GAP
         screen.elements.extend([
             Button(screen.content_x, shortcuts_y, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png", scale=0.6), font_preset="small"),
             Button(screen.content_x + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, shortcuts_y, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.4, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), font_preset="small"),

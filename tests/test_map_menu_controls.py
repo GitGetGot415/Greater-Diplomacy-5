@@ -128,8 +128,8 @@ class MapMenuControlTests(unittest.TestCase):
         slider = game.slider_num_players
         self.assertTrue(slider.visible)
         self.assertFalse(slider.disabled)
-        self.assertTrue(game.bot_bar_rect.contains(slider.rect))
-        self.assertGreater(slider.rect.x, game.bot_bar_rect.centerx)
+        self.assertTrue(game.top_bar_rect.contains(slider.rect))
+        self.assertLess(slider.rect.right, game.top_bar_rect.centerx)
 
         slider.callback(3 / 7.0)
         map_buttons.update_button_states(game)
