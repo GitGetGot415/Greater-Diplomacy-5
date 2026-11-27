@@ -559,7 +559,7 @@
 | Sakhalin | Public Domain |
 | Salta | Public Domain |
 | Sámi | Public Domain |
-| San Francisco | Public Domain |
+| [San Francisco](https://commons.wikimedia.org/wiki/File:Flag_of_San_Francisco,_California.svg) | Public Domain |
 | San Francisco Carousel | Public Domain |
 | San Francisco Cruises | Public Domain |
 | Santiago | Public Domain |
