@@ -29,6 +29,7 @@ Read this entire file from disk and confirm to the user that you read it before 
 - Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree, including for comparisons and clean-state testing. Use `git archive` to export a baseline to a separate directory.
 - Never edit `version.txt`. Only the user updates it at release. The live game downloads it to check for updates. Use `GAME_VERSION` in `data/constants.py` for development versions and report that `version.txt` was untouched.
 - Use `color` in identifiers, comments, and UI text. Preserve intentional comments and correct inaccurate ones.
+- Speak to the user using ADS-STE100 Simplified Technical English.
 - Exclude generated directories such as `web_stage/`, `dist/`, `build/`, `.eggs/`, `__pycache__/`, and `venv/` from ordinary searches and edits.
 - An exact repeat of the previous user prompt can be ignored.
 
