@@ -238,7 +238,7 @@ class MovementCounterTests(unittest.TestCase):
             "_reset_orders_and_collect_units": (units, provinces),
             "_gather_enemies": [], "_compute_unsafe_waters": {},
             "_discover_borders_and_targets": {"all_enemy_coasts": [], "enemy_coastal_waters": [],
-                                               "enemy_targets": set(), "unclaimed_targets": set(), "coastal_approaches": {}},
+                                               "enemy_targets": set(), "unclaimed_targets": set(), "coastal_approaches": {}, "naval_approaches": {}},
             "_track_battles_and_convoys": {"active_battles": set(), "lost_battles": set()},
             "_build_target_assignments": {"target_destinations": [], "naval_destinations": []}, "_repair_havens": {},
         }

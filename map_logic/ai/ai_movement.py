@@ -1036,7 +1036,7 @@ def _compute_unsafe_waters(context, ai_name):
 
 
 def _threatened_coasts(context, ai_name, prov_ids, enemies):
-    """Map potential landing sites to water tiles reachable from enemy shores or convoys."""
+    """Map landing sites to their approaches and distance from known threats."""
     world_state = world_for(context)
     world = ai_world.for_screen(context)
     if not enemies or not prov_ids:
@@ -1049,12 +1049,13 @@ def _threatened_coasts(context, ai_name, prov_ids, enemies):
                   or ((visible is None or tile in visible)
                       and any(unit.get("type", "").startswith("Convoy")
                               for unit in _visible_hostiles(context, ai_name, world_state.id_to_province[tile])))}
-    frontier = approaches.copy()
-    for _ in range(c.AI_NEARBY_SEA_TILES - 1):
-        frontier = {near for tile in frontier for near in world.neighbor_ids.get(tile, ()) if near in world.water_ids} - approaches
-        approaches.update(frontier)
+    frontier = approaches
+    distances = dict.fromkeys(approaches, 0)
+    for distance in range(1, c.AI_NEARBY_SEA_TILES):
+        frontier = {near for tile in frontier for near in world.neighbor_ids.get(tile, ()) if near in world.water_ids} - distances.keys()
+        distances.update(dict.fromkeys(frontier, distance))
     return {beach: entries for beach in prov_ids
-            if (entries := approaches.intersection(world.neighbor_ids.get(beach, ())))}
+            if (entries := {tile: distances[tile] for tile in world.neighbor_ids.get(beach, ()) if tile in distances})}
 
 
 def _operational_paths(context, unit, origin, tiles, limit, stops=frozenset(), intercepted=None):
@@ -1462,7 +1463,7 @@ def _reserve_strike_orders(context, ai_name, units_info, ctx, reserved, ground_i
                 room -= 1
 
 
-def _naval_exchange_favors(context, ship, opponents, tile):
+def _naval_exchange_favors(context, ship, opponents, tile, *, landing_value=0):
     if not opponents:
         return True
     nations = world_for(context).nation_data
@@ -1470,13 +1471,24 @@ def _naval_exchange_favors(context, ship, opponents, tile):
     incoming = combat_rules.projected_incoming_damage(battle, nations)
     own_loss = incoming.get(id(ship), 0) / ship["health"]
     enemy_loss = sum(min(unit["health"], incoming.get(id(unit), 0)) for unit in opponents)
-    return own_loss < 1 and enemy_loss > own_loss * sum(unit["health"] for unit in opponents)
+    if own_loss >= 1:
+        return False
+    if enemy_loss > own_loss * sum(unit["health"] for unit in opponents):
+        return True
+    if not landing_value:
+        return False
+    damaged = dict(ship, health=ship["health"] - incoming.get(id(ship), 0))
+    before = unit_actions.repair_costs(context, ship)
+    after = unit_actions.repair_costs(context, damaged)
+    repair_value = sum((after[f"cost_{key}"] - before[f"cost_{key}"]) * price
+                       for key, price in c.DEAL_VALUE_RESOURCE_PRICES.items())
+    return repair_value < landing_value
 
 
-def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
-    """Commit ships to interceptions, then to sea occupations with a supply effect."""
+def _reserve_naval_orders(context, ai_name, units_info, supply, beaches, warnings, factories):
+    """Intercept landings, protect supply, then station ships on threatened approaches."""
     if not supply.enemies:
-        return set(), {}, set()
+        return set(), {}, set(), set()
     world = world_for(context)
     provinces = world.id_to_province
     known = supply.known
@@ -1491,7 +1503,7 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
              if _is_combat_ship(unit.get("type", ""), context=context) and unit["health"] > 0 and not _is_wounded(unit)
              and origin["id"] not in hostile}
     if not convoys and not fleet:
-        return set(), {}, set()
+        return set(), {}, set(), set()
     fleet_rank = {identity: rank for rank, identity in enumerate(fleet)}
 
     ship_routes = defaultdict(dict)
@@ -1508,7 +1520,7 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
                 if not _is_combat_ship(unit.get("type", ""), context=context):
                     continue
                 paths = _operational_paths(context, unit, provinces[tile], sea, queries.unit_movement_speed(unit))
-                for target in paths.keys() & ship_routes.keys():
+                for target in paths.keys() & sea:
                     enemy_reach[target].append((len(paths[target]), unit))
 
     reserved = set()
@@ -1534,13 +1546,16 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
 
     def landings(convoy, port, additional=None):
         limit = queries.unit_movement_speed(convoy)
+        cargo = [u for u in hostile[port["id"]] if u.get("type", "").startswith("Convoy")]
+
+        def station(tile):
+            return additional[1] if additional and tile == additional[0] else stations.get(tile)
 
         def intercepted(tile, step):
-            identity = additional[1] if additional and tile == additional[0] else stations.get(tile)
+            identity = station(tile)
             if identity is None or len(ship_routes[tile][identity]) > step:
                 return False
             escort = [u for arrival, u in enemy_reach.get(tile, ()) if arrival <= step]
-            cargo = [u for u in hostile[port["id"]] if u.get("type", "").startswith("Convoy")]
             return _naval_exchange_favors(context, fleet[identity][0], cargo + escort, provinces[tile])
 
         paths = _operational_paths(context, convoy, port, sea, limit, intercepted=intercepted)
@@ -1551,22 +1566,34 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
             for beach in provinces[tile].get("neighbors", ()):
                 if beach in beaches and beach not in routes and queries.can_unit_move_step(
                         convoy, provinces[tile], provinces[beach], world.nation_data, context=context):
+                    identity = station(tile)
+                    if not path and identity is not None and len(ship_routes[tile][identity]) == 1:
+                        ship, origin = fleet[identity]
+                        escort = [u for arrival, u in enemy_reach.get(tile, ()) if arrival <= 1]
+                        if (queries.move_is_pinned(context, convoy, (beach,), ((ship, origin["id"]),))
+                                and _naval_exchange_favors(context, ship, cargo + escort, port,
+                                                           landing_value=deal_mod.tile_value(provinces[beach]))):
+                            continue
                     routes[beach] = path
         return routes
 
-    # A ship must reach a water tile on the convoy's path by the same step.
-    # Recheck possible landings with the ship committed, since an alternate
-    # crossing can leave the coast exposed even if the shortest path is covered.
+    # A ship can meet a convoy en route or attack the water tile it would
+    # land from this step. Recheck landings since another crossing may remain.
     initial_sites = {beach for convoy, port in convoys for beach in landings(convoy, port)}
     for convoy, port in convoys:
         routes = landings(convoy, port)
         candidates = {(tile, identity) for path in routes.values() for step, tile in enumerate(path, 1)
                       if tile not in stations for identity in options(tile) if len(ship_routes[tile][identity]) <= step}
+        if () in routes.values() and port["id"] not in stations:
+            candidates.update((port["id"], identity) for identity in options(port["id"])
+                              if len(ship_routes[port["id"]][identity]) == 1)
         ranked = []
         for tile, identity in candidates:
             remaining = landings(convoy, port, (tile, identity))
-            if len(remaining) < len(routes):
-                ranked.append((len(remaining), len(ship_routes[tile][identity]), tile, identity))
+            prevented = routes.keys() - remaining.keys()
+            if prevented:
+                coverage = len(prevented) + len(prevented & factories)
+                ranked.append((-coverage, len(ship_routes[tile][identity]), tile, identity))
         for _, _, tile, identity in sorted(ranked, key=lambda item: (*item[:3], fleet_rank[item[3]])):
             if commit(((identity, tile),)):
                 break
@@ -1581,7 +1608,8 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
         if stations.get(port["id"]) != identity:
             vacating[port["id"]].add(identity)
     reachable = {tile for tile in ship_routes if tile not in stations and ship_routes[tile].keys() - reserved}
-    objectives = supply.naval_supply_objectives(reachable, enemy_reach, vacating, set(stations), len(fleet) - len(reserved))
+    supply_reach = {tile: enemy_reach[tile] for tile in reachable & enemy_reach.keys()}
+    objectives = supply.naval_supply_objectives(reachable, supply_reach, vacating, set(stations), len(fleet) - len(reserved))
     priorities = {"relief": 0, "guard": 1, "guard_one": 1, "blockade": 2, "scout": 3}
     blockaded = set()
     scouted = False
@@ -1593,7 +1621,7 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
         for tile in tiles:
             targets = hostile.get(tile, [])
             if kind in ("guard", "guard_one", "blockade"):
-                targets = list({id(u): u for u in [*targets, *(u for _, u in enemy_reach[tile])]}.values())
+                targets = list({id(u): u for u in [*targets, *(u for _, u in enemy_reach.get(tile, ()))]}.values())
             choices.append([identity for identity in options(tile)
                             if (kind != "scout" or ship_routes[tile][identity])
                             and _naval_exchange_favors(context, fleet[identity][0], targets, provinces[tile])])
@@ -1609,10 +1637,46 @@ def _reserve_naval_orders(context, ai_name, units_info, supply, beaches):
             restored |= kind == "relief"
             scouted |= kind == "scout"
 
-    return reserved, threats, initial_sites
+    covered = set(stations)
+    approaches = defaultdict(set)
+    distance_from_enemy = {}
+    for beach, waters in warnings.items():
+        for tile in waters.keys() - covered:
+            approaches[tile].add(beach)
+            distance_from_enemy[tile] = waters[tile]
+
+    patrols = []
+    for identity in fleet.keys() - reserved:
+        ship, origin = fleet[identity]
+        speed = queries.unit_movement_speed(ship)
+        if not approaches or speed <= 0:
+            continue
+        paths = _operational_paths(context, ship, origin, sea, speed * ai_tuning.AI_COAST_GARRISON_TURNS, hostile)
+        for tile in paths.keys() & approaches.keys():
+            path = paths[tile]
+            opposition = [u for _, u in enemy_reach.get(tile, ())]
+            if not _naval_exchange_favors(context, ship, opposition, provinces[tile]):
+                continue
+            sites = approaches[tile]
+            turns = max(1, ceil(len(path) / speed))
+            priority = (turns, distance_from_enemy[tile], -len(sites) - len(sites & factories), len(path), tile, fleet_rank[identity])
+            patrols.append((priority, tile, identity, path[:speed], len(path) <= speed))
+
+    assigned = set(covered)
+    for _, tile, identity, path, arrives in sorted(patrols):
+        if tile in assigned or identity in reserved:
+            continue
+        ship, origin = fleet[identity]
+        if _order_move(context, ai_name, origin, ship, path):
+            reserved.add(identity)
+            assigned.add(tile)
+            if arrives:
+                covered.add(tile)
+
+    return reserved, threats, initial_sites, covered
 
 
-def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, threats, ctx):
+def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, threats, factories, ctx):
     """Cover immediate landings first, then keep a guard per exposed coast."""
     provinces = world_for(context).id_to_province
     known = supply.known
@@ -1633,7 +1697,7 @@ def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, thre
         paths = _operational_paths(context, unit, origin, owned_land, speed * ai_tuning.AI_COAST_GARRISON_TURNS, stops)
         candidates.append((unit, origin, speed, paths))
 
-    def guard(sites, *, imminent=False):
+    def guard(sites, *, arrival=None, on_time=False):
         orders = []
         for unit, origin, speed, paths in candidates:
             if id(unit) in committed:
@@ -1643,13 +1707,16 @@ def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, thre
                 if path and speed <= 0:
                     continue
                 distance = len(path)
-                if imminent:
-                    priority = distance > speed, distance, -unit["health"]
+                if arrival is not None:
+                    late = distance > min(speed, arrival)
+                    if late and on_time:
+                        continue
+                    priority = late, distance, -unit["health"]
                 else:
                     # Preserve combat strength for the front when guards can
                     # cover the coast on the same turn.
                     turns_late = (distance - 1) // speed if distance > speed else 0
-                    priority = turns_late, queries.calculate_unit_strength(unit), distance
+                    priority = turns_late, site not in factories, queries.calculate_unit_strength(unit), distance
                 rank = (-warning_risk.get(site, 0), *priority, site)
                 orders.append((rank, unit, origin, path[:speed]))
         for _, unit, origin, path in sorted(orders, key=lambda order: order[0]):
@@ -1659,14 +1726,16 @@ def _reserve_coastal_guards(context, ai_name, units_info, supply, warnings, thre
                 return True
         return False
 
-    for beach, arrivals in sorted(threats.items(), key=lambda item: (min(item[1]), -len(item[1]), item[0])):
-        for _ in arrivals:
-            if not guard({beach}, imminent=True):
-                break
+    landings = [(step, beach not in factories, -len(arrivals), beach)
+                for beach, arrivals in threats.items() for step in arrivals]
+    unguarded = [(step, beach) for step, _, _, beach in sorted(landings)
+                 if not guard({beach}, arrival=step, on_time=True)]
+    for step, beach in unguarded:
+        guard({beach}, arrival=step)
 
     pending = warnings.keys() | threats.keys()
     while pending:
-        start = min(pending, key=lambda tile: (-warning_risk.get(tile, 0), tile))
+        start = min(pending, key=lambda tile: (-warning_risk.get(tile, 0), tile not in factories, tile))
         blind = bool(warning_risk.get(start, 0))
         sector = {start}
         frontier = list(sector)
@@ -1691,7 +1760,7 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
     enemies = set(enemies).difference(c.UNPLAYABLE_NATIONS)
     war_borders = set()
     peace_borders = set()
-    coastal_borders = set()
+    coastal_tiles = set()
     enemy_targets = set()
     all_enemy_coasts = set()
     enemy_coastal_waters = set()
@@ -1746,7 +1815,8 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
     for prov in my_provs:
         is_war_border = False
         is_peace_border = False
-        is_coastal = prov.get("is_coastal", False)
+        if prov.get("is_coastal", False):
+            coastal_tiles.add(prov["id"])
 
         for n_id in prov.get("neighbors", []):
             n_prov = world_state.id_to_province.get(n_id)
@@ -1766,19 +1836,20 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
             war_borders.add(prov["id"])
         elif is_peace_border:
             peace_borders.add(prov["id"])
-        elif is_coastal:
-            coastal_borders.add(prov["id"])
 
     # A coast with no land border needs a guard only if something could land
     # on it. Guarding every one of them kept half of some armies on beaches no
     # enemy could reach (saves/runv3: 47 of the United States' 61 land units,
     # at war with nobody).
-    coastal_approaches = _threatened_coasts(context, ai_name, coastal_borders, enemies)
+    naval_approaches = _threatened_coasts(context, ai_name, coastal_tiles, enemies)
+    coastal_approaches = {tile: waters for tile, waters in naval_approaches.items()
+                          if tile not in war_borders and tile not in peace_borders}
 
     return {
         "war_borders": war_borders,
         "peace_borders": peace_borders,
         "coastal_approaches": coastal_approaches,
+        "naval_approaches": naval_approaches,
         "enemy_targets": enemy_targets,
         "all_enemy_coasts": all_enemy_coasts,
         "enemy_coastal_waters": enemy_coastal_waters,
@@ -3043,7 +3114,9 @@ def _generate_unit_orders(context, *, countries=None):
             }
             ctx["repair_havens"] = havens
             beaches = {province["id"] for province in my_provs if province.get("is_coastal")}
-            reserved, threats, convoy_sites = _reserve_naval_orders(context, ai_name, units_info, supply, beaches)
+            coastal_factories = {tile for tile in beaches if queries.has_basic_factory(world_state.id_to_province[tile])}
+            reserved, threats, convoy_sites, covered = _reserve_naval_orders(
+                context, ai_name, units_info, supply, beaches, borders["naval_approaches"], coastal_factories)
             for unit, origin in units_info:
                 if id(unit) not in reserved or not (path := unit["order"]["path"]):
                     continue
@@ -3051,9 +3124,10 @@ def _generate_unit_orders(context, *, countries=None):
                     if tile in assignments["naval_assignments"]:
                         assignments["naval_assignments"][tile] += delta
                         assignments["naval_stacks"][tile] += delta
-            warnings = {beach: approaches for beach, approaches in borders["coastal_approaches"].items() if beach not in convoy_sites}
+            warnings = {beach: unguarded for beach, approaches in borders["coastal_approaches"].items()
+                        if beach not in convoy_sites and (unguarded := approaches.keys() - covered)}
             if warnings or threats:
-                reserved.update(_reserve_coastal_guards(context, ai_name, units_info, supply, warnings, threats, ctx))
+                reserved.update(_reserve_coastal_guards(context, ai_name, units_info, supply, warnings, threats, coastal_factories, ctx))
             ctx["reserved_units"] = reserved
 
             _assign_maintenance_orders(context, ai_name, units_info, ctx,

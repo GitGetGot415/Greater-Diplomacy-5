@@ -104,7 +104,7 @@ def ground_move_records(context, records=None, *, step=0):
                      and not air_unit_can_move_on_ground(unit, context=context))]
 
 
-def move_route_enters_combat(context, unit, *, step=0, viewer=None):
+def move_route_enters_combat(context, unit, *, path=None, step=0, viewer=None):
     """Whether this turn's remaining route attacks outside friendly territory.
 
     A friendly first step cannot disguise an attack later in the same turn.
@@ -115,7 +115,8 @@ def move_route_enters_combat(context, unit, *, step=0, viewer=None):
     world = world_for(context)
     side = get_unit_combat_owner(unit)
     friendly = friendly_nations_view(side, world.nation_data)
-    path = unit.get("order", {}).get("path", [])
+    if path is None:
+        path = unit.get("order", {}).get("path", [])
     for province_id in path[:max(0, queries.unit_movement_speed(unit) - step)]:
         province = world.id_to_province.get(province_id)
         if province is None:
@@ -150,6 +151,15 @@ def can_unit_leave_current_combat(context, unit, province, *, step=0):
             or (step == 0 and not move_route_enters_combat(context, unit, step=step)))
 
 
+def move_is_pinned(context, unit, path, incoming, *, step=0):
+    """Whether an attack into the mover's starting tile can pin this route."""
+    nation_data = world_for(context).nation_data
+    side = get_unit_combat_owner(unit)
+    return (bool(path) and any(origin != path[0] and are_at_war(side, get_unit_combat_owner(attacker), nation_data)
+                for attacker, origin in incoming)
+            and move_route_enters_combat(context, unit, path=path, step=step))
+
+
 def find_movement_pins(context, records=None, *, step=0):
     """Return provisional pins from this step's incoming hostile movers.
 
@@ -165,17 +175,9 @@ def find_movement_pins(context, records=None, *, step=0):
         if not can_unit_leave_current_combat(context, unit, province, step=step):
             continue
         incoming[unit["order"]["path"][0]].append((unit, province["id"]))
-    nation_data = world_for(context).nation_data
-    pinned = set()
-    for unit, province in records:
-        destination = unit["order"]["path"][0]
-        attacked_elsewhere = any(
-            origin != destination and are_at_war(
-                get_unit_combat_owner(unit), get_unit_combat_owner(attacker), nation_data)
-            for attacker, origin in incoming.get(province["id"], ()))
-        if attacked_elsewhere and move_route_enters_combat(context, unit, step=step):
-            pinned.add(id(unit))
-    return pinned
+    return {id(unit) for unit, province in records
+            if (attackers := incoming.get(province["id"]))
+            and move_is_pinned(context, unit, unit["order"]["path"], attackers, step=step)}
 
 
 def find_unit_move_path(unit, start_province, destination_id, id_to_province, nation_data, *, context=None):

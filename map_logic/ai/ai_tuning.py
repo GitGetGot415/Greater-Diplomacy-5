@@ -534,7 +534,7 @@ AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea
 
 AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls eligible units toward active battles
 AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
-AI_COAST_GARRISON_TURNS = 3  # Stage a guard from this many turns away by land.
+AI_COAST_GARRISON_TURNS = 3  # Stage coastal guards or patrols from this many turns away.
 AI_SUPPLY_SEA_CANDIDATES = 12  # Limit alternate-route projections per country and order pass.
 AI_SUPPLY_LAND_CANDIDATES = 10
 AI_SUPPLY_LAND_PAIR_CANDIDATES = 6

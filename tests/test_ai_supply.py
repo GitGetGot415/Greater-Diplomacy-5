@@ -199,6 +199,86 @@ class AISupplyTests(SupplyFixture):
         self.assertIn(convoy, approach["units"])
         self.assertEqual(beach["units"], [])
 
+    def test_ship_pins_a_convoy_that_can_land_directly(self):
+        beach = province(1, "A", [2, 4], coast=True)
+        approach = province(2, "Ocean", [1, 3], sea=True)
+        station = province(3, "Ocean", [2, 5], sea=True)
+        rear = province(4, "A", [1], output=(100, 100, 100))
+        escort_duty = province(5, "Ocean", [3], sea=True)
+        ship = division(station, kind="Supply Test Ship", speed=1, attack=1000)
+        convoy = division(approach, "B", kind="Convoy (Supply Test Division)", speed=1, attack=1,
+                          order={"type": "MOVE", "path": [1]})
+        division(escort_duty, kind="Convoy (Supply Test Division)", speed=1)
+        world = game(beach, approach, station, rear, escort_duty)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(ship["order"]["path"], [2])
+        self.assertIn(id(convoy), queries.find_movement_pins(world))
+        movement_processor.process_movement(world)
+        self.assertIn(convoy, approach["units"])
+        self.assertEqual(beach["owner"], "A")
+
+    def test_army_guards_direct_landing_when_the_escort_would_sink_the_ship(self):
+        beach = province(1, "A", [2, 4], coast=True)
+        approach = province(2, "Ocean", [1, 3], sea=True)
+        station = province(3, "Ocean", [2], sea=True)
+        rear = province(4, "A", [1], output=(100, 100, 100))
+        ship = division(station, kind="Supply Test Ship", speed=1, attack=1)
+        division(approach, "B", kind="Supply Test Ship", speed=1, attack=1000)
+        division(approach, "B", kind="Convoy (Supply Test Division)", speed=1, attack=1)
+        guard = division(rear, speed=1)
+        world = game(beach, approach, station, rear)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(ship["order"]["path"], [])
+        self.assertEqual(guard["order"]["path"], [1])
+
+    def test_ship_accepts_damage_to_delay_a_direct_landing(self):
+        beach = province(1, "A", [2], coast=True)
+        approach = province(2, "Ocean", [1, 3], sea=True)
+        station = province(3, "Ocean", [2], sea=True)
+        ship = division(station, kind="Supply Test Ship", speed=1, attack=1)
+        escort = division(approach, "B", kind="Supply Test Ship", speed=1, attack=30)
+        convoy = division(approach, "B", kind="Convoy (Supply Test Division)", speed=1, attack=1)
+        world = game(beach, approach, station)
+
+        self.assertFalse(ai_movement._naval_exchange_favors(world, ship, [escort, convoy], approach))
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(ship["order"]["path"], [2])
+
+    def test_ship_stages_and_holds_a_crossing_with_no_visible_convoy(self):
+        beach = province(1, "A", [2, 5], coast=True)
+        approach = province(2, "Ocean", [1, 3, 5], sea=True)
+        middle = province(3, "Ocean", [2, 4], sea=True)
+        station = province(4, "Ocean", [3, 6], sea=True)
+        enemy_coast = province(5, "B", [1, 2], coast=True)
+        escort_duty = province(6, "Ocean", [4], sea=True)
+        ship = division(station, kind="Supply Test Ship", speed=1)
+        division(escort_duty, kind="Convoy (Supply Test Division)", speed=1)
+        world = game(beach, approach, middle, station, enemy_coast, escort_duty)
+        world.world.scenario_settings["fog_of_war"] = True
+
+        for path, origin, destination in (([3], station, middle), ([2], middle, approach), ([], approach, approach)):
+            ai_movement.process_ai_unit_orders(world, countries=["A"])
+            self.assertEqual(ship["order"]["path"], path)
+            movement_processor.process_movement(world)
+            self.assertIn(ship, destination["units"])
+            if path:
+                self.assertNotIn(ship, origin["units"])
+
+    def test_army_guards_factory_first_when_two_immediate_landings_remain(self):
+        beach = province(1, "A", [3, 4], coast=True)
+        factory = province(2, "A", [3, 4], coast=True)
+        factory["buildings"] = ["Basic Factory"]
+        approach = province(3, "Ocean", [1, 2], sea=True)
+        rear = province(4, "A", [1, 2], output=(100, 100, 100))
+        guard = division(rear, speed=1)
+        division(approach, "B", kind="Convoy (Supply Test Division)", speed=1)
+        world = game(beach, factory, approach, rear)
+
+        ai_movement.process_ai_unit_orders(world, countries=["A"])
+        self.assertEqual(guard["order"]["path"], [2])
+
     def test_a_second_approach_can_keep_a_landing_threat_active(self):
         beach = province(1, "A", [2, 3, 6], coast=True)
         north = province(2, "Ocean", [1, 4, 5], sea=True)
