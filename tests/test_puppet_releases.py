@@ -14,6 +14,7 @@ import pygame
 import data.constants as c
 from data import queries
 from data.map import load_map
+from data.migrations import conversions
 from data.queries import images
 from ui.dialogs import pickers
 from map_logic.actions.player_actions import collect_map_commands
@@ -194,10 +195,36 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         self.assertEqual(nations["Master"]["release_puppet_queue"], [])
         notice, = nations["Master"]["inbox"]
         self.assertTrue(diplomacy_messages.is_system_notice(notice))
+        self.assertEqual(notice["sender"], "Core")
         self.assertFalse(notice["read"])
         self.assertIn("Core Display", notice["content"])
         self.assertIn("No eligible provinces", notice["content"])
         self.assertFalse(any(nations[country].get("inbox") for country in ("Core", "Other")))
+
+    def test_provisional_release_notice_recovers_its_country_on_save_and_history_load(self):
+        old = {"action": "PRIVATE_GAME_NOTICE", "sender": "GLOBAL_EVENTS", "system_notice": True,
+               "related_action": "RELEASE_PUPPET", "message_id": "failure", "read": True,
+               "content": "Core Display was not created. No eligible provinces remained when the release was due."}
+        unknown_sender = dict(old, message_id="unattributed", content="Unknown country was not created. No eligible provinces remained.")
+        for convert in (conversions.convert_save, conversions.convert_history_turn):
+            with self.subTest(convert=convert.__name__), mock.patch.object(queries, "get_country_data", return_value={}):
+                payload = {"nation_data": {"Master": {"inbox": [old.copy(), unknown_sender.copy()]},
+                                           "Core": {"name": "Core Display"}}}
+                convert(payload, {})
+                convert(payload, {})
+                notice, = payload["nation_data"]["Master"]["inbox"]
+                self.assertEqual(notice["sender"], "Core")
+                self.assertEqual(notice["action"], diplomacy_messages.RELEASE_FAILED_ACTION)
+                self.assertEqual(notice["message_id"], old["message_id"])
+                self.assertEqual(notice["read"], old["read"])
+                self.assertEqual(notice["content"], old["content"])
+
+    def test_new_country_does_not_receive_private_release_notices_from_the_source(self):
+        self.map.world.time_manager = StubTimeManager()
+        diplomacy_messages.send_release_failure_notice(self.map, "Other", "Core", "The release failed.")
+        created = self.release()
+        self.assertFalse(self.map.world.nation_data[created].get("inbox"))
+        self.assertEqual(self.map.world.nation_data["Core"]["inbox"][0]["sender"], "Other")
 
     def test_new_country_does_not_copy_the_source_release_queue(self):
         self.map.world.nation_data["Core"]["release_puppet_queue"] = [{"core_nation": "Other", "turns_left": 3}]

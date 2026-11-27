@@ -10,13 +10,16 @@ from map_logic.diplomacy import faction_records
 from data import queries
 
 
-def get_country_display_name(country_id, nation_data):
+def get_country_display_name(country_id, nation_data, *, use_library=False):
     """Return the player-facing name for a country ID.
 
     Nation IDs are storage and protocol keys.  UI callers should use this
     helper rather than exposing one directly; the ID remains the safe fallback
     for legacy or incomplete nation data.
+    Use the country library for contacts that can refer to an absent country.
     """
+    if use_library and (not isinstance(nation_data, dict) or country_id not in nation_data):
+        nation_data = queries.get_country_data()
     country = nation_data.get(country_id, {}) if isinstance(nation_data, dict) else {}
     name = country.get("name") if isinstance(country, dict) else None
     return name.strip() if isinstance(name, str) and name.strip() else str(country_id)

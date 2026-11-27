@@ -14,7 +14,7 @@ from map_logic.diplomacy.diplomacy_messages import (
     get_pending, get_pending_action, send_message, send_treaty_message, forward_message,
     get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
     FORWARD_ACTION, has_queued_forward, cancel_queued_forward, automatic_decline_text,
-    send_private_system_notice, send_system_notice, SHARED_OUTCOME_ACTION
+    send_release_failure_notice, send_system_notice, SHARED_OUTCOME_ACTION
 )
 from map_logic.diplomacy.war_actions import finalize_war, finalize_neutral
 from map_logic.diplomacy.puppet_actions import finalize_annexation, finalize_release, finalize_take_puppets
@@ -30,7 +30,7 @@ from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, LITE_RESPO
 from map_logic.ai import ai_handler, ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod, deal_effects
 from map_logic.territory import ownership
-from map_logic.diplomacy.puppet_actions import finalize_create_puppet, puppet_release_country_name
+from map_logic.diplomacy.puppet_actions import finalize_create_puppet
 
 
 def toggle_diplomacy_action(context, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
@@ -1793,13 +1793,12 @@ def _process_claim_queues(context):
                 created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
                                                 country_name, core_nation, context, keep_cores, release_type)
                 if not created:
-                    core_name = puppet_release_country_name(core_nation, world_state.nation_data)
+                    core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
                     reason = ("No eligible provinces remained when the release was due."
                               if release_type in c.PUPPET_RELEASE_TYPES else "The release type was invalid.")
-                    send_private_system_notice(context, country_name, f"{core_name} was not created. {reason}",
-                                               related_action="RELEASE_PUPPET")
+                    send_release_failure_notice(context, core_nation, country_name, f"{core_name} was not created. {reason}")
                 elif country_name == session_state.player_country:
-                    core_name = puppet_release_country_name(core_nation, world_state.nation_data)
+                    core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
                     context.show_feedback(f"Created {release_type.lower()} country from {core_name} cores!")
 
 

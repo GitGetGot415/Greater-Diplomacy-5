@@ -104,17 +104,18 @@ class DiplomaticPopup:
             y_off += 20
 
 
-def _spawn_spectator_game_notices(map_screen):
-    """Show Game notices in the local spectator view of country mail."""
+def _spawn_spectator_release_notices(map_screen):
+    """Show release failures in the local spectator view of country mail."""
     nation_data = map_screen.world.nation_data
     for country, data in nation_data.items():
         for msg in data.get("inbox", []):
-            if (msg.get("action") != diplomacy_messages.PRIVATE_NOTICE_ACTION
+            if (msg.get("action") != diplomacy_messages.RELEASE_FAILED_ACTION
                     or msg.get("spectator_read") or msg.get("spectator_popup_shown")):
                 continue
             name = queries.get_country_display_name(country, nation_data)
             content = diplomacy_messages.conversation_message_text(msg, country, nation_data)
-            popup = DiplomaticPopup(diplomacy_messages.SYSTEM_NOTICE_AUTHOR, f"{name}: {content}",
+            sender = diplomacy_messages.message_author_name(msg, nation_data)
+            popup = DiplomaticPopup(sender, f"To {name}: {content}",
                                     len(map_screen.diplomatic_popups), message=msg, read_key="spectator_read")
             map_screen.diplomatic_popups.append(popup)
             msg["spectator_popup_shown"] = True
@@ -128,7 +129,7 @@ def spawn_popups_for_player(map_screen):
     session = map_screen.session
     if session.player_country == "Spectator":
         if not (session.is_networked or session.is_editor or session.tactical_mode):
-            _spawn_spectator_game_notices(map_screen)
+            _spawn_spectator_release_notices(map_screen)
         return
     if session.player_country in ("None", "Editor"):
         return
@@ -152,7 +153,7 @@ def spawn_popups_for_player(map_screen):
                 is_system = diplomacy_messages.is_system_notice(msg)
                 content = diplomacy_messages.conversation_message_text(msg, map_screen.session.player_country, map_screen.world.nation_data)
                 sender_id = msg.get("sender", "Unknown")
-                sender = diplomacy_messages.SYSTEM_NOTICE_AUTHOR if is_system else queries.get_country_display_name(sender_id, map_screen.world.nation_data)
+                sender = diplomacy_messages.message_author_name(msg, map_screen.world.nation_data)
 
                 forwarded = diplomacy_messages.forwarded_details(msg)
                 if forwarded:

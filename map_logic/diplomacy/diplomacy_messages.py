@@ -15,6 +15,7 @@ from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS, BILATERAL
 # are saved wholesale, so an uncapped one grows the save file for the whole
 # length of a game. Newest first, so the oldest fall off the end.
 INBOX_MAX_MESSAGES = 300
+RELEASE_FAILED_ACTION = "RELEASE_PUPPET_FAILED"
 
 # What kind of act a message announced, for anyone reading a list of them.
 #
@@ -84,15 +85,13 @@ MESSAGE_CATEGORIES = {
 
     "ANNEX_PUPPET": "PUPPET",
     "RELEASE_PUPPET": "PUPPET",
+    RELEASE_FAILED_ACTION: "PUPPET",
     "TAKE_PUPPETS": "PUPPET",
 
     "BREAK_ALLIANCE": "ALLIANCE",
 }
 
 SYSTEM_NOTICE_AUTHOR = "Game"
-# Use a reserved non-country ID as the thread key for one-recipient notices.
-GAME_NOTICE_THREAD = "GLOBAL_EVENTS"
-PRIVATE_NOTICE_ACTION = "PRIVATE_GAME_NOTICE"
 SHARED_OUTCOME_ACTION = "SHARED_DIPLOMATIC_OUTCOME"
 _LEGACY_AUTO_DECLINE_TEXT = "Your proposal was ignored and automatically declined."
 _LEGACY_SHARED_OUTCOMES = {
@@ -353,7 +352,7 @@ def is_system_notice(msg):
     """Recognize neutral outcomes independently of whose conversation stores them."""
     if is_forwarded(msg):
         return False
-    if msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION, PRIVATE_NOTICE_ACTION) or legacy_shared_outcome(msg):
+    if msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION, RELEASE_FAILED_ACTION) or legacy_shared_outcome(msg):
         return True
     # Older automatic declines used the original offer action for both copies.
     return _is_legacy_auto_decline(msg)
@@ -380,6 +379,15 @@ def system_notice_identity(msg, viewer):
         counterpart = msg.get("sender", "").removeprefix("To: ")
         return (legacy_outcome, msg.get("date"), frozenset((viewer, counterpart)))
     return msg.get("message_id")
+
+
+def message_author_name(msg, nation_data):
+    """Display the author of a received message, including diplomatic notices."""
+    if msg.get("action") == RELEASE_FAILED_ACTION:
+        return queries.get_country_display_name(msg["sender"], nation_data, use_library=True)
+    if is_system_notice(msg):
+        return SYSTEM_NOTICE_AUTHOR
+    return queries.get_country_display_name(msg.get("sender", "Unknown"), nation_data)
 
 
 def automatic_decline_text(proposer, recipient, nation_data):
@@ -565,11 +573,11 @@ def send_system_notice(context, first, second, content, action, *, related_actio
     _deliver(world.nation_data, second, dict(entry, sender=first))
 
 
-def send_private_system_notice(context, receiver, content, *, related_action):
-    """Deliver an unread Game notice only to the affected country."""
+def send_release_failure_notice(context, sender, receiver, content):
+    """Report a failed release to the country that ordered it."""
     world = world_for(context)
-    entry = _system_notice_entry(world, content, PRIVATE_NOTICE_ACTION, related_action)
-    _deliver(world.nation_data, receiver, dict(entry, sender=GAME_NOTICE_THREAD))
+    entry = _system_notice_entry(world, content, RELEASE_FAILED_ACTION, None)
+    _deliver(world.nation_data, receiver, dict(entry, sender=sender))
 
 
 def forward_message(context, sender, receiver, original_message, source_owner=None):
@@ -684,7 +692,7 @@ def message_category(msg):
     if not isinstance(msg, dict):
         return ""
     action = msg.get("action")
-    if action in (SHARED_OUTCOME_ACTION, PRIVATE_NOTICE_ACTION):
+    if action == SHARED_OUTCOME_ACTION:
         action = msg.get("related_action", action)
     if action:
         return MESSAGE_CATEGORIES.get(action, "DIPLOMACY")

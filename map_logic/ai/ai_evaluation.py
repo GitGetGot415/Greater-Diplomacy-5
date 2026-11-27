@@ -255,7 +255,7 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
                 thread.append(f"{speaker} {provenance}: '{msg.get('content')}'")
             else:
                 if diplomacy_messages.is_system_notice(msg):
-                    speaker = diplomacy_messages.SYSTEM_NOTICE_AUTHOR
+                    speaker = diplomacy_messages.message_author_name(msg, nation_data)
                 content = diplomacy_messages.conversation_message_text(msg, ai_nation, nation_data)
                 thread.append(f"{speaker}: '{content}'")
 

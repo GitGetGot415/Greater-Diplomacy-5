@@ -98,8 +98,6 @@ MSG_FORWARD_BUTTON_SIZE = (82, 24)
 
 def _draw_cached_flag(surface, flag, x, center_y):
     """Draw a prepared flag without reading country data during a frame."""
-    if flag is None:
-        return x
     rect = flag.get_rect(midleft=(x, center_y))
     surface.blit(flag, rect)
     pygame.draw.rect(surface, (100, 100, 100), rect, 1)
@@ -123,7 +121,7 @@ class ConversationRow(Button):
         self.flag = flag
         self.badge = badge_font.render(str(unread), True, (255, 255, 255)) if unread else None
         self.badge_width = max(24, self.badge.get_width() + 12) if self.badge else 0
-        flag_space = self.flag.get_width() + MSG_FLAG_GAP if self.flag is not None else 0
+        flag_space = self.flag.get_width() + MSG_FLAG_GAP
         text_width = width - 32 - flag_space - (self.badge_width + 8 if unread else 0)
         self.name_surface = name_font.render(text_utils.fit_text(name, name_font, text_width), True, (241, 245, 250))
         self.name_y = (height - self.name_surface.get_height()) // 2 if compact else 10
@@ -161,6 +159,7 @@ class Messages_Screen(Screen):
         self.bg_color = MSG_BG_DARK
         self.map_screen = None
         self.selected_recipient = None
+        self.archived_release_contacts = set()
         self.compose_text = ""
         self.drafts = [] 
         self.draft_edit_rects = []
@@ -233,12 +232,12 @@ class Messages_Screen(Screen):
     @property
     def text_input_active(self):
         """The compose bar accepts keystrokes while a conversation is open and the bar has focus."""
-        return (self.selected_recipient is not None and not self.viewing_game_notices
+        return (self.selected_recipient is not None and not self.viewing_archived_release_contact
                 and self._compose_has_focus()) or super().text_input_active
 
     @property
-    def viewing_game_notices(self):
-        return self.selected_recipient == diplomacy_messages.GAME_NOTICE_THREAD
+    def viewing_archived_release_contact(self):
+        return self.selected_recipient in self.archived_release_contacts
 
     def _compose_has_focus(self):
         """Whether the compose bar holds the keyboard focus.
@@ -279,7 +278,7 @@ class Messages_Screen(Screen):
 
     def save_current_draft(self):
         """Save typed and queued text before switching menus or contacts."""
-        if self.selected_recipient and self.map_screen and not self.viewing_game_notices:
+        if self.selected_recipient and self.map_screen and not self.viewing_archived_release_contact:
             if self.compose_text.strip():
                 self.drafts.append(self.compose_text.strip())
                 self.compose_text = ""
@@ -313,7 +312,7 @@ class Messages_Screen(Screen):
                 
         # Load drafts and sync with the map screen
         self.drafts = []
-        if not self.viewing_game_notices:
+        if not self.viewing_archived_release_contact:
             saved_list = p_data.get("draft_lists", {}).get(target, [])
             if saved_list:
                 self.drafts = saved_list.copy()
@@ -338,7 +337,7 @@ class Messages_Screen(Screen):
         self.refresh_ui()
 
     def edit_conversation_theme(self):
-        if not self.selected_recipient or self.viewing_game_notices:
+        if not self.selected_recipient or self.viewing_archived_release_contact:
             return
         country = self.selected_recipient
         colors = session_for(self.map_screen).conversation_colors
@@ -362,7 +361,7 @@ class Messages_Screen(Screen):
         self.select_recipient(target)
 
     def send_message(self):
-        if self.map_screen.session.tactical_mode or self.viewing_game_notices:
+        if self.map_screen.session.tactical_mode or self.viewing_archived_release_contact:
             return
         if self.selected_recipient:
             message = self.compose_text.strip()
@@ -575,7 +574,7 @@ class Messages_Screen(Screen):
             self.offer_button_rects = []
 
         # --- Text Input Logic ---
-        if self.selected_recipient and not self.viewing_game_notices:
+        if self.selected_recipient and not self.viewing_archived_release_contact:
             locked = queries.is_diplomat_busy(self.map_screen.session.player_country, self.selected_recipient, self.map_screen.world.nation_data)
             if not locked and not is_tactical and self._compose_has_focus():
                 previous_text = self.compose_text
@@ -694,6 +693,16 @@ class Messages_Screen(Screen):
         # position. Never retain geometry from a frame that was rebuilt.
         self.forward_button_rects = []
         if not self.map_screen: return
+        nation_data = self.map_screen.world.nation_data
+        player = self.map_screen.session.player_country
+        active_nations = queries.get_living_nations(self.map_screen.world.map_data)
+        playable = {country for country in active_nations
+                    if country != player and nation_data.get(country, {}).get("is_playable")}
+        inbox = nation_data.get(player, {}).get("inbox", [])
+        self.archived_release_contacts = {
+            msg["sender"] for msg in inbox
+            if msg.get("action") == diplomacy_messages.RELEASE_FAILED_ACTION and msg["sender"] not in playable
+        }
         self.thread_rect = pygame.Rect(MSG_LEFT_PANE_W, MSG_HEADER_H,
                                        c.SCREEN_WIDTH - MSG_LEFT_PANE_W,
                                        c.SCREEN_HEIGHT - MSG_HEADER_H - MSG_INPUT_H)
@@ -703,27 +712,16 @@ class Messages_Screen(Screen):
         unread_x = c.SCREEN_WIDTH - MSG_MARGIN - MSG_HEADER_UNREAD_W
         trade_x = unread_x - MSG_CONTROL_GAP - MSG_HEADER_TRADE_W
         theme_x = trade_x - MSG_CONTROL_GAP - MSG_HEADER_THEME_W
-        game_thread = diplomacy_messages.GAME_NOTICE_THREAD
-        header = "Messages"
-        if self.viewing_game_notices:
-            header = diplomacy_messages.SYSTEM_NOTICE_AUTHOR
-        elif self.selected_recipient:
-            header = queries.get_country_display_name(self.selected_recipient, self.map_screen.world.nation_data)
+        header = (queries.get_country_display_name(self.selected_recipient, nation_data, use_library=True)
+                  if self.selected_recipient else "Messages")
         header_font = fonts.get("heading2")
         self.header_flag = (flag_icons.flag_surface(self.selected_recipient, self.map_screen.world.nation_data, MSG_HEADER_FLAG_SIZE)
-                            if self.selected_recipient and not self.viewing_game_notices else None)
+                            if self.selected_recipient else None)
         flag_space = self.header_flag.get_width() + MSG_FLAG_GAP if self.header_flag is not None else 0
         header_width = theme_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - flag_space
         self.header_surface = header_font.render(text_utils.fit_text(header, header_font, header_width), True, (241, 245, 250))
         self.sidebar_title_surface = fonts.get("normal").render("Messages", True, (220, 229, 240))
-        
-        active_nations = set([prov.get("owner") for prov in self.map_screen.world.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
-        playable = [country for country, d in self.map_screen.world.nation_data.items() if d.get("is_playable") and country != self.map_screen.session.player_country and country in active_nations]
-        playable.sort(key=lambda country: self.map_screen.world.nation_data.get(country, {}).get("name", country))
-
-        p_data = self.map_screen.world.nation_data.get(self.map_screen.session.player_country, {})
-        inbox = p_data.get("inbox", [])
-
+        self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, MSG_EMPTY_TEXT_COLOR)
         history_contacts = set()
         for msg in inbox:
             sender = msg.get("sender", "")
@@ -731,9 +729,6 @@ class Messages_Screen(Screen):
                 history_contacts.add(sender[4:])
             else:
                 history_contacts.add(sender)
-        has_game_notices = game_thread in history_contacts
-        empty_text = "Select a conversation." if has_game_notices else "Select a nation to view communications."
-        self.empty_thread_surface = header_font.render(empty_text, True, MSG_EMPTY_TEXT_COLOR)
 
         # These all iterate snapshots -- a turn can still be resolving while this
         # screen rebuilds, and a live iterator would trip over the changes.
@@ -763,13 +758,15 @@ class Messages_Screen(Screen):
         if self.show_all_contacts:
             self.elements.append(Button(132, MSG_CONTACT_TOOLBAR_Y, (132, MSG_HEADER_BUTTON_H), "grey", "Cancel", self.toggle_add_contact,
                                         font_preset="button_small"))
-            display_list = [n for n in playable if n not in history_contacts]
+            contacts = playable - history_contacts
         else:
             self.elements.append(Button(MSG_SORT_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_SORT_BUTTON_W, MSG_HEADER_BUTTON_H), "grey",
                                         self.contact_sort, self.cycle_contact_sort, font_preset="button_small"))
             self.elements.append(Button(MSG_ADD_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_ADD_BUTTON_W, MSG_HEADER_BUTTON_H), "green", "+",
                                         self.toggle_add_contact, font_preset="button_small", sound_kind="new_contact"))
-            display_list = [n for n in playable if n in history_contacts]
+            contacts = (playable & history_contacts) | self.archived_release_contacts
+        contact_names = {country: queries.get_country_display_name(country, nation_data, use_library=True) for country in contacts}
+        display_list = sorted(contacts, key=lambda country: (contact_names[country], country))
         previews = {}
         unread_counts = {}
         # The inbox is newest first, so a contact's first entry gives its recency rank.
@@ -781,7 +778,8 @@ class Messages_Screen(Screen):
             recency.setdefault(country, len(recency))
             if country not in previews:
                 prefix = "You: " if outgoing else ""
-                if country != game_thread and diplomacy_messages.is_system_notice(message):
+                if (diplomacy_messages.is_system_notice(message)
+                        and message.get("action") != diplomacy_messages.RELEASE_FAILED_ACTION):
                     prefix = f"{diplomacy_messages.SYSTEM_NOTICE_AUTHOR}: "
                 content = diplomacy_messages.conversation_message_text(message, self.map_screen.session.player_country, self.map_screen.world.nation_data)
                 previews[country] = prefix + " ".join(content.split())
@@ -795,8 +793,6 @@ class Messages_Screen(Screen):
             elif self.contact_sort == "Recent":
                 # Stable sort: contacts without messages keep A-Z order after the rest.
                 display_list.sort(key=lambda country: recency.get(country, len(recency)))
-            if has_game_notices:
-                display_list.insert(0, game_thread)
 
         row_height = MSG_NEW_CONTACT_ROW_H if self.show_all_contacts else MSG_CONTACT_ROW_H
         row_step = row_height + MSG_CONTACT_ROW_GAP
@@ -809,19 +805,16 @@ class Messages_Screen(Screen):
             if y + row_height <= contact_rect.top:
                 continue
             country = display_list[index]
-            is_game_thread = country == game_thread
-            display_name = (diplomacy_messages.SYSTEM_NOTICE_AUTHOR if is_game_thread
-                            else queries.get_country_display_name(country, self.map_screen.world.nation_data))
             unread = unread_counts.get(country, 0)
             # Unanswered requests use the same unread rule as the map badge.
-            if not is_game_thread and queries.has_unanswered_request(self.map_screen.session.player_country, country, self.map_screen.world.nation_data):
+            if country in playable and queries.has_unanswered_request(player, country, nation_data):
                 unread += 1
             callback = self.select_new_contact if self.show_all_contacts else self.select_recipient
             row = ConversationRow(contact_rect.x, y, contact_rect.width,
-                                  display_name, previews.get(country, ""), unread,
+                                  contact_names[country], previews.get(country, ""), unread,
                                   self.selected_recipient == country,
                                   lambda target=country, select=callback: select(target),
-                                  flag=None if is_game_thread else flag_icons.flag_surface(country, self.map_screen.world.nation_data, MSG_CONTACT_FLAG_SIZE),
+                                  flag=flag_icons.flag_surface(country, nation_data, MSG_CONTACT_FLAG_SIZE),
                                   compact=self.show_all_contacts, theme_color=colors.get(country))
             self.add_list_row(row)
             row.click_guard = click_guard
@@ -831,7 +824,7 @@ class Messages_Screen(Screen):
                               c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_MARGIN,
                               (MSG_QUEUE_W, MSG_INPUT_H - 2 * MSG_MARGIN), "blue", "Queue",
                               self.send_message, font_preset="button_small", sound_kind=None)
-        queue_button.visible = not self.viewing_game_notices
+        queue_button.visible = not self.viewing_archived_release_contact
         queue_button.apply_state(enabled=queue_button.visible and bool(self.selected_recipient) and not is_tactical, color="blue")
         self.elements.append(queue_button)
         unread_button = Button(unread_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_UNREAD_W, MSG_HEADER_BUTTON_H), "orange",
@@ -842,7 +835,7 @@ class Messages_Screen(Screen):
         # their master. They trade like anyone else now.
         trade_button = Button(trade_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_TRADE_W, MSG_HEADER_BUTTON_H), "orange", "Trade", self.open_trade,
                               font_preset="button_small")
-        trade_button.visible = not self.viewing_game_notices
+        trade_button.visible = not self.viewing_archived_release_contact
         trade_button.disabled = (not trade_button.visible or not self.selected_recipient or is_tactical
                                  or not availability(self.map_screen, self.map_screen.session.player_country,
                                                      self.selected_recipient, "TRADE").allowed)
@@ -851,7 +844,7 @@ class Messages_Screen(Screen):
                               self.edit_conversation_theme, image=ui_elements.UI_ICONS.get("brush"),
                               show_text=False, font_preset="button_small")
         theme_button.disabled = not self.selected_recipient
-        theme_button.visible = not self.viewing_game_notices
+        theme_button.visible = not self.viewing_archived_release_contact
         self.elements.append(theme_button)
 
     @staticmethod
@@ -993,7 +986,7 @@ class Messages_Screen(Screen):
         self.refresh_ui()
 
     def open_trade(self):
-        if not self.selected_recipient or self.viewing_game_notices or self.map_screen.session.tactical_mode:
+        if not self.selected_recipient or self.viewing_archived_release_contact or self.map_screen.session.tactical_mode:
             return
         self.save_current_draft()
         open_trade_menu(self.map_screen, self.selected_recipient)
@@ -1019,7 +1012,7 @@ class Messages_Screen(Screen):
         display_thread = []
         archived_terms = False
         # Each open offer's reply buttons go under the newest message that made it.
-        offers = [] if self.viewing_game_notices else self._open_offers()
+        offers = [] if self.viewing_archived_release_contact else self._open_offers()
         for offer in offers:
             offer["at"], offer["rank"] = None, 0
 
@@ -1053,6 +1046,7 @@ class Messages_Screen(Screen):
                         "content": sub_text,
                         "is_player": is_player,
                         "is_system": is_system,
+                        "system_author": diplomacy_messages.message_author_name(msg, nation_data) if is_system else None,
                         "is_draft": False,
                         "is_diplo": msg.get("type") == "DIPLOMACY",
                         "date": "" if forwarded_header else show_date,
@@ -1208,7 +1202,7 @@ class Messages_Screen(Screen):
                 color = c.COLOR_GOLD_HIGHLIGHT if index == 0 else (170, 180, 195)
                 headers.extend((line, color) for line in text_utils.wrap_text(header, font_tiny, max_width))
             if is_system:
-                label = diplomacy_messages.SYSTEM_NOTICE_AUTHOR
+                label = msg.get("system_author", diplomacy_messages.SYSTEM_NOTICE_AUTHOR)
                 if msg["date"]:
                     label = f"{label} · {msg['date']}"
                 headers = [(label, (151, 163, 181))]
@@ -1262,7 +1256,7 @@ class Messages_Screen(Screen):
                                       c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_MARGIN,
                                       c.SCREEN_WIDTH - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - MSG_QUEUE_W - MSG_CONTROL_GAP,
                                       MSG_INPUT_H - 2 * MSG_MARGIN)
-        self.compose_enabled = bool(self.selected_recipient) and not self.viewing_game_notices and not self.map_screen.session.tactical_mode
+        self.compose_enabled = bool(self.selected_recipient) and not self.viewing_archived_release_contact and not self.map_screen.session.tactical_mode
         if self.compose_enabled:
             self.compose_enabled = not queries.is_diplomat_busy(
                 self.map_screen.session.player_country, self.selected_recipient, self.map_screen.world.nation_data)
@@ -1306,7 +1300,7 @@ class Messages_Screen(Screen):
         composer_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom + bottom_dy,
                                      self.thread_rect.width, MSG_INPUT_H)
         self._draw_panel(surface, composer_rect, "composer")
-        if not self.viewing_game_notices:
+        if not self.viewing_archived_release_contact:
             input_rect = self.input_rect.move(0, bottom_dy)
             # An active bar also asks for the phone keyboard.
             compose_active = self.compose_active

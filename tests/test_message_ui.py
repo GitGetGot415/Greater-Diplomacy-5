@@ -135,6 +135,22 @@ class PopupLifetimeTests(unittest.TestCase):
         diplomatic_popups.spawn_popups_for_player(self.screen)
         self.assertEqual(self.screen.diplomatic_popups, [])
 
+    def test_local_spectator_sees_release_alert_from_its_country_once(self):
+        self.screen.session.player_country = "Spectator"
+        self.screen.diplomatic_popups.clear()
+        self.nation_data["Avaria"]["name"] = "Avarian Republic"
+        dm.send_release_failure_notice(self.screen, "Avaria", "Player", "The release failed.")
+
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+        diplomatic_popups.spawn_popups_for_player(self.screen)
+        popup, = self.screen.diplomatic_popups
+        self.assertEqual(popup.sender, "Avarian Republic")
+        self.assertIn("To Player", popup.text)
+        popup.message["spectator_read"] = True
+        diplomatic_popups.close_spent_popups(self.screen)
+        self.assertEqual(self.screen.diplomatic_popups, [])
+        self.assertFalse(popup.message["read"])
+
 
 class TacticalModeTests(unittest.TestCase):
     """A tactical player commands a division, not a country.
@@ -353,33 +369,40 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertFalse(messages[0]["read"])
         self.assertTrue(messages[1]["read"])
 
-    def test_private_game_notice_raises_an_alert_and_opens_in_a_read_only_thread(self):
+    def test_release_notice_uses_the_country_for_the_alert_and_conversation(self):
         from screens.game.messages import ConversationRow
 
-        screen = self.make_screen()
-        game = screen.map_screen
-        game.world.time_manager = Clock()
-        text = "Test country was not created. No eligible provinces remained."
-        dm.send_private_system_notice(game, "P", text, related_action="RELEASE_PUPPET")
-        notice = game.world.nation_data["P"]["inbox"][0]
-        diplomatic_popups.spawn_popups_for_player(game)
-        self.assertEqual(game.diplomatic_popups[0].sender, dm.SYSTEM_NOTICE_AUTHOR)
+        country_cases = ((True, "B", "Second country"), (False, "Dormant", "Dormant Republic"))
+        for playable, country, name in country_cases:
+            with self.subTest(country=country), mock.patch.object(dm.queries, "get_country_data", return_value={
+                    "Dormant": {"name": "Dormant Republic"}}):
+                screen = self.make_screen()
+                game = screen.map_screen
+                game.world.time_manager = Clock()
+                text = f"{name} was not created. No eligible provinces remained."
+                dm.send_release_failure_notice(game, country, "P", text)
+                notice = game.world.nation_data["P"]["inbox"][0]
+                diplomatic_popups.spawn_popups_for_player(game)
+                self.assertEqual(game.diplomatic_popups[0].sender, name)
 
-        screen.refresh_ui()
-        row = next(element for element in screen.elements
-                   if isinstance(element, ConversationRow) and element.text == dm.SYSTEM_NOTICE_AUTHOR)
-        with mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
-            screen.handle_events([
-                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=row.rect.center),
-                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=row.rect.center)])
+                screen.refresh_ui()
+                rows = [row for row in screen.elements if isinstance(row, ConversationRow)]
+                self.assertNotIn(dm.SYSTEM_NOTICE_AUTHOR, [row.text for row in rows])
+                row, = [row for row in rows if row.text == name]
+                with mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
+                    screen.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=row.rect.center),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=row.rect.center)])
 
-        self.assertEqual(screen.selected_recipient, dm.GAME_NOTICE_THREAD)
-        self.assertEqual(screen.processed_messages[0]["msg_data"]["content"], text)
-        self.assertFalse(screen.text_input_active)
-        self.assertTrue(notice["read"])
-        self.assertFalse(game.world.nation_data["P"]["inbox"][1]["read"])
-        diplomatic_popups.close_spent_popups(game)
-        self.assertEqual(game.diplomatic_popups, [])
+                self.assertEqual(screen.selected_recipient, country)
+                message = screen.processed_messages[0]["msg_data"]
+                self.assertEqual(message["content"], text)
+                self.assertEqual(message["system_author"], name)
+                self.assertEqual(screen.compose_enabled, playable)
+                self.assertTrue(notice["read"])
+                self.assertFalse(game.world.nation_data["P"]["inbox"][1]["read"])
+                diplomatic_popups.close_spent_popups(game)
+                self.assertEqual(game.diplomatic_popups, [])
 
     def test_clipped_conversation_row_does_not_select_a_country(self):
         from screens.game.messages import ConversationRow

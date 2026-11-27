@@ -105,7 +105,8 @@ def convert_save(save_meta, map_data):
     expect(map_data, dict, "map_data")
     convert_scenario_settings(save_meta.get("scenario_settings"))
     aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
-    _nations(container(save_meta, "nation_data", dict, "meta", repair=True), aliases)
+    nation_data = container(save_meta, "nation_data", dict, "meta", repair=True)
+    _nations(nation_data, aliases)
     for key, province in list(map_data.items()):
         if not isinstance(province, dict):
             del map_data[key]
@@ -113,6 +114,7 @@ def convert_save(save_meta, map_data):
             continue
         _province(province, province.get("terrain"), aliases, f"map_data.{key}")
     _province_overlays(save_meta, map_data, aliases, "meta")
+    _convert_legacy_release_notices(nation_data, map_data, save_meta.get("provinces", {}))
     # Completed real-time saves made before offline_view open as spectator replays.
     realtime_match = save_meta.get("realtime_match")
     if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
@@ -128,8 +130,49 @@ def convert_history_turn(snapshot, map_data):
         return  # Missing or unreadable historical turns do not prevent loading the world.
     expect(map_data, dict, "map_data")
     aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
-    _nations(container(snapshot, "nation_data", dict, "history", repair=True), aliases, "history.nation_data")
+    nation_data = container(snapshot, "nation_data", dict, "history", repair=True)
+    _nations(nation_data, aliases, "history.nation_data")
     _province_overlays(snapshot, map_data, aliases, "history")
+    _convert_legacy_release_notices(nation_data, map_data, snapshot.get("provinces", {}))
+
+
+def _convert_legacy_release_notices(nation_data, map_data, overlays):
+    """Replace the former Game sender with the release country when its name identifies it."""
+    notices = []
+    for country, data in nation_data.items():
+        inbox = data.get("inbox") if isinstance(data, dict) else None
+        if isinstance(inbox, list):
+            notices.extend((country, inbox, message) for message in inbox
+                           if isinstance(message, dict) and message.get("action") == "PRIVATE_GAME_NOTICE"
+                           and message.get("sender") == "GLOBAL_EVENTS")
+    if not notices:
+        return
+
+    # The conversion only needs the cached country library when a provisional notice is present.
+    from data import queries
+    from map_logic.diplomacy.diplomacy_messages import RELEASE_FAILED_ACTION
+
+    country_ids = set(nation_data) | set(queries.get_country_data())
+    country_ids.update(core for provinces in (map_data, overlays) for province in provinces.values()
+                       if isinstance(province, dict) for core in (province.get("cores") or ())
+                       if isinstance(core, str))
+    names = {}
+    for country in country_ids.difference(c.UNPLAYABLE_NATIONS):
+        name = queries.get_country_display_name(country, nation_data, use_library=True)
+        names.setdefault(name, []).append(country)
+
+    for country, inbox, message in notices:
+        content = message.get("content")
+        name, marker, _ = content.rpartition(" was not created. ") if isinstance(content, str) else ("", "", "")
+        matches = names.get(name, ())
+        if marker and len(matches) == 1:
+            message["sender"] = matches[0]
+            message["action"] = RELEASE_FAILED_ACTION
+            message.pop("related_action", None)
+        else:
+            # The provisional record stored a display name and no sender ID.
+            inbox.remove(message)
+            repaired(f"nation_data.{country}.inbox.release_failure_sender")
 
 
 def _province_overlays(saved, map_data, aliases, path):

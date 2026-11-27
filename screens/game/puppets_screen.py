@@ -14,7 +14,7 @@ from ui.widgets.text_utils import fit_text, wrap_text
 
 from data.io import country_io
 from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
-from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue, puppet_release_country_name
+from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
 
 
 class Puppets_Screen(Screen):
@@ -410,7 +410,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.release_row_surfaces = []
         row_font = fonts.get("normal")
         for index, subject in enumerate(self.valid_subjects):
-            name = puppet_release_country_name(subject, world.nation_data)
+            name = queries.get_country_display_name(subject, world.nation_data, use_library=True)
             entry = queued.get(subject)
             available = entry is not None or bool(queries.get_puppet_release_provinces(
                 self.releasing_country, subject, world.map_data, self.keep_cores, queue))
@@ -481,7 +481,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             self.refresh_ui()
             return
         country.setdefault("release_puppet_queue", [])[:] = canonical
-        name = puppet_release_country_name(subject, self.map_screen.world.nation_data)
+        name = queries.get_country_display_name(subject, self.map_screen.world.nation_data, use_library=True)
         self.map_screen.show_feedback(f"Creation of {name} ({self.release_type}) queued (1 turn).")
         self.refresh_ui()
 
