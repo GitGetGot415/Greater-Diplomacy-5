@@ -121,7 +121,7 @@ class ConstructionTests(unittest.TestCase):
                             economy(PLENTY, NOTHING), library=library)
         self.assertEqual(queued, [[]])
 
-    def test_a_country_prepares_research_modifiers_once_for_its_building_candidates(self):
+    def test_a_country_prepares_modifiers_and_quotes_once_for_its_building_candidates(self):
         provinces = [province(pid, factory=False) for pid in (1, 2)]
         research = {"fixture_bonus": 1}
         data = {"research": research, "at_war_with": []}
@@ -131,12 +131,29 @@ class ConstructionTests(unittest.TestCase):
         with patch.object(queries, "get_tech_tree", return_value=tree), \
                 patch.object(queries, "get_building_required_tech", return_value=(None, 0)), \
                 patch.object(queries, "get_building_output_modifiers", wraps=queries.get_building_output_modifiers) as prepare, \
+                patch.object(queries, "get_building_cost", wraps=queries.get_building_cost) as quote, \
                 patch.object(queries, "group_yields", wraps=queries.group_yields) as yields:
             ai_construction._construction_options(
                 screen, "Avaria", data, provinces, LIBRARY, {}, {"materials": 1, "manpower": 1, "fuel": 1})
         prepare.assert_called_once_with(research, LIBRARY, context=screen)
+        quote.assert_called_once_with("Fixture Works", "Avaria", screen.world.map_data, LIBRARY,
+                                      screen.world.nation_data, context=screen)
         self.assertEqual(yields.call_count, 2)
         self.assertIs(yields.call_args_list[0].kwargs["modifiers"], yields.call_args_list[1].kwargs["modifiers"])
+
+    def test_construction_checks_the_live_quote_after_an_earlier_purchase(self):
+        def quote(name, nation, map_data, library, nation_data, *, context):
+            stats = library[name].copy()
+            if any(prov["building_queue"] for prov in map_data.values()):
+                stats["cost_materials"] += 1
+            return stats
+
+        provinces = [province(pid, factory=False) for pid in (1, 2)]
+        stock = {"materials": 2 * LIBRARY["Fixture Works"]["cost_materials"], "manpower": 0, "fuel": 0}
+        with patch.object(queries, "get_building_cost", side_effect=quote), \
+                patch.object(ai_tuning, "AI_MAX_BUILDINGS_PER_TURN", 2):
+            queued = self.build(provinces, stock, economy(PLENTY, NOTHING))
+        self.assertEqual(queued, [["Fixture Works"], []])
 
 
 class RecruitmentSavingsTests(unittest.TestCase):

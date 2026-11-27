@@ -427,22 +427,28 @@ def air_target_in_range(context, unit, base, kind, target_id):
     return _air_target_within(context, base, target_id, target, radius_squared, kind in _LAND_TARGET_MISSIONS)
 
 
-def get_air_targets(context, unit, base, kind, *, cache=None):
+def get_air_targets(context, unit, base, kind, *, cache=None, candidate_ids=None):
     """Geometry-only preview: never reads fogged units or private orders.
 
     A caller may reuse sweeps within one world while geometry and terrain are fixed.
-    Cache the IDs in province order so every call builds its own set in that order.
+    An optional set limits the sweep and its cached result to those provinces.
     """
+    if candidate_ids is not None:
+        candidate_ids = frozenset(candidate_ids)
+        if not candidate_ids:
+            return set()
     radius_squared = air_mission_radius_squared(context, unit, base, kind)
     if radius_squared is None:
         return set()
     land_only = kind in _LAND_TARGET_MISSIONS
     if cache is not None:
-        key = (tuple(base["center"]), radius_squared, land_only)
+        key = (tuple(base["center"]), radius_squared, land_only, candidate_ids)
         if key in cache:
             return {pid for pid in cache[key]}
 
-    target_ids = (pid for pid, target in world_for(context).id_to_province.items()
+    provinces = world_for(context).id_to_province
+    targets = provinces.items() if candidate_ids is None else ((pid, provinces.get(pid)) for pid in candidate_ids)
+    target_ids = (pid for pid, target in targets
                   if _air_target_within(context, base, pid, target, radius_squared, land_only))
     if cache is not None:
         target_ids = tuple(target_ids)

@@ -76,17 +76,22 @@ def _factory_objectives(context, country, visible, provinces_by_owner):
     return scores
 
 
-def legal_air_candidates(context, unit, base, *, range_cache=None):
-    """Only canonical orders are ever offered to heuristic/model consumers."""
+def legal_air_candidates(context, unit, base, *, range_cache=None, missions=None):
+    """Enumerate canonical orders, optionally by mission and candidate province IDs."""
     world_state = world_for(context)
     candidates = []
     if not queries.air_unit_can_launch(context, unit, base):
         return candidates
-    if queries.air_unit_can_patrol(unit, context=context):
+    if missions is None:
+        missions = dict.fromkeys(("AIR_PATROL", *queries.AIR_TARGET_MISSION_TYPES.values()))
+    if "AIR_PATROL" in missions and queries.air_unit_can_patrol(unit, context=context):
         candidates.append(queries.canonical_air_order(context, unit, base,
             {"type": "AIR_PATROL", "priority": queries.AIR_DEFAULT_PRIORITY}))
-    for kind in queries.AIR_TARGET_MISSION_TYPES.values():
-        for target_id in sorted(queries.get_air_targets(context, unit, base, kind, cache=range_cache)):
+    for kind, candidate_ids in missions.items():
+        if kind == "AIR_PATROL":
+            continue
+        for target_id in sorted(queries.get_air_targets(context, unit, base, kind, cache=range_cache,
+                                                        candidate_ids=candidate_ids)):
             target = world_state.id_to_province[target_id]
             if kind == "AIR_ATTACK" and not queries.air_target_is_hostile(
                     unit, target, world_state.nation_data, visible_only=True):
@@ -314,7 +319,8 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
         elif order.get("type") == "AIR_ATTACK":
             strike_cover.setdefault(order["target_id"], []).append(unit)
 
-    enemy_ids = {province["id"] for province in enemies}
+    enemy_ids = frozenset(province["id"] for province in enemies)
+    home_ids = frozenset(province["id"] for province in world_state.map_data.values() if province.get("owner") == country)
     target_values = {province["id"]: sum(queries.calculate_unit_strength(unit) for unit in
                    queries.filter_visible_units(province.get("units", []), country,
                                                 province, world_state.nation_data)
@@ -383,14 +389,18 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
         if (not queries.is_air_unit(unit, context=context) or queries.is_water_province(base)
                 or queries.is_nation_in_combat_here(country, base, world_state.nation_data)):
             continue
-        candidates = legal_air_candidates(context, unit, base, range_cache=range_cache)
-        safe_repositions = [order for order in candidates if order["type"] == "AIR_REPOSITION"
-                            and order["target_id"] != base["id"] and order["target_id"] not in threatened]
+        can_transport = queries.air_unit_can_transport(unit, context=context)
+        # Only evacuation and ferry flights consider landing outside this country.
+        landing_ids = None if base["id"] in threatened or can_transport else home_ids
+        repositions = legal_air_candidates(context, unit, base, range_cache=range_cache,
+                                           missions={"AIR_REPOSITION": landing_ids})
+        safe_repositions = [order for order in repositions
+                            if order["target_id"] != base["id"] and order["target_id"] not in threatened]
         if base["id"] in threatened and safe_repositions:
             unit_actions.apply_action(context, country, base, unit, min(safe_repositions, key=lambda order: (
                 queries.air_distance_squared(context, base, order["target_id"]), order["target_id"])), authority="ai")
             continue
-        if queries.air_unit_can_transport(unit, context=context):
+        if can_transport:
             if logistics is None:
                 if factories is None:
                     factories = _factory_objectives(context, country, visible, world.provs_by_owner)
@@ -405,7 +415,7 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
             if _assign_air_transport(context, country, unit, base, safe_repositions, all_units_info, logistics):
                 cargo_changed = True
             continue
-        repair = _aircraft_repair_order(context, country, unit, base, threatened, candidates)
+        repair = _aircraft_repair_order(context, country, unit, base, threatened, repositions)
         if repair:
             unit_actions.apply_action(context, country, base, unit, repair, authority="ai")
             continue
@@ -417,11 +427,12 @@ def _assign_air_orders(context, country, units_info, *, factories=None, known_su
             if target:
                 unit_actions.apply_action(context, country, base, unit, {"type": "UPGRADE", "target_type": target}, authority="ai")
                 continue
-        pool.append((unit, base, candidates))
+        missions = legal_air_candidates(context, unit, base, range_cache=range_cache,
+                                        missions={"AIR_PATROL": None, "AIR_ATTACK": enemy_ids})
+        pool.append((unit, base, missions + repositions))
 
     def reach(unit_candidates):
-        return {order["target_id"]: order for order in unit_candidates
-                if order["type"] == "AIR_ATTACK" and order["target_id"] in enemy_ids}
+        return {order["target_id"]: order for order in unit_candidates if order["type"] == "AIR_ATTACK"}
 
     reaches = {id(unit): reach(candidates) for unit, _base, candidates in pool}
 

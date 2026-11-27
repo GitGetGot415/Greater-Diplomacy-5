@@ -473,8 +473,11 @@ class AirMoveSafetyTests(unittest.TestCase):
         attacker = wing(self.enemy, "Infantry Type 1910", "B")
         attacker["speed"] = 1
         self.enemy["neighbors"] = [self.base["id"]]
-        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}):
+        with patch.dict(self.game.world.scenario_settings, {"fog_of_war": False}), \
+                patch.object(queries, "get_air_targets", wraps=queries.get_air_targets) as targets:
             ai_movement._assign_air_orders(self.game, "A", [(self.plane, self.base)])
+        self.assertEqual([call.args[3] for call in targets.call_args_list if call.args[1] is self.plane],
+                         ["AIR_REPOSITION"])
         self.assertEqual(self.plane["order"]["type"], "AIR_REPOSITION")
         self.assertEqual(self.plane["order"]["target_id"], self.safe["id"])
         air_processor.process_air_orders(self.game)

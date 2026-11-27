@@ -284,6 +284,19 @@ class MissionSweepTests(unittest.TestCase):
             self.assertIn(2, queries.get_air_targets(
                 self.game, wing(other_base), other_base, "AIR_ATTACK", cache=cache))
 
+    def test_range_sweep_checks_only_requested_tiles_and_caches_each_subset(self):
+        self.spread_a_world()
+        kind = "AIR_ATTACK"
+        full = queries.get_air_targets(self.game, self.plane, self.base, kind)
+        cache = {}
+        with patch.object(queries, "air_distance_squared", wraps=queries.air_distance_squared) as distance:
+            subset = queries.get_air_targets(self.game, self.plane, self.base, kind, cache=cache, candidate_ids={2, 6, 999})
+        self.assertEqual(subset, full & {2, 6})
+        self.assertEqual({call.args[2] for call in distance.call_args_list}, {2, 6})
+        self.assertEqual(queries.get_air_targets(
+            self.game, self.plane, self.base, kind, cache=cache, candidate_ids={5}), full & {5})
+        self.assertEqual(queries.get_air_targets(self.game, self.plane, self.base, kind, cache=cache), full)
+
     def test_air_candidates_check_live_target_legality_with_a_warm_range_cache(self):
         self.spread_a_world()
         cache = {}
