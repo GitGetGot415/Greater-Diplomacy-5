@@ -63,8 +63,8 @@ class SessionState:
     queued_letters: list = field(default_factory=list)
     # [sender, recipient] for each message a recipient's letter sitting answered this turn.
     letter_answers: list = field(default_factory=list)
-    # Created country ID to (ordering country, release country, transferred province IDs).
-    releases_this_turn: dict[str, tuple[str, str, tuple[int, ...]]] = field(default_factory=dict)
+    # Created country ID to (ordering country, release country).
+    releases_this_turn: dict[str, tuple[str, str]] = field(default_factory=dict)
     turn_start_time: int = 0
     # Tournament host and player state.
     multiplayer_tournament_dir: object = None

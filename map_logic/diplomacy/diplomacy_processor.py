@@ -1793,8 +1793,7 @@ def _process_claim_queues(context):
                 created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
                                                 country_name, core_nation, context, keep_cores, release_type)
                 if created:
-                    transferred = tuple(world_state.nation_data[created]["spawned_territories"])
-                    session_state.releases_this_turn[created] = (country_name, core_nation, transferred)
+                    session_state.releases_this_turn[created] = (country_name, core_nation)
                     if country_name == session_state.player_country:
                         core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
                         context.show_feedback(f"Created {release_type.lower()} country from {core_name} cores!")
@@ -1815,15 +1814,10 @@ def report_release_territory_losses(context):
     session_state.releases_this_turn = {}
     world = world_for(context)
     living = queries.get_living_nations(world.map_data)
-    for created, (receiver, sender, transferred) in releases.items():
+    for created, (receiver, sender) in releases.items():
         if created in living:
             continue
         content = ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LOST_TERRITORY"].format(country=created)
-        owners = {world.id_to_province[pid]["owner"] for pid in transferred}
-        if len(owners) == 1 and not owners.intersection(c.UNPLAYABLE_NATIONS):
-            owner, = owners
-            name = queries.get_country_display_name(owner, world.nation_data)
-            content += " " + ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LAND_OWNER"].format(owner=name)
         send_release_notice(context, sender, receiver, content, action=RELEASE_LOST_TERRITORY_ACTION)
 
 

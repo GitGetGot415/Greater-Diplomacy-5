@@ -30,7 +30,6 @@
   "API_ERROR": "API Error.",
   "TIMEOUT": "Timeout.",
   "RELEASE_LOST_TERRITORY": "{country} was created and lost all its territory before the turn ended.",
-  "RELEASE_LAND_OWNER": "{owner} now controls the land transferred in the release.",
 
   "BETRAYAL": [
     {"when": {"strength": "weaker"},

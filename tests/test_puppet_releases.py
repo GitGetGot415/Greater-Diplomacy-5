@@ -225,7 +225,8 @@ class PuppetReleaseRuleTests(unittest.TestCase):
                 self.assertEqual(notice["action"], diplomacy_messages.RELEASE_LOST_TERRITORY_ACTION)
                 self.assertEqual(notice["sender"], "Core")
                 self.assertIn(created, notice["content"])
-                self.assertEqual("Other Display" in notice["content"], second_owner == "Other")
+                self.assertNotIn(nations["Other"]["name"], notice["content"])
+                self.assertNotIn(nations["Enemy"]["name"], notice["content"])
                 self.assertFalse(notice["read"])
                 self.assertFalse(any(nations[country].get("inbox") for country in ("Core", "Other", "Enemy")))
 
