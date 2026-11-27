@@ -439,7 +439,7 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
     new_data["pending_diplomacy"] = {}
     if "inbox" in new_data:
         new_data["inbox"] = [message for message in new_data["inbox"]
-                             if message.get("action") != diplomacy_messages.RELEASE_FAILED_ACTION]
+                             if not diplomacy_messages.is_release_notice(message)]
     new_data["claims"] = []
     new_data["claim_queue"] = []
     new_data["revoke_queue"] = []

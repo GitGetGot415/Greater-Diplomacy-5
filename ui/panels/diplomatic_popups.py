@@ -105,11 +105,11 @@ class DiplomaticPopup:
 
 
 def _spawn_spectator_release_notices(map_screen):
-    """Show release failures in the local spectator view of country mail."""
+    """Show release notices in the local spectator view of country mail."""
     nation_data = map_screen.world.nation_data
     for country, data in nation_data.items():
         for msg in data.get("inbox", []):
-            if (msg.get("action") != diplomacy_messages.RELEASE_FAILED_ACTION
+            if (not diplomacy_messages.is_release_notice(msg)
                     or msg.get("spectator_read") or msg.get("spectator_popup_shown")):
                 continue
             name = queries.get_country_display_name(country, nation_data)

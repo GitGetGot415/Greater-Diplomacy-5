@@ -14,7 +14,7 @@ from map_logic.diplomacy.diplomacy_messages import (
     get_pending, get_pending_action, send_message, send_treaty_message, forward_message,
     get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
     FORWARD_ACTION, has_queued_forward, cancel_queued_forward, automatic_decline_text,
-    send_release_failure_notice, send_system_notice, SHARED_OUTCOME_ACTION
+    send_release_notice, send_system_notice, RELEASE_FAILED_ACTION, RELEASE_LOST_TERRITORY_ACTION, SHARED_OUTCOME_ACTION
 )
 from map_logic.diplomacy.war_actions import finalize_war, finalize_neutral
 from map_logic.diplomacy.puppet_actions import finalize_annexation, finalize_release, finalize_take_puppets
@@ -1792,14 +1792,39 @@ def _process_claim_queues(context):
                 release_type = rq["release_type"]
                 created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
                                                 country_name, core_nation, context, keep_cores, release_type)
-                if not created:
+                if created:
+                    transferred = tuple(world_state.nation_data[created]["spawned_territories"])
+                    session_state.releases_this_turn[created] = (country_name, core_nation, transferred)
+                    if country_name == session_state.player_country:
+                        core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
+                        context.show_feedback(f"Created {release_type.lower()} country from {core_name} cores!")
+                else:
                     core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
                     reason = ("No eligible provinces remained when the release was due."
                               if release_type in c.PUPPET_RELEASE_TYPES else "The release type was invalid.")
-                    send_release_failure_notice(context, core_nation, country_name, f"{core_name} was not created. {reason}")
-                elif country_name == session_state.player_country:
-                    core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
-                    context.show_feedback(f"Created {release_type.lower()} country from {core_name} cores!")
+                    send_release_notice(context, core_nation, country_name, f"{core_name} was not created. {reason}",
+                                        action=RELEASE_FAILED_ACTION)
+
+
+def report_release_territory_losses(context):
+    """Tell the ordering country when its release ends the turn without land."""
+    session_state = session_for(context)
+    releases = session_state.releases_this_turn
+    if not releases:
+        return
+    session_state.releases_this_turn = {}
+    world = world_for(context)
+    living = queries.get_living_nations(world.map_data)
+    for created, (receiver, sender, transferred) in releases.items():
+        if created in living:
+            continue
+        content = ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LOST_TERRITORY"].format(country=created)
+        owners = {world.id_to_province[pid]["owner"] for pid in transferred}
+        if len(owners) == 1 and not owners.intersection(c.UNPLAYABLE_NATIONS):
+            owner, = owners
+            name = queries.get_country_display_name(owner, world.nation_data)
+            content += " " + ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LAND_OWNER"].format(owner=name)
+        send_release_notice(context, sender, receiver, content, action=RELEASE_LOST_TERRITORY_ACTION)
 
 
 def _process_scheduled_ai_attache_revocations(context):

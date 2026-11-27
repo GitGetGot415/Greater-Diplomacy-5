@@ -63,6 +63,8 @@ class SessionState:
     queued_letters: list = field(default_factory=list)
     # [sender, recipient] for each message a recipient's letter sitting answered this turn.
     letter_answers: list = field(default_factory=list)
+    # Created country ID to (ordering country, release country, transferred province IDs).
+    releases_this_turn: dict[str, tuple[str, str, tuple[int, ...]]] = field(default_factory=dict)
     turn_start_time: int = 0
     # Tournament host and player state.
     multiplayer_tournament_dir: object = None
@@ -88,6 +90,7 @@ class SessionState:
         result = object.__new__(type(self))
         result.__dict__.update(self.__dict__)
         result.progress = {phase: copy.copy(counter) for phase, counter in self.progress.items()}
+        result.releases_this_turn = self.releases_this_turn.copy()
         return result
 
     @property

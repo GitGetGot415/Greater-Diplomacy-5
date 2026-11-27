@@ -52,6 +52,7 @@ async def prepare_turn(context):
     """
     world_state = world_for(context)
     session_state = session_for(context)
+    session_state.releases_this_turn = {}
     print("\n" + "="*40)
     print("--- [PHASE 1] AI PREPARATION START ---")
 
@@ -293,6 +294,8 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
 
     research_processor.process_national_research(context, economies=economies)
     await asyncio.sleep(0)
+
+    diplomacy_processor.report_release_territory_losses(context)
 
     if c.RECORD_HISTORY:
         # --- MULTI-TURN OPTIMIZATION ---

@@ -701,7 +701,7 @@ class Messages_Screen(Screen):
         inbox = nation_data.get(player, {}).get("inbox", [])
         self.archived_release_contacts = {
             msg["sender"] for msg in inbox
-            if msg.get("action") == diplomacy_messages.RELEASE_FAILED_ACTION and msg["sender"] not in playable
+            if diplomacy_messages.is_release_notice(msg) and msg["sender"] not in playable
         }
         self.thread_rect = pygame.Rect(MSG_LEFT_PANE_W, MSG_HEADER_H,
                                        c.SCREEN_WIDTH - MSG_LEFT_PANE_W,
@@ -779,7 +779,7 @@ class Messages_Screen(Screen):
             if country not in previews:
                 prefix = "You: " if outgoing else ""
                 if (diplomacy_messages.is_system_notice(message)
-                        and message.get("action") != diplomacy_messages.RELEASE_FAILED_ACTION):
+                        and not diplomacy_messages.is_release_notice(message)):
                     prefix = f"{diplomacy_messages.SYSTEM_NOTICE_AUTHOR}: "
                 content = diplomacy_messages.conversation_message_text(message, self.map_screen.session.player_country, self.map_screen.world.nation_data)
                 previews[country] = prefix + " ".join(content.split())

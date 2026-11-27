@@ -139,7 +139,8 @@ class PopupLifetimeTests(unittest.TestCase):
         self.screen.session.player_country = "Spectator"
         self.screen.diplomatic_popups.clear()
         self.nation_data["Avaria"]["name"] = "Avarian Republic"
-        dm.send_release_failure_notice(self.screen, "Avaria", "Player", "The release failed.")
+        dm.send_release_notice(self.screen, "Avaria", "Player", "The new country lost its territory.",
+                               action=dm.RELEASE_LOST_TERRITORY_ACTION)
 
         diplomatic_popups.spawn_popups_for_player(self.screen)
         diplomatic_popups.spawn_popups_for_player(self.screen)
@@ -380,7 +381,8 @@ class ConversationInteractionTests(unittest.TestCase):
                 game = screen.map_screen
                 game.world.time_manager = Clock()
                 text = f"{name} was not created. No eligible provinces remained."
-                dm.send_release_failure_notice(game, country, "P", text)
+                action = dm.RELEASE_FAILED_ACTION if playable else dm.RELEASE_LOST_TERRITORY_ACTION
+                dm.send_release_notice(game, country, "P", text, action=action)
                 notice = game.world.nation_data["P"]["inbox"][0]
                 diplomatic_popups.spawn_popups_for_player(game)
                 self.assertEqual(game.diplomatic_popups[0].sender, name)

@@ -16,6 +16,8 @@ from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS, BILATERAL
 # length of a game. Newest first, so the oldest fall off the end.
 INBOX_MAX_MESSAGES = 300
 RELEASE_FAILED_ACTION = "RELEASE_PUPPET_FAILED"
+RELEASE_LOST_TERRITORY_ACTION = "RELEASE_PUPPET_LOST_TERRITORY"
+RELEASE_NOTICE_ACTIONS = (RELEASE_FAILED_ACTION, RELEASE_LOST_TERRITORY_ACTION)
 
 # What kind of act a message announced, for anyone reading a list of them.
 #
@@ -86,6 +88,7 @@ MESSAGE_CATEGORIES = {
     "ANNEX_PUPPET": "PUPPET",
     "RELEASE_PUPPET": "PUPPET",
     RELEASE_FAILED_ACTION: "PUPPET",
+    RELEASE_LOST_TERRITORY_ACTION: "PUPPET",
     "TAKE_PUPPETS": "PUPPET",
 
     "BREAK_ALLIANCE": "ALLIANCE",
@@ -348,11 +351,16 @@ def legacy_shared_outcome(msg):
     return None
 
 
+def is_release_notice(msg):
+    return msg.get("action") in RELEASE_NOTICE_ACTIONS
+
+
 def is_system_notice(msg):
     """Recognize neutral outcomes independently of whose conversation stores them."""
     if is_forwarded(msg):
         return False
-    if msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION, RELEASE_FAILED_ACTION) or legacy_shared_outcome(msg):
+    if (is_release_notice(msg) or msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION)
+            or legacy_shared_outcome(msg)):
         return True
     # Older automatic declines used the original offer action for both copies.
     return _is_legacy_auto_decline(msg)
@@ -383,7 +391,7 @@ def system_notice_identity(msg, viewer):
 
 def message_author_name(msg, nation_data):
     """Display the author of a received message, including diplomatic notices."""
-    if msg.get("action") == RELEASE_FAILED_ACTION:
+    if is_release_notice(msg):
         return queries.get_country_display_name(msg["sender"], nation_data, use_library=True)
     if is_system_notice(msg):
         return SYSTEM_NOTICE_AUTHOR
@@ -573,10 +581,10 @@ def send_system_notice(context, first, second, content, action, *, related_actio
     _deliver(world.nation_data, second, dict(entry, sender=first))
 
 
-def send_release_failure_notice(context, sender, receiver, content):
-    """Report a failed release to the country that ordered it."""
+def send_release_notice(context, sender, receiver, content, *, action):
+    """Report a release outcome to the country that ordered it."""
     world = world_for(context)
-    entry = _system_notice_entry(world, content, RELEASE_FAILED_ACTION, None)
+    entry = _system_notice_entry(world, content, action, None)
     _deliver(world.nation_data, receiver, dict(entry, sender=sender))
 
 

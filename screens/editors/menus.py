@@ -271,7 +271,7 @@ def open_spectator_messages(map_screen):
                     sender_name = queries.get_country_display_name(sender, map_screen.world.nation_data)
                     receiver_name = queries.get_country_display_name(c_name, map_screen.world.nation_data)
                     if is_system:
-                        if msg.get("action") != diplomacy_messages.RELEASE_FAILED_ACTION:
+                        if not diplomacy_messages.is_release_notice(msg):
                             receiver_name = ", ".join(sorted((sender_name, receiver_name)))
                         sender_name = diplomacy_messages.message_author_name(msg, map_screen.world.nation_data)
                     all_msgs.append({

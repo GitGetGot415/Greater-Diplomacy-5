@@ -19,6 +19,7 @@ from data.queries import images
 from ui.dialogs import pickers
 from map_logic.actions.player_actions import collect_map_commands
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, puppet_actions
+from map_logic.territory import ownership
 from screens.game import puppets_screen
 from tests import app_harness
 from tests.stub_map_screen import StubTimeManager, state_owner, map_double, sample_map_screen
@@ -201,6 +202,49 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         self.assertIn("No eligible provinces", notice["content"])
         self.assertFalse(any(nations[country].get("inbox") for country in ("Core", "Other")))
 
+    def test_same_turn_capture_sends_one_release_notice_after_captures(self):
+        for second_owner in ("Other", "Enemy"):
+            with self.subTest(second_owner=second_owner):
+                self.map = release_map("Other")
+                self.map.world.time_manager = StubTimeManager()
+                nations = self.map.world.nation_data
+                nations["Master"]["faction"] = ""
+                nations["Master"]["release_puppet_queue"] = self.canonical([{"core_nation": "Core"}])
+                diplomacy_processor._process_claim_queues(self.map)
+                first = self.map.world.map_data["1"]
+                created = first["owner"]
+                ownership.conquer_province(self.map, first, "Other")
+                ownership.conquer_province(self.map, self.map.world.map_data["2"], second_owner)
+                self.assertNotIn(created, nations)
+                self.assertFalse(nations["Master"].get("inbox"))
+
+                diplomacy_processor.report_release_territory_losses(self.map)
+                diplomacy_processor.report_release_territory_losses(self.map)
+
+                notice, = nations["Master"]["inbox"]
+                self.assertEqual(notice["action"], diplomacy_messages.RELEASE_LOST_TERRITORY_ACTION)
+                self.assertEqual(notice["sender"], "Core")
+                self.assertIn(created, notice["content"])
+                self.assertEqual("Other Display" in notice["content"], second_owner == "Other")
+                self.assertFalse(notice["read"])
+                self.assertFalse(any(nations[country].get("inbox") for country in ("Core", "Other", "Enemy")))
+
+    def test_a_release_that_keeps_land_does_not_send_a_notice_on_a_later_turn(self):
+        self.map.world.time_manager = StubTimeManager()
+        nations = self.map.world.nation_data
+        nations["Master"]["release_puppet_queue"] = self.canonical([{"core_nation": "Core"}])
+        diplomacy_processor._process_claim_queues(self.map)
+        first, second = (self.map.world.map_data[pid] for pid in ("1", "2"))
+        self.assertEqual(first["owner"], second["owner"])
+        ownership.conquer_province(self.map, first, "Other")
+        diplomacy_processor.report_release_territory_losses(self.map)
+        self.assertFalse(nations["Master"].get("inbox"))
+
+        ownership.conquer_province(self.map, second, "Other")
+        self.map.world.time_manager.total_turns += 1
+        diplomacy_processor.report_release_territory_losses(self.map)
+        self.assertFalse(nations["Master"].get("inbox"))
+
     def test_provisional_release_notice_recovers_its_country_on_save_and_history_load(self):
         old = {"action": "PRIVATE_GAME_NOTICE", "sender": "GLOBAL_EVENTS", "system_notice": True,
                "related_action": "RELEASE_PUPPET", "message_id": "failure", "read": True,
@@ -221,7 +265,8 @@ class PuppetReleaseRuleTests(unittest.TestCase):
 
     def test_new_country_does_not_receive_private_release_notices_from_the_source(self):
         self.map.world.time_manager = StubTimeManager()
-        diplomacy_messages.send_release_failure_notice(self.map, "Other", "Core", "The release failed.")
+        diplomacy_messages.send_release_notice(self.map, "Other", "Core", "The release failed.",
+                                               action=diplomacy_messages.RELEASE_FAILED_ACTION)
         created = self.release()
         self.assertFalse(self.map.world.nation_data[created].get("inbox"))
         self.assertEqual(self.map.world.nation_data["Core"]["inbox"][0]["sender"], "Other")
