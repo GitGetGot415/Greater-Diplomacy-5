@@ -185,4 +185,11 @@ State the behavior change, verification, required supporting edits, and any sepa
 
 ## Reading comprehension
 
-Explain to the user how you think features should be implemented based on your reading of the AGENTS.md. Be very precise about this. Vague statements will not be accepted.
+BEFORE MAKING ANY EDITS
+Answer the following questions, and make sure the user sees this.
+
+1. Where should data be centralized in?
+2. How should new features be implemented in general?
+3. What is the turn processing folder called?
+4. How do capital provinces work?
+5. How should conversions be handled?
