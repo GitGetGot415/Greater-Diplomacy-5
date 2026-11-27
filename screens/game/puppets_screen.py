@@ -6,7 +6,7 @@ from ui.widgets import flag_icons
 from ui.navigation.screen import MapOverlayScreen, Screen
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button, on_off_color
 from ui.rendering.font_manager import fonts
-from ui.rendering import overlay_renderer
+from ui.rendering import refresh_map
 from ui.bars import ui_bars
 from ui.background_styles import PUPPET_PANEL_STYLES
 from ui.navigation.screen_runner import _run_pygame_sub_screen
@@ -14,7 +14,7 @@ from ui.widgets.text_utils import fit_text, wrap_text
 
 from data.io import country_io
 from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
-from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue, puppet_release_country_name
 
 
 class Puppets_Screen(Screen):
@@ -339,12 +339,14 @@ class Create_Puppet_Screen(MapOverlayScreen):
         c.PUPPET_TYPE_AUTONOMOUS: c.COLOR_SUCCESS_GREEN,
         c.PUPPET_RELEASE_INDEPENDENT: c.UI_ACCENT_BLUE,
     }
+    RELEASE_COLORS = ((255, 105, 180), (105, 255, 180), (105, 180, 255), (255, 255, 105), (255, 150, 100))
 
     def __init__(self, map_screen, country_id=None):
         super().__init__(map_screen, pygame.Rect(80, 120, 450, c.SCREEN_HEIGHT - 240))
         self.releasing_country = self.player if country_id is None else country_id
         self.keep_cores = False
         self.release_type = c.PUPPET_TYPE_INTEGRATED
+        self._preview_inputs = None
         self.refresh_ui()
 
     def get_panel_title(self):
@@ -392,54 +394,71 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.scroll.content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + self.CONTENT_TOP,
                                                self.panel_rect.width - 10,
                                                self.panel_rect.height - self.CONTENT_TOP - self.CONTENT_BOTTOM_GAP)
-        queue = self.map_screen.world.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
+        world = self.map_screen.world
+        queue = world.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
         queued = {entry["core_nation"]: entry for entry in queue}
-        self.valid_subjects = sorted({core for province in self.map_screen.world.map_data.values()
+        self.valid_subjects = sorted({core for province in world.map_data.values()
                                       if province.get("owner") == self.releasing_country
                                       and not queries.is_water_province(province)
                                       for core in province.get("cores", [])
                                       if core != self.releasing_country and core not in c.UNPLAYABLE_NATIONS}
                                      | set(queued))
-        self.release_rows = []
+        self.refresh_preview(queue)
+        self.scroll.limit = min(0, self.scroll.content_rect.height - len(self.valid_subjects) * self.ROW_HEIGHT)
+        self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
+
         self.release_row_surfaces = []
         row_font = fonts.get("normal")
         for index, subject in enumerate(self.valid_subjects):
-            name = queries.get_country_display_name(subject, self.map_screen.world.nation_data)
-            if subject not in self.map_screen.world.nation_data:
-                name = country_io.get_country_stats(subject).get("name", name)
+            name = puppet_release_country_name(subject, world.nation_data)
             entry = queued.get(subject)
-            available = queries.get_puppet_release_provinces(
-                self.releasing_country, subject, self.map_screen.world.map_data, self.keep_cores, queue)
+            available = entry is not None or bool(queries.get_puppet_release_provinces(
+                self.releasing_country, subject, world.map_data, self.keep_cores, queue))
             status = f" ({entry['release_type']} queued)" if entry else ""
-            self.release_rows.append((name + status, entry is not None))
-            row_text = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
-            text_color = (self.QUEUED_TEXT_COLORS[entry["release_type"]]
-                          if entry else c.UI_TEXT_LIGHT)
-            self.release_row_surfaces.append(row_font.render(
-                row_text, True, text_color))
+            label = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
+            color = self.QUEUED_TEXT_COLORS[entry["release_type"]] if entry else c.UI_TEXT_LIGHT
+            self.release_row_surfaces.append(row_font.render(label, True, color))
             y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll.value
             button = Button(self.panel_rect.x + 320, y_pos, "small", "red" if entry else "green",
                             "Cancel" if entry else "Create",
                             lambda value=subject, cancel=bool(entry): self.cancel_queue(value) if cancel else self.queue_creation(value))
-            button.apply_state(enabled=enabled and (entry is not None or bool(available)),
+            button.apply_state(enabled=enabled and available,
                                color="red" if entry else "green",
-                               text="No Land" if entry is None and not available else None)
+                               text="No Land" if not available else None)
             button.is_scrollable = True
             button.click_guard = self.content_hover_guard()
             button.base_y = y_pos - self.scroll.value
             self.elements.append(button)
 
-        # Cache the map highlights in creation order, using the same territory rule.
-        self.queued_highlights = []
-        colors = ((255, 105, 180), (105, 255, 180), (105, 180, 255), (255, 255, 105), (255, 150, 100))
+    def refresh_preview(self, queue):
+        if not queue:
+            self._preview_inputs = None
+            self.preview_map = None
+            return
+        world = self.map_screen.world
+        master = self.releasing_country
+        master_color = world.nation_data.get(master, {}).get("color", country_io.DEFAULT_NATION_COLOR)[:3]
+        palette = sorted(self.RELEASE_COLORS, reverse=True,
+                         key=lambda color: sum((channel - base) ** 2 for channel, base in zip(color, master_color)))
+        colors = {entry["core_nation"]: palette[index % len(palette)] for index, entry in enumerate(queue)}
+        owner_colors = {master: master_color}
+        transfers = {}
         prior = []
-        for index, entry in enumerate(queue):
-            provinces = queries.get_puppet_release_provinces(
-                self.releasing_country, entry["core_nation"], self.map_screen.world.map_data,
-                entry.get("keep_cores", False), prior)
-            self.queued_highlights.extend((province["id"], colors[index % len(colors)]) for province in provinces)
+        # Releases due on the same turn transfer shared land in queue order.
+        for entry in sorted(queue, key=lambda item: max(1, item.get("turns_left", 1))):
+            subject = entry["core_nation"]
+            provinces = queries.get_puppet_release_provinces(master, subject, world.map_data,
+                                                            entry.get("keep_cores", False), prior)
+            owner = ("release", subject)
+            owner_colors[owner] = colors[subject]
+            transfers.update((province["id"], owner) for province in provinces)
             prior.append(entry)
-        self.scroll.limit = min(0, self.scroll.content_rect.height - len(self.valid_subjects) * self.ROW_HEIGHT)
+
+        inputs = (self.map_screen.id_map, self.map_screen._presentation_cache_revision, owner_colors, transfers)
+        if inputs == self._preview_inputs:
+            return
+        self.preview_map = refresh_map.build_ownership_preview_map(self.map_screen, owner_colors, transfers)
+        self._preview_inputs = inputs
 
     def update(self):
         super().update()
@@ -462,7 +481,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             self.refresh_ui()
             return
         country.setdefault("release_puppet_queue", [])[:] = canonical
-        name = queries.get_country_display_name(subject, self.map_screen.world.nation_data)
+        name = puppet_release_country_name(subject, self.map_screen.world.nation_data)
         self.map_screen.show_feedback(f"Creation of {name} ({self.release_type}) queued (1 turn).")
         self.refresh_ui()
 
@@ -473,12 +492,16 @@ class Create_Puppet_Screen(MapOverlayScreen):
         queue[:] = [entry for entry in queue if entry["core_nation"] != subject]
         self.refresh_ui()
 
+    def draw_overlay_map(self, surface):
+        if self.preview_map is None:
+            super().draw_overlay_map(surface)
+        else:
+            refresh_map.draw_ownership_preview_map(surface, self.map_screen, self.preview_map, show_names=False)
+
     def draw_content(self, surface):
-        for province_id, color in self.queued_highlights:
-            overlay_renderer.draw_map_highlight(surface, self.map_screen, province_id, color, base_radius=10)
         self.draw_panel(surface)
-        font = fonts.get("normal")
-        if not self.release_rows:
+        if not self.valid_subjects:
+            font = fonts.get("normal")
             surface.blit(font.render("No nations available to create.", True, c.UI_TEXT_MUTED),
                          (self.panel_rect.x + 30, self.panel_rect.y + self.ROW_TOP))
         else:

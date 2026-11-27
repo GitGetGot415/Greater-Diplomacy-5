@@ -90,6 +90,9 @@ MESSAGE_CATEGORIES = {
 }
 
 SYSTEM_NOTICE_AUTHOR = "Game"
+# Use a reserved non-country ID as the thread key for one-recipient notices.
+GAME_NOTICE_THREAD = "GLOBAL_EVENTS"
+PRIVATE_NOTICE_ACTION = "PRIVATE_GAME_NOTICE"
 SHARED_OUTCOME_ACTION = "SHARED_DIPLOMATIC_OUTCOME"
 _LEGACY_AUTO_DECLINE_TEXT = "Your proposal was ignored and automatically declined."
 _LEGACY_SHARED_OUTCOMES = {
@@ -350,7 +353,7 @@ def is_system_notice(msg):
     """Recognize neutral outcomes independently of whose conversation stores them."""
     if is_forwarded(msg):
         return False
-    if msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION) or legacy_shared_outcome(msg):
+    if msg.get("action") in (peace_scope.CHOICE_ACTION, SHARED_OUTCOME_ACTION, PRIVATE_NOTICE_ACTION) or legacy_shared_outcome(msg):
         return True
     # Older automatic declines used the original offer action for both copies.
     return _is_legacy_auto_decline(msg)
@@ -545,16 +548,28 @@ def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None
     return incoming
 
 
-def send_system_notice(context, first, second, content, action, *, related_action=None):
-    """Put a shared outcome in both inboxes with the counterpart as the thread key."""
-    world = world_for(context)
+def _system_notice_entry(world, content, action, related_action):
     entry = {"content": content, "type": "DIPLOMACY", "action": action, "system_notice": True,
              "read": False, "spectator_read": False, "date": world.time_manager.get_date_string(),
              "message_id": uuid.uuid4().hex}
     if related_action is not None:
         entry["related_action"] = related_action
+    return entry
+
+
+def send_system_notice(context, first, second, content, action, *, related_action=None):
+    """Put a shared outcome in both inboxes with the counterpart as the thread key."""
+    world = world_for(context)
+    entry = _system_notice_entry(world, content, action, related_action)
     _deliver(world.nation_data, first, dict(entry, sender=second))
     _deliver(world.nation_data, second, dict(entry, sender=first))
+
+
+def send_private_system_notice(context, receiver, content, *, related_action):
+    """Deliver an unread Game notice only to the affected country."""
+    world = world_for(context)
+    entry = _system_notice_entry(world, content, PRIVATE_NOTICE_ACTION, related_action)
+    _deliver(world.nation_data, receiver, dict(entry, sender=GAME_NOTICE_THREAD))
 
 
 def forward_message(context, sender, receiver, original_message, source_owner=None):
@@ -669,7 +684,7 @@ def message_category(msg):
     if not isinstance(msg, dict):
         return ""
     action = msg.get("action")
-    if action == SHARED_OUTCOME_ACTION:
+    if action in (SHARED_OUTCOME_ACTION, PRIVATE_NOTICE_ACTION):
         action = msg.get("related_action", action)
     if action:
         return MESSAGE_CATEGORIES.get(action, "DIPLOMACY")

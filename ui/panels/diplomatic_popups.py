@@ -25,7 +25,7 @@ POPUP_CLOSE_INSET_X = 30
 POPUP_CLOSE_INSET_Y = 5
 
 class DiplomaticPopup:
-    def __init__(self, sender, text, index, message=None):
+    def __init__(self, sender, text, index, message=None, *, read_key="read"):
         self.width = POPUP_WIDTH
         self.height = POPUP_HEIGHT
         #: The inbox entry this came from, so the popup can tell when it has
@@ -33,6 +33,7 @@ class DiplomaticPopup:
         #: message read is what the Messages screen already does, and this reads
         #: the same object.
         self.message = message
+        self.read_key = read_key
         
         # Start positions
         start_x = POPUP_START_X
@@ -103,27 +104,37 @@ class DiplomaticPopup:
             y_off += 20
 
 
+def _spawn_spectator_game_notices(map_screen):
+    """Show Game notices in the local spectator view of country mail."""
+    nation_data = map_screen.world.nation_data
+    for country, data in nation_data.items():
+        for msg in data.get("inbox", []):
+            if (msg.get("action") != diplomacy_messages.PRIVATE_NOTICE_ACTION
+                    or msg.get("spectator_read") or msg.get("spectator_popup_shown")):
+                continue
+            name = queries.get_country_display_name(country, nation_data)
+            content = diplomacy_messages.conversation_message_text(msg, country, nation_data)
+            popup = DiplomaticPopup(diplomacy_messages.SYSTEM_NOTICE_AUTHOR, f"{name}: {content}",
+                                    len(map_screen.diplomatic_popups), message=msg, read_key="spectator_read")
+            map_screen.diplomatic_popups.append(popup)
+            msg["spectator_popup_shown"] = True
+
+
 def spawn_popups_for_player(map_screen):
-    """Raises an alert for every unseen diplomatic message in the player's inbox.
-
-    Nobody it is not addressed to gets one. A spectator has no diplomacy of
-    their own, and neither does a tactical-mode player: their country is run by
-    the AI, every screen the alert would send them to is read-only for them, and
-    the inbox it is announcing belongs to their host rather than to them.
-
-    The messages are still marked shown. Declaring independence turns tactical
-    mode off mid-game, and a player who has just founded a country should not be
-    handed a stack of alerts about treaties their old host signed.
-    """
+    """Show unseen alerts for the current country's inbox or local spectator orders."""
     if not hasattr(map_screen, 'diplomatic_popups'):
         map_screen.diplomatic_popups = []
 
-    if map_screen.session.player_country in ["None", "Spectator", "Editor"]:
+    session = map_screen.session
+    if session.player_country == "Spectator":
+        if not (session.is_networked or session.is_editor or session.tactical_mode):
+            _spawn_spectator_game_notices(map_screen)
+        return
+    if session.player_country in ("None", "Editor"):
         return
 
-    if map_screen.session.tactical_mode:
-        # Runs every frame the player is in control, so this also takes down any
-        # alert that was already up when the mode changed.
+    if session.tactical_mode:
+        # Mark the host country's alerts shown so they stay closed after independence.
         map_screen.diplomatic_popups = []
         for msg in map_screen.world.nation_data.get(map_screen.session.player_country, {}).get("inbox", []):
             if msg.get("type") == "DIPLOMACY":
@@ -182,7 +193,7 @@ def is_spent(map_screen, popup):
     msg = popup.message
     if msg is None:
         return False
-    if msg.get("read"):
+    if msg.get(popup.read_key):
         return True
 
     sender = msg.get("sender", "")

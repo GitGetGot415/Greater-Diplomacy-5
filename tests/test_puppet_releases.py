@@ -17,10 +17,10 @@ from data.map import load_map
 from data.queries import images
 from ui.dialogs import pickers
 from map_logic.actions.player_actions import collect_map_commands
-from map_logic.diplomacy import diplomacy_processor, puppet_actions
+from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, puppet_actions
 from screens.game import puppets_screen
 from tests import app_harness
-from tests.stub_map_screen import state_owner, map_double, sample_map_screen
+from tests.stub_map_screen import StubTimeManager, state_owner, map_double, sample_map_screen
 from ui.navigation import modal_stack
 from data.session_state import LOCAL_PLAY, MAP_EDITOR, REALTIME, TOURNAMENT
 
@@ -179,6 +179,25 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         first, second = self.map.world.map_data["1"]["owner"], self.map.world.map_data["3"]["owner"]
         self.assertNotEqual(first, second)
         self.assertEqual(self.map.world.map_data["2"]["owner"], first)
+
+    def test_failed_release_sends_one_notice_to_the_ordering_country(self):
+        self.map.session.player_country = "Other"
+        self.map.world.time_manager = StubTimeManager()
+        nations = self.map.world.nation_data
+        nations["Master"]["release_puppet_queue"] = self.canonical([{"core_nation": "Core"}])
+        self.map.world.map_data["1"]["owner"] = "Other"
+        self.map.world.map_data["2"]["owner"] = "Other"
+
+        diplomacy_processor._process_claim_queues(self.map)
+        diplomacy_processor._process_claim_queues(self.map)
+
+        self.assertEqual(nations["Master"]["release_puppet_queue"], [])
+        notice, = nations["Master"]["inbox"]
+        self.assertTrue(diplomacy_messages.is_system_notice(notice))
+        self.assertFalse(notice["read"])
+        self.assertIn("Core Display", notice["content"])
+        self.assertIn("No eligible provinces", notice["content"])
+        self.assertFalse(any(nations[country].get("inbox") for country in ("Core", "Other")))
 
     def test_new_country_does_not_copy_the_source_release_queue(self):
         self.map.world.nation_data["Core"]["release_puppet_queue"] = [{"core_nation": "Other", "turns_left": 3}]
@@ -481,6 +500,12 @@ class PuppetReleaseControlTests(unittest.TestCase):
 
     def setUp(self):
         self.map = release_map()
+        provinces = self.map.world.id_to_province
+        self.map.world.map_data = {tuple(p["map_color"]): p for p in provinces.values()}
+        self.map._presentation_cache_revision = 0
+        self.map.id_map = pygame.Surface((20 * len(provinces), 20))
+        for index, province in enumerate(provinces.values()):
+            self.map.id_map.fill(province["map_color"], pygame.Rect(index * 20, 0, 20, 20))
 
     def test_opening_always_starts_integrated_and_buttons_change_the_choice(self):
         screen = puppets_screen.Create_Puppet_Screen(self.map)
@@ -559,7 +584,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
         screen.queue_creation("Core")
         screen.queue_creation("Core")
         self.assertEqual(len(self.map.world.nation_data["Master"]["release_puppet_queue"]), 1)
-        self.map.world.map_data["3"]["owner"] = "Other"
+        self.map.world.id_to_province[3]["owner"] = "Other"
         screen.queue_creation("Second")
         self.assertEqual(len(self.map.world.nation_data["Master"]["release_puppet_queue"]), 1)
 
@@ -593,9 +618,45 @@ class PuppetReleaseControlTests(unittest.TestCase):
         screen = puppets_screen.Create_Puppet_Screen(self.map)
         screen.queue_creation("Core")
         with mock.patch.object(queries, "get_puppet_release_provinces", side_effect=AssertionError("Frame calculation")), \
-                mock.patch.object(puppets_screen.overlay_renderer, "draw_map_highlight"):
-            screen.draw_content(self.surface)
-            screen.draw_content(self.surface)
+                mock.patch.object(puppets_screen.refresh_map, "draw_ownership_preview_map") as draw:
+            screen.draw_overlay_map(self.surface)
+            screen.draw_overlay_map(self.surface)
+        self.assertEqual(draw.call_args_list, [
+            mock.call(self.surface, self.map, screen.preview_map, show_names=False)] * 2)
+
+    def test_country_name_is_a_label_and_create_and_cancel_are_controls(self):
+        screen = puppets_screen.Create_Puppet_Screen(self.map)
+        pos = (screen.panel_rect.x + 26, screen.panel_rect.y + screen.ROW_TOP + 22)
+        nation = self.map.world.nation_data["Master"]
+        self.assertFalse(any(element.rect.collidepoint(pos) for element in screen.elements))
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
+            screen.handle_events([pygame.event.Event(event, button=1, pos=pos)
+                                  for event in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)])
+        self.assertIsNone(screen.preview_map)
+        self.assertNotIn("release_puppet_queue", nation)
+
+        create = next(element for element in screen.elements if element.text == "Create")
+        self.click_button(screen, create)
+        self.assertIsNotNone(screen.preview_map)
+        self.assertEqual([entry["core_nation"] for entry in nation["release_puppet_queue"]], ["Core"])
+        cancel = next(element for element in screen.elements if element.text == "Cancel")
+        self.click_button(screen, cancel)
+        self.assertEqual(nation["release_puppet_queue"], [])
+        self.assertIsNone(screen.preview_map)
+
+    def test_queued_preview_uses_saved_options_and_reserves_shared_land(self):
+        screen = puppets_screen.Create_Puppet_Screen(self.map)
+        with mock.patch.object(puppets_screen.refresh_map, "build_ownership_preview_map",
+                               wraps=puppets_screen.refresh_map.build_ownership_preview_map) as build:
+            screen.queue_creation("Core")
+            queued = build.call_args.args[2]
+            screen.toggle_keep_cores()
+            self.assertEqual(build.call_count, 1)
+            screen.queue_creation("Second")
+            transfers = build.call_args.args[2]
+        self.assertEqual(queued[1], queued[2])
+        self.assertEqual({pid: transfers[pid] for pid in queued}, queued)
+        self.assertNotEqual(transfers[2], transfers[3])
 
 
 if __name__ == "__main__":

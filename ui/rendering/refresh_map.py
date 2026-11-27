@@ -534,7 +534,12 @@ def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
     pre-war borders it actually restores, which is the one thing a player needs
     to see before deciding what to demand.
     """
-    parties = set(parties)
+    colors = {party: map_screen.nation_colors.get(party, UNOWNED_COLOR) for party in parties}
+    return build_ownership_preview_map(map_screen, colors, transfers, baseline)
+
+
+def build_ownership_preview_map(map_screen, colors, transfers, baseline=None):
+    """Build a political preview from projected transfers and owner colors."""
 
     def get_data(data):
         prov_id = int(data["id"])
@@ -544,8 +549,8 @@ def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
         if owner is None:
             owner = data.get("owner", "Unclaimed")
 
-        if owner in parties:
-            return owner, map_screen.nation_colors.get(owner, UNOWNED_COLOR)
+        if owner in colors:
+            return owner, colors[owner]
         if owner in c.UNOWNED_LAND_OWNERS:
             return owner, UNOWNED_COLOR
         return owner, BYSTANDER_COLOR
@@ -553,17 +558,23 @@ def build_deal_preview_map(map_screen, parties, transfers, baseline=None):
     return _build_map_surface(map_screen, get_data)
 
 
-def draw_deal_preview_map(surface, map_screen, preview):
-    """Draw a deal's political preview with the live map camera and restore the map."""
+def draw_ownership_preview_map(surface, map_screen, preview, *, show_names=True):
+    """Draw a political preview with the live map camera and restore the map."""
     previous_layer = map_screen.base_layer
     previous_map = map_screen.active_map
+    previous_names = map_screen.show_country_names
     try:
         map_screen.base_layer = "POLITICAL"
         map_screen.active_map = preview
+        map_screen.show_country_names = show_names and previous_names
         map_screen.draw_clean_map_background(surface)
     finally:
         map_screen.base_layer = previous_layer
         map_screen.active_map = previous_map
+        map_screen.show_country_names = previous_names
+
+
+draw_deal_preview_map = draw_ownership_preview_map
 
 
 def refresh_fog_map(map_screen):

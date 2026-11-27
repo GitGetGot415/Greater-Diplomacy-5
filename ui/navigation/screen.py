@@ -969,12 +969,15 @@ class MapOverlayScreen(Screen):
     def update(self):
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
 
+    def draw_overlay_map(self, surface):
+        self.map_screen.draw_clean_map_background(surface)
+
     def draw(self, surface):
         # Map_Screen.draw_background recomputes its own bg_color from the live
         # camera zoom (see map.py), so this stays color-responsive while
         # zooming even though Map_Screen.update() doesn't run behind a modal.
         self.map_screen.draw_background(surface)
-        self.map_screen.draw_clean_map_background(surface)
+        self.draw_overlay_map(surface)
         if self.overlay_alpha:
             ui_bars.draw_fullscreen_overlay(surface, self.overlay_alpha)
 

@@ -341,6 +341,14 @@ def finalize_take_puppets(map_data, nation_data, master, target_puppet):
         p_type = nation_data.get(p, {}).get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
         assign_puppet(map_data, nation_data, master, p, p_type)
 
+
+def puppet_release_country_name(core_nation, nation_data):
+    """Read the display name of a release candidate, including dormant countries."""
+    if core_nation not in nation_data:
+        return country_io.get_country_stats(core_nation).get("name", core_nation)
+    return queries.get_country_display_name(core_nation, nation_data)
+
+
 def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_queue=()):
     """Validate nation creation choices. Preserve host countdowns."""
     if master not in nation_data or master in c.UNPLAYABLE_NATIONS or not isinstance(entries, list):

@@ -1736,7 +1736,7 @@ class Map(StateAccess, Screen):
         if is_playing:
             self._refresh_resource_hud_economy()
 
-        if (is_playing and self._popup_presentation_revision
+        if (is_playing and not self.session.is_refreshing and self._popup_presentation_revision
                 != self._presentation_cache_revision):
             diplomatic_popups.spawn_popups_for_player(self)
             self._popup_presentation_revision = self._presentation_cache_revision
