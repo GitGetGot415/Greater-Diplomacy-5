@@ -18,9 +18,8 @@
 - rebellion / garrison system so taking non core territory has consequences
 - also makes puppets potentially able to revolt
 
-## Edgecases
-
-- if you're playing as a 1 province nation, and you're attacked, because provinces being fought over produce 0 resources, all your units can't fight back and you will lose without dealing any damage
+- make local multiplayer easier to find, so you dont have to go into the settings to find it
+- make puppets less weird to work with `(essentially, try to cut down on unessecary tag creations and messages that are sent by one tag only to never have that tag send you messages ever again)`
 
 ## Check First
 
