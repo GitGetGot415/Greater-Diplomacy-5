@@ -1,6 +1,6 @@
 # Greater Diplomacy 5 Agent Guide
 
-Read this entire file from disk and confirm to the user that you read it before making any edits. Answer questions without editing until the user explicitly asks for changes.
+Read this entire file from disk. You are not allowed to make changes before reading this file. Answer questions without editing until the user explicitly asks for changes.
 
 ## Before Editing
 
@@ -182,3 +182,7 @@ Tuning includes stats, costs, production times, outputs, capabilities, research 
 ### Handoff
 
 State the behavior change, verification, required supporting edits, and any separately approved changes. For persisted data or library content, explain whether a migration is needed and why. Name the conversion or default and the affected save, selected-history, and tournament-move paths. Name tests and builds run or skipped. Link relevant files and identify remaining risks or unverified platforms. Include a small example when it clarifies the change.
+
+## Reading comprehension
+
+Explain to the user how you think features should be implemented based on your reading of the AGENTS.md. Be very precise about this. Vague statements will not be accepted.
