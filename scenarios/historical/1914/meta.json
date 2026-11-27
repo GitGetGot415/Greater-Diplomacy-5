@@ -1,6 +1,6 @@
 {
-  "version": "v50",
-  "generated_at": "2026-11-24T20:13:22.759806",
+  "version": "v51",
+  "generated_at": "2026-11-27T14:32:42.018806",
   "date": {"day": 15, "month": 0, "year": 1914, "total_turns": 0},
   "loop_map": true,
   "player_country": "None",
@@ -7085,7 +7085,18 @@
     "Dominion of Canada": {},
     "Zheleznogorsk": {},
     "Communist Hive Mind Raj": {},
-    "Polynesian SSR": {}
+    "Polynesian SSR": {},
+    "Malta": {},
+    "Mauritius": {},
+    "Northern Alliance": {},
+    "Northern Cyprus": {},
+    "Palau": {},
+    "Puntland": {},
+    "Samoa": {},
+    "Sao Tome and Principe": {},
+    "Singapore": {},
+    "Somaliland": {},
+    "Sudan People's Liberation Movement": {}
   },
   "factions": {
     "faction-b64fe71bae558a332e48ff5a": {

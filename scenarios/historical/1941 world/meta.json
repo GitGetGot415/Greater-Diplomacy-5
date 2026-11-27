@@ -1,6 +1,6 @@
 {
-  "version": "v50",
-  "generated_at": "2026-11-24T20:13:30.217857",
+  "version": "v51",
+  "generated_at": "2026-11-27T14:32:49.225956",
   "date": {"day": 15, "month": 5, "year": 1941, "total_turns": 0},
   "loop_map": true,
   "player_country": "Editor",
@@ -17442,6 +17442,17 @@
     "Zheleznogorsk": {},
     "Communist Hive Mind Raj": {},
     "Polynesian SSR": {},
+    "Malta": {},
+    "Mauritius": {},
+    "Northern Alliance": {},
+    "Northern Cyprus": {},
+    "Palau": {},
+    "Puntland": {},
+    "Samoa": {},
+    "Sao Tome and Principe": {},
+    "Singapore": {},
+    "Somaliland": {},
+    "Sudan People's Liberation Movement": {},
     "FACTION_WAR_MAPS": {
       "Axis": {
         "21": "Reichskommissariat Norwegen",

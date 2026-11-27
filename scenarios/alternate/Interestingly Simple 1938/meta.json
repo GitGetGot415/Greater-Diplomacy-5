@@ -1,6 +1,6 @@
 {
-  "version": "v50",
-  "generated_at": "2026-11-24T20:13:39.515273",
+  "version": "v51",
+  "generated_at": "2026-11-27T14:33:03.603881",
   "date": {"day": 15, "month": 8, "year": 1938, "total_turns": 0},
   "loop_map": true,
   "player_country": "None",
@@ -4441,7 +4441,18 @@
     "Bahrain": {},
     "Zheleznogorsk": {},
     "Communist Hive Mind Raj": {},
-    "Polynesian SSR": {}
+    "Polynesian SSR": {},
+    "Malta": {},
+    "Mauritius": {},
+    "Northern Alliance": {},
+    "Northern Cyprus": {},
+    "Palau": {},
+    "Puntland": {},
+    "Samoa": {},
+    "Sao Tome and Principe": {},
+    "Singapore": {},
+    "Somaliland": {},
+    "Sudan People's Liberation Movement": {}
   },
   "factions": {
     "faction-177fd547e13732ad1d524e8f": {
