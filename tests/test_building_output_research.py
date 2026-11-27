@@ -15,7 +15,8 @@ from data.state_access import BackendState
 from map_logic import politics
 from map_logic.actions import production_actions
 from map_logic.ai import ai_tech_eval
-from map_logic.system32 import economy_processor, research_processor, turn_processor
+from map_logic.system32 import combat_processor, economy_processor, research_processor, turn_processor
+from tests.combat_fixtures import unit
 from tests.stub_map_screen import state_owner, map_double, sample_map_screen
 from tests.research_fixtures import research_lock_cases
 from data.session_state import LOCAL_PLAY, REALTIME, TOURNAMENT
@@ -404,51 +405,70 @@ class OutputBonusTests(unittest.TestCase):
         for res in c.ECON_RESOURCE_KEYS:
             self.assertEqual(country[res], expected["total_inc"][res])
 
-    def test_active_combat_pauses_tile_income_and_fuel_conversion_until_the_fighting_ends(self):
-        tile = dict(self.province(), id=1, terrain="plains", units=[{"owner": "A", "health": 100}])
-        safe = {"id": 2, "terrain": "plains", "owner": "A", "cores": ["A"]}
-        provinces = {1: tile, 2: safe}
-        country = {"at_war_with": ["B"], "mat_to_fuel_slider": 1, "conscription_slider": 1}
+    def test_isolated_defender_earns_reduced_income_and_can_deal_damage(self):
+        kind = "Test Ground Division"
+        defender = unit("A", health=1000, kind=kind)
+        attacker = unit("B", health=1000, kind=kind)
+        tile = dict(self.province(core=False), id=1, terrain="plains", units=[defender])
+        tile["building_queue"] = [{"item_name": "Basic Factory", "turns_remaining": 1}]
+        provinces = {1: tile}
+        stockpiles = dict.fromkeys(c.ECON_RESOURCE_KEYS, 5000)
+        country = {**stockpiles, "at_war_with": ["B"], "mat_to_fuel_slider": 1, "conscription_slider": 1}
         nations = {"A": country, "B": {"at_war_with": ["A"]}, "C": {}}
         game = map_double(map_data=provinces, nation_data=nations, player_country="A",
                           hovered_province=tile, secondary_mode="ECONOMY", base_layer="POLITICAL",
                           _presentation_cache_revision=0, _tooltip_building_stamp=None)
+        unit_library = {kind: {f"cost_{resource}": 1000 for resource in c.ECON_RESOURCE_KEYS}}
 
-        def economy(tiles):
-            return queries.calculate_all_economies(tiles, nations, context=game)["A"]
+        def economy():
+            return queries.calculate_all_economies(provinces, nations, context=game)["A"]
 
-        with (patch.object(queries, "get_unit_library", return_value={}),
+        with (patch.object(queries, "get_unit_library", return_value=unit_library),
               patch.object(queries, "get_max_fuel_conversion", return_value=1),
               patch.object(c, "FUEL_CONVERSION_RATIO", 1),
+              patch.object(c, "UPKEEP_MODIFIERS", dict.fromkeys(c.ECON_RESOURCE_KEYS, 1)),
               patch.object(c, "BASE_YIELDS", {"manpower": 100, "materials": 20, "fuel": 10})):
-            safe_income = economy({2: safe})
-            tile["units"].append({"owner": "C", "health": 100})
-            normal = economy(provinces)
-            self.assertGreater(normal["gross_materials"], safe_income["gross_materials"])
-
-            tile["units"].append({"owner": "B", "health": 100})
-            self.assertEqual(economy(provinces)["breakdown"], safe_income["breakdown"])
-            supply = queries.SupplySnapshot(game)
-            actual = supply.income_conversions_for("A")
-            self.assertEqual(set(actual), {2})
-            self.assertEqual(actual[2]["fuel"], safe_income["breakdown"]["fuel"]["conversion"])
-            self.assertNotIn(1, supply.for_country("A").production_tiles)
-            reopened = supply.land_projection("A", reopen={1: "A"})
-            self.assertGreater(reopened.production_tiles[1]["fuel"], 0)
-
+            normal = economy()
+            tile["units"].append(unit("C", health=1000, kind=kind))
+            self.assertEqual(economy()["breakdown"], normal["breakdown"])
             tooltip.prepare_building_yields(game)
-            self.assertTrue(game._tooltip_tile_in_combat)
-            self.assertTrue(all(not any(output.values()) for _, output in game._tooltip_building_yields))
+            normal_buildings = game._tooltip_building_yields
 
-            economy_processor.process_economy(game)
-            for resource, amount in safe_income["total_inc"].items():
-                self.assertEqual(country[resource], amount)
+            tile["units"].append(attacker)
+            current = economy()
+            multiplier = c.CONTESTED_PROVINCE_OUTPUT_MULTIPLIER
+            for resource in c.ECON_RESOURCE_KEYS:
+                for source in ("non_core", "resources", "buildings"):
+                    self.assertAlmostEqual(current["breakdown"][resource][source], normal["breakdown"][resource][source] * multiplier)
+                self.assertEqual(current["breakdown"][resource]["base"], normal["breakdown"][resource]["base"])
 
-            tile["units"].pop()
+            supply = queries.SupplySnapshot(game)
+            self.assertAlmostEqual(supply.income_conversions_for("A")[1]["fuel"], current["breakdown"]["fuel"]["conversion"])
+            self.assertGreater(supply.status(defender).readiness, 0)
+            self.assertLess(supply.status(defender).readiness, 1)
+            reopened = supply.land_projection("A", reopen={1: "A"})
+            self.assertGreater(reopened.production_tiles[1]["fuel"], supply.for_country("A").production_tiles[1]["fuel"])
+
             game._presentation_cache_revision += 1
             tooltip.prepare_building_yields(game)
-            self.assertFalse(game._tooltip_tile_in_combat)
-            self.assertEqual(economy(provinces)["breakdown"], normal["breakdown"])
+            self.assertEqual(game._tooltip_output_multiplier, multiplier)
+            self.assertEqual(game._tooltip_tile_yields, {resource: current["breakdown"][resource]["non_core"] for resource in c.ECON_RESOURCE_KEYS})
+            self.assertEqual(game._tooltip_building_yields, [
+                (name, {resource: amount * multiplier for resource, amount in output.items()}) for name, output in normal_buildings])
+
+            economy_processor.process_economy(game)
+            for resource, amount in current["total_inc"].items():
+                self.assertAlmostEqual(country[resource], stockpiles[resource] + amount - current["upkeep"][resource])
+
+            with queries.combat_supply(queries.freeze_combat_supply(game)):
+                combat_processor.process_combat(game)
+            self.assertLess(attacker["health"], attacker["max_health"])
+
+            tile["units"].remove(attacker)
+            game._presentation_cache_revision += 1
+            tooltip.prepare_building_yields(game)
+            self.assertEqual(game._tooltip_output_multiplier, 1.0)
+            self.assertEqual(economy()["breakdown"], normal["breakdown"])
 
     def test_first_compass_step_changes_credited_factory_income_and_research(self):
         factory_materials = 100

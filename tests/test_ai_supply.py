@@ -511,7 +511,7 @@ class AISupplyTests(SupplyFixture):
 
     def test_ai_rejects_reinforcements_that_reduce_the_fronts_damage(self):
         supply = province(1, "A", [2], output=(100, 100, 100))
-        front = province(2, "A", [1, 3])
+        front = province(2, "B", [1, 3])
         isolated = province(3, "A", [2])
         division(front)
         division(front, "B", health=500, max_health=500, attack=0)

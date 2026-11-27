@@ -846,20 +846,24 @@ class ProvinceProduction:
             }
         return self.countries[owner]
 
+    def output_multiplier(self, province):
+        if is_province_in_active_combat(province, self.nation_data):
+            return c.CONTESTED_PROVINCE_OUTPUT_MULTIPLIER
+        return 1.0
+
     def tile_yield(self, province):
         """Return (is_core, territory_multipliers, base_tile_yields) for one province."""
         owner = province.get("owner", "Unclaimed")
         economy = self.country(owner)
         is_core = queries.has_core(owner, province)
-        territory = {resource: 1.0 if is_core else c.NON_CORE_MULTIPLIERS[resource] * economy["non_core_province_multiplier"]
+        output_multiplier = self.output_multiplier(province)
+        territory = {resource: output_multiplier * (1.0 if is_core else c.NON_CORE_MULTIPLIERS[resource] * economy["non_core_province_multiplier"])
                      for resource in c.ECON_RESOURCE_KEYS}
         yields = {resource: territory[resource] * economy["dynamic_yields"][resource] for resource in c.ECON_RESOURCE_KEYS}
         yields["manpower"] *= economy["tile_manpower_multiplier"]
         return is_core, territory, yields
 
     def breakdown(self, province):
-        if is_province_in_active_combat(province, self.nation_data):
-            return {}
         owner = province["owner"]
         economy = self.country(owner)
         is_core, territory, yields = self.tile_yield(province)
@@ -874,14 +878,14 @@ class ProvinceProduction:
         return {"core" if is_core else "non_core": yields, "resources": deposits, "buildings": self.building_output(province)}
 
     def _cached_breakdown(self, province):
-        # A capture forecast clears the roster even when ownership stays the same.
-        key = province["id"], province["owner"], bool(province.get("units"))
+        # A capture forecast can end combat even when ownership stays the same.
+        key = province["id"], province["owner"], self.output_multiplier(province)
         if key not in self.province_breakdowns:
             self.province_breakdowns[key] = self.breakdown(province)
         return self.province_breakdowns[key]
 
     def total_output(self, province):
-        key = province["id"], province["owner"], bool(province.get("units"))
+        key = province["id"], province["owner"], self.output_multiplier(province)
         if key not in self.totals:
             breakdown = self._cached_breakdown(province)
             self.totals[key] = {resource: sum(output[resource] for output in breakdown.values()) for resource in c.ECON_RESOURCE_KEYS}
@@ -899,8 +903,6 @@ class ProvinceProduction:
         land_materials = {}
         for province in provinces:
             output = self._cached_breakdown(province)
-            if not output:
-                continue
             _add_province_income(breakdown, output)
             if not is_water_province(province):
                 total = self.total_output(province)
@@ -953,9 +955,11 @@ class ProvinceProduction:
         research = self.nation_data.get(owner, {}).get("research", {})
         if owner not in self.country_buildings:
             self.country_buildings[owner] = get_building_output_modifiers(research, self.library, context=self.context, cache=self.buildings)
-        return queries.get_province_building_output(
+        output = queries.get_province_building_output(
             province, research, self.library, modifiers=self.country_buildings[owner], factory_multiplier=economy["factory_multiplier"],
             non_core_multiplier=economy["non_core_building_multiplier"])
+        multiplier = self.output_multiplier(province)
+        return {resource: amount * multiplier for resource, amount in output.items()} if multiplier != 1.0 else output
 
 
 def calculate_all_economies(map_data, nation_data, *, context=None):

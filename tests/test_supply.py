@@ -433,19 +433,35 @@ class SupplyTests(SupplyFixture):
         self.assertEqual(projection["player_supply"], {unit["unit_id"]: (0, 0, 0)})
         self.assertEqual(projection["provinces"]["2"]["units"], [])
 
-    def test_contested_tile_draws_once_and_cannot_join_two_areas(self):
+    def test_contested_bridge_connects_supply_until_its_defenders_leave(self):
         front = province(1, "A", [2], output=(50, 50, 50))
         contested = province(2, "A", [1, 3], output=(900, 900, 900))
         rear = province(3, "A", [2], output=(300, 300, 300))
-        unit = division(contested)
+        front_unit = division(front)
+        defender = division(contested)
         division(contested, "B")
         rear_unit = division(rear)
         world = game(front, contested, rear)
+        world.world.nation_data["A"]["military_access"] = ["C"]
+        world.world.nation_data["C"]["at_war_with"] = ["B"]
+        world.world.nation_data["B"]["at_war_with"].append("C")
         snapshot = queries.SupplySnapshot(world)
         network = snapshot.for_country("A")
+        self.assertEqual(network.province_area[1], network.province_area[3])
+        self.assertEqual(network.unit_area[defender["unit_id"]], network.unit_area[rear_unit["unit_id"]])
+        self.assertEqual(snapshot.fractions(front_unit), (1, 1, 1))
+        self.assertNotIn(2, snapshot.for_country("B").province_area)
+        self.assertIn(2, snapshot.for_country("C").province_area)
+
+        projected = snapshot.land_projection("A", block=(2,), occupier="B")
+        self.assertEqual(snapshot.fractions(front_unit, network=projected), (0.5, 0.5, 0.5))
+
+        contested["units"].remove(defender)
+        snapshot = queries.SupplySnapshot(world)
+        network = snapshot.for_country("A")
+        self.assertNotIn(2, network.province_area)
         self.assertNotEqual(network.province_area[1], network.province_area[3])
-        self.assertEqual(network.unit_area[unit["unit_id"]], network.unit_area[rear_unit["unit_id"]])
-        self.assertEqual(network.areas[network.province_area[3]].demand["fuel"], 200)
+        self.assertEqual(snapshot.fractions(front_unit), (0.5, 0.5, 0.5))
 
     def test_contested_coast_draws_supply_through_open_sea(self):
         beach = province(1, "B", [2], coast=True)

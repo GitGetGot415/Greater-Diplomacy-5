@@ -56,7 +56,8 @@ def _factory_objectives(context, country, visible, provinces_by_owner):
     """Visible completed factories, scored by lost and gained industrial output."""
     nations = world_for(context).nation_data
     own = queries.ProvinceProduction(nations, context)
-    foreign = queries.ProvinceProduction({name: {} for name in nations}, context) if visible is not None else own
+    foreign = (queries.ProvinceProduction({name: {"at_war_with": queries.get_enemies(name, nations)} for name in nations}, context)
+               if visible is not None else own)
     scores = {}
     for enemy in queries.get_enemies(country, nations):
         for province in provinces_by_owner.get(enemy, ()):
@@ -66,10 +67,12 @@ def _factory_objectives(context, country, visible, provinces_by_owner):
                 continue
             buildings = [name for name in province.get("buildings", ()) if own.library.get(name, {}).get("group") == "industry"]
             factory = dict(province, buildings=buildings, building_queue=())
+            if visible is not None:
+                factory["units"] = queries.filter_visible_units(province.get("units", ()), country, province, nations)
             recipient = ownership.conquest_owner(context, province, queries.get_faction_core_transfer_target(country, province, nations))
             loss = foreign.building_output(factory)
             producer = own if recipient == country else foreign
-            gain = producer.building_output(dict(factory, owner=recipient))
+            gain = producer.building_output(dict(factory, owner=recipient, units=()))
             value = sum((loss[key] + gain[key]) * price for key, price in c.DEAL_VALUE_RESOURCE_PRICES.items())
             if value > 0:
                 scores[tile] = (value, recipient)

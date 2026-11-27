@@ -1,7 +1,6 @@
 import pygame
 import data.constants as c
 from data import queries
-from map_logic import politics
 from ui.rendering import overlay_renderer
 
 UNIT_PREVIEW_LIMIT = 5
@@ -26,21 +25,14 @@ def prepare_building_yields(map_screen):
     map_screen._tooltip_building_yields = []
     map_screen._tooltip_tile_yields = None
     map_screen._tooltip_tile_is_core = True
-    map_screen._tooltip_tile_in_combat = False
+    map_screen._tooltip_output_multiplier = 1.0
     if not visible:
         return
     owner = province.get("owner", "Unclaimed")
     world = map_screen.world
-    if queries.is_province_in_active_combat(province, world.nation_data):
-        map_screen._tooltip_tile_in_combat = True
-        zero = dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)
-        map_screen._tooltip_building_yields = [(name, dict(zero)) for name in province.get("buildings", [])]
-        for project in province.get("building_queue", []):
-            if project.get("item_name") == "Basic Factory":
-                map_screen._tooltip_building_yields.append(("Basic Factory (Under Construction)", dict(zero)))
-        return
     country = world.nation_data.get(owner, {})
     production = queries.ProvinceProduction(world.nation_data, map_screen)
+    map_screen._tooltip_output_multiplier = production.output_multiplier(province)
     is_core, _territory, tile_yields = production.tile_yield(province)
     map_screen._tooltip_tile_is_core = is_core
     map_screen._tooltip_tile_yields = tile_yields
@@ -59,23 +51,14 @@ def prepare_building_yields(map_screen):
                 provinces = (tile for tile in world.map_data.values() if tile.get("owner") == owner)
                 conversions = production.income_conversions_by_province(owner, provinces)
             countries[owner] = conversions
-    research = country.get("research", {})
-    library = queries.get_building_library(map_screen)
-    modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
-    factory_multiplier = politics.factory_output_multiplier(world.nation_data, owner)
-    non_core_multiplier = politics.axis_effect(world.nation_data, owner, "non_core_building_output")
     for name in province.get("buildings", []):
         building_province = dict(province, buildings=[name], building_queue=[])
-        output = queries.get_province_building_output(building_province, research, library,
-                                                      context=map_screen, modifiers=modifiers, factory_multiplier=factory_multiplier,
-                                                      non_core_multiplier=non_core_multiplier)
+        output = production.building_output(building_province)
         map_screen._tooltip_building_yields.append((name, output))
     for project in province.get("building_queue", []):
         if project.get("item_name") == "Basic Factory":
             construction_province = dict(province, buildings=[], building_queue=[project])
-            output = queries.get_province_building_output(construction_province, research, library,
-                                                          context=map_screen, modifiers=modifiers, factory_multiplier=factory_multiplier,
-                                                          non_core_multiplier=non_core_multiplier)
+            output = production.building_output(construction_province)
             map_screen._tooltip_building_yields.append(("Basic Factory (Under Construction)", output))
 
 
@@ -181,12 +164,12 @@ def _province_tooltip_lines(map_screen, prov):
                 lines.append("No Natural Resources")
 
     elif map_screen.secondary_mode == "ECONOMY":
-        in_combat = is_visible and map_screen._tooltip_tile_in_combat
         if not is_visible:
             lines.append("Tile Yield: (Hidden by Fog of War)")
-        elif in_combat:
-            lines.append("No income during battle")
         else:
+            output_multiplier = map_screen._tooltip_output_multiplier
+            if output_multiplier != 1.0:
+                lines.append(f"{output_multiplier:.0%} output during battle")
             tile_yields = getattr(map_screen, "_tooltip_tile_yields", None)
             if tile_yields is None:
                 is_core, _territory, tile_yields = queries.ProvinceProduction(map_screen.world.nation_data, map_screen).tile_yield(prov)

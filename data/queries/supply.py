@@ -334,8 +334,21 @@ class SupplySnapshot:
         if country in self.accessible:
             return self.accessible[country]
         enemies = self._enemies(country)
-        blocked = {key for key, occupants in self.occupants.items() if enemies & occupants}
-        self.accessible[country] = self._open_tiles(country) - blocked
+        open_tiles = self._open_tiles(country)
+        blocked = set()
+        for key, occupants in self.occupants.items():
+            hostiles = enemies & occupants
+            if not hostiles or key not in open_tiles:
+                continue
+            if key not in self.water:
+                owner = self.provinces[key]["owner"]
+                # The owner's side must still oppose every hostile blocker on land.
+                defenders = [member for member in occupants & queries.friendly_nations_view(owner, self.nations)
+                             if key in self.land_units.get(member, {})]
+                if all(any(hostile in self._enemies(member) for member in defenders) for hostile in hostiles):
+                    continue
+            blocked.add(key)
+        self.accessible[country] = open_tiles - blocked
         return self.accessible[country]
 
     def _open_tiles(self, country):
@@ -584,7 +597,8 @@ class SupplySnapshot:
         if key not in self.visible_provinces:
             return c.BASE_YIELDS
         if key not in self.estimated_output:
-            self.estimated_output[key] = self._foreign_production().total_output(self.provinces[key])
+            province = dict(self.provinces[key], units=self.visible_units.get(key, ()))
+            self.estimated_output[key] = self._foreign_production().total_output(province)
         return self.estimated_output[key]
 
     def _foreign_production(self):
@@ -655,8 +669,8 @@ class SupplySnapshot:
                     network.unit_area[identity] = area_id
                     _add_resources(network.areas[area_id].demand, self.unit_data[identity].demand)
 
-        # A contested group may draw from a neighboring area without joining
-        # distinct networks through a hostile or contested tile.
+        # Units on blocked or hostile land may draw from one neighboring area.
+        # Their presence alone does not connect the areas.
         for key in sorted(land_units):
             if key in network.province_area:
                 continue

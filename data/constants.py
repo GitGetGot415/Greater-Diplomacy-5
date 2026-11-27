@@ -83,6 +83,7 @@ BASE_YIELDS = {
     "materials": 10,
     "fuel": 2
 }
+CONTESTED_PROVINCE_OUTPUT_MULTIPLIER = 0.5
 
 GENERAL_RECRUITMENT_BONUS = 5 # Add this
 
