@@ -2,12 +2,15 @@
 
 from collections import Counter
 from pathlib import Path
-import re
 import sys
+
+if __package__:
+    from .sort_statuses import parse_status_row
+else:
+    from sort_statuses import parse_status_row
 
 
 STATUS_FILE = Path(__file__).with_name("flags_copyright_status.md")
-ROW_RE = re.compile(r"^\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*$")
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -17,10 +20,10 @@ def read_flag_statuses():
     """Return (flag name, status) pairs from the copyright table."""
     entries = []
     for line in STATUS_FILE.read_text(encoding="utf-8").splitlines():
-        match = ROW_RE.match(line)
-        if not match or match.group(1) in {"Flag name", "---"}:
+        row = parse_status_row(line)
+        if not row or row[0] in {"Flag name", "---"}:
             continue
-        entries.append(match.groups())
+        entries.append(row)
     return entries
 
 

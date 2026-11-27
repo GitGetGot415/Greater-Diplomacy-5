@@ -11,6 +11,17 @@ STATUS_FILES = (
     COPYRIGHT_DIR / "portraits_copyright_status.md",
 )
 TABLE_ROW_RE = re.compile(r"^\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*$")
+NAME_LINK_RE = re.compile(r"\[([^\]]+)\]\(.+\)")
+
+
+def parse_status_row(line):
+    """Read the displayed name and status from a copyright table row."""
+    row = TABLE_ROW_RE.match(line)
+    if row is None:
+        return None
+    name, status = row.groups()
+    link = NAME_LINK_RE.fullmatch(name)
+    return (link.group(1) if link else name), status
 
 
 def alphabetical_key(value):
@@ -34,9 +45,9 @@ def sort_status_file(path):
     body_lines = lines[separator_index + 1:]
     table_rows = []
     for index, line in enumerate(body_lines):
-        match = TABLE_ROW_RE.match(line)
-        if match:
-            table_rows.append((match.group(1), index, line))
+        row = parse_status_row(line)
+        if row:
+            table_rows.append((row[0], index, line))
 
     sorted_rows = [
         line for _, _, line in sorted(table_rows, key=lambda row: alphabetical_key(row[0]))

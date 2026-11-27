@@ -370,6 +370,7 @@
 | Mason Street | Public Domain |
 | Mato Grosso | Public Domain |
 | Mauritania | Public Domain |
+| [Mauritius](https://commons.wikimedia.org/wiki/File:Flag_of_Mauritius.svg "Reference design. Original PNG source unverified.") | Public Domain |
 | Mauryan Empire | Public Domain |
 | Mecklenburg | Public Domain |
 | Mega City One | Public Domain |
@@ -424,6 +425,7 @@
 | North German Confederation | Public Domain |
 | North Korea | Public Domain |
 | North Macedonia | Public Domain |
+| [Northern Alliance](https://commons.wikimedia.org/wiki/File:Flag_of_Afghanistan_%28WFB_1996%29.png "Reference design. Original PNG source unverified.") | Source unverified |
 | Northern Territory | Public Domain |
 | Northwest Territories | Public Domain |
 | Norway | Public Domain |
@@ -521,6 +523,7 @@
 | Ptolemaic Empire | Public Domain |
 | Puerto Rico | Public Domain |
 | Punjab | Public Domain |
+| [Puntland](https://commons.wikimedia.org/wiki/File:Flag_of_Puntland.svg "Reference design. Original PNG source unverified.") | Public Domain |
 | Qatar | Public Domain |
 | Qing Dynasty | Public Domain |
 | Quebec | Public Domain |
@@ -596,6 +599,7 @@
 | Silesia | Public Domain |
 | Sinaloa | Public Domain |
 | Sinaloa Cartel | Public Domain |
+| [Singapore](https://commons.wikimedia.org/wiki/File:Flag_of_Singapore.svg "Reference design. Original PNG source unverified.") | Public Domain |
 | Skystar Wheel | Public Domain |
 | Slovakia | Public Domain |
 | Slovenia | Public Domain |
@@ -604,6 +608,7 @@
 | Sokoto Caliphate | Public Domain |
 | Solomon Islands | Public Domain |
 | Somalia | Public Domain |
+| [Somaliland](https://commons.wikimedia.org/wiki/File:Flag_of_Somaliland.svg "Reference design. Original PNG source unverified.") | Public Domain |
 | Songhai | Public Domain |
 | Songhai Empire | Public Domain |
 | Sonora | Public Domain |
