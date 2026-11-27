@@ -18,7 +18,6 @@
 - rebellion / garrison system so taking non core territory has consequences
 - also makes puppets potentially able to revolt
 
-- make local multiplayer easier to find, so you dont have to go into the settings to find it
 - make puppets less weird to work with `(essentially, try to cut down on unessecary tag creations and messages that are sent by one tag only to never have that tag send you messages ever again)`
 
 ## Check First
