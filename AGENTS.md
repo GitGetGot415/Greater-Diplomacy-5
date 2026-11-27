@@ -162,7 +162,7 @@ Tuning includes stats, costs, production times, outputs, capabilities, research 
 ## Verification
 
 - Review the diff before handoff. Verify the affected callers use the named shared owner and canonical names and data shapes. Verify compatibility conversion occurs at input boundaries. Tie every edit to the request or a necessary supporting change, including each calculation, UI string, helper, field, fallback, and branch. Remove additions that lack a requirement.
-- Verify appearance manually, including colors, fonts, icons, layout, dimensions, overlap, and pixel appearance. Tests cover behavior such as callbacks, input, navigation, permissions, rules, data, persistence, caches, and runtime errors, including paths through UI controls. Remove visual assertions from mixed tests and keep functional assertions.
+- Verify appearance manually, including colors, fonts, icons, layout, dimensions, overlap, and pixel appearance. Tests cover behavior such as callbacks, input, navigation, permissions, rules, data, persistence, caches, and runtime errors, including paths through UI controls. Tests must NEVER require buttons, sliders, or other UI controls to be at a specific screen position or layout location. Remove visual assertions from mixed tests and keep functional assertions.
 - Check exact UI and tutorial wording only when required for protocol values, identifiers, or an explicit user requirement. Tests that need real network services or an LLM must be marked as integration tests. Search `.github/workflows/` before changing how tests or scripts run or import.
 
 ### Unit, Building, and Research Tests
