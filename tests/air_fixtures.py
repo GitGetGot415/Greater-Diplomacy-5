@@ -3,7 +3,6 @@
 import json
 import os
 import tempfile
-from types import SimpleNamespace
 from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -83,11 +82,14 @@ def world():
         "at_war_with": [other for other in ("A", "B", "C") if other != name],
         "research": {}, "materials": 100000, "fuel": 100000, "manpower": 100000}
         for name in ("A", "B", "C")}
+    time_manager = TimeHandler(start_year=1939)
+    time_manager.day = 1
+    time_manager.total_turns = 4
     return map_double(map_data={}, id_to_province={}, nation_data=nations,
         id_map=pygame.Surface((2400, 32)), scenario_settings={}, tactical_mode=False,
         player_unit=None, player_country="A", loop_map=False, active_players=["A"],
         current_player_index=0, script_variables={}, default_research={},
-        time_manager=SimpleNamespace(day=1, month_index=0, year=1939, total_turns=4),
+        time_manager=time_manager,
         multiplayer_session_key="air-test-session", submitted_moves=set())
 
 
