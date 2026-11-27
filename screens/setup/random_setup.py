@@ -10,6 +10,10 @@ from data.io import starting_defaults
 from screens.setup.scenario_settings import Scenario_Settings
 
 
+MAP_BUTTON_SIZE = (200, 36)
+MAP_BUTTON_GAP = 10
+
+
 class Random_Setup(Screen):
     country_slider = None
     year_slider = None
@@ -144,44 +148,33 @@ class Random_Setup(Screen):
         
         random_map_x = 20
         random_map_y = 70
+        column_step = MAP_BUTTON_SIZE[0] + MAP_BUTTON_GAP
+        row_step = MAP_BUTTON_SIZE[1] + MAP_BUTTON_GAP
 
-        # 1. Isolated Procedural Options (Placed above the table display)
+        proc_btn = Button(random_map_x, random_map_y, MAP_BUTTON_SIZE, "blue", "Random Map", self.toggle_procedural,
+                          font_preset="button_small", sound_kind="select_sub_category")
+        proc_btn.is_selected = self.procedural_world
+        self.elements.append(proc_btn)
+
         if self.procedural_world:
-            # Side-by-side positioning when procedural is active
-            proc_x = (c.SCREEN_WIDTH // 2) - 210
-            type_x = (c.SCREEN_WIDTH // 2) + 10
-            
-            proc_btn = Button(random_map_x, random_map_y, "medium", "blue", "Random Map", self.toggle_procedural,
-                              sound_kind="select_sub_category")
-            proc_btn.is_selected = True
-            self.elements.append(proc_btn)
-            
             map_type_str = self.procedural_types[self.proc_type_index]
             self.elements.append(
-                Button(random_map_x + 210, random_map_y, "medium", "red", f"Type: {map_type_str}", self.toggle_procedural_type,
-                       sound_kind="select_sub_category")
+                Button(random_map_x + column_step, random_map_y, MAP_BUTTON_SIZE, "red", f"Type: {map_type_str}",
+                       self.toggle_procedural_type, font_preset="button_small", sound_kind="select_sub_category")
             )
-        else:
-            # Perfectly centered when it's the lone option
-            proc_btn = Button(random_map_x, random_map_y, "medium", "blue", "Random Map", self.toggle_procedural,
-                              sound_kind="select_sub_category")
-            self.elements.append(proc_btn)
-        
-        # 2. Base Maps Table Layout
-        total_items = len(self.available_maps)
-        cols = min(6, max(1, total_items))
-        grid_width = cols * 210
-        start_x = (c.SCREEN_WIDTH - grid_width) // 2 + 10 
+
+        cols = min(6, max(1, len(self.available_maps)))
+        grid_width = cols * column_step
+        start_x = (c.SCREEN_WIDTH - grid_width) // 2 + MAP_BUTTON_GAP
         start_y = 130
-        
+
         for i, map_name in enumerate(self.available_maps):
-            grid_idx = i  # Reset to 0 base since Random Map isn't taking slot 0 anymore
-            col = grid_idx % cols
-            row = grid_idx // cols
-            btn = Button(start_x + (col * 210), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx),
-                         sound_kind="select_sub_category")
-            if not self.procedural_world and i == self.map_index:
-                btn.is_selected = True 
+            row, col = divmod(i, cols)
+            btn = Button(start_x + col * column_step, start_y + row * row_step, MAP_BUTTON_SIZE, "blue", map_name,
+                         lambda idx=i: self.select_map(idx), font_preset="button_small", sound_kind="select_sub_category")
+            btn.fit_text = True
+            btn.fit_single_line = True
+            btn.is_selected = not self.procedural_world and i == self.map_index
             self.elements.append(btn)
 
     def do_reset(self):
