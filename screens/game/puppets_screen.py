@@ -389,10 +389,11 @@ class Create_Puppet_Screen(MapOverlayScreen):
         group_width = len(c.PUPPET_RELEASE_TYPES) * width + (len(c.PUPPET_RELEASE_TYPES) - 1) * self.RELEASE_TYPE_BUTTON_GAP
         start_x = self.panel_rect.centerx - group_width // 2
         for index, release_type in enumerate(c.PUPPET_RELEASE_TYPES):
+            button_palette, _ = self.RELEASE_TYPE_STYLES[release_type]
             button = Button(start_x + index * (width + self.RELEASE_TYPE_BUTTON_GAP),
-                            self.panel_rect.y + self.RELEASE_TYPE_Y, (width, height), "blue", release_type,
+                            self.panel_rect.y + self.RELEASE_TYPE_Y, (width, height), button_palette, release_type,
                             lambda value=release_type: self.set_release_type(value))
-            button.apply_state(enabled=enabled, color="blue")
+            button.apply_state(enabled=enabled, color=button_palette)
             button.is_selected = enabled and self.release_type == release_type
             self.elements.append(button)
         keep = make_toggle_button(self.centered_x("medium"), self.panel_rect.y + self.KEEP_CORES_Y,
