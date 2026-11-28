@@ -682,7 +682,9 @@ class TournamentMoveTests(unittest.TestCase):
                 host = Host()
                 host.world.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
                                           "terrain": "plains", "units": []}}
-                releases = [{"core_nation": "Outsider", "keep_cores": False, "release_type": release_type, "turns_left": 0}]
+                destination = {"action": "restore", "country": "Outsider"}
+                releases = [{"core_nation": "Outsider", "keep_cores": False, "release_type": release_type,
+                             "turns_left": 0, "destination": destination}]
                 player_data = self.player_data(host, player_intents=[
                     {"type": "puppet_draft", "puppet_order": ["Subject"], "release_subjects": releases}])
                 with tempfile.TemporaryDirectory() as directory:
@@ -690,12 +692,15 @@ class TournamentMoveTests(unittest.TestCase):
                     summary = self.import_moves(host, [path])
                 self.assertEqual(summary["loaded"], 1)
                 self.assertEqual(host.world.nation_data["Leader"]["release_puppet_queue"], [
-                    {"core_nation": "Outsider", "keep_cores": False, "release_type": release_type, "turns_left": 1}])
+                    {"core_nation": "Outsider", "keep_cores": False, "release_type": release_type,
+                     "turns_left": 1, "destination": destination}])
 
     def test_import_rejects_invalid_foreign_duplicate_and_stale_release_requests(self):
         for country, entries, stale in (
                 ("Leader", [None], False),
                 ("Leader", [{"core_nation": "Outsider", "release_type": "Unknown"}], False),
+                ("Leader", [{"core_nation": "Outsider", "destination": {"action": "restore", "country": []}}], False),
+                ("Leader", [{"core_nation": "Outsider", "destination": {"action": "restore", "country": "Member"}}], False),
                 ("Leader", [{"core_nation": "Outsider"}, {"core_nation": "Outsider"}], False),
                 ("Member", [{"core_nation": "Outsider"}], False),
                 ("Leader", [{"core_nation": "Outsider"}], True)):

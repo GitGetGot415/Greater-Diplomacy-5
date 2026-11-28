@@ -95,6 +95,7 @@ MESSAGE_CATEGORIES = {
 }
 
 SYSTEM_NOTICE_AUTHOR = "Game"
+GAME_NOTICE_CONTACT = "GLOBAL_EVENTS"
 SHARED_OUTCOME_ACTION = "SHARED_DIPLOMATIC_OUTCOME"
 _LEGACY_AUTO_DECLINE_TEXT = "Your proposal was ignored and automatically declined."
 _LEGACY_SHARED_OUTCOMES = {
@@ -391,8 +392,6 @@ def system_notice_identity(msg, viewer):
 
 def message_author_name(msg, nation_data):
     """Display the author of a received message, including diplomatic notices."""
-    if is_release_notice(msg):
-        return queries.get_country_display_name(msg["sender"], nation_data, use_library=True)
     if is_system_notice(msg):
         return SYSTEM_NOTICE_AUTHOR
     return queries.get_country_display_name(msg.get("sender", "Unknown"), nation_data)
@@ -581,11 +580,11 @@ def send_system_notice(context, first, second, content, action, *, related_actio
     _deliver(world.nation_data, second, dict(entry, sender=first))
 
 
-def send_release_notice(context, sender, receiver, content, *, action):
+def send_release_notice(context, receiver, content, *, action):
     """Report a release outcome to the country that ordered it."""
     world = world_for(context)
     entry = _system_notice_entry(world, content, action, None)
-    _deliver(world.nation_data, receiver, dict(entry, sender=sender))
+    _deliver(world.nation_data, receiver, dict(entry, sender=GAME_NOTICE_CONTACT))
 
 
 def forward_message(context, sender, receiver, original_message, source_owner=None):

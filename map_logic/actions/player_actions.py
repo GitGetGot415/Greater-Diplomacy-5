@@ -466,11 +466,9 @@ class PlayerActions:
             if isinstance(subject, dict) and subject.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
                 siphons[puppet] = copy.deepcopy(subject.get("siphon_rates", {}))
         return {"puppet_order": list(controlled), "siphons": siphons,
-                "release_subjects": [{"core_nation": entry.get("core_nation"),
-                                      "keep_cores": bool(entry.get("keep_cores", False)),
-                                      "release_type": entry["release_type"]}
-                                     for entry in country_data.get("release_puppet_queue", [])
-                                     if isinstance(entry, dict)],
+                "release_subjects": [{key: copy.deepcopy(entry[key]) for key in (
+                    "core_nation", "keep_cores", "release_type", "destination") if key in entry}
+                    for entry in country_data.get("release_puppet_queue", []) if isinstance(entry, dict)],
                 "appearances": copy.deepcopy(self.session.pending_subject_appearances)}
 
     def _apply_puppet_draft(self, country_id, command):

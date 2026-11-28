@@ -42,11 +42,13 @@ class RealtimeFogTests(unittest.TestCase):
         country = game.world.nation_data[enemy]
         offer = {"action": "PEACE_TREATY", "turns": 1, "request_id": "visible-offer", "escrow": {"materials": 20}}
         pending = {owner: offer, "Private": {"action": "PEACE_TREATY", "turns": 0}}
-        with patch.dict(country, pending_diplomacy=pending, peace_choices={owner: {"selected": enemy}}), \
+        with patch.dict(country, pending_diplomacy=pending, peace_choices={owner: {"selected": enemy}},
+                        release_puppet_queue=[{"core_nation": owner, "destination": {"action": "return_land", "country": owner}}]), \
                 patch.dict(game.world.nation_data[owner], peace_choices={enemy: {"selected": owner}}):
             snapshot = queries.player_snapshot_projection(game, queries.build_save_dict(game), owner)
         self.assertEqual(snapshot["nation_data"][owner]["peace_choices"][enemy]["selected"], owner)
         self.assertNotIn("peace_choices", snapshot["nation_data"][enemy])
+        self.assertNotIn("release_puppet_queue", snapshot["nation_data"][enemy])
         self.assertEqual(snapshot["nation_data"][enemy]["pending_diplomacy"], {
             owner: {"action": "PEACE_TREATY", "turns": 1, "request_id": "visible-offer"}})
 

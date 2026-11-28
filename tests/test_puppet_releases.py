@@ -80,8 +80,8 @@ class PuppetReleaseRuleTests(unittest.TestCase):
                 self.assertEqual(data["faction"], "" if independent else "Pact")
                 self.assertEqual(data["at_war_with"], [] if independent else ["Enemy"])
                 self.assertEqual(created in self.map.world.nation_data["Master"]["puppets"], not independent)
-                self.assertEqual(bool(data.get("is_created_integrated_puppet")),
-                                 release_type == c.PUPPET_TYPE_INTEGRATED)
+                self.assertEqual(created, "Core")
+                self.assertFalse(data.get("is_created_integrated_puppet"))
                 self.assertEqual(data["research"], self.map.world.nation_data["Master"]["research"])
                 self.assertIsNot(data["research"], self.map.world.nation_data["Master"]["research"])
                 self.assertEqual(self.map.world.map_data["1"]["owner"], created)
@@ -106,14 +106,11 @@ class PuppetReleaseRuleTests(unittest.TestCase):
                 created = self.release(release_type)
                 data = self.map.world.nation_data[created]
                 integrated = release_type == c.PUPPET_TYPE_INTEGRATED
-                expected_name = (f'{master["adjective"]} {source["name"]}' if integrated
-                                 else f'{source["name"]} 2')
                 expected_color = master["color"] if integrated else source["color"]
-                self.assertEqual(data["name"], expected_name)
+                self.assertEqual(data["name"], source["name"])
                 self.assertEqual(data["color"], expected_color)
                 self.assertEqual(self.map.nation_colors[created], tuple(expected_color))
                 self.assertEqual(data["adjective"], source["adjective"])
-                self.assertEqual(self.map.world.nation_data["Core"], source)
                 saved_map = sample_map_screen()
                 saved_map.world.nation_data = self.map.world.nation_data
                 saved_map.world.map_data = self.map.world.map_data
@@ -196,7 +193,7 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         self.assertEqual(nations["Master"]["release_puppet_queue"], [])
         notice, = nations["Master"]["inbox"]
         self.assertTrue(diplomacy_messages.is_system_notice(notice))
-        self.assertEqual(notice["sender"], "Core")
+        self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
         self.assertFalse(notice["read"])
         self.assertIn("Core Display", notice["content"])
         self.assertIn("No eligible provinces", notice["content"])
@@ -215,7 +212,8 @@ class PuppetReleaseRuleTests(unittest.TestCase):
                 created = first["owner"]
                 ownership.conquer_province(self.map, first, "Other")
                 ownership.conquer_province(self.map, self.map.world.map_data["2"], second_owner)
-                self.assertNotIn(created, nations)
+                self.assertEqual(created, "Core")
+                self.assertIn("Core", self.map.world.map_data["1"]["cores"])
                 self.assertFalse(nations["Master"].get("inbox"))
 
                 diplomacy_processor.report_release_territory_losses(self.map)
@@ -223,8 +221,8 @@ class PuppetReleaseRuleTests(unittest.TestCase):
 
                 notice, = nations["Master"]["inbox"]
                 self.assertEqual(notice["action"], diplomacy_messages.RELEASE_LOST_TERRITORY_ACTION)
-                self.assertEqual(notice["sender"], "Core")
-                self.assertIn(created, notice["content"])
+                self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
+                self.assertIn(nations[created]["name"], notice["content"])
                 self.assertNotIn(nations["Other"]["name"], notice["content"])
                 self.assertNotIn(nations["Enemy"]["name"], notice["content"])
                 self.assertFalse(notice["read"])
@@ -246,37 +244,133 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         diplomacy_processor.report_release_territory_losses(self.map)
         self.assertFalse(nations["Master"].get("inbox"))
 
-    def test_provisional_release_notice_recovers_its_country_on_save_and_history_load(self):
-        old = {"action": "PRIVATE_GAME_NOTICE", "sender": "GLOBAL_EVENTS", "system_notice": True,
-               "related_action": "RELEASE_PUPPET", "message_id": "failure", "read": True,
-               "content": "Core Display was not created. No eligible provinces remained when the release was due."}
-        unknown_sender = dict(old, message_id="unattributed", content="Unknown country was not created. No eligible provinces remained.")
+    def test_old_release_notices_keep_their_contents_on_save_and_history_load(self):
+        provisional = {"action": "PRIVATE_GAME_NOTICE", "sender": "GLOBAL_EVENTS", "system_notice": True,
+                       "related_action": "RELEASE_PUPPET", "message_id": "failure", "read": True,
+                       "date": "Today", "content": "Unidentified country was not created."}
+        attributed = dict(provisional, message_id="loss", sender="Core", read=False,
+                          action=diplomacy_messages.RELEASE_LOST_TERRITORY_ACTION, related_action="another field")
         for convert in (conversions.convert_save, conversions.convert_history_turn):
-            with self.subTest(convert=convert.__name__), mock.patch.object(queries, "get_country_data", return_value={}):
-                payload = {"nation_data": {"Master": {"inbox": [old.copy(), unknown_sender.copy()]},
-                                           "Core": {"name": "Core Display"}}}
+            with self.subTest(convert=convert.__name__):
+                payload = {"nation_data": {"Master": {"inbox": [provisional.copy(), attributed.copy()]}}}
                 convert(payload, {})
                 convert(payload, {})
-                notice, = payload["nation_data"]["Master"]["inbox"]
-                self.assertEqual(notice["sender"], "Core")
-                self.assertEqual(notice["action"], diplomacy_messages.RELEASE_FAILED_ACTION)
-                self.assertEqual(notice["message_id"], old["message_id"])
-                self.assertEqual(notice["read"], old["read"])
-                self.assertEqual(notice["content"], old["content"])
+                first, second = payload["nation_data"]["Master"]["inbox"]
+                self.assertEqual(first["action"], diplomacy_messages.RELEASE_FAILED_ACTION)
+                self.assertEqual(second["action"], attributed["action"])
+                for old, notice in ((provisional, first), (attributed, second)):
+                    self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
+                    for key in ("message_id", "date", "read", "content"):
+                        self.assertEqual(notice[key], old[key])
 
-    def test_new_country_does_not_receive_private_release_notices_from_the_source(self):
+    def test_separate_subject_has_its_own_appearance_and_clean_records(self):
         self.map.world.time_manager = StubTimeManager()
-        diplomacy_messages.send_release_notice(self.map, "Other", "Core", "The release failed.",
+        nations = self.map.world.nation_data
+        provinces = self.map.world.map_data
+        provinces["4"]["owner"] = "Core"
+        original = nations["Core"]
+        original.update(pending_diplomacy={"Other": {"action": "TRADE"}},
+                        diplo_responses={"Other": {"verdict": "accept"}},
+                        release_puppet_queue=[{"core_nation": "Other", "turns_left": 3}],
+                        draft_lists={"Other": ["Private draft"]}, materials=61)
+        diplomacy_messages.send_message(self.map, "Other", "Core", "Private letter")
+        diplomacy_messages.send_release_notice(self.map, "Core", "The release failed.",
                                                action=diplomacy_messages.RELEASE_FAILED_ACTION)
-        created = self.release()
-        self.assertFalse(self.map.world.nation_data[created].get("inbox"))
-        self.assertEqual(self.map.world.nation_data["Core"]["inbox"][0]["sender"], "Other")
+        with self.assertRaises(ValueError):
+            self.canonical([{"core_nation": "Core"}])
+        order = {"core_nation": "Core", "destination": {"action": puppet_actions.RELEASE_CREATE, "country": None}}
+        nations["Master"]["release_puppet_queue"] = self.canonical([order])
+        diplomacy_processor._process_claim_queues(self.map)
 
-    def test_new_country_does_not_copy_the_source_release_queue(self):
-        self.map.world.nation_data["Core"]["release_puppet_queue"] = [{"core_nation": "Other", "turns_left": 3}]
-        created = self.release()
-        self.assertEqual(self.map.world.nation_data[created]["release_puppet_queue"], [])
-        self.assertEqual(len(self.map.world.nation_data["Core"]["release_puppet_queue"]), 1)
+        subject = provinces["1"]["owner"]
+        self.assertNotEqual(subject, "Core")
+        data = nations[subject]
+        self.assertNotEqual(subject, data["name"])
+        self.assertEqual(data["release_source"], "Core")
+        self.assertEqual(data["adjective"], original["adjective"])
+        self.assertEqual(data["color"], nations["Master"]["color"])
+        self.assertTrue(data["is_created_integrated_puppet"])
+        for key in ("inbox", "diplo_responses", "draft_lists", "pending_diplomacy", "release_puppet_queue"):
+            self.assertFalse(data[key])
+        self.assertEqual(len(original["inbox"]), 2)
+        self.assertIn("Other", original["diplo_responses"])
+        self.assertEqual(provinces["4"]["owner"], "Core")
+
+        # Later acquisitions add land to the subject and fold its copied core into the source row.
+        provinces["4"]["owner"] = "Master"
+        self.assertEqual(queries.puppet_release_candidates("Master", provinces, nations), {"Core", "Second"})
+        additional = self.canonical([{"core_nation": "Core"}])
+        self.assertEqual(additional[0]["destination"], {"action": puppet_actions.RELEASE_ADD_LAND, "country": subject})
+        nations["Master"]["release_puppet_queue"] = additional
+        diplomacy_processor._process_claim_queues(self.map)
+        self.assertEqual(provinces["4"]["owner"], subject)
+        self.assertEqual(nations["Master"]["puppets"], [subject])
+        self.assertIn(4, data["spawned_territories"])
+
+    def test_restored_integrated_country_keeps_its_cores_and_mail_when_annexed(self):
+        world = self.map.world
+        world.nation_data["Master"]["faction"] = ""
+        original = world.nation_data["Core"]
+        original["inbox"] = [{"sender": "Other", "content": "Old letter"}]
+        self.assertEqual(self.release(), "Core")
+        self.assertIs(world.nation_data["Core"], original)
+        puppet_actions.finalize_annexation(world.map_data, world.nation_data, "Master", "Core", self.map)
+        self.assertIn("Core", world.map_data["1"]["cores"])
+        self.assertEqual(self.release(c.PUPPET_RELEASE_INDEPENDENT), "Core")
+        self.assertEqual(original["inbox"][0]["content"], "Old letter")
+
+    def test_return_to_a_government_in_exile_keeps_its_existing_diplomacy(self):
+        world = self.map.world
+        world.nation_data["Core"].update(faction="Exiles", is_faction_leader=True, research={"existing": 1},
+                                        pending_diplomacy={"Other": {"action": "TRADE"}})
+        world.nation_data["Other"]["faction"] = "Exiles"
+        self.assertTrue(queries.is_government_in_exile("Core", world.map_data, world.nation_data))
+        entry = self.canonical([{"core_nation": "Core", "release_type": c.PUPPET_RELEASE_INDEPENDENT}])[0]
+        self.assertEqual(entry["destination"], {"action": puppet_actions.RELEASE_RETURN_LAND, "country": "Core"})
+        world.nation_data["Master"]["release_puppet_queue"] = [entry]
+        diplomacy_processor._process_claim_queues(self.map)
+        self.assertEqual(world.map_data["1"]["owner"], "Core")
+        self.assertEqual(queries.get_country_faction("Core", world.nation_data), "Exiles")
+        self.assertEqual(world.nation_data["Core"]["research"], {"existing": 1})
+        self.assertIn("Other", world.nation_data["Core"]["pending_diplomacy"])
+
+    def test_queued_expansion_fails_if_its_recipient_changes_status(self):
+        world = self.map.world
+        world.time_manager = StubTimeManager()
+        self.release()
+        world.map_data["4"]["owner"] = "Master"
+        world.nation_data["Master"]["release_puppet_queue"] = self.canonical([{"core_nation": "Core"}])
+        puppet_actions.finalize_release(world.map_data, world.nation_data, "Master", "Core", self.map)
+        diplomacy_processor._process_claim_queues(self.map)
+        self.assertEqual(world.map_data["4"]["owner"], "Master")
+        notice, = world.nation_data["Master"]["inbox"]
+        self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
+        self.assertEqual(notice["action"], diplomacy_messages.RELEASE_FAILED_ACTION)
+
+    def test_queued_restore_transfers_provinces_that_remain_eligible(self):
+        world = self.map.world
+        world.nation_data["Master"]["release_puppet_queue"] = self.canonical([{"core_nation": "Core"}])
+        world.map_data["2"]["owner"] = "Other"
+        diplomacy_processor._process_claim_queues(self.map)
+        self.assertEqual(world.map_data["1"]["owner"], "Core")
+        self.assertEqual(world.map_data["2"]["owner"], "Other")
+        self.assertFalse(world.nation_data["Master"].get("inbox"))
+
+    def test_legacy_integrated_source_is_recovered_from_unambiguous_name_and_cores(self):
+        nation_data = self.map.world.nation_data
+        nation_data["Generated"] = {"name": "Masterish Core Display", "master": "Master",
+                                    "puppet_type": c.PUPPET_TYPE_INTEGRATED, "is_created_integrated_puppet": True}
+        maps = {"1": {"cores": ["Core", "Generated"]}, "2": {"cores": ["Core"]}}
+        overlays = {"2": {"cores": ["Core", "Generated"]}}
+        for convert in (conversions.convert_save, conversions.convert_history_turn):
+            with self.subTest(convert=convert.__name__):
+                saved = {"nation_data": copy.deepcopy(nation_data), "provinces": copy.deepcopy(overlays)}
+                convert(saved, copy.deepcopy(maps))
+                self.assertEqual(saved["nation_data"]["Generated"]["release_source"], "Core")
+                saved["nation_data"]["Generated"].pop("release_source")
+                saved["nation_data"]["Generated"]["name"] = "Custom name"
+                convert(saved, copy.deepcopy(maps))
+                self.assertNotIn("release_source", saved["nation_data"]["Generated"])
 
     def test_malformed_duplicate_foreign_and_empty_land_requests_are_rejected(self):
         for entries in (None, [None], [{"core_nation": []}], [{"core_nation": "Core", "keep_cores": "yes"}],
@@ -306,6 +400,8 @@ class PuppetReleaseRuleTests(unittest.TestCase):
             saved_map.world.nation_data["Master"]["release_puppet_queue"] = self.canonical(
                 [{"core_nation": "Core", "release_type": release_type}])
             payload = json.loads(json.dumps(queries.build_save_dict(saved_map)))
+            order, = payload["nation_data"]["Master"]["release_puppet_queue"]
+            self.assertEqual(order["destination"], {"action": puppet_actions.RELEASE_RESTORE, "country": "Core"})
             loaded = release_map()
             loaded.world.nation_data = payload["nation_data"]
             queries.merge_country_templates(loaded.world.nation_data)
@@ -330,8 +426,11 @@ class PuppetFlagInheritanceTests(unittest.TestCase):
             queries.decode_b64_to_surf("DEFAULT", c.FLAG_SIZE, country_name="Core"))
 
     def create(self, world, kind):
+        world.world.map_data["4"]["owner"] = "Core"
+        destination = {"action": puppet_actions.RELEASE_CREATE, "country": None}
         world.world.nation_data["Master"]["release_puppet_queue"] = puppet_actions.canonical_puppet_release_queue(
-            world.world.map_data, world.world.nation_data, "Master", [{"core_nation": "Core", "release_type": kind}])
+            world.world.map_data, world.world.nation_data, "Master",
+            [{"core_nation": "Core", "release_type": kind, "destination": destination}])
         diplomacy_processor._process_claim_queues(world)
         return world.world.map_data["1"]["owner"]
 
@@ -365,15 +464,18 @@ class PuppetFlagInheritanceTests(unittest.TestCase):
                 world = release_map()
                 source = world.world.nation_data.pop("Core")
                 with mock.patch.object(puppet_actions.country_io, "get_country_stats", return_value=source):
-                    created = self.create(world, kind)
-                self.assertEqual(world.world.nation_data[created]["flag_data"], self.expected_flag)
+                    created = puppet_actions.finalize_create_puppet(world.world.map_data, world.world.nation_data,
+                                                                    "Master", "Core", world, release_type=kind)
+                    self.assertEqual(created, "Core")
+                    self.assertEqual(queries.encode_surf_to_b64(queries.decode_b64_to_surf(
+                        world.world.nation_data[created]["flag_data"], c.FLAG_SIZE, country_name=created)), self.expected_flag)
 
     def test_custom_source_flag_is_preserved_without_loading_a_default(self):
         custom_flag = queries.get_default_b64()
         for kind in c.PUPPET_RELEASE_TYPES:
             with self.subTest(kind=kind):
                 world = release_map()
-                world.world.nation_data["Core"]["flag_data"] = custom_flag
+                world.world.nation_data["Core"].update(flag_data=custom_flag, portrait_data=custom_flag)
                 with mock.patch.object(queries, "decode_b64_to_surf", side_effect=AssertionError("Custom flag replaced")):
                     created = self.create(world, kind)
                 self.assertEqual(world.world.nation_data[created]["flag_data"], custom_flag)
@@ -697,18 +799,14 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.assertEqual(draw.call_args_list, [
             mock.call(self.surface, self.map, screen.preview_map, show_names=False)] * 2)
 
-    def test_country_name_is_a_label_and_create_and_cancel_are_controls(self):
+    def test_country_name_is_a_label_and_restore_and_cancel_are_controls(self):
         screen = puppets_screen.Create_Puppet_Screen(self.map)
-        pos = (screen.panel_rect.x + 26, screen.panel_rect.y + screen.ROW_TOP + 22)
         nation = self.map.world.nation_data["Master"]
-        self.assertFalse(any(element.rect.collidepoint(pos) for element in screen.elements))
-        with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
-            screen.handle_events([pygame.event.Event(event, button=1, pos=pos)
-                                  for event in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)])
+        self.assertFalse(any(element.text == "Core Display" for element in screen.elements))
         self.assertIsNone(screen.preview_map)
         self.assertNotIn("release_puppet_queue", nation)
 
-        create = next(element for element in screen.elements if element.text == "Create")
+        create = next(element for element in screen.elements if element.text == "Restore")
         self.click_button(screen, create)
         self.assertIsNotNone(screen.preview_map)
         self.assertEqual([entry["core_nation"] for entry in nation["release_puppet_queue"]], ["Core"])
@@ -730,6 +828,21 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.assertEqual(queued[1], queued[2])
         self.assertEqual({pid: transfers[pid] for pid in queued}, queued)
         self.assertNotEqual(transfers[2], transfers[3])
+
+    def test_existing_country_can_receive_land_or_create_a_separate_tag(self):
+        world = self.map.world
+        world.id_to_province[4]["owner"] = "Core"
+        screen = puppets_screen.Create_Puppet_Screen(self.map)
+        self.assertFalse(any(element.text == "Add Land" for element in screen.elements))
+        screen.set_release_type(c.PUPPET_RELEASE_INDEPENDENT)
+        for label, action in (("Return Land", puppet_actions.RELEASE_RETURN_LAND),
+                              ("Create Separate", puppet_actions.RELEASE_CREATE)):
+            button = next(element for element in screen.elements if element.text == label)
+            self.click_button(screen, button)
+            entry, = world.nation_data["Master"]["release_puppet_queue"]
+            self.assertEqual(entry["destination"]["action"], action)
+            self.assertIsNotNone(screen.preview_map)
+            screen.cancel_queue("Core")
 
 
 if __name__ == "__main__":

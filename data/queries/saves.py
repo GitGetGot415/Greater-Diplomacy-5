@@ -358,6 +358,7 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
 PRIVATE_COUNTRY_FIELDS = (
     "production_queue", "current_research", "research_queue", "research_progress", "research", "inbox",
     "pending_diplomacy", "diplo_responses", "draft_lists", "peace_choices", "queued_ai_actions", "ai_notebook",
+    "release_puppet_queue",
     "orders", "armies", "automation", "materials", "manpower", "fuel", "manpower_pool", "materials_pool",
     "fuel_pool", *politics.DRIFT_KEYS, "research_funding_slider")
 

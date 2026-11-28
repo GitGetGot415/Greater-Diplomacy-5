@@ -7,8 +7,11 @@ each other where the concerns interact.
 
 # Faction actions call subject actions. Keep imports of faction mutations local to avoid that reciprocal dependency.
 
-from data.state_access import world_for, session_for
 import copy
+from dataclasses import dataclass
+import uuid
+
+from data.state_access import world_for, session_for
 from map_logic.territory import ownership
 from data import queries
 from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -17,7 +20,7 @@ import data.constants as c
 
 from data.io import country_io
 from map_logic.territory.ownership import retire_landless_nation
-from map_logic.diplomacy import diplomacy_messages, volunteers, faction_leadership, faction_records
+from map_logic.diplomacy import volunteers, faction_leadership, faction_records
 
 
 # --- RECURSIVE PUPPET HELPERS ---
@@ -342,131 +345,219 @@ def finalize_take_puppets(map_data, nation_data, master, target_puppet):
         assign_puppet(map_data, nation_data, master, p, p_type)
 
 
+RELEASE_RESTORE = "restore"
+RELEASE_ADD_LAND = "add_land"
+RELEASE_RETURN_LAND = "return_land"
+RELEASE_CREATE = "create"
+RELEASE_ACTIONS = (RELEASE_RESTORE, RELEASE_ADD_LAND, RELEASE_RETURN_LAND, RELEASE_CREATE)
+
+
+@dataclass
+class PuppetReleasePlan:
+    action: str | None
+    country: str | None
+    provinces: list[dict]
+    reason: str = ""
+
+    def destination(self):
+        return {"action": self.action, "country": self.country}
+
+
+def plan_puppet_release(map_data, nation_data, master, core_nation, release_type, keep_cores=False,
+                        *, reserved=(), destination=None):
+    """Resolve a release's recipient and eligible provinces. Never change world state."""
+    if (release_type not in c.PUPPET_RELEASE_TYPES or master not in nation_data
+            or master == core_nation or core_nation in c.UNPLAYABLE_NATIONS or master in c.UNPLAYABLE_NATIONS):
+        return PuppetReleasePlan(None, None, [], "Invalid nation release.")
+    provinces = [province for province in queries.get_puppet_release_provinces(
+        master, core_nation, map_data, keep_cores, nation_data=nation_data) if province["id"] not in reserved]
+    if not provinces:
+        return PuppetReleasePlan(None, None, [], "No eligible provinces.")
+
+    source = nation_data.get(core_nation, {})
+    active = bool(queries.get_country_faction(core_nation, nation_data)) or any(
+        province.get("owner") == core_nation for province in map_data.values())
+    subjects = [subject for subject in nation_data[master].get("puppets", [])
+                if nation_data.get(subject, {}).get("master") == master and queries.is_playable(subject, nation_data)
+                and (subject == core_nation or nation_data[subject].get("release_source") == core_nation)]
+    matching = next((subject for subject in subjects if nation_data[subject].get("puppet_type") == release_type), None)
+    plan = PuppetReleasePlan(None, None, provinces)
+    if matching:
+        plan.action, plan.country = RELEASE_ADD_LAND, matching
+    elif subjects and (release_type != c.PUPPET_RELEASE_INDEPENDENT or core_nation in subjects):
+        subject = subjects[0]
+        name = queries.get_country_display_name(subject, nation_data)
+        plan.reason = f"{name} is {nation_data[subject]['puppet_type']}."
+    elif active and release_type == c.PUPPET_RELEASE_INDEPENDENT and source.get("is_playable"):
+        plan.action, plan.country = RELEASE_RETURN_LAND, core_nation
+    elif active:
+        name = queries.get_country_display_name(core_nation, nation_data)
+        plan.reason = f"{name} still exists."
+    elif release_type != c.PUPPET_RELEASE_INDEPENDENT and would_create_puppet_cycle(master, core_nation, nation_data):
+        plan.reason = "Restoring this country as a subject would create a subject cycle."
+    else:
+        plan.action, plan.country = RELEASE_RESTORE, core_nation
+
+    # A separate tag is useful when the intended government already exists or has a different status.
+    if destination == {"action": RELEASE_CREATE, "country": None} and plan.action in (None, RELEASE_RETURN_LAND):
+        return PuppetReleasePlan(RELEASE_CREATE, None, provinces)
+    if destination is not None and (not plan.action or destination != plan.destination()):
+        return PuppetReleasePlan(None, None, [], "The planned destination has changed.")
+    return plan
+
+
+def queued_puppet_release_plans(map_data, nation_data, master, queue):
+    """Preview all entries in the order that they first become due."""
+    plans, reserved = {}, set()
+    for entry in sorted(queue, key=lambda item: max(1, item.get("turns_left", 1))):
+        core_nation = entry["core_nation"]
+        plan = plan_puppet_release(map_data, nation_data, master, core_nation, entry["release_type"],
+                                   entry.get("keep_cores", False), reserved=reserved, destination=entry.get("destination"))
+        plans[core_nation] = plan
+        if plan.action:
+            reserved.update(province["id"] for province in plan.provinces)
+    return plans, reserved
+
+
 def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_queue=()):
-    """Validate nation creation choices. Preserve host countdowns."""
+    """Validate player choices, keep existing countdowns and bind new orders to their destinations."""
     if master not in nation_data or master in c.UNPLAYABLE_NATIONS or not isinstance(entries, list):
-        raise ValueError("Invalid source country or nation creation queue.")
+        raise ValueError("Invalid source country or nation release queue.")
     previous = {entry["core_nation"]: entry for entry in old_queue}
     result, seen = [], set()
     for entry in entries:
         if not isinstance(entry, dict):
-            raise ValueError("Invalid nation creation entry.")
+            raise ValueError("Invalid nation release entry.")
         subject = entry.get("core_nation")
         keep_cores = entry.get("keep_cores", False)
-        # A request can omit its release type. Integrated is the default.
         release_type = entry.get("release_type", c.PUPPET_TYPE_INTEGRATED)
+        destination = entry.get("destination")
         if (not isinstance(subject, str) or subject == master or subject in c.UNPLAYABLE_NATIONS
                 or subject in seen or not isinstance(keep_cores, bool)
-                or not isinstance(release_type, str) or release_type not in c.PUPPET_RELEASE_TYPES):
-            raise ValueError("Invalid nation creation choice.")
+                or release_type not in c.PUPPET_RELEASE_TYPES
+                or ("destination" in entry and (not isinstance(destination, dict)
+                    or set(destination) != {"action", "country"} or destination["action"] not in RELEASE_ACTIONS
+                    or (destination["country"] is not None and not isinstance(destination["country"], str))))):
+            raise ValueError("Invalid nation release choice.")
         old = previous.get(subject)
+        order = {"core_nation": subject, "keep_cores": keep_cores, "release_type": release_type,
+                 "turns_left": old.get("turns_left", 1) if old else 1}
         if old:
-            if (old.get("keep_cores", False) != keep_cores
-                    or old["release_type"] != release_type):
-                raise ValueError("Cancel the existing nation creation before changing its options.")
-        elif not queries.get_puppet_release_provinces(master, subject, map_data, keep_cores, result):
-            raise ValueError("That nation has no eligible core territory for creation.")
-        result.append({"core_nation": subject, "keep_cores": keep_cores, "release_type": release_type,
-                       "turns_left": old.get("turns_left", 1) if old else 1})
+            if (old.get("keep_cores", False) != keep_cores or old["release_type"] != release_type
+                    or (destination is not None and destination != old.get("destination"))):
+                raise ValueError("Cancel the existing nation release before changing its options.")
+            if "destination" in old:
+                order["destination"] = copy.deepcopy(old["destination"])
+        elif destination is not None:
+            order["destination"] = destination.copy()
+        result.append(order)
         seen.add(subject)
+
+    plans, _ = queued_puppet_release_plans(map_data, nation_data, master, result)
+    for order in result:
+        subject = order["core_nation"]
+        if subject not in previous:
+            plan = plans[subject]
+            if not plan.action:
+                raise ValueError(plan.reason)
+            order["destination"] = plan.destination()
     return result
 
 
-def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
-                         keep_cores=False, release_type=c.PUPPET_TYPE_INTEGRATED):
-    """Create an Integrated, Autonomous, or Independent country from eligible core land."""
-    if release_type not in c.PUPPET_RELEASE_TYPES or master not in nation_data:
-        return None
-    territory = queries.get_puppet_release_provinces(master, core_nation, map_data, keep_cores)
-    if not territory:
-        return None
-    territory_ids = {province["id"] for province in territory}
-    master_data = nation_data.get(master, {})
-    master_name = master_data.get("name", master)
-    master_adjective = master_data.get("adjective", "")
+def _prepare_released_country(nation_data, master, core_nation, release_type, *, separate):
+    source = nation_data.get(core_nation)
+    template = country_io.get_country_stats(core_nation)
+    appearance = source if source is not None else template
+    master_data = nation_data[master]
     integrated = release_type == c.PUPPET_TYPE_INTEGRATED
+    name = appearance.get("name", core_nation)
 
-    # Load from active data or from disk if dead
-    if core_nation in nation_data:
-        base_data = nation_data[core_nation].copy()
+    if separate:
+        if integrated:
+            adjective = master_data.get("adjective")
+            master_name = queries.get_country_display_name(master, nation_data)
+            name = f"{adjective} {name}" if adjective else f"{master_name}'s Protectorate of {name}"
+        base_name, suffix = name, 1
+        names = {data.get("name", country) for country, data in nation_data.items()}
+        while name in names:
+            suffix += 1
+            name = f"{base_name} {suffix}"
+        country = "country-" + uuid.uuid4().hex
     else:
-        base_data = country_io.get_country_stats(core_nation).copy()
+        country = core_nation
 
-    core_name = base_data.get("name", core_nation)
-    if not integrated:
-        base_str = core_name
-    elif master_adjective:
-        base_str = f"{master_adjective} {core_name}"
+    if not separate and source is not None:
+        break_puppet_link(nation_data, source.get("master", ""), country)
+        data = source
     else:
-        base_str = f"{master_name}'s Protectorate of {core_name}"
+        data = {key: copy.deepcopy(appearance[key]) for key in c.COUNTRY_APPEARANCE_FIELDS if key in appearance}
+        data.update({key: template.get(key, 0) for key in c.ECON_RESOURCE_KEYS})
+        data.update(puppets=[], faction="", is_faction_leader=False, inbox=[])
+        if separate:
+            data["release_source"] = core_nation
+            if integrated:
+                data["is_created_integrated_puppet"] = True
 
-    new_id = base_str
-    new_name = base_str
-
-    # Check collision to avoid overwriting existing subjects
-    suffix = 1
-    while new_id in nation_data or any(d.get("name") == new_name for d in nation_data.values()):
-        suffix += 1
-        new_id = f"{base_str} {suffix}"
-        new_name = f"{base_str} {suffix}"
-
-    new_data = copy.deepcopy(base_data)
-    new_data["name"] = new_name
-    # DEFAULT resolves against a country ID. Copy the source image before using the new ID.
-    if not new_data.get("flag_data") or new_data["flag_data"] == "DEFAULT":
+    # A split country needs its own copy of images resolved by the source ID.
+    if separate and data.get("flag_data") in (None, "", "DEFAULT"):
         flag = queries.decode_b64_to_surf("DEFAULT", c.FLAG_SIZE, country_name=core_nation)
-        new_data["flag_data"] = queries.encode_surf_to_b64(flag)
+        data["flag_data"] = queries.encode_surf_to_b64(flag)
+    if separate and data.get("portrait_data") in (None, "", "DEFAULT"):
+        portrait = queries.decode_b64_to_surf("DEFAULT", c.PORTRAIT_SIZE, is_portrait=True, country_name=core_nation)
+        data["portrait_data"] = queries.encode_surf_to_b64(portrait)
+    data.setdefault("flag_data", "DEFAULT")
+    color = (master_data.get("color", country_io.DEFAULT_NATION_COLOR) if integrated
+             else appearance.get("color", country_io.DEFAULT_NATION_COLOR))
+    data.update(name=name, color=list(color), research=copy.deepcopy(master_data.get("research", {})),
+                is_playable=True, at_war_with=[], pending_diplomacy={}, diplo_responses={}, draft_lists={},
+                claim_queue=[], revoke_queue=[], return_queue=[], release_puppet_queue=[],
+                master="", puppet_type="", spawned_territories=[])
+    nation_data[country] = data
+    return country
 
-    # Only Integrated nations use the master's color.
-    # Older country records may omit color. Use the shared country default.
-    release_color = (master_data.get("color", [255, 255, 255]) if integrated
-                     else base_data.get("color", country_io.DEFAULT_NATION_COLOR))
-    new_data["color"] = list(release_color)
 
-    # Update context's color cache so the white default bug doesn't happen ---
-    if hasattr(context, 'nation_colors'):
-        context.nation_colors[new_id] = tuple(release_color)
+def apply_puppet_release(map_data, nation_data, master, core_nation, context, release_type, plan):
+    """Apply a plan calculated against the current turn's world state."""
+    country = plan.country
+    if plan.action in (RELEASE_RESTORE, RELEASE_CREATE):
+        country = _prepare_released_country(nation_data, master, core_nation, release_type,
+                                            separate=plan.action == RELEASE_CREATE)
+        if release_type != c.PUPPET_RELEASE_INDEPENDENT:
+            assign_puppet(map_data, nation_data, master, country, release_type)
+        if hasattr(context, "nation_colors"):
+            context.nation_colors[country] = tuple(nation_data[country]["color"])
 
-    # Inherit Master's Research exactly
-    master_research = nation_data.get(master, {}).get("research", {})
-    new_data["research"] = copy.deepcopy(master_research)
+    recipient = nation_data[country]
+    if plan.action == RELEASE_CREATE:
+        for province in map_data.values():
+            cores = province.get("cores", [])
+            if core_nation in cores and country not in cores:
+                cores.append(country)
+    if recipient.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
+        spawned = recipient.setdefault("spawned_territories", [])
+        spawned.extend(province["id"] for province in plan.provinces if province["id"] not in spawned)
+    for province in plan.provinces:
+        if country not in province.get("cores", []) and plan.action == RELEASE_ADD_LAND:
+            province.setdefault("cores", []).append(country)
+        ownership.conquer_province(context, province, country)
 
-    new_data["is_playable"] = True
-    new_data.pop("is_created_integrated_puppet", None)
-    if release_type == c.PUPPET_TYPE_INTEGRATED:
-        new_data["is_created_integrated_puppet"] = True
-    new_data["at_war_with"] = []
-    new_data["pending_diplomacy"] = {}
-    if "inbox" in new_data:
-        new_data["inbox"] = [message for message in new_data["inbox"]
-                             if not diplomacy_messages.is_release_notice(message)]
-    new_data["claims"] = []
-    new_data["claim_queue"] = []
-    new_data["revoke_queue"] = []
-    new_data["return_queue"] = []
-    new_data["release_puppet_queue"] = []
-    new_data["puppets"] = []
-    new_data["master"] = ""
-    new_data["puppet_type"] = ""
-    new_data["faction"] = ""
-    new_data["is_faction_leader"] = False
-    new_data["spawned_territories"] = []
+    master_name = queries.get_country_display_name(master, nation_data)
+    name = queries.get_country_display_name(country, nation_data)
+    event = {
+        RELEASE_RESTORE: f"{master_name} has restored {name}.",
+        RELEASE_ADD_LAND: f"{master_name} has transferred territory to its subject {name}.",
+        RELEASE_RETURN_LAND: f"{master_name} has returned territory to {name}.",
+        RELEASE_CREATE: f"{master_name} has formed {name}.",
+    }
+    log_global_event(nation_data, event[plan.action])
+    return country
 
-    nation_data[new_id] = new_data
 
-    # Independent nations do not inherit the master's faction or wars.
-    if release_type != c.PUPPET_RELEASE_INDEPENDENT:
-        assign_puppet(map_data, nation_data, master, new_id, release_type)
-
-    # Transfer tiles
-    for prov in map_data.values():
-        if core_nation in prov.get("cores", []):
-            if new_id not in prov.get("cores", []):
-                prov.setdefault("cores", []).append(new_id)
-
-            if prov["id"] in territory_ids:
-                nation_data[new_id]["spawned_territories"].append(prov["id"])
-                ownership.conquer_province(context, prov, new_id)
-
-    log_global_event(nation_data, f"{master_name} has formed {new_name}.")
-    return new_id
+def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
+                         keep_cores=False, release_type=c.PUPPET_TYPE_INTEGRATED, *, destination=None):
+    """Resolve a release immediately for callers outside the turn queue."""
+    plan = plan_puppet_release(map_data, nation_data, master, core_nation, release_type, keep_cores,
+                               destination=destination)
+    if plan.action:
+        return apply_puppet_release(map_data, nation_data, master, core_nation, context, release_type, plan)
+    return None
