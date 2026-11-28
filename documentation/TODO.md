@@ -20,6 +20,19 @@
 
 - make puppets less weird to work with `(essentially, try to cut down on unessecary tag creations and messages that are sent by one tag only to never have that tag send you messages ever again)`
 
+## Kaiserin's criticism about the magna world map
+
+1. Haiti and Kuwait have less tiles then they do in the regular map (they only have on in this one). Idk I feel like maybe they should have a little bit more. Maybe like a second tile at least
+2. No bahrain
+3. The pacific feels really empty (I feel like they're should be a lot more islands (it would make a ww2 game on this map a lot more fun))
+4. Africa coast has less islands then in the regular map (again, I feel like a few extra islands would be nice, it doesn't need to be much, but just a couple islands would be cool)
+5. The area between trinidad and Guadeloupe could use a couple more islands (like idk 1 or 2) (This point can kinda of be skipped, although having 1 or 2 more islands in the caribean would be cool).
+6. Panama and egypt don't have there canals, it would be nice if those canel would be included on the map.
+
+- Island in the North Sea mayhaps?
+- El salvador and Belize having one extra tile 
+- Also some of africa border look pretty weird (specifically the area around burkina faso looks kinda of weird)
+
 ## Check First
 
 - check why refreshing country data can show countries that don't exist anymore
