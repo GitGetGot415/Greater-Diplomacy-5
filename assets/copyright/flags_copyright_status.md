@@ -22,7 +22,7 @@
 | Alto Rio Negro | Public Domain |
 | [Amapá](https://commons.wikimedia.org/wiki/File:Bandeira_do_Amap%C3%A1.svg) | Public Domain |
 | American Territory of Canada | neptune2019 |
-| American Union State | Kaiserreich |
+| [American Union State](https://commons.wikimedia.org/wiki/File:American_Union_State_Flag_from_Kaiserreich.png) | Kaiserreich |
 | [Amur](https://tno.wiki.gg/wiki/File:All-Russian_Government_of_Amur.png) | TNO |
 | Anarchist Commune of America | Kaiserreich |
 | [Andalusia](https://commons.wikimedia.org/wiki/File:Flag_of_Andalusia.svg) | Public Domain |
@@ -83,12 +83,12 @@
 | [Botswana](https://commons.wikimedia.org/wiki/File:Flag_of_Botswana.svg) | Public Domain |
 | Boudin Bakery | Public Domain |
 | [Brazil](https://commons.wikimedia.org/wiki/File:Flag_of_Brazil.svg) | Public Domain |
-| Bremen | Public Domain |
+| [Bremen](https://commons.wikimedia.org/wiki/File:Flag_of_Germany_%281867%E2%80%931918%29.svg) | Public Domain |
 | Bridge | Public Domain |
-| British America | Public Domain |
+| [British America](https://commons.wikimedia.org/wiki/File:Civil_ensign_of_the_United_Kingdom.svg) | Public Domain |
 | [British Columbia](https://commons.wikimedia.org/wiki/File:Flag_of_British_Columbia.svg) | Public Domain |
-| British Malaya | Public Domain |
-| British Raj | Public Domain |
+| [British Malaya](https://commons.wikimedia.org/wiki/File:Flag_of_the_British_Straits_Settlements_%281925%E2%80%931946%29.svg) | Public Domain |
+| [British Raj](https://commons.wikimedia.org/wiki/File:British_Raj_Red_Ensign.svg) | Public Domain |
 | British-Japanese Empire | Public Domain |
 | [Brittany](https://commons.wikimedia.org/wiki/File:Flag_of_Brittany_%28Gwenn_ha_du%29.svg) | Public Domain |
 | [Brunei](https://commons.wikimedia.org/wiki/File:Flag_of_Brunei.svg) | Public Domain |
@@ -117,7 +117,7 @@
 | [Chad](https://commons.wikimedia.org/wiki/File:Flag_of_Chad.svg) | Public Domain |
 | Champa | Public Domain |
 | [Chechnya](https://commons.wikimedia.org/wiki/File:Flag_of_the_Chechen_Republic.svg) | Public Domain |
-| Cherokee | Public Domain |
+| [Cherokee](https://commons.wikimedia.org/wiki/File:Flag_of_the_Cherokee_Nation.svg) | Public Domain |
 | Chihuahua | Public Domain |
 | [Chile](https://commons.wikimedia.org/wiki/File:Flag_of_Chile.svg) | Public Domain |
 | Chokwe | Public Domain |
@@ -140,10 +140,10 @@
 | Communist Hive Mind Raj | Exodus |
 | Communist Party of India | Public Domain |
 | [Confederate States of America](https://commons.wikimedia.org/wiki/File:Flag_of_the_Confederate_States_%281861%E2%80%931863%29.svg) | Public Domain |
-| Confederate States of America (Battle Flag) | Public Domain |
+| [Confederate States of America (Battle Flag)](https://commons.wikimedia.org/wiki/File:Confederate_Rebel_Flag.svg) | Public Domain |
 | Corporatist Brazil | neptune2019 |
 | [Corsica](https://commons.wikimedia.org/wiki/File:Flag_of_Corsica.svg) | Public Domain |
-| Cossacks | Public Domain |
+| [Cossacks](https://commons.wikimedia.org/wiki/File:Flag_of_Don_Cossacks.svg) | Public Domain |
 | [Costa Rica](https://commons.wikimedia.org/wiki/File:Flag_of_Costa_Rica.svg) | Public Domain |
 | Cousins Maine Lobster | Public Domain |
 | Crab House at Pier 39 | Public Domain |
@@ -171,7 +171,7 @@
 | Durango | Public Domain |
 | Dutch America | Public Domain |
 | [Dutch East India Company](https://commons.wikimedia.org/wiki/File:Flag_of_the_Dutch_East_India_Company.svg) | Public Domain |
-| Dutch East Indies | Public Domain |
+| [Dutch East Indies](https://commons.wikimedia.org/wiki/File:Flag_of_the_Netherlands.svg) | Public Domain |
 | Ea-Nasir | Public Domain |
 | Eagle Cafe | Public Domain |
 | East African Federation | Public Domain |
@@ -223,7 +223,7 @@
 | [French Indochina](https://commons.wikimedia.org/wiki/File:Flag_of_Colonial_Annam.svg) | Public Domain |
 | French Madagascar | Public Domain |
 | [French Polynesia](https://commons.wikimedia.org/wiki/File:Flag_of_French_Polynesia.svg) | Public Domain |
-| French Sudan | Public Domain |
+| [French Sudan](https://commons.wikimedia.org/wiki/File:Flag_of_French_Sudan_%281958%E2%80%931959%29.svg) | Public Domain |
 | Fun Food Factory | Public Domain |
 | Futa Jallon | Public Domain |
 | [Gabon](https://commons.wikimedia.org/wiki/File:Flag_of_Gabon.svg) | Public Domain |
@@ -236,7 +236,7 @@
 | [Ghana](https://commons.wikimedia.org/wiki/File:Flag_of_Ghana.svg) | Public Domain |
 | Gigachad | Public Domain |
 | Glasgow | Public Domain |
-| Gotia | Public Domain |
+| [Gotia](https://commons.wikimedia.org/wiki/File:Flag_of_Spain.svg) | Public Domain |
 | Gran Colombia | Public Domain |
 | Grand Est | Public Domain |
 | Granite | Public Domain |
@@ -321,7 +321,7 @@
 | [Kingdom of Sardinia](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.7.2/gfx/flags/SRD.tga) | Kaiserreich |
 | [Kingdom of Two Sicilies](https://kaiserreich.wiki/File:Two_Sicilies.png) | Kaiserreich |
 | Kokand | Public Domain |
-| Korea | Public Domain |
+| [Korea](https://commons.wikimedia.org/wiki/File:Flag_of_South_Korea.svg) | Public Domain |
 | [Kosovo](https://commons.wikimedia.org/wiki/File:Flag_of_Kosovo.svg) | Public Domain |
 | [Kurdistan](https://commons.wikimedia.org/wiki/File:Flag_of_Kurdistan.svg) | Public Domain |
 | [Kuwait](https://commons.wikimedia.org/wiki/File:Flag_of_Kuwait.svg) | Public Domain |
@@ -341,7 +341,7 @@
 | Lids | Public Domain |
 | [Lithuania](https://commons.wikimedia.org/wiki/File:Flag_of_Lithuania.svg) | Public Domain |
 | Livonian Order | Public Domain |
-| London | Public Domain |
+| [London](https://commons.wikimedia.org/wiki/File:Flag_of_Greater_London.svg) | Public Domain |
 | [Los Angeles](https://commons.wikimedia.org/wiki/File:Flag_of_Los_Angeles%2C_California.svg) | Public Domain |
 | [Louisiana](https://commons.wikimedia.org/wiki/File:Flag_of_Louisiana.svg) | Public Domain |
 | Luang Phrabang | Public Domain |
@@ -397,7 +397,7 @@
 | [Myanmar](https://commons.wikimedia.org/wiki/File:Flag_of_Myanmar.svg) | Public Domain |
 | [Namibia](https://commons.wikimedia.org/wiki/File:Flag_of_Namibia.svg) | Public Domain |
 | Naples | Public Domain |
-| Napoleonic France | Public Domain |
+| [Napoleonic France](https://commons.wikimedia.org/wiki/File:Flag_of_France.svg) | Public Domain |
 | Nathan's Hot Dog Cart | Public Domain |
 | [National France](https://kaiserreich.wiki/File:Flag_of_Exile_French_Republic.svg) | Kaiserreich |
 | [Nationalist China](https://commons.wikimedia.org/wiki/File:Flag_of_the_Republic_of_China.svg) | Public Domain |
@@ -438,7 +438,7 @@
 | Oceanian Federation | Public Domain |
 | [Ohio](https://commons.wikimedia.org/wiki/File:Flag_of_Ohio.svg) | Public Domain |
 | [Oklahoma](https://commons.wikimedia.org/wiki/File:Flag_of_Oklahoma.svg) | Public Domain |
-| Oldegård | Public Domain |
+| [Oldegård](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kalmar_Union.svg) | Public Domain |
 | [Oman](https://commons.wikimedia.org/wiki/File:Flag_of_Oman.svg) | Public Domain |
 | Omani Empire | Public Domain |
 | Omsk | TNO |
@@ -456,7 +456,7 @@
 | [Panama](https://commons.wikimedia.org/wiki/File:Flag_of_Panama.svg) | Public Domain |
 | [Papal States](https://commons.wikimedia.org/wiki/File:Flag_of_the_Papal_States_%28pre_1808%29.svg) | Public Domain |
 | [Papua New Guinea](https://commons.wikimedia.org/wiki/File:Flag_of_Papua_New_Guinea.svg) | Public Domain |
-| Pará | Public Domain |
+| [Pará](https://commons.wikimedia.org/wiki/File:Bandeira_do_Par%C3%A1.svg) | Public Domain |
 | [Paraguay](https://commons.wikimedia.org/wiki/File:Flag_of_Paraguay.svg) | Public Domain |
 | Paris | Public Domain |
 | Parking Lot | GitGetGot415 |
@@ -611,7 +611,7 @@
 | [Somaliland](https://commons.wikimedia.org/wiki/File:Flag_of_Somaliland.svg) | Public Domain |
 | Songhai | Public Domain |
 | Songhai Empire | Public Domain |
-| Sonora | Public Domain |
+| [Sonora](https://commons.wikimedia.org/wiki/File:Flag_of_Sonora.svg) | Public Domain |
 | [South Australia](https://commons.wikimedia.org/wiki/File:Flag_of_South_Australia.svg) | Public Domain |
 | [South Carolina](https://commons.wikimedia.org/wiki/File:Flag_of_South_Carolina.svg) | Public Domain |
 | [South Korea](https://commons.wikimedia.org/wiki/File:Flag_of_South_Korea.svg) | Public Domain |
@@ -696,7 +696,7 @@
 | [Uruguay](https://commons.wikimedia.org/wiki/File:Flag_of_Uruguay.svg) | Public Domain |
 | [Utah](https://commons.wikimedia.org/wiki/File:Flag_of_Utah.svg) | Public Domain |
 | [Uzbekistan](https://commons.wikimedia.org/wiki/File:Flag_of_Uzbekistan.svg) | Public Domain |
-| Valencia | Public Domain |
+| [Valencia](https://commons.wikimedia.org/wiki/File:Flag_of_the_Land_of_Valencia_%28official%29.svg) | Public Domain |
 | Vanishing Inc. Magic Shop | Public Domain |
 | [Vanuatu](https://commons.wikimedia.org/wiki/File:Flag_of_Vanuatu.svg) | Public Domain |
 | Vatican | Public Domain |
@@ -713,7 +713,7 @@
 | Vlahos Orchard | Public Domain |
 | Volgograd | Public Domain |
 | Vorkuta | TNO |
-| Voroniya | Public Domain |
+| [Voroniya](https://commons.wikimedia.org/wiki/File:Flag_of_Russia_%281858%E2%80%931896%29.svg) | Public Domain |
 | [Wales](https://commons.wikimedia.org/wiki/File:Flag_of_Wales.svg) | Public Domain |
 | [Wallachia](https://commons.wikimedia.org/wiki/File:Flag_of_Wallachia.svg) | Public Domain |
 | [Washington](https://commons.wikimedia.org/wiki/File:Flag_of_Washington.svg) | Public Domain |
@@ -725,7 +725,7 @@
 | Western Command Center | Kaiserreich |
 | [Western Sahara](https://commons.wikimedia.org/wiki/File:Flag_of_the_Sahrawi_Arab_Democratic_Republic.svg) | Public Domain |
 | White Kaganate | Public Domain |
-| White Ruthenia | Public Domain |
+| [White Ruthenia](https://commons.wikimedia.org/wiki/File:Flag_of_Belarus_%281918,_1991%E2%80%931995%29.svg) | Public Domain |
 | Wine Tasting on the Bay | Public Domain |
 | [Wisconsin](https://commons.wikimedia.org/wiki/File:Flag_of_Wisconsin.svg) | Public Domain |
 | Wooden Sidewalk | GitGetGot415 |
