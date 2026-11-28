@@ -260,7 +260,7 @@
 | Henan | Public Domain |
 | [Herero](https://commons.wikimedia.org/wiki/File:Flag_of_Hereroland.svg) | Public Domain |
 | [Hokkaido](https://commons.wikimedia.org/wiki/File:Flag_of_Hokkaido_Prefecture.svg) | Public Domain |
-| Holy Britannian Empire | Public Domain |
+| [Holy Britannian Empire](https://commons.wikimedia.org/wiki/File:Holy_Britannian_Empire.svg) | CC BY 4.0 |
 | [Holy Roman Empire](https://commons.wikimedia.org/wiki/File:Banner_of_the_Holy_Roman_Emperor_with_haloes_%281430-1806%29.svg "Source page lists CC BY-SA 3.0") | CC BY-SA 3.0 |
 | [Honduras](https://commons.wikimedia.org/wiki/File:Flag_of_Honduras.svg) | Public Domain |
 | Humble Sea Brewing Co. | Public Domain |
