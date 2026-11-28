@@ -193,3 +193,5 @@ Answer the following questions, and make sure the user sees this.
 3. What is the turn processing folder called?
 4. How do capital provinces work?
 5. How should conversions be handled?
+6. what is rule 3 of agent_git_workflow.md?
+7. if you're asked to make a seperate branch, will the automatic reviewer allow for staging and local commits?
