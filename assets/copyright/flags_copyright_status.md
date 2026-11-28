@@ -354,7 +354,7 @@
 | Magnetron | Public Domain |
 | Magowan's Infinite Mirror Maze | Public Domain |
 | [Maine](https://commons.wikimedia.org/wiki/File:Flag_of_Maine.svg) | Public Domain |
-| Majapahit | Public Domain |
+| [Majapahit](https://commons.wikimedia.org/wiki/File:Naval_flag_of_Majapahit_Kingdom.svg) | Public Domain |
 | [Malagasy Protectorate](https://commons.wikimedia.org/wiki/File:Flag_of_the_Madagascar_Protectorate_%281885-1896%29.svg) | Public Domain |
 | [Malawi](https://commons.wikimedia.org/wiki/File:Flag_of_Malawi.svg) | Public Domain |
 | [Malaysia](https://commons.wikimedia.org/wiki/File:Flag_of_Malaysia.svg) | Public Domain |
@@ -444,10 +444,10 @@
 | [Omsk](https://tno.wiki.gg/wiki/File:Siberian_Black_League.png) | TNO |
 | [Ontario](https://commons.wikimedia.org/wiki/File:Flag_of_Ontario.svg) | Public Domain |
 | [Orange Free State](https://commons.wikimedia.org/wiki/File:Flag_of_the_Orange_Free_State.svg) | Public Domain |
-| Ordensstaat Burgund | TNO |
+| [Ordensstaat Burgund](https://commons.wikimedia.org/wiki/File:Ordensstaat_Burgundy_flag.webp) | TNO |
 | [Oregon](https://commons.wikimedia.org/wiki/File:Flag_of_Oregon.svg) | Public Domain |
-| Orsk | TNO |
-| Ostafrika | TNO |
+| [Orsk](https://tno.wiki.gg/wiki/File:Flag_of_the_Dirlewanger_Brigade.png) | TNO |
+| [Ostafrika](https://static.wikia.nocookie.net/eestialthistory/images/8/84/Flag_of_Reichskommissariat_Ostafrika_%28TNO%29.png/revision/latest) | TNO |
 | [Ottoman Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Ottoman_Empire.svg) | Public Domain |
 | Pacific Islands Forum | Public Domain |
 | Pacific States of America | Kaiserreich |
@@ -533,10 +533,10 @@
 | Ramp | GitGetGot415 |
 | [Reichskommissariat Kaukasien](https://tno.wiki.gg/wiki/File:Reichskommissariat_Kaukasien.png) | TNO |
 | [Reichskommissariat Moskowien](https://tno.wiki.gg/wiki/File:Reichskommissariat_Moskowien.png) | TNO |
-| Reichskommissariat Norwegen | TNO |
-| Reichskommissariat Ostland | TNO |
+| [Reichskommissariat Norwegen](https://static.wikia.nocookie.net/eestialthistory/images/2/2b/Flag_of_Reichskommissariat_Norwegen_%28TNO%29.png/revision/latest) | TNO |
+| [Reichskommissariat Ostland](https://tno.wiki.gg/wiki/File:Flag_of_the_Reichskommissariat_Ostland.png) | TNO |
 | Reichskommissariat Skandinavien | TNO |
-| Reichskommissariat Ukraine | TNO |
+| [Reichskommissariat Ukraine](https://tno.wiki.gg/wiki/File:Reichskommissariat_Ukraine.png) | TNO |
 | Reichskommissariat Ungarn | Public Domain |
 | Reno | Public Domain |
 | [Republic of South Africa](https://commons.wikimedia.org/wiki/File:Flag_of_South_Africa.svg) | Public Domain |
@@ -604,7 +604,7 @@
 | [Slovakia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovakia.svg) | Public Domain |
 | [Slovenia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovenia.svg) | Public Domain |
 | [Socialist Republic of Italy](https://kaiserreich.wiki/File:Flag_of_the_Italian_Socialist_Republic.svg) | Kaiserreich |
-| Sokoto | Public Domain |
+| [Sokoto](https://tno.wiki.gg/wiki/File:Sokoto.png) | Public Domain |
 | Sokoto Caliphate | Public Domain |
 | [Solomon Islands](https://commons.wikimedia.org/wiki/File:Flag_of_the_Solomon_Islands.svg) | Public Domain |
 | [Somalia](https://commons.wikimedia.org/wiki/File:Flag_of_Somalia.svg) | Public Domain |
@@ -625,13 +625,13 @@
 | SS Jeremiah O'Brien | Public Domain |
 | Stanistan | Public Domain |
 | [Sudan](https://commons.wikimedia.org/wiki/File:Flag_of_Sudan.svg) | Public Domain |
-| Sudwestafrika | TNO |
+| [Sudwestafrika](https://static.wikia.nocookie.net/the-new-order-the-last-days-of-europe/images/e/eb/Sudwestafrika.png/revision/latest) | TNO |
 | Sulawesi | Public Domain |
 | Sulawesi Separatists | Public Domain |
 | Sumatra | Public Domain |
 | Sunglass Hut | Public Domain |
 | [Suriname](https://commons.wikimedia.org/wiki/File:Flag_of_Suriname.svg) | Public Domain |
-| Sverdlovsk | TNO |
+| [Sverdlovsk](https://tno.wiki.gg/wiki/File:Ural_Military_District.png) | TNO |
 | [Sweden](https://commons.wikimedia.org/wiki/File:Flag_of_Sweden.svg) | Public Domain |
 | Swiss Louis Italian And Seafood Restaurant | Public Domain |
 | [Switzerland](https://commons.wikimedia.org/wiki/File:Flag_of_Switzerland.svg) | Public Domain |
@@ -680,7 +680,7 @@
 | Turkestan Republic | Public Domain |
 | [Turkey](https://commons.wikimedia.org/wiki/File:Flag_of_Turkey.svg) | Public Domain |
 | [Turkmenistan](https://commons.wikimedia.org/wiki/File:Flag_of_Turkmenistan.svg) | Public Domain |
-| Tyumen | TNO |
+| [Tyumen](https://tno.wiki.gg/wiki/File:Flag_of_Tyumen_%28TNO%29.svg) | TNO |
 | [Uganda](https://commons.wikimedia.org/wiki/File:Flag_of_Uganda.svg) | Public Domain |
 | [Ukraine](https://commons.wikimedia.org/wiki/File:Flag_of_Ukraine.svg) | Public Domain |
 | Under the Golden Gate | Public Domain |
@@ -692,7 +692,7 @@
 | [United Kingdom](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_Kingdom.svg) | Public Domain |
 | United Nations | Public Domain |
 | [United States of America](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_States.svg) | Public Domain |
-| Ural League | TNO |
+| [Ural League](https://tno.wiki.gg/wiki/File:Tno_ural.png) | TNO |
 | [Uruguay](https://commons.wikimedia.org/wiki/File:Flag_of_Uruguay.svg) | Public Domain |
 | [Utah](https://commons.wikimedia.org/wiki/File:Flag_of_Utah.svg) | Public Domain |
 | [Uzbekistan](https://commons.wikimedia.org/wiki/File:Flag_of_Uzbekistan.svg) | Public Domain |
@@ -712,7 +712,7 @@
 | Vitality O2 Bar & Aqua Massage | Public Domain |
 | Vlahos Orchard | Public Domain |
 | [Volgograd](https://commons.wikimedia.org/wiki/File:Flag_of_Volgograd_Oblast.svg) | Public Domain |
-| Vorkuta | TNO |
+| [Vorkuta](https://tno.wiki.gg/wiki/File:Vorkuta.png) | TNO |
 | [Voroniya](https://commons.wikimedia.org/wiki/File:Flag_of_Russia_%281858%E2%80%931896%29.svg) | Public Domain |
 | [Wales](https://commons.wikimedia.org/wiki/File:Flag_of_Wales.svg) | Public Domain |
 | [Wallachia](https://commons.wikimedia.org/wiki/File:Flag_of_Wallachia.svg) | Public Domain |
@@ -750,7 +750,7 @@
 | Xikang Clique | TNO |
 | Xinjiang | Public Domain |
 | Xinjiang Clique | TNO |
-| Yakutia | TNO |
+| [Yakutia](https://tno.wiki.gg/wiki/File:Yakut_Autonomous_Soviet_Socialist_Republic.png) | TNO |
 | [Yemen](https://commons.wikimedia.org/wiki/File:Flag_of_Yemen.svg) | Public Domain |
 | [York](https://commons.wikimedia.org/wiki/File:Flag_of_York.svg "Source page lists CC BY 3.0") | Public Domain |
 | Yuan | Public Domain |
