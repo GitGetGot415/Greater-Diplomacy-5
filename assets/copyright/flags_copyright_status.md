@@ -49,7 +49,7 @@
 | [Austria](https://commons.wikimedia.org/wiki/File:Flag_of_Austria.svg) | Public Domain |
 | [Austria-Hungary](https://commons.wikimedia.org/wiki/File:Flag_of_Austria-Hungary.svg) | CC BY-SA 3.0 |
 | Ayutthaya Kingdom | Public Domain |
-| Azad Hind | Public Domain |
+| [Azad Hind](https://commons.wikimedia.org/wiki/File:AzadHindFlag.png "Design reference for the springing tiger tricolor") | Public Domain |
 | [Azande](https://commons.wikimedia.org/wiki/File:Flag_of_the_Azania_Liberation_Front.svg "Matching flag design from the Azania Liberation Front") | Public Domain |
 | [Azerbaijan](https://commons.wikimedia.org/wiki/File:Flag_of_Azerbaijan.svg) | Public Domain |
 | Aztec Empire | Public Domain |
@@ -65,7 +65,7 @@
 | Bay Plunge | Public Domain |
 | Bay Walk | GitGetGot415 |
 | Beach Street | Public Domain |
-| Beijing | Public Domain |
+| [Beijing](https://commons.wikimedia.org/wiki/File:Flag_of_the_Empire_of_China_%281915%E2%80%931916%29.svg "Empire of China flag used for Beijing") | Public Domain |
 | [Belarus](https://commons.wikimedia.org/wiki/File:Flag_of_Belarus.svg) | Public Domain |
 | [Belgian Congo](https://commons.wikimedia.org/wiki/File:Flag_of_the_Congo_Free_State.svg) | Public Domain |
 | [Belgium](https://commons.wikimedia.org/wiki/File:Flag_of_Belgium.svg) | Public Domain |
@@ -109,7 +109,7 @@
 | [Cameroon African State](https://www.paxhistoria.co/flags/78b93c26-05be-4e36-9781-121fb8ab0337 "Design reference for the TNO flag") | TNO |
 | [Canada](https://commons.wikimedia.org/wiki/File:Flag_of_Canada.svg) | Public Domain |
 | Candy Baron | Public Domain |
-| Carthage | Public Domain |
+| [Carthage](https://commons.wikimedia.org/wiki/File:Carthaginian_Empire_flag_%28local%29.svg "Design reference for the sign of Tanit on the game flag") | CC BY 4.0 |
 | [Catalonia](https://commons.wikimedia.org/wiki/File:Flag_of_Catalonia.svg) | Public Domain |
 | Caucasus | Public Domain |
 | CCP | misteron |
@@ -118,14 +118,14 @@
 | [Champa](https://champa.one/article/853 "Design reference for the game flag") | Public Domain |
 | [Chechnya](https://commons.wikimedia.org/wiki/File:Flag_of_the_Chechen_Republic.svg) | Public Domain |
 | [Cherokee](https://commons.wikimedia.org/wiki/File:Flag_of_the_Cherokee_Nation.svg) | Public Domain |
-| Chihuahua | Public Domain |
+| [Chihuahua](https://www.chihuahua.gob.mx/Conoce-Chihuahua/Escudo "Design reference for the coat of arms on the game flag") | Public Domain |
 | [Chile](https://commons.wikimedia.org/wiki/File:Flag_of_Chile.svg) | Public Domain |
 | Chokwe | Public Domain |
 | Chongqing | Public Domain |
 | Chowder's | Public Domain |
 | Christmas in San Francisco | Public Domain |
 | [Christmas Island](https://commons.wikimedia.org/wiki/File:Flag_of_Christmas_Island.svg) | Public Domain |
-| Circassia | Public Domain |
+| [Circassia](https://www.flagcolorcodes.com/circassia "Design reference for the yellow stars and black arrows") | Public Domain |
 | Clothing Store | Public Domain |
 | [Colombia](https://commons.wikimedia.org/wiki/File:Flag_of_Colombia.svg) | Public Domain |
 | [Colorado](https://commons.wikimedia.org/wiki/File:Flag_of_Colorado.svg) | Public Domain |
@@ -134,7 +134,7 @@
 | [Commune of France](https://kaiserreich.wiki/File:Commune_of_France_flag_new.png) | Kaiserreich |
 | Commune of Japan | Public Domain |
 | Commune of Lemuria | Public Domain |
-| Commune of Spain | Public Domain |
+| [Commune of Spain](https://commons.wikimedia.org/wiki/File:Bandera_del_GRAPO.svg) | CC BY-SA 3.0 |
 | [Communist China](https://commons.wikimedia.org/wiki/File:Flag_of_the_People%27s_Republic_of_China.svg) | Public Domain |
 | Communist Greece | Public Domain |
 | Communist Hive Mind Raj | Exodus |
@@ -157,7 +157,7 @@
 | [Czechia](https://commons.wikimedia.org/wiki/File:Flag_of_the_Czech_Republic.svg) | Public Domain |
 | Czechochechnyaslovenoslovakia | Public Domain |
 | [Czechoslovakia](https://commons.wikimedia.org/wiki/File:Flag_of_Czechoslovakia.svg) | Public Domain |
-| Danubia | Kaiserreich |
+| [Danubia](https://kaisercatcinema.com/products/danubian-federation-flag "Kaiserreich Danubian Federation flag design") | Kaiserreich |
 | [Danzig](https://commons.wikimedia.org/wiki/File:Flag_of_the_Free_City_of_Danzig.svg) | Public Domain |
 | [Darfur](https://commons.wikimedia.org/wiki/File:Flag_of_Darfur_Liberation_Front.svg) | Public Domain |
 | default_flag | GitGetGot415 |
@@ -242,7 +242,7 @@
 | Granite | Public Domain |
 | Grass | GitGetGot415 |
 | Great Hwan Empire | Public Domain |
-| Great Lakes Republic | Public Domain |
+| [Great Lakes Republic](https://the-red-world.fandom.com/wiki/File:Great_Lakes_Flag_Big.png "Red World flag design") | Public Domain |
 | [Greece](https://commons.wikimedia.org/wiki/File:Flag_of_Greece.svg) | Public Domain |
 | [Greenland](https://commons.wikimedia.org/wiki/File:Flag_of_Greenland.svg) | Public Domain |
 | [Guangxi Clique](https://vexilo.org/flag/Guangxi%20Clique%20%28HOI4%2C%20before%201.17%20update%29 "Hearts of Iron IV flag before the 1.17 update") | Paradox |
@@ -327,7 +327,7 @@
 | [Kuwait](https://commons.wikimedia.org/wiki/File:Flag_of_Kuwait.svg) | Public Domain |
 | KWAK | Public Domain |
 | [Kyrgyzstan](https://commons.wikimedia.org/wiki/File:Flag_of_Kyrgyzstan_%281992%E2%80%932023%29.svg) | Public Domain |
-| Kyushu | Public Domain |
+| [Kyushu](https://commons.wikimedia.org/wiki/File:Flag_of_Fukuoka_Prefecture.svg "Fukuoka Prefecture flag used for Kyushu") | Public Domain |
 | [Laos](https://commons.wikimedia.org/wiki/File:Flag_of_Laos.svg) | Public Domain |
 | Lappert's Ice Cream | Public Domain |
 | [Las Vegas](https://commons.wikimedia.org/wiki/File:Flag_of_Las_Vegas,_Nevada.svg) | Public Domain |
@@ -384,7 +384,7 @@
 | [Mississippi](https://commons.wikimedia.org/wiki/File:Flag_of_Mississippi.svg) | Copyrighted free use |
 | [Missouri](https://commons.wikimedia.org/wiki/File:Flag_of_Missouri.svg) | Public Domain |
 | [Moldova](https://commons.wikimedia.org/wiki/File:Flag_of_Moldova.svg) | Public Domain |
-| Mongol Empire | Public Domain |
+| [Mongol Empire](https://www.paxhistoria.co/flags/433a7492-6501-492a-9628-80c18b363529 "Design reference for the reconstructed blue banner with a white flame, sun, and crescent") | Public Domain |
 | [Mongolia](https://commons.wikimedia.org/wiki/File:Flag_of_Mongolia.svg) | Public Domain |
 | [Montana](https://commons.wikimedia.org/wiki/File:Flag_of_Montana.svg) | Public Domain |
 | [Montenegro](https://commons.wikimedia.org/wiki/File:Flag_of_Montenegro_%281905%E2%80%931918%29.svg) | Public Domain |
@@ -578,7 +578,7 @@
 | [Serbia](https://commons.wikimedia.org/wiki/File:Civil_Flag_of_Serbia.svg) | Public Domain |
 | [Shangdong Clique](https://kaiserreich.wiki/File:Shandong.png) | Kaiserreich |
 | Shanghai | Public Domain |
-| Shanxi | TNO |
+| [Shanxi](https://tno.fandom.com/wiki/File:Roc_shanxi.webp "TNO wiki flag for the Jinshaan Administrative Office") | TNO |
 | Shirtique & Krazy Kaps | Public Domain |
 | [Siberia](https://commons.wikimedia.org/wiki/File:Flag_of_Siberia.svg) | Public Domain |
 | [Siberian Black Army](https://tno.wiki.gg/wiki/File:Siberian_Black_Army.png) | TNO |
@@ -747,9 +747,9 @@
 | Wooden Sidewalk 9 | GitGetGot415 |
 | [Wyoming](https://commons.wikimedia.org/wiki/File:Flag_of_Wyoming.svg) | Public Domain |
 | Xibei San Ma | Paradox |
-| Xikang Clique | TNO |
+| [Xikang Clique](https://tno.fandom.com/wiki/File:Xikang_flag_diy.png "TNO wiki flag for the NRA 24th Army") | TNO |
 | Xinjiang | Public Domain |
-| Xinjiang Clique | TNO |
+| [Xinjiang Clique](https://tno.fandom.com/wiki/File:Xinjiang_Clique.png "TNO wiki flag for the Xinjiang Border Defense Administration") | TNO |
 | [Yakutia](https://tno.wiki.gg/wiki/File:Yakut_Autonomous_Soviet_Socialist_Republic.png) | TNO |
 | [Yemen](https://commons.wikimedia.org/wiki/File:Flag_of_Yemen.svg) | Public Domain |
 | [York](https://commons.wikimedia.org/wiki/File:Flag_of_York.svg "Source page lists CC BY 3.0") | CC BY 3.0 |
@@ -762,7 +762,7 @@
 | [Zakytaishchyna](https://commons.wikimedia.org/wiki/File:Flag_of_Green_Ukraine.svg) | Public Domain |
 | [Zambia](https://commons.wikimedia.org/wiki/File:Flag_of_Zambia.svg) | Public Domain |
 | [Zapatistas](https://commons.wikimedia.org/wiki/File:Ej%C3%A9rcito_Zapatista_de_Liberaci%C3%B3n_Nacional,_Flag.svg) | Public Domain |
-| Zentralafrika | TNO |
+| [Zentralafrika](https://tno.fandom.com/wiki/File:Zentralafrika_good.png "TNO wiki flag for Reichskommissariat Zentralafrika") | TNO |
 | [Zheleznogorsk](https://commons.wikimedia.org/wiki/File:Flag_of_Zheleznogorsk.svg) | Public Domain |
 | [Zhili](https://commons.wikimedia.org/wiki/File:Beiyang_star.svg "Design reference for the game flag") | Public Domain |
 | Zilkhstan | Public Domain |
