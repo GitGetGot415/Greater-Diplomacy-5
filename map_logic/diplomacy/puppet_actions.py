@@ -412,11 +412,12 @@ def plan_puppet_release(map_data, nation_data, master, core_nation, release_type
     if destination is None:
         return plan
     if destination == plan.separate_destination():
-        return PuppetReleasePlan(RELEASE_CREATE, None, provinces)
+        return PuppetReleasePlan(RELEASE_CREATE, None, provinces, blocked_action=plan.action or plan.blocked_action)
     if isinstance(destination, dict) and destination.get("action") == RELEASE_ADD_LAND and destination.get("country") in matching:
         plan.country = destination["country"]
     if not plan.action or destination != plan.destination():
-        return PuppetReleasePlan(None, None, [], "The planned destination has changed.")
+        return PuppetReleasePlan(None, None, [], "The planned destination has changed.",
+                                 blocked_action=plan.action or plan.blocked_action)
     return plan
 
 

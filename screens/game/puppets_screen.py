@@ -430,30 +430,39 @@ class Create_Puppet_Screen(MapOverlayScreen):
             y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + (self.ROW_HEIGHT - button_height) // 2
             detail = self.release_description(plan, release_type)
             color = self.QUEUED_TEXT_COLORS[release_type] if entry else c.UI_TEXT_LIGHT
-            separate = None
+            destination = entry.get("destination") if entry else None
+            cancel_on_right = isinstance(destination, dict) and destination.get("action") == puppet_actions.RELEASE_CREATE
+            primary_action = plan.blocked_action if cancel_on_right else plan.action or plan.blocked_action
+            primary_label = self.ROW_ACTION_LABELS.get(primary_action, "Release").replace(" Land", "\nLand")
+            create_label = "Create"
+            primary_callback = create_callback = None
 
             if entry:
-                if not plan.action and isinstance(entry.get("destination"), dict):
-                    destination = entry["destination"]
+                if not plan.action and isinstance(destination, dict):
                     action = self.ROW_ACTION_LABELS.get(destination.get("action"), "Release")
                     target = queries.get_country_display_name(destination.get("country") or subject,
                                                               world.nation_data, use_library=True)
                     name = f"{action} {target}"
-                self.add_release_button(primary_x, y, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
+                cancel = lambda value=subject: self.cancel_queue(value)
+                if cancel_on_right:
+                    create_label, create_callback = "Cancel", cancel
+                else:
+                    primary_label, primary_callback = "Cancel", cancel
             else:
                 separate = plan.separate_destination()
-                label = self.ROW_ACTION_LABELS.get(plan.action or plan.blocked_action, "Release").replace(" Land", "\nLand")
-                callback = None
                 if choose_recipient:
-                    callback = lambda value=subject, options=plan: self.choose_release_recipient(value, options)
+                    primary_callback = lambda value=subject, options=plan: self.choose_release_recipient(value, options)
                 elif plan.action:
-                    callback = lambda value=subject, target=plan.destination(): self.queue_creation(value, target)
-                self.add_release_button(primary_x, y, label, callback, enabled and callback is not None)
-                if separate and not plan.action:
-                    detail = f"{plan.reason} {self.release_count(plan)}."
+                    primary_callback = lambda value=subject, target=plan.destination(): self.queue_creation(value, target)
+                if separate:
+                    create_callback = lambda value=subject, target=separate: self.queue_creation(value, target)
+                    if not plan.action:
+                        detail = f"{plan.reason} {self.release_count(plan)}."
 
-            separate_callback = (lambda value=subject, target=separate: self.queue_creation(value, target)) if separate else None
-            self.add_release_button(create_x, y, "Create", separate_callback, enabled and separate_callback is not None)
+            self.add_release_button(primary_x, y, primary_label, primary_callback, enabled and primary_callback is not None,
+                                    "red" if entry and not cancel_on_right else "green")
+            self.add_release_button(create_x, y, create_label, create_callback, enabled and create_callback is not None,
+                                    "red" if cancel_on_right else "green")
 
             self.release_row_surfaces.append((
                 row_font.render(fit_text(name, row_font, self.ROW_TEXT_WIDTH), True, color),
