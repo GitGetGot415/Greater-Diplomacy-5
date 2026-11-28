@@ -28,7 +28,7 @@
 | [Andalusia](https://commons.wikimedia.org/wiki/File:Flag_of_Andalusia.svg) | Public Domain |
 | [Angola](https://commons.wikimedia.org/wiki/File:Flag_of_Angola.svg) | Public Domain |
 | [Ankara](https://www.ankara.bel.tr/kurumsal/dijital-medya/logo-ve-amblem "Design reference for the municipal emblem on the game flag") | License unverified |
-| Antalya | Public Domain |
+| [Antalya](https://www.reddit.com/r/vexillology/comments/i5wd3d/flag_for_city_of_antalya_turkey/ "Original flag proposal with a red sun and blue waves") | Public Domain |
 | [Antofagasta](https://commons.wikimedia.org/wiki/File:Flag_of_Antofagasta_Region,_Chile.svg) | CC BY-SA 4.0 |
 | [Apulia](https://commons.wikimedia.org/wiki/File:Flag_of_Apulia.svg) | CC BY-SA 3.0 |
 | Aquarium of the Bay | Public Domain |
@@ -172,7 +172,7 @@
 | Dutch America | Public Domain |
 | [Dutch East India Company](https://commons.wikimedia.org/wiki/File:Flag_of_the_Dutch_East_India_Company.svg) | Public Domain |
 | [Dutch East Indies](https://commons.wikimedia.org/wiki/File:Flag_of_the_Netherlands.svg) | Public Domain |
-| Ea-Nasir | Public Domain |
+| [Ea-Nasir](https://www.metmuseum.org/art/collection/search/323735 "Standing Male Worshiper statue used to represent Ea-Nasir") | Public Domain |
 | Eagle Cafe | Public Domain |
 | [East African Federation](https://commons.wikimedia.org/wiki/File:Flag_of_the_East_African_Community_%28no_logo%29.svg) | Public Domain |
 | East Asia | Public Domain |
@@ -274,9 +274,9 @@
 | Image Arts | Public Domain |
 | [India](https://commons.wikimedia.org/wiki/File:Flag_of_India.svg) | Public Domain |
 | [Indonesia](https://commons.wikimedia.org/wiki/File:Flag_of_Indonesia.svg) | Public Domain |
-| Intersection | Public Domain |
+| [Intersection](https://commons.wikimedia.org/wiki/File:MUTCD_W2-1.svg "U.S. crossroad warning sign") | Public Domain |
 | [Iowa](https://commons.wikimedia.org/wiki/File:Flag_of_Iowa.svg) | Public Domain |
-| Iqutios | Public Domain |
+| [Iqutios](https://commons.wikimedia.org/wiki/File:Bandera_de_Iquitos.png) | Public Domain |
 | [Iran](https://commons.wikimedia.org/wiki/File:Civil_flag_of_Iran_%281964%E2%80%931980%29.svg) | Public Domain |
 | [Iraq](https://commons.wikimedia.org/wiki/File:Flag_of_Iraq.svg) | Public Domain |
 | [Ireland](https://commons.wikimedia.org/wiki/File:Flag_of_Ireland.svg) | Public Domain |
@@ -374,7 +374,7 @@
 | [Mauryan Empire](https://commons.wikimedia.org/wiki/File:Flag_of_Maurya_Empire.svg) | Public Domain |
 | [Mecklenburg](https://commons.wikimedia.org/wiki/File:Flagge_Gro%C3%9Fherzogt%C3%BCmer_Mecklenburg.svg) | Public Domain |
 | Mega City One | Public Domain |
-| Mende | Public Domain |
+| [Mende](https://www.crwflags.com/fotw/flags/fr-48-me.html "Municipal flag of Mende, France") | Public Domain |
 | [Mengjiang](https://commons.wikimedia.org/wiki/File:Flag_of_Mengjiang.svg) | Public Domain |
 | [Merina](https://commons.wikimedia.org/wiki/File:Flag_of_the_Merina_Kingdom.svg "Source page lists CC BY 3.0") | CC BY 3.0 |
 | [Mexico](https://commons.wikimedia.org/wiki/File:Flag_of_Mexico.svg) | Public Domain |
@@ -409,7 +409,7 @@
 | [Nevada](https://commons.wikimedia.org/wiki/File:Flag_of_Nevada.svg) | Public Domain |
 | [New Brunswick](https://commons.wikimedia.org/wiki/File:Flag_of_New_Brunswick.svg) | Public Domain |
 | [New Caledonia](https://commons.wikimedia.org/wiki/File:Flag_of_FLNKS.svg) | Public Domain |
-| New England | Public Domain |
+| [New England](https://kaisercatcinema.com/products/new-new-england-flag-double-sided) | Public Domain |
 | [New Jersey](https://commons.wikimedia.org/wiki/File:Flag_of_New_Jersey.svg) | Public Domain |
 | [New Mexico](https://commons.wikimedia.org/wiki/File:Flag_of_New_Mexico.svg) | Public Domain |
 | [New South Wales](https://commons.wikimedia.org/wiki/File:Flag_of_New_South_Wales.svg) | Public Domain |
@@ -598,14 +598,14 @@
 | [Sikh Empire](https://commons.wikimedia.org/wiki/File:Sikh_Empire_flag.svg "Source page lists CC BY-SA 4.0") | CC BY-SA 4.0 |
 | [Silesia](https://commons.wikimedia.org/wiki/File:Flag_of_Silesia.svg) | Public Domain |
 | [Sinaloa](https://commons.wikimedia.org/wiki/File:Flag_of_Sinaloa.svg "Source page lists CC BY-SA 3.0, GFDL, Public domain") | Public Domain |
-| Sinaloa Cartel | Public Domain |
+| [Sinaloa Cartel](https://commons.wikimedia.org/wiki/File:C.D.S.png "Design reference for the C.D.S. lettering and tricolor stripe") | Public Domain |
 | [Singapore](https://commons.wikimedia.org/wiki/File:Flag_of_Singapore.svg) | Public Domain |
 | Skystar Wheel | Public Domain |
 | [Slovakia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovakia.svg) | Public Domain |
 | [Slovenia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovenia.svg) | Public Domain |
 | [Socialist Republic of Italy](https://kaiserreich.wiki/File:Flag_of_the_Italian_Socialist_Republic.svg) | Kaiserreich |
 | [Sokoto](https://tno.wiki.gg/wiki/File:Sokoto.png) | TNO (license unverified) |
-| Sokoto Caliphate | Public Domain |
+| [Sokoto Caliphate](https://www.paxhistoria.co/assets/cfc05046-4a04-506c-8428-b6b59baa528a "Design reference for the green flag with a white crescent and star on a black disk") | Public Domain |
 | [Solomon Islands](https://commons.wikimedia.org/wiki/File:Flag_of_the_Solomon_Islands.svg) | Public Domain |
 | [Somalia](https://commons.wikimedia.org/wiki/File:Flag_of_Somalia.svg) | Public Domain |
 | [Somaliland](https://commons.wikimedia.org/wiki/File:Flag_of_Somaliland.svg) | Public Domain |
@@ -668,9 +668,9 @@
 | [Tomsk](https://tno.wiki.gg/wiki/File:Central_Siberian_Republic.png) | TNO |
 | Toronto | Public Domain |
 | Totalist Italy | Kaiserreich |
-| Toubou | Public Domain |
+| [Toubou](https://www.reddit.com/r/vexillology/comments/1fmw524/what_is_this_blueredblack_flag/ "Photo reference for the blue, red, and black flag with a yellow sun") | Public Domain |
 | [Transylvania](https://commons.wikimedia.org/wiki/File:Flag_of_Transylvania_%28Local%29.svg) | Public Domain |
-| Trazbon | Public Domain |
+| [Trazbon](https://www.crwflags.com/fotw/flags/tr-61-tz.html "White flag of Trabzon Metropolitan Municipality") | Public Domain |
 | [Trinidad and Tobago](https://commons.wikimedia.org/wiki/File:Flag_of_Trinidad_and_Tobago.svg) | Public Domain |
 | Trish's Chocolate | Public Domain |
 | Trish's Mini Donuts | Public Domain |
@@ -746,7 +746,7 @@
 | Wooden Sidewalk 8 | GitGetGot415 |
 | Wooden Sidewalk 9 | GitGetGot415 |
 | [Wyoming](https://commons.wikimedia.org/wiki/File:Flag_of_Wyoming.svg) | Public Domain |
-| Xibei San Ma | Paradox |
+| [Xibei San Ma](https://forumcontent.paradoxplaza.com/public/319221/Hoi4_Warlords_Group_v02.jpg "Paradox Waking the Tiger artwork with the Xibei San Ma flag") | Paradox |
 | [Xikang Clique](https://tno.fandom.com/wiki/File:Xikang_flag_diy.png "TNO wiki flag for the NRA 24th Army") | TNO |
 | Xinjiang | Public Domain |
 | [Xinjiang Clique](https://tno.fandom.com/wiki/File:Xinjiang_Clique.png "TNO wiki flag for the Xinjiang Border Defense Administration") | TNO |
@@ -756,7 +756,7 @@
 | Yuan | Public Domain |
 | [Yucatan](https://commons.wikimedia.org/wiki/File:Flag_of_the_Republic_of_Yucatan.svg "Source page lists CC BY-SA 3.0, GFDL, Public domain") | Public Domain |
 | [Yugoslavia](https://commons.wikimedia.org/wiki/File:Flag_of_Yugoslavia_%281918%E2%80%931941%29.svg) | Public Domain |
-| Yunnan | Paradox |
+| [Yunnan](https://forumcontent.paradoxplaza.com/public/319221/Hoi4_Warlords_Group_v02.jpg "Paradox Waking the Tiger artwork with the Yunnan flag") | Paradox |
 | [Yunnan Clique](https://kaiserreich.wiki/File:Yunnan.png) | Kaiserreich |
 | [Zabaykalsky](https://commons.wikimedia.org/wiki/File:Flag_of_Zabaykalsky_Krai.svg) | Public Domain |
 | [Zakytaishchyna](https://commons.wikimedia.org/wiki/File:Flag_of_Green_Ukraine.svg) | Public Domain |
