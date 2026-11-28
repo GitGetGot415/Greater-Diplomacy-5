@@ -1520,6 +1520,23 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         validated = driver.validate_draft("A", [old_command])[0]
         self.assertEqual(validated["release_subjects"][0]["release_type"], c.PUPPET_TYPE_INTEGRATED)
 
+    def test_host_accepts_an_explicit_matching_subject_and_checks_its_current_master(self):
+        map_ref = self.make_map()
+        nations = map_ref.world.nation_data
+        nations["P"].update(master="A", is_playable=True)
+        nations["Second Subject"] = dict(nations["P"], name="Second Subject", release_source="P")
+        nations["A"]["puppets"].append("Second Subject")
+        driver = MapRealtimeDriver(map_ref)
+        command = {"type": "puppet_draft", "puppet_order": ["P", "Second Subject"]}
+        for destination in ({"action": "create", "country": None}, {"action": "add_land", "country": "Second Subject"}):
+            with self.subTest(destination=destination):
+                command["release_subjects"] = [{"core_nation": "P", "destination": destination}]
+                order, = driver.validate_draft("A", [command])[0]["release_subjects"]
+                self.assertEqual(order["destination"], destination)
+        nations["Second Subject"]["master"] = "B"
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [command])
+
     def test_queue_items_are_rebuilt_from_server_costs_not_client_refunds(self):
         map_ref = self.make_map()
         driver = MapRealtimeDriver(map_ref)

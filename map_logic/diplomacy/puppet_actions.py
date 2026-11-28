@@ -358,9 +358,15 @@ class PuppetReleasePlan:
     country: str | None
     provinces: list[dict]
     reason: str = ""
+    matching_subjects: tuple[str, ...] = ()
 
     def destination(self):
         return {"action": self.action, "country": self.country}
+
+    def separate_destination(self):
+        if self.provinces and self.action != RELEASE_RESTORE:
+            return {"action": RELEASE_CREATE, "country": None}
+        return None
 
 
 def plan_puppet_release(map_data, nation_data, master, core_nation, release_type, keep_cores=False,
@@ -380,10 +386,10 @@ def plan_puppet_release(map_data, nation_data, master, core_nation, release_type
     subjects = [subject for subject in nation_data[master].get("puppets", [])
                 if nation_data.get(subject, {}).get("master") == master and queries.is_playable(subject, nation_data)
                 and (subject == core_nation or nation_data[subject].get("release_source") == core_nation)]
-    matching = next((subject for subject in subjects if nation_data[subject].get("puppet_type") == release_type), None)
-    plan = PuppetReleasePlan(None, None, provinces)
+    matching = tuple(subject for subject in subjects if nation_data[subject].get("puppet_type") == release_type)
+    plan = PuppetReleasePlan(None, None, provinces, matching_subjects=matching)
     if matching:
-        plan.action, plan.country = RELEASE_ADD_LAND, matching
+        plan.action, plan.country = RELEASE_ADD_LAND, matching[0]
     elif subjects and (release_type != c.PUPPET_RELEASE_INDEPENDENT or core_nation in subjects):
         subject = subjects[0]
         name = queries.get_country_display_name(subject, nation_data)
@@ -398,10 +404,13 @@ def plan_puppet_release(map_data, nation_data, master, core_nation, release_type
     else:
         plan.action, plan.country = RELEASE_RESTORE, core_nation
 
-    # A separate tag is useful when the intended government already exists or has a different status.
-    if destination == {"action": RELEASE_CREATE, "country": None} and plan.action in (None, RELEASE_RETURN_LAND):
+    if destination is None:
+        return plan
+    if destination == plan.separate_destination():
         return PuppetReleasePlan(RELEASE_CREATE, None, provinces)
-    if destination is not None and (not plan.action or destination != plan.destination()):
+    if isinstance(destination, dict) and destination.get("action") == RELEASE_ADD_LAND and destination.get("country") in matching:
+        plan.country = destination["country"]
+    if not plan.action or destination != plan.destination():
         return PuppetReleasePlan(None, None, [], "The planned destination has changed.")
     return plan
 

@@ -421,7 +421,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
             entry = queued.get(subject)
             release_type = entry["release_type"] if entry else self.release_type
             plan = plans[subject] if entry else self.plan_release(subject, reserved)
-            name = queries.get_country_display_name(plan.country or subject, world.nation_data, use_library=True)
+            choose_recipient = not entry and len(plan.matching_subjects) > 1
+            display_country = subject if choose_recipient else plan.country or subject
+            name = queries.get_country_display_name(display_country, world.nation_data, use_library=True)
             y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT
             detail = self.release_description(plan, release_type)
             color = self.QUEUED_TEXT_COLORS[release_type] if entry else c.UI_TEXT_LIGHT
@@ -435,19 +437,20 @@ class Create_Puppet_Screen(MapOverlayScreen):
                     name = f"{action} {target}"
                 self.add_release_button(y + 10, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
             else:
-                separate = None
-                if plan.provinces and plan.action in (None, puppet_actions.RELEASE_RETURN_LAND):
-                    separate = self.plan_release(subject, reserved, {"action": puppet_actions.RELEASE_CREATE, "country": None})
+                separate = plan.separate_destination()
                 if plan.action:
+                    if choose_recipient:
+                        callback = lambda value=subject, options=plan: self.choose_release_recipient(value, options)
+                    else:
+                        callback = lambda value=subject, target=plan.destination(): self.queue_creation(value, target)
                     self.add_release_button(y if separate else y + 10, self.ROW_BUTTON_LABELS[plan.action],
-                                            lambda value=subject, target=plan.destination(): self.queue_creation(value, target),
-                                            enabled)
-                if separate and separate.action:
+                                            callback, enabled)
+                if separate:
                     if not plan.action:
-                        detail = f"{plan.reason} {self.release_count(separate)}."
+                        detail = f"{plan.reason} {self.release_count(plan)}."
                     offset = self.ROW_BUTTON_SIZE[1] + self.ROW_BUTTON_GAP if plan.action else 10
-                    self.add_release_button(y + offset, self.ROW_BUTTON_LABELS[separate.action],
-                                            lambda value=subject, target=separate.destination(): self.queue_creation(value, target),
+                    self.add_release_button(y + offset, self.ROW_BUTTON_LABELS[puppet_actions.RELEASE_CREATE],
+                                            lambda value=subject, target=separate: self.queue_creation(value, target),
                                             enabled)
                 elif not plan.action:
                     self.add_release_button(y + 10, "No Land", None, False)
@@ -457,10 +460,20 @@ class Create_Puppet_Screen(MapOverlayScreen):
                 detail_font.render(fit_text(detail, detail_font, self.ROW_TEXT_WIDTH), True, color),
             ))
 
-    def plan_release(self, subject, reserved, destination=None):
+    def plan_release(self, subject, reserved):
         world = self.map_screen.world
         return puppet_actions.plan_puppet_release(world.map_data, world.nation_data, self.releasing_country, subject,
-                                                  self.release_type, self.keep_cores, reserved=reserved, destination=destination)
+                                                  self.release_type, self.keep_cores, reserved=reserved)
+
+    def choose_release_recipient(self, subject, plan):
+        if not self.can_edit_realtime():
+            return
+
+        def selected(country):
+            self.queue_creation(subject, {"action": puppet_actions.RELEASE_ADD_LAND, "country": country})
+
+        items = queries.country_picker_items(plan.matching_subjects, self.map_screen.world.nation_data)
+        pickers.open_listbox_selector(self, "Add Land", f"Transfer {self.release_count(plan)}. Select the recipient.", items, selected)
 
     def add_release_button(self, y, label, callback, enabled, color="green"):
         x = self.panel_rect.right - self.ROW_BUTTON_SIZE[0] - 20

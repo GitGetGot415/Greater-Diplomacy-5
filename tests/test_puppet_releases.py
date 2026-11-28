@@ -319,6 +319,34 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         self.assertEqual(self.release(c.PUPPET_RELEASE_INDEPENDENT), "Core")
         self.assertEqual(original["inbox"][0]["content"], "Old letter")
 
+    def test_matching_subject_type_allows_a_second_subject_and_an_explicit_recipient(self):
+        for release_type in (c.PUPPET_TYPE_INTEGRATED, c.PUPPET_TYPE_AUTONOMOUS):
+            with self.subTest(release_type=release_type):
+                self.map = release_map()
+                world = self.map.world
+                first = self.release(release_type, keep_cores=True)
+                destination = {"action": puppet_actions.RELEASE_CREATE, "country": None}
+                second = puppet_actions.finalize_create_puppet(world.map_data, world.nation_data, "Master", "Core",
+                                                               self.map, release_type=release_type, destination=destination)
+                self.assertEqual(first, "Core")
+                self.assertEqual(world.nation_data["Master"]["puppets"], [first, second])
+                self.assertEqual(world.nation_data[second]["puppet_type"], release_type)
+                self.assertEqual(world.map_data["2"]["owner"], second)
+
+                world.map_data["4"]["owner"] = "Master"
+                destination = {"action": puppet_actions.RELEASE_ADD_LAND, "country": second}
+                order = {"core_nation": "Core", "release_type": release_type, "destination": destination}
+                world.nation_data["Master"]["release_puppet_queue"] = self.canonical([order])
+                diplomacy_processor._process_claim_queues(self.map)
+                self.assertEqual(world.map_data["4"]["owner"], second)
+
+                world.map_data["5"]["cores"].append("Core")
+                puppet_actions.finalize_release(world.map_data, world.nation_data, "Master", second, self.map)
+                with self.assertRaises(ValueError):
+                    self.canonical([order])
+                self.assertEqual(self.canonical([{"core_nation": "Core", "release_type": release_type}])[0]
+                                 ["destination"]["country"], first)
+
     def test_return_to_a_government_in_exile_keeps_its_existing_diplomacy(self):
         world = self.map.world
         world.nation_data["Core"].update(faction="Exiles", is_faction_leader=True, research={"existing": 1},
@@ -843,6 +871,28 @@ class PuppetReleaseControlTests(unittest.TestCase):
             self.assertEqual(entry["destination"]["action"], action)
             self.assertIsNotNone(screen.preview_map)
             screen.cancel_queue("Core")
+
+    def test_add_land_picker_queues_the_subject_selected_by_name(self):
+        world = self.map.world
+        puppet_actions.finalize_create_puppet(world.map_data, world.nation_data, "Master", "Core", self.map, keep_cores=True)
+        screen = puppets_screen.Create_Puppet_Screen(self.map)
+        separate = next(item for item in screen.elements if item.text == "Create Separate")
+        self.click_button(screen, separate)
+        diplomacy_processor._process_claim_queues(self.map)
+        second = world.id_to_province[2]["owner"]
+        world.id_to_province[4]["owner"] = "Master"
+        screen.refresh_ui()
+        with mock.patch.object(modal_stack, "_stack", []):
+            button = next(item for item in screen.elements if item.text == "Add Land")
+            self.click_button(screen, button)
+            picker = modal_stack.active().screen
+            self.assertFalse(world.nation_data["Master"]["release_puppet_queue"])
+            self.assertEqual(dict(picker.items), {world.nation_data[country]["name"]: country for country in ("Core", second)})
+            self.assertIn("1 province", picker.prompt)
+            picker.select(next(item for item in picker.items if item[1] == second))
+        order, = world.nation_data["Master"]["release_puppet_queue"]
+        self.assertEqual(order["destination"], {"action": puppet_actions.RELEASE_ADD_LAND, "country": second})
+        self.assertIsNotNone(screen.preview_map)
 
 
 if __name__ == "__main__":

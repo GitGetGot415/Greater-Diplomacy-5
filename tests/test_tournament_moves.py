@@ -720,6 +720,33 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(summary["loaded"], 0)
                 self.assertNotIn("release_puppet_queue", host.world.nation_data[country])
 
+    def test_import_accepts_a_second_matching_subject_and_rejects_a_foreign_recipient(self):
+        for destination, allowed in (({"action": "create", "country": None}, True),
+                                     ({"action": "add_land", "country": "Second Subject"}, True),
+                                     ({"action": "add_land", "country": "Foreign Subject"}, False)):
+            with self.subTest(destination=destination):
+                host = Host()
+                host.world.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
+                                                "terrain": "plains", "units": []}}
+                nations = host.world.nation_data
+                nations["Subject"]["release_source"] = "Outsider"
+                nations["Second Subject"] = dict(nations["Subject"], name="Second Subject")
+                nations["Foreign Subject"] = dict(nations["Subject"], name="Foreign Subject", master="Member")
+                nations["Leader"]["puppets"].append("Second Subject")
+                command = {"type": "puppet_draft", "puppet_order": ["Subject", "Second Subject"],
+                           "release_subjects": [{"core_nation": "Outsider", "destination": destination}]}
+                move = self.player_data(host, player_intents=[command])
+                with tempfile.TemporaryDirectory() as directory:
+                    path = self.write_move(directory, "leader.gd5move", "Leader", move)
+                    summary = self.import_moves(host, [path])
+                if allowed:
+                    self.assertEqual(summary["loaded"], 1, summary["rejections"])
+                    order, = nations["Leader"]["release_puppet_queue"]
+                    self.assertEqual(order["destination"], destination)
+                else:
+                    self.assertEqual(summary["rejected"], 1)
+                    self.assertNotIn("release_puppet_queue", nations["Leader"])
+
     def previous_release_move(self, host, **extra):
         from data import migrations
         return self.player_data(host, game_version=f"v{migrations.CURRENT_VERSION - 1}", **extra)
