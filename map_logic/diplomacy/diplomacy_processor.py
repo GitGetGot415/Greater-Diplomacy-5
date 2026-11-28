@@ -1801,7 +1801,7 @@ def _process_claim_queues(context):
                     core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
                     reason = ("No eligible provinces remained when the release was due."
                               if release_type in c.PUPPET_RELEASE_TYPES else "The release type was invalid.")
-                    send_release_notice(context, core_nation, country_name, f"{core_name} was not created. {reason}",
+                    send_release_notice(context, country_name, f"{core_name} was not created. {reason}",
                                         action=RELEASE_FAILED_ACTION)
 
 
@@ -1814,11 +1814,11 @@ def report_release_territory_losses(context):
     session_state.releases_this_turn = {}
     world = world_for(context)
     living = queries.get_living_nations(world.map_data)
-    for created, (receiver, sender) in releases.items():
+    for created, (receiver, _) in releases.items():
         if created in living:
             continue
         content = ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LOST_TERRITORY"].format(country=created)
-        send_release_notice(context, sender, receiver, content, action=RELEASE_LOST_TERRITORY_ACTION)
+        send_release_notice(context, receiver, content, action=RELEASE_LOST_TERRITORY_ACTION)
 
 
 def _process_scheduled_ai_attache_revocations(context):

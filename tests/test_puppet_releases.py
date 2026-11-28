@@ -196,7 +196,7 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         self.assertEqual(nations["Master"]["release_puppet_queue"], [])
         notice, = nations["Master"]["inbox"]
         self.assertTrue(diplomacy_messages.is_system_notice(notice))
-        self.assertEqual(notice["sender"], "Core")
+        self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
         self.assertFalse(notice["read"])
         self.assertIn("Core Display", notice["content"])
         self.assertIn("No eligible provinces", notice["content"])
@@ -223,7 +223,7 @@ class PuppetReleaseRuleTests(unittest.TestCase):
 
                 notice, = nations["Master"]["inbox"]
                 self.assertEqual(notice["action"], diplomacy_messages.RELEASE_LOST_TERRITORY_ACTION)
-                self.assertEqual(notice["sender"], "Core")
+                self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
                 self.assertIn(created, notice["content"])
                 self.assertNotIn(nations["Other"]["name"], notice["content"])
                 self.assertNotIn(nations["Enemy"]["name"], notice["content"])
@@ -246,31 +246,33 @@ class PuppetReleaseRuleTests(unittest.TestCase):
         diplomacy_processor.report_release_territory_losses(self.map)
         self.assertFalse(nations["Master"].get("inbox"))
 
-    def test_provisional_release_notice_recovers_its_country_on_save_and_history_load(self):
-        old = {"action": "PRIVATE_GAME_NOTICE", "sender": "GLOBAL_EVENTS", "system_notice": True,
-               "related_action": "RELEASE_PUPPET", "message_id": "failure", "read": True,
-               "content": "Core Display was not created. No eligible provinces remained when the release was due."}
-        unknown_sender = dict(old, message_id="unattributed", content="Unknown country was not created. No eligible provinces remained.")
+    def test_old_release_notices_keep_their_contents_on_save_and_history_load(self):
+        provisional = {"action": "PRIVATE_GAME_NOTICE", "sender": "GLOBAL_EVENTS", "system_notice": True,
+                       "related_action": "RELEASE_PUPPET", "message_id": "failure", "read": True,
+                       "date": "Today", "content": "Unidentified country was not created."}
+        attributed = dict(provisional, message_id="loss", sender="Core", read=False,
+                          action=diplomacy_messages.RELEASE_LOST_TERRITORY_ACTION, related_action="another field")
         for convert in (conversions.convert_save, conversions.convert_history_turn):
-            with self.subTest(convert=convert.__name__), mock.patch.object(queries, "get_country_data", return_value={}):
-                payload = {"nation_data": {"Master": {"inbox": [old.copy(), unknown_sender.copy()]},
-                                           "Core": {"name": "Core Display"}}}
+            with self.subTest(convert=convert.__name__):
+                payload = {"nation_data": {"Master": {"inbox": [provisional.copy(), attributed.copy()]}}}
                 convert(payload, {})
                 convert(payload, {})
-                notice, = payload["nation_data"]["Master"]["inbox"]
-                self.assertEqual(notice["sender"], "Core")
-                self.assertEqual(notice["action"], diplomacy_messages.RELEASE_FAILED_ACTION)
-                self.assertEqual(notice["message_id"], old["message_id"])
-                self.assertEqual(notice["read"], old["read"])
-                self.assertEqual(notice["content"], old["content"])
+                first, second = payload["nation_data"]["Master"]["inbox"]
+                self.assertEqual(first["action"], diplomacy_messages.RELEASE_FAILED_ACTION)
+                self.assertEqual(second["action"], attributed["action"])
+                for old, notice in ((provisional, first), (attributed, second)):
+                    self.assertEqual(notice["sender"], diplomacy_messages.GAME_NOTICE_CONTACT)
+                    for key in ("message_id", "date", "read", "content"):
+                        self.assertEqual(notice[key], old[key])
 
     def test_new_country_does_not_receive_private_release_notices_from_the_source(self):
         self.map.world.time_manager = StubTimeManager()
-        diplomacy_messages.send_release_notice(self.map, "Other", "Core", "The release failed.",
+        diplomacy_messages.send_release_notice(self.map, "Core", "The release failed.",
                                                action=diplomacy_messages.RELEASE_FAILED_ACTION)
         created = self.release()
         self.assertFalse(self.map.world.nation_data[created].get("inbox"))
-        self.assertEqual(self.map.world.nation_data["Core"]["inbox"][0]["sender"], "Other")
+        self.assertEqual(self.map.world.nation_data["Core"]["inbox"][0]["sender"],
+                         diplomacy_messages.GAME_NOTICE_CONTACT)
 
     def test_new_country_does_not_copy_the_source_release_queue(self):
         self.map.world.nation_data["Core"]["release_puppet_queue"] = [{"core_nation": "Other", "turns_left": 3}]

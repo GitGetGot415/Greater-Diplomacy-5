@@ -114,7 +114,7 @@ def convert_save(save_meta, map_data):
             continue
         _province(province, province.get("terrain"), aliases, f"map_data.{key}")
     _province_overlays(save_meta, map_data, aliases, "meta")
-    _convert_legacy_release_notices(nation_data, map_data, save_meta.get("provinces", {}))
+    _convert_legacy_release_notices(nation_data)
     # Completed real-time saves made before offline_view open as spectator replays.
     realtime_match = save_meta.get("realtime_match")
     if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
@@ -133,46 +133,27 @@ def convert_history_turn(snapshot, map_data):
     nation_data = container(snapshot, "nation_data", dict, "history", repair=True)
     _nations(nation_data, aliases, "history.nation_data")
     _province_overlays(snapshot, map_data, aliases, "history")
-    _convert_legacy_release_notices(nation_data, map_data, snapshot.get("provinces", {}))
+    _convert_legacy_release_notices(nation_data)
 
 
-def _convert_legacy_release_notices(nation_data, map_data, overlays):
-    """Replace the former Game sender with the release country when its name identifies it."""
-    notices = []
-    for country, data in nation_data.items():
-        inbox = data.get("inbox") if isinstance(data, dict) else None
-        if isinstance(inbox, list):
-            notices.extend((country, inbox, message) for message in inbox
-                           if isinstance(message, dict) and message.get("action") == "PRIVATE_GAME_NOTICE"
-                           and message.get("sender") == "GLOBAL_EVENTS")
-    if not notices:
-        return
+def _convert_legacy_release_notices(nation_data):
+    """File old release notices in Game and preserve their text and read state."""
+    # The diplomacy package also uses migrations through the save and query modules.
+    from map_logic.diplomacy import diplomacy_messages as messages
 
-    # The conversion only needs the cached country library when a provisional notice is present.
-    from data import queries
-    from map_logic.diplomacy.diplomacy_messages import RELEASE_FAILED_ACTION
-
-    country_ids = set(nation_data) | set(queries.get_country_data())
-    country_ids.update(core for provinces in (map_data, overlays) for province in provinces.values()
-                       if isinstance(province, dict) for core in (province.get("cores") or ())
-                       if isinstance(core, str))
-    names = {}
-    for country in country_ids.difference(c.UNPLAYABLE_NATIONS):
-        name = queries.get_country_display_name(country, nation_data, use_library=True)
-        names.setdefault(name, []).append(country)
-
-    for country, inbox, message in notices:
-        content = message.get("content")
-        name, marker, _ = content.rpartition(" was not created. ") if isinstance(content, str) else ("", "", "")
-        matches = names.get(name, ())
-        if marker and len(matches) == 1:
-            message["sender"] = matches[0]
-            message["action"] = RELEASE_FAILED_ACTION
-            message.pop("related_action", None)
-        else:
-            # The provisional record stored a display name and no sender ID.
-            inbox.remove(message)
-            repaired(f"nation_data.{country}.inbox.release_failure_sender")
+    for data in nation_data.values():
+        if not isinstance(data, dict) or not isinstance(data.get("inbox"), list):
+            continue
+        for message in data["inbox"]:
+            if not isinstance(message, dict):
+                continue
+            if (message.get("action") == "PRIVATE_GAME_NOTICE" and message.get("sender") == messages.GAME_NOTICE_CONTACT
+                    and message.get("related_action") == "RELEASE_PUPPET"):
+                message["action"] = messages.RELEASE_FAILED_ACTION
+                message.pop("related_action")
+            if messages.is_release_notice(message) and not messages.is_forwarded(message):
+                message["sender"] = messages.GAME_NOTICE_CONTACT
+                message["system_notice"] = True
 
 
 def _province_overlays(saved, map_data, aliases, path):
