@@ -338,10 +338,10 @@ class Create_Puppet_Screen(MapOverlayScreen):
     ROW_BUTTON_SIZE = (64, 42)
     ROW_BUTTON_GAP = 4
     ROW_ACTION_LABELS = {
-        puppet_actions.RELEASE_RESTORE: "Restore",
+        puppet_actions.RELEASE_RESTORE: "Spawn",
         puppet_actions.RELEASE_ADD_LAND: "Add Land",
         puppet_actions.RELEASE_RETURN_LAND: "Return Land",
-        puppet_actions.RELEASE_CREATE: "Create Separate",
+        puppet_actions.RELEASE_CREATE: "Create Seperate",
     }
     QUEUED_TEXT_COLORS = {
         c.PUPPET_TYPE_INTEGRATED: c.COLOR_GOLD_HIGHLIGHT,
@@ -434,7 +434,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             cancel_on_right = isinstance(destination, dict) and destination.get("action") == puppet_actions.RELEASE_CREATE
             primary_action = plan.blocked_action if cancel_on_right else plan.action or plan.blocked_action
             primary_label = self.ROW_ACTION_LABELS.get(primary_action, "Release").replace(" Land", "\nLand")
-            create_label = "Create"
+            create_label = self.ROW_ACTION_LABELS[puppet_actions.RELEASE_CREATE].replace(" ", "\n")
             primary_callback = create_callback = None
 
             if entry:
@@ -462,7 +462,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             self.add_release_button(primary_x, y, primary_label, primary_callback, enabled and primary_callback is not None,
                                     "red" if entry and not cancel_on_right else "green")
             self.add_release_button(create_x, y, create_label, create_callback, enabled and create_callback is not None,
-                                    "red" if cancel_on_right else "green")
+                                    "red" if cancel_on_right else "green", font_preset="button_small" if cancel_on_right else "small")
 
             self.release_row_surfaces.append((
                 row_font.render(fit_text(name, row_font, self.ROW_TEXT_WIDTH), True, color),
@@ -484,8 +484,8 @@ class Create_Puppet_Screen(MapOverlayScreen):
         items = queries.country_picker_items(plan.matching_subjects, self.map_screen.world.nation_data)
         pickers.open_listbox_selector(self, "Add Land", f"Transfer {self.release_count(plan)}. Select the recipient.", items, selected)
 
-    def add_release_button(self, x, y, label, callback, enabled, color="green"):
-        button = Button(x, y + self.scroll.value, self.ROW_BUTTON_SIZE, color, label, callback, font_preset="button_small")
+    def add_release_button(self, x, y, label, callback, enabled, color="green", *, font_preset="button_small"):
+        button = Button(x, y + self.scroll.value, self.ROW_BUTTON_SIZE, color, label, callback, font_preset=font_preset)
         button.apply_state(enabled=enabled, color=color)
         button.is_scrollable = True
         button.click_guard = self.content_hover_guard()

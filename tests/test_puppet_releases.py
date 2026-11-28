@@ -827,15 +827,15 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.assertEqual(draw.call_args_list, [
             mock.call(self.surface, self.map, screen.preview_map, show_names=False)] * 2)
 
-    def test_country_name_is_a_label_and_restore_and_cancel_are_controls(self):
+    def test_country_name_is_a_label_and_spawn_and_cancel_are_controls(self):
         screen = puppets_screen.Create_Puppet_Screen(self.map)
         nation = self.map.world.nation_data["Master"]
         self.assertFalse(any(element.text == "Core Display" for element in screen.elements))
         self.assertIsNone(screen.preview_map)
         self.assertNotIn("release_puppet_queue", nation)
 
-        create = next(element for element in screen.elements if element.text == "Restore")
-        self.click_button(screen, create)
+        spawn = next(element for element in screen.elements if element.text == "Spawn")
+        self.click_button(screen, spawn)
         self.assertIsNotNone(screen.preview_map)
         self.assertEqual([entry["core_nation"] for entry in nation["release_puppet_queue"]], ["Core"])
         cancel = next(element for element in screen.elements if element.text == "Cancel")
@@ -870,10 +870,10 @@ class PuppetReleaseControlTests(unittest.TestCase):
             self.assertTrue(control.visible)
             return control
 
-        self.assertFalse(button("Restore").disabled)
-        self.assertTrue(button("Create").disabled)
+        self.assertFalse(button("Spawn").disabled)
+        self.assertTrue(button("Create\nSeperate").disabled)
         screen.toggle_keep_cores()
-        for label in ("Restore", "Create"):
+        for label in ("Spawn", "Create\nSeperate"):
             control = button(label)
             self.assertTrue(control.disabled)
             self.click_button(screen, control)
@@ -883,7 +883,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
         world.id_to_province[4]["owner"] = "Core"
         screen.refresh_ui()
         self.assertTrue(button("Return\nLand").disabled)
-        self.click_button(screen, button("Create"))
+        self.click_button(screen, button("Create\nSeperate"))
         self.assertTrue(button("Return\nLand").disabled)
         self.click_button(screen, button("Return\nLand"))
         self.assertEqual(len(nation["release_puppet_queue"]), 1)
@@ -897,7 +897,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.assertFalse(any(element.text == "Add\nLand" for element in screen.elements))
         screen.set_release_type(c.PUPPET_RELEASE_INDEPENDENT)
         for label, action in (("Return\nLand", puppet_actions.RELEASE_RETURN_LAND),
-                              ("Create", puppet_actions.RELEASE_CREATE)):
+                              ("Create\nSeperate", puppet_actions.RELEASE_CREATE)):
             button = next(element for element in screen.elements if element.text == label)
             self.click_button(screen, button)
             entry, = world.nation_data["Master"]["release_puppet_queue"]
@@ -909,7 +909,7 @@ class PuppetReleaseControlTests(unittest.TestCase):
         world = self.map.world
         puppet_actions.finalize_create_puppet(world.map_data, world.nation_data, "Master", "Core", self.map, keep_cores=True)
         screen = puppets_screen.Create_Puppet_Screen(self.map)
-        separate = next(item for item in screen.elements if item.text == "Create")
+        separate = next(item for item in screen.elements if item.text == "Create\nSeperate")
         self.click_button(screen, separate)
         diplomacy_processor._process_claim_queues(self.map)
         second = world.id_to_province[2]["owner"]
