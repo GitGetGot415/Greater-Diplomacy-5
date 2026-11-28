@@ -337,17 +337,16 @@ class Create_Puppet_Screen(MapOverlayScreen):
     ROW_TEXT_WIDTH = 272
     ROW_BUTTON_SIZE = (64, 42)
     ROW_BUTTON_GAP = 4
-    ROW_BUTTON_HOVER_LIGHTEN = 20
     ROW_ACTION_LABELS = {
         puppet_actions.RELEASE_RESTORE: "Spawn",
         puppet_actions.RELEASE_ADD_LAND: "Add Land",
         puppet_actions.RELEASE_RETURN_LAND: "Return Land",
         puppet_actions.RELEASE_CREATE: "Create Seperate",
     }
-    RELEASE_TYPE_COLORS = {
-        c.PUPPET_TYPE_INTEGRATED: c.COLOR_GOLD_HIGHLIGHT,
-        c.PUPPET_TYPE_AUTONOMOUS: c.COLOR_SUCCESS_GREEN,
-        c.PUPPET_RELEASE_INDEPENDENT: c.UI_ACCENT_BLUE,
+    RELEASE_TYPE_STYLES = {
+        c.PUPPET_TYPE_INTEGRATED: ("yellow", c.COLOR_GOLD_HIGHLIGHT),
+        c.PUPPET_TYPE_AUTONOMOUS: ("green", c.COLOR_SUCCESS_GREEN),
+        c.PUPPET_RELEASE_INDEPENDENT: ("blue", c.UI_ACCENT_BLUE),
     }
     RELEASE_COLORS = ((255, 105, 180), (105, 255, 180), (105, 180, 255), (255, 255, 105), (255, 150, 100))
 
@@ -430,8 +429,8 @@ class Create_Puppet_Screen(MapOverlayScreen):
             name = queries.get_country_display_name(display_country, world.nation_data, use_library=True)
             y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + (self.ROW_HEIGHT - button_height) // 2
             detail = self.release_description(plan, release_type)
-            release_color = self.RELEASE_TYPE_COLORS[release_type]
-            text_color = release_color if entry else c.UI_TEXT_LIGHT
+            button_palette, queued_color = self.RELEASE_TYPE_STYLES[release_type]
+            text_color = queued_color if entry else c.UI_TEXT_LIGHT
             destination = entry.get("destination") if entry else None
             cancel_on_right = isinstance(destination, dict) and destination.get("action") == puppet_actions.RELEASE_CREATE
             primary_action = plan.blocked_action if cancel_on_right else plan.action or plan.blocked_action
@@ -462,9 +461,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
                         detail = f"{plan.reason} {self.release_count(plan)}."
 
             self.add_release_button(primary_x, y, primary_label, primary_callback, enabled and primary_callback is not None,
-                                    release_color, cancel=bool(entry) and not cancel_on_right)
+                                    "red" if entry and not cancel_on_right else button_palette)
             self.add_release_button(create_x, y, create_label, create_callback, enabled and create_callback is not None,
-                                    release_color, cancel=cancel_on_right, font_preset="button_small" if cancel_on_right else "small")
+                                    "red" if cancel_on_right else button_palette, font_preset="button_small" if cancel_on_right else "small")
 
             self.release_row_surfaces.append((
                 row_font.render(fit_text(name, row_font, self.ROW_TEXT_WIDTH), True, text_color),
@@ -486,13 +485,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
         items = queries.country_picker_items(plan.matching_subjects, self.map_screen.world.nation_data)
         pickers.open_listbox_selector(self, "Add Land", f"Transfer {self.release_count(plan)}. Select the recipient.", items, selected)
 
-    def add_release_button(self, x, y, label, callback, enabled, release_color, *, cancel=False, font_preset="button_small"):
-        palette = "red" if cancel else "grey"
+    def add_release_button(self, x, y, label, callback, enabled, palette, *, font_preset="button_small"):
         button = Button(x, y + self.scroll.value, self.ROW_BUTTON_SIZE, palette, label, callback, font_preset=font_preset)
         button.apply_state(enabled=enabled, color=palette)
-        if enabled and not cancel:
-            hover_color = tuple(min(255, channel + self.ROW_BUTTON_HOVER_LIGHTEN) for channel in release_color)
-            button.set_colors(release_color, hover_color)
         button.is_scrollable = True
         button.click_guard = self.content_hover_guard()
         button.base_y = y
