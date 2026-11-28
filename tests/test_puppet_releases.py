@@ -857,6 +857,39 @@ class PuppetReleaseControlTests(unittest.TestCase):
         self.assertEqual({pid: transfers[pid] for pid in queued}, queued)
         self.assertNotEqual(transfers[2], transfers[3])
 
+    def test_unavailable_release_buttons_stay_visible_and_leave_orders_unmodified(self):
+        world = self.map.world
+        world.id_to_province[1]["cores"].append("Master")
+        for province in (2, 3):
+            world.id_to_province[province]["cores"].remove("Second")
+        screen = puppets_screen.Create_Puppet_Screen(self.map)
+        nation = world.nation_data["Master"]
+
+        def button(label):
+            control = next(element for element in screen.elements if element.text == label)
+            self.assertTrue(control.visible)
+            return control
+
+        self.assertFalse(button("Restore").disabled)
+        self.assertTrue(button("Create Separate").disabled)
+        screen.toggle_keep_cores()
+        for label in ("Restore", "Create Separate"):
+            control = button(label)
+            self.assertTrue(control.disabled)
+            self.click_button(screen, control)
+        self.assertFalse(nation.get("release_puppet_queue"))
+
+        screen.toggle_keep_cores()
+        world.id_to_province[4]["owner"] = "Core"
+        screen.refresh_ui()
+        self.assertTrue(button("Return Land").disabled)
+        self.click_button(screen, button("Create Separate"))
+        self.assertTrue(button("Create Separate").disabled)
+        self.click_button(screen, button("Create Separate"))
+        self.assertEqual(len(nation["release_puppet_queue"]), 1)
+        self.click_button(screen, button("Cancel"))
+        self.assertFalse(nation["release_puppet_queue"])
+
     def test_existing_country_can_receive_land_or_create_a_separate_tag(self):
         world = self.map.world
         world.id_to_province[4]["owner"] = "Core"

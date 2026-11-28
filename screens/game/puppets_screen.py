@@ -427,6 +427,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT
             detail = self.release_description(plan, release_type)
             color = self.QUEUED_TEXT_COLORS[release_type] if entry else c.UI_TEXT_LIGHT
+            separate = None
 
             if entry:
                 if not plan.action and isinstance(entry.get("destination"), dict):
@@ -435,25 +436,23 @@ class Create_Puppet_Screen(MapOverlayScreen):
                     target = queries.get_country_display_name(destination.get("country") or subject,
                                                               world.nation_data, use_library=True)
                     name = f"{action} {target}"
-                self.add_release_button(y + 10, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
+                self.add_release_button(y, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
             else:
                 separate = plan.separate_destination()
-                if plan.action:
-                    if choose_recipient:
-                        callback = lambda value=subject, options=plan: self.choose_release_recipient(value, options)
-                    else:
-                        callback = lambda value=subject, target=plan.destination(): self.queue_creation(value, target)
-                    self.add_release_button(y if separate else y + 10, self.ROW_BUTTON_LABELS[plan.action],
-                                            callback, enabled)
-                if separate:
-                    if not plan.action:
-                        detail = f"{plan.reason} {self.release_count(plan)}."
-                    offset = self.ROW_BUTTON_SIZE[1] + self.ROW_BUTTON_GAP if plan.action else 10
-                    self.add_release_button(y + offset, self.ROW_BUTTON_LABELS[puppet_actions.RELEASE_CREATE],
-                                            lambda value=subject, target=separate: self.queue_creation(value, target),
-                                            enabled)
-                elif not plan.action:
-                    self.add_release_button(y + 10, "No Land", None, False)
+                label = self.ROW_BUTTON_LABELS.get(plan.action or plan.blocked_action, "Release")
+                callback = None
+                if choose_recipient:
+                    callback = lambda value=subject, options=plan: self.choose_release_recipient(value, options)
+                elif plan.action:
+                    callback = lambda value=subject, target=plan.destination(): self.queue_creation(value, target)
+                self.add_release_button(y, label, callback, enabled and callback is not None)
+                if separate and not plan.action:
+                    detail = f"{plan.reason} {self.release_count(plan)}."
+
+            separate_y = y + self.ROW_BUTTON_SIZE[1] + self.ROW_BUTTON_GAP
+            separate_callback = (lambda value=subject, target=separate: self.queue_creation(value, target)) if separate else None
+            self.add_release_button(separate_y, self.ROW_BUTTON_LABELS[puppet_actions.RELEASE_CREATE],
+                                    separate_callback, enabled and separate_callback is not None)
 
             self.release_row_surfaces.append((
                 row_font.render(fit_text(name, row_font, self.ROW_TEXT_WIDTH), True, color),

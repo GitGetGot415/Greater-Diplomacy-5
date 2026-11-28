@@ -359,6 +359,7 @@ class PuppetReleasePlan:
     provinces: list[dict]
     reason: str = ""
     matching_subjects: tuple[str, ...] = ()
+    blocked_action: str | None = None
 
     def destination(self):
         return {"action": self.action, "country": self.country}
@@ -377,8 +378,6 @@ def plan_puppet_release(map_data, nation_data, master, core_nation, release_type
         return PuppetReleasePlan(None, None, [], "Invalid nation release.")
     provinces = [province for province in queries.get_puppet_release_provinces(
         master, core_nation, map_data, keep_cores, nation_data=nation_data) if province["id"] not in reserved]
-    if not provinces:
-        return PuppetReleasePlan(None, None, [], "No eligible provinces.")
 
     source = nation_data.get(core_nation, {})
     active = bool(queries.get_country_faction(core_nation, nation_data)) or any(
@@ -393,17 +392,23 @@ def plan_puppet_release(map_data, nation_data, master, core_nation, release_type
     elif subjects and (release_type != c.PUPPET_RELEASE_INDEPENDENT or core_nation in subjects):
         subject = subjects[0]
         name = queries.get_country_display_name(subject, nation_data)
+        plan.blocked_action = RELEASE_ADD_LAND
         plan.reason = f"{name} is {nation_data[subject]['puppet_type']}."
     elif active and release_type == c.PUPPET_RELEASE_INDEPENDENT and source.get("is_playable"):
         plan.action, plan.country = RELEASE_RETURN_LAND, core_nation
     elif active:
         name = queries.get_country_display_name(core_nation, nation_data)
+        plan.blocked_action = RELEASE_RETURN_LAND
         plan.reason = f"{name} still exists."
     elif release_type != c.PUPPET_RELEASE_INDEPENDENT and would_create_puppet_cycle(master, core_nation, nation_data):
+        plan.blocked_action = RELEASE_RESTORE
         plan.reason = "Restoring this country as a subject would create a subject cycle."
     else:
         plan.action, plan.country = RELEASE_RESTORE, core_nation
 
+    if not provinces:
+        return PuppetReleasePlan(None, plan.country, [], "No eligible provinces.",
+                                 blocked_action=plan.action or plan.blocked_action)
     if destination is None:
         return plan
     if destination == plan.separate_destination():
