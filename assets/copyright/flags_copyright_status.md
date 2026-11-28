@@ -28,7 +28,7 @@
 | [Andalusia](https://commons.wikimedia.org/wiki/File:Flag_of_Andalusia.svg) | Public Domain |
 | [Angola](https://commons.wikimedia.org/wiki/File:Flag_of_Angola.svg) | Public Domain |
 | [Ankara](https://www.ankara.bel.tr/kurumsal/dijital-medya/logo-ve-amblem "Design reference for the municipal emblem on the game flag") | License unverified |
-| [Antalya](https://www.reddit.com/r/vexillology/comments/i5wd3d/flag_for_city_of_antalya_turkey/ "Original flag proposal with a red sun and blue waves") | Public Domain |
+| [Antalya](https://www.reddit.com/r/vexillology/comments/i5wd3d/flag_for_city_of_antalya_turkey/ "Original flag proposal with a red sun and blue waves") | u/DragutRais |
 | [Antofagasta](https://commons.wikimedia.org/wiki/File:Flag_of_Antofagasta_Region,_Chile.svg) | CC BY-SA 4.0 |
 | [Apulia](https://commons.wikimedia.org/wiki/File:Flag_of_Apulia.svg) | CC BY-SA 3.0 |
 | Aquarium of the Bay | Public Domain |
@@ -668,7 +668,7 @@
 | [Tomsk](https://tno.wiki.gg/wiki/File:Central_Siberian_Republic.png) | TNO |
 | Toronto | Public Domain |
 | Totalist Italy | Kaiserreich |
-| [Toubou](https://www.reddit.com/r/vexillology/comments/1fmw524/what_is_this_blueredblack_flag/ "Photo reference for the blue, red, and black flag with a yellow sun") | Public Domain |
+| [Toubou](https://commons.wikimedia.org/wiki/File:Flag_of_the_Toubou_Front_for_the_Salvation_of_Libya.svg) | Public Domain |
 | [Transylvania](https://commons.wikimedia.org/wiki/File:Flag_of_Transylvania_%28Local%29.svg) | Public Domain |
 | [Trazbon](https://www.crwflags.com/fotw/flags/tr-61-tz.html "White flag of Trabzon Metropolitan Municipality") | Public Domain |
 | [Trinidad and Tobago](https://commons.wikimedia.org/wiki/File:Flag_of_Trinidad_and_Tobago.svg) | Public Domain |
