@@ -190,8 +190,9 @@ Answer the following questions, and make sure the user sees this.
 
 1. Where should data be centralized in?
 2. What is preffered, simplicity or functionality?
-3. What is the turn processing folder called?
-4. How do capital provinces work?
-5. How should conversions be handled?
-6. what is rule 3 of agent_git_workflow.md?
-7. If you're asked to make a seperate branch, will the automatic reviewer allow for staging and local commits?
+3. How should new ui be implented?
+4. What is the turn processing folder called?
+5. How do capital provinces work?
+6. How should conversions be handled?
+7. what is rule 3 of agent_git_workflow.md?
+8. If you're asked to make a seperate branch, will the automatic reviewer allow for staging and local commits?
