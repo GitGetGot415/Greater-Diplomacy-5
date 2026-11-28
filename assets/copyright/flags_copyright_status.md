@@ -3,9 +3,9 @@
 | Flag name | Status |
 | --- | --- |
 | 49ers | Public Domain |
-| Aboriginals | Public Domain |
+| [Aboriginals](https://commons.wikimedia.org/wiki/File:Australian_Aboriginal_Flag.svg) | Public Domain |
 | [Abyssonia](https://commons.wikimedia.org/wiki/File:Flag_of_Ethiopia_%28blank%29.svg) | Public Domain |
-| Achaemenid Empire | Public Domain |
+| [Achaemenid Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Acahemenid_empire_during_the_battle_of_Cunaxa.png) | Public Domain |
 | Adventure Cat Sailing Charters | Public Domain |
 | [Afghanistan](https://commons.wikimedia.org/wiki/File:Flag_of_Afghanistan_%282013%E2%80%932021%29.svg) | Public Domain |
 | [Afrika Korps](https://commons.wikimedia.org/wiki/File:Afrika_Korps_emblem.svg) | Public Domain |
@@ -29,10 +29,10 @@
 | [Angola](https://commons.wikimedia.org/wiki/File:Flag_of_Angola.svg) | Public Domain |
 | Ankara | Public Domain |
 | Antalya | Public Domain |
-| Antofagasta | Public Domain |
-| Apulia | Public Domain |
+| [Antofagasta](https://commons.wikimedia.org/wiki/File:Flag_of_Antofagasta_Region,_Chile.svg) | Public Domain |
+| [Apulia](https://commons.wikimedia.org/wiki/File:Flag_of_Apulia.svg) | Public Domain |
 | Aquarium of the Bay | Public Domain |
-| Aragon | Public Domain |
+| [Aragon](https://eu4.paradoxwikis.com/File:Aragon.png) | Public Domain |
 | [Argentina](https://commons.wikimedia.org/wiki/File:Flag_of_Argentina.svg) | Public Domain |
 | [Arizona](https://commons.wikimedia.org/wiki/File:Flag_of_Arizona.svg) | Public Domain |
 | [Arkhangelsk](https://commons.wikimedia.org/wiki/File:Flag_of_Arkhangelsk_Oblast.svg) | Public Domain |
@@ -55,7 +55,7 @@
 | Aztec Empire | Public Domain |
 | [Bahia](https://commons.wikimedia.org/wiki/File:Bandeira_da_Bahia.svg) | Public Domain |
 | [Bahrain](https://commons.wikimedia.org/wiki/File:Flag_of_Bahrain.svg) | Public Domain |
-| Baja California | Public Domain |
+| [Baja California](https://commons.wikimedia.org/wiki/File:Flag_of_Baja_California.svg) | Public Domain |
 | [Bangladesh](https://commons.wikimedia.org/wiki/File:Flag_of_Bangladesh.svg) | Public Domain |
 | [Barotseland](https://commons.wikimedia.org/wiki/File:Flag_of_Barotseland.svg) | Public Domain |
 | Basque Country | Public Domain |
@@ -102,7 +102,7 @@
 | [Burkina Faso](https://commons.wikimedia.org/wiki/File:Flag_of_Burkina_Faso.svg) | Public Domain |
 | [Burundi](https://commons.wikimedia.org/wiki/File:Flag_of_Burundi.svg) | Public Domain |
 | [Buryatia](https://tno.wiki.gg/wiki/File:Tno_buryatia.png) | TNO |
-| Byzantine Empire | Public Domain |
+| [Byzantine Empire](https://commons.wikimedia.org/wiki/File:Byzantine_imperial_flag,_14th_century,_square.svg) | Public Domain |
 | [California](https://commons.wikimedia.org/wiki/File:Flag_of_California.svg) | Public Domain |
 | [Cambodia](https://commons.wikimedia.org/wiki/File:Flag_of_Cambodia.svg) | Public Domain |
 | [Cameroon](https://commons.wikimedia.org/wiki/File:Flag_of_Cameroon.svg) | Public Domain |
@@ -159,7 +159,7 @@
 | [Czechoslovakia](https://commons.wikimedia.org/wiki/File:Flag_of_Czechoslovakia.svg) | Public Domain |
 | Danubia | Kaiserreich |
 | [Danzig](https://commons.wikimedia.org/wiki/File:Flag_of_the_Free_City_of_Danzig.svg) | Public Domain |
-| Darfur | Public Domain |
+| [Darfur](https://commons.wikimedia.org/wiki/File:Flag_of_Darfur_Liberation_Front.svg) | Public Domain |
 | default_flag | GitGetGot415 |
 | Delhi | Public Domain |
 | [Democratic Republic of the Congo](https://commons.wikimedia.org/wiki/File:Flag_of_the_Democratic_Republic_of_the_Congo.svg) | Public Domain |
@@ -269,7 +269,7 @@
 | I Love SF | Public Domain |
 | Iberia | Public Domain |
 | [Iceland](https://commons.wikimedia.org/wiki/File:Flag_of_Iceland.svg) | Public Domain |
-| Ilkhanate | Public Domain |
+| [Ilkhanate](https://commons.wikimedia.org/wiki/File:Flag_of_Ilkhanate.svg) | Public Domain |
 | [Illinois](https://commons.wikimedia.org/wiki/File:Flag_of_Illinois.svg) | Public Domain |
 | Image Arts | Public Domain |
 | [India](https://commons.wikimedia.org/wiki/File:Flag_of_India.svg) | Public Domain |
@@ -280,7 +280,7 @@
 | [Iran](https://commons.wikimedia.org/wiki/File:Civil_flag_of_Iran_%281964%E2%80%931980%29.svg) | Public Domain |
 | [Iraq](https://commons.wikimedia.org/wiki/File:Flag_of_Iraq.svg) | Public Domain |
 | [Ireland](https://commons.wikimedia.org/wiki/File:Flag_of_Ireland.svg) | Public Domain |
-| Irkutsk | TNO |
+| [Irkutsk](https://tno.wiki.gg/wiki/File:Union_of_Soviet_Socialist_Republics_%28Irkutsk%29.png) | TNO |
 | [Iroquois Confederacy](https://commons.wikimedia.org/wiki/File:Flag_of_the_Iroquois_Confederacy.svg) | Public Domain |
 | Islamic Republic of Japan | Public Domain |
 | [Israel](https://commons.wikimedia.org/wiki/File:Flag_of_Israel.svg) | Public Domain |
@@ -298,7 +298,7 @@
 | Kalat | Public Domain |
 | [Kaliningrad](https://commons.wikimedia.org/wiki/File:Flag_of_Kaliningrad_Oblast.svg) | Public Domain |
 | [Kalmar Union](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kalmar_Union.svg) | Public Domain |
-| Kamchatka | TNO |
+| [Kamchatka](https://tno.wiki.gg/wiki/File:Pacific_Fleet.png) | TNO |
 | [Kansas](https://commons.wikimedia.org/wiki/File:Flag_of_Kansas.svg) | Public Domain |
 | [Karelia](https://commons.wikimedia.org/wiki/File:Flag_of_Karelia.svg) | Public Domain |
 | [Kashmir](https://commons.wikimedia.org/wiki/File:Flag_of_Azad_Kashmir.svg) | Public Domain |
@@ -350,7 +350,7 @@
 | [Lviv](https://commons.wikimedia.org/wiki/File:Flag_of_Lviv_Oblast.svg) | Public Domain |
 | [Madagascar](https://commons.wikimedia.org/wiki/File:Flag_of_Madagascar.svg) | Public Domain |
 | [Madrid](https://commons.wikimedia.org/wiki/File:Flag_of_the_Community_of_Madrid.svg) | Public Domain |
-| Magadan | TNO |
+| [Magadan](https://tno.wiki.gg/wiki/File:Free_State_of_Magadan.png) | TNO |
 | Magnetron | Public Domain |
 | Magowan's Infinite Mirror Maze | Public Domain |
 | [Maine](https://commons.wikimedia.org/wiki/File:Flag_of_Maine.svg) | Public Domain |
@@ -371,7 +371,7 @@
 | [Mato Grosso](https://commons.wikimedia.org/wiki/File:Bandeira_de_Mato_Grosso.svg) | Public Domain |
 | [Mauritania](https://commons.wikimedia.org/wiki/File:Flag_of_Mauritania.svg) | Public Domain |
 | [Mauritius](https://commons.wikimedia.org/wiki/File:Flag_of_Mauritius.svg) | Public Domain |
-| Mauryan Empire | Public Domain |
+| [Mauryan Empire](https://commons.wikimedia.org/wiki/File:Flag_of_Maurya_Empire.svg) | Public Domain |
 | [Mecklenburg](https://commons.wikimedia.org/wiki/File:Flagge_Gro%C3%9Fherzogt%C3%BCmer_Mecklenburg.svg) | Public Domain |
 | Mega City One | Public Domain |
 | Mende | Public Domain |
@@ -396,7 +396,7 @@
 | Muscogee | Public Domain |
 | [Myanmar](https://commons.wikimedia.org/wiki/File:Flag_of_Myanmar.svg) | Public Domain |
 | [Namibia](https://commons.wikimedia.org/wiki/File:Flag_of_Namibia.svg) | Public Domain |
-| Naples | Public Domain |
+| [Naples](https://commons.wikimedia.org/wiki/File:Flag_of_Naples.svg) | Public Domain |
 | [Napoleonic France](https://commons.wikimedia.org/wiki/File:Flag_of_France.svg) | Public Domain |
 | Nathan's Hot Dog Cart | Public Domain |
 | [National France](https://kaiserreich.wiki/File:Flag_of_Exile_French_Republic.svg) | Kaiserreich |
@@ -441,7 +441,7 @@
 | [Oldegård](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kalmar_Union.svg) | Public Domain |
 | [Oman](https://commons.wikimedia.org/wiki/File:Flag_of_Oman.svg) | Public Domain |
 | Omani Empire | Public Domain |
-| Omsk | TNO |
+| [Omsk](https://tno.wiki.gg/wiki/File:Siberian_Black_League.png) | TNO |
 | [Ontario](https://commons.wikimedia.org/wiki/File:Flag_of_Ontario.svg) | Public Domain |
 | [Orange Free State](https://commons.wikimedia.org/wiki/File:Flag_of_the_Orange_Free_State.svg) | Public Domain |
 | Ordensstaat Burgund | TNO |
@@ -531,8 +531,8 @@
 | Quick Tag | Public Domain |
 | Rahanweyn | Public Domain |
 | Ramp | GitGetGot415 |
-| Reichskommissariat Kaukasien | TNO |
-| Reichskommissariat Moskowien | TNO |
+| [Reichskommissariat Kaukasien](https://tno.wiki.gg/wiki/File:Reichskommissariat_Kaukasien.png) | TNO |
+| [Reichskommissariat Moskowien](https://tno.wiki.gg/wiki/File:Reichskommissariat_Moskowien.png) | TNO |
 | Reichskommissariat Norwegen | TNO |
 | Reichskommissariat Ostland | TNO |
 | Reichskommissariat Skandinavien | TNO |
@@ -546,7 +546,7 @@
 | Rio de Janeiro | Public Domain |
 | Rio Grande | Public Domain |
 | Ripley's Marvelous Mirror Maze | Public Domain |
-| Rojava | Public Domain |
+| [Rojava](https://commons.wikimedia.org/wiki/File:Flag_of_Rojava.svg) | Public Domain |
 | [Romania](https://commons.wikimedia.org/wiki/File:Flag_of_Romania.svg) | Public Domain |
 | Rome | Public Domain |
 | [Rondon](https://commons.wikimedia.org/wiki/File:Flag_of_England.svg) | Public Domain |
@@ -581,7 +581,7 @@
 | Shanxi | TNO |
 | Shirtique & Krazy Kaps | Public Domain |
 | [Siberia](https://commons.wikimedia.org/wiki/File:Flag_of_Siberia.svg) | Public Domain |
-| Siberian Black Army | TNO |
+| [Siberian Black Army](https://tno.wiki.gg/wiki/File:Siberian_Black_Army.png) | TNO |
 | Sichuan Clique | Public Domain |
 | [Sicily](https://commons.wikimedia.org/wiki/File:Flag_of_Sicily.svg) | Public Domain |
 | Sidewalk | GitGetGot415 |
@@ -665,7 +665,7 @@
 | [Tierra del Fuego](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Tierra_del_Fuego.svg) | Public Domain |
 | Timbuktu | Public Domain |
 | [Togo](https://commons.wikimedia.org/wiki/File:Flag_of_Togo.svg) | Public Domain |
-| Tomsk | TNO |
+| [Tomsk](https://tno.wiki.gg/wiki/File:Central_Siberian_Republic.png) | TNO |
 | Toronto | Public Domain |
 | Totalist Italy | Kaiserreich |
 | Toubou | Public Domain |
@@ -767,5 +767,5 @@
 | Zhili | Public Domain |
 | Zilkhstan | Public Domain |
 | [Zimbabwe](https://commons.wikimedia.org/wiki/File:Flag_of_Zimbabwe.svg) | Public Domain |
-| Zlatoust | TNO |
+| [Zlatoust](https://tno.wiki.gg/wiki/File:Flag_of_Zlatoust.png) | TNO |
 | Zulu | Public Domain |
