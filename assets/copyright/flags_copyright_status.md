@@ -9,7 +9,7 @@
 | Adventure Cat Sailing Charters | Public Domain |
 | [Afghanistan](https://commons.wikimedia.org/wiki/File:Flag_of_Afghanistan_%282013%E2%80%932021%29.svg) | Public Domain |
 | [Afrika Korps](https://commons.wikimedia.org/wiki/File:Afrika_Korps_emblem.svg) | Public Domain |
-| Aktobe | Public Domain |
+| [Aktobe](https://commons.wikimedia.org/wiki/File:Flag_of_Aktobe,_Kazakhstan.gif) | Public Domain |
 | [Alabama](https://commons.wikimedia.org/wiki/File:Flag_of_Alabama.svg) | Public Domain |
 | [Alash Autonomy](https://commons.wikimedia.org/wiki/File:AlashOrdaFlagIn.png) | Public Domain |
 | [Alaska](https://commons.wikimedia.org/wiki/File:Flag_of_Alaska.svg) | Public Domain |
@@ -42,7 +42,7 @@
 | [Aruba](https://commons.wikimedia.org/wiki/File:Flag_of_Aruba.svg) | Public Domain |
 | Atalia's Gelato | Public Domain |
 | Atlantis | Public Domain |
-| Atyrau | Public Domain |
+| [Atyrau](https://commons.wikimedia.org/wiki/File:Flag_of_Atyrau,_Kazakhstan.svg) | Public Domain |
 | Aunt Fanny's Hot Pretzels | Public Domain |
 | [Australia](https://commons.wikimedia.org/wiki/File:Flag_of_Australia.svg) | Public Domain |
 | Australia-Hungary | Public Domain |
@@ -225,7 +225,7 @@
 | [French Polynesia](https://commons.wikimedia.org/wiki/File:Flag_of_French_Polynesia.svg) | Public Domain |
 | [French Sudan](https://commons.wikimedia.org/wiki/File:Flag_of_French_Sudan_%281958%E2%80%931959%29.svg) | Public Domain |
 | Fun Food Factory | Public Domain |
-| Futa Jallon | Public Domain |
+| [Futa Jallon](https://commons.wikimedia.org/wiki/File:Improved_Flag_of_the_Imamate_of_Futa_Djallon_%281896-1912%29.svg "Source page lists CC BY-SA 4.0") | Public Domain |
 | [Gabon](https://commons.wikimedia.org/wiki/File:Flag_of_Gabon.svg) | Public Domain |
 | [Galicia](https://commons.wikimedia.org/wiki/File:Flag_of_Galicia_%28civil%29.svg) | Public Domain |
 | Gaul | Public Domain |
@@ -359,8 +359,8 @@
 | [Malawi](https://commons.wikimedia.org/wiki/File:Flag_of_Malawi.svg) | Public Domain |
 | [Malaysia](https://commons.wikimedia.org/wiki/File:Flag_of_Malaysia.svg) | Public Domain |
 | [Mali](https://commons.wikimedia.org/wiki/File:Flag_of_Mali.svg) | Public Domain |
-| Mali Empire | Public Domain |
-| Manchester | Public Domain |
+| [Mali Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Mali_Empire.svg) | Public Domain |
+| [Manchester](https://commons.wikimedia.org/wiki/File:County_Flag_of_Greater_Manchester_variant.svg) | Public Domain |
 | [Manchukuo](https://commons.wikimedia.org/wiki/File:Flag_of_Manchukuo.svg) | Public Domain |
 | [Manitoba](https://commons.wikimedia.org/wiki/File:Flag_of_Manitoba.svg) | Public Domain |
 | [Maracaibo](https://commons.wikimedia.org/wiki/File:Bandera_de_Maracaibo.svg "Source page lists CC BY-SA 3.0, Public domain") | Public Domain |
@@ -379,7 +379,7 @@
 | [Merina](https://commons.wikimedia.org/wiki/File:Flag_of_the_Merina_Kingdom.svg "Source page lists CC BY 3.0") | Public Domain |
 | [Mexico](https://commons.wikimedia.org/wiki/File:Flag_of_Mexico.svg) | Public Domain |
 | [Michigan](https://commons.wikimedia.org/wiki/File:Flag_of_Michigan.svg) | Public Domain |
-| Midway | Public Domain |
+| [Midway](https://commons.wikimedia.org/wiki/File:Flag_of_the_Midway_Islands_%28local%29.svg) | Public Domain |
 | [Minnesota](https://commons.wikimedia.org/wiki/File:Flag_of_Minnesota.svg) | Public Domain |
 | [Mississippi](https://commons.wikimedia.org/wiki/File:Flag_of_Mississippi.svg) | Public Domain |
 | [Missouri](https://commons.wikimedia.org/wiki/File:Flag_of_Missouri.svg) | Public Domain |
@@ -510,7 +510,7 @@
 | Plaza de California | Public Domain |
 | Pocatello | Public Domain |
 | [Poland](https://commons.wikimedia.org/wiki/File:Flag_of_Poland.svg) | Public Domain |
-| Polish-Lithuanian Commonwealth | Public Domain |
+| [Polish-Lithuanian Commonwealth](https://commons.wikimedia.org/wiki/File:Flaga_Rzeczypospolitej_Obojga_Narodow_ogolna.svg "Source page lists CC BY-SA 1.0, 2.0, and 2.5") | Public Domain |
 | Pollo Campero | Public Domain |
 | Polynesian SSR | Exodus |
 | [Pomerania](https://commons.wikimedia.org/wiki/File:POL_wojew%C3%B3dztwo_pomorskie_flag.svg "Source page lists CC BY-SA 2.5, Public domain") | Public Domain |
@@ -538,7 +538,7 @@
 | Reichskommissariat Skandinavien | TNO |
 | [Reichskommissariat Ukraine](https://tno.wiki.gg/wiki/File:Reichskommissariat_Ukraine.png) | TNO |
 | Reichskommissariat Ungarn | Public Domain |
-| Reno | Public Domain |
+| [Reno](https://commons.wikimedia.org/wiki/File:Flag_of_Reno,_Nevada_%281959%E2%80%932018%29.svg) | Public Domain |
 | [Republic of South Africa](https://commons.wikimedia.org/wiki/File:Flag_of_South_Africa.svg) | Public Domain |
 | [Republic of the Congo](https://commons.wikimedia.org/wiki/File:Flag_of_the_Republic_of_the_Congo.svg) | Public Domain |
 | Rhineland | Public Domain |
@@ -554,7 +554,7 @@
 | [Russia](https://commons.wikimedia.org/wiki/File:Flag_of_Russia.svg) | Public Domain |
 | [Russian Empire](https://commons.wikimedia.org/wiki/File:Flag_of_Russia_%281858%E2%80%931896%29.svg) | Public Domain |
 | [Rwanda](https://commons.wikimedia.org/wiki/File:Flag_of_Rwanda.svg) | Public Domain |
-| Safavid Empire | Public Domain |
+| [Safavid Empire](https://commons.wikimedia.org/wiki/File:Safavid_Flag.svg) | Public Domain |
 | [Sakha](https://commons.wikimedia.org/wiki/File:Flag_of_Sakha.svg) | Public Domain |
 | [Sakhalin](https://commons.wikimedia.org/wiki/File:Flag_of_Sakhalin_Oblast.svg) | Public Domain |
 | [Salta](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Salta.svg "Source page lists CC BY 4.0") | Public Domain |
@@ -610,7 +610,7 @@
 | [Somalia](https://commons.wikimedia.org/wiki/File:Flag_of_Somalia.svg) | Public Domain |
 | [Somaliland](https://commons.wikimedia.org/wiki/File:Flag_of_Somaliland.svg) | Public Domain |
 | Songhai | Public Domain |
-| Songhai Empire | Public Domain |
+| [Songhai Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Songhai_Empire.jpg) | Public Domain |
 | [Sonora](https://commons.wikimedia.org/wiki/File:Flag_of_Sonora.svg) | Public Domain |
 | [South Australia](https://commons.wikimedia.org/wiki/File:Flag_of_South_Australia.svg) | Public Domain |
 | [South Carolina](https://commons.wikimedia.org/wiki/File:Flag_of_South_Carolina.svg) | Public Domain |
@@ -647,7 +647,7 @@
 | [Tatarstan](https://commons.wikimedia.org/wiki/File:Flag_of_Tatarstan.svg) | Public Domain |
 | Telangana | Public Domain |
 | [Tennessee](https://commons.wikimedia.org/wiki/File:Flag_of_Tennessee.svg) | Public Domain |
-| Teutonic Order | Public Domain |
+| [Teutonic Order](https://commons.wikimedia.org/wiki/File:Flag_of_the_State_of_the_Teutonic_Order.svg "Source page lists CC BY-SA 4.0 and Public domain") | Public Domain |
 | [Texas](https://commons.wikimedia.org/wiki/File:Flag_of_Texas.svg) | Public Domain |
 | [Thailand](https://commons.wikimedia.org/wiki/File:Flag_of_Thailand.svg) | Public Domain |
 | [The Bahamas](https://commons.wikimedia.org/wiki/File:Flag_of_the_Bahamas.svg) | Public Domain |
@@ -669,7 +669,7 @@
 | Toronto | Public Domain |
 | Totalist Italy | Kaiserreich |
 | Toubou | Public Domain |
-| Transylvania | Public Domain |
+| [Transylvania](https://commons.wikimedia.org/wiki/File:Flag_of_Transylvania_%28Local%29.svg) | Public Domain |
 | Trazbon | Public Domain |
 | [Trinidad and Tobago](https://commons.wikimedia.org/wiki/File:Flag_of_Trinidad_and_Tobago.svg) | Public Domain |
 | Trish's Chocolate | Public Domain |
@@ -701,7 +701,7 @@
 | [Vanuatu](https://commons.wikimedia.org/wiki/File:Flag_of_Vanuatu.svg) | Public Domain |
 | [Vatican](https://commons.wikimedia.org/wiki/File:Flag_of_Vatican_City_%282023%E2%80%93present%29.svg "Design reference for the game flag") | Public Domain |
 | [Venezuela](https://commons.wikimedia.org/wiki/File:Flag_of_Venezuela.svg) | Public Domain |
-| Venice | Public Domain |
+| [Venice](https://commons.wikimedia.org/wiki/File:Flag_of_the_Serene_Republic_of_Venice.svg "Design reference for the game flag. Source page lists CC BY-SA 3.0") | Public Domain |
 | [Vermont](https://commons.wikimedia.org/wiki/File:Flag_of_Vermont.svg) | Public Domain |
 | [Vichy France](https://commons.wikimedia.org/wiki/File:Flag_of_Philippe_P%C3%A9tain,_Chief_of_State_of_Vichy_France.svg) | Public Domain |
 | [Victoria](https://commons.wikimedia.org/wiki/File:Flag_of_Victoria_%28Australia%29.svg) | Public Domain |
