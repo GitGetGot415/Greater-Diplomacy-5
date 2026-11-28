@@ -331,6 +331,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
     KEEP_CORES_Y = 110
     ROW_TOP = 170
     ROW_HEIGHT = 50
+    ROW_DIVIDER_COLOR = (80, 85, 95)
     CONTENT_TOP = 160
     CONTENT_BOTTOM_GAP = 30
     ROW_TEXT_WIDTH = 272
@@ -563,6 +564,10 @@ class Create_Puppet_Screen(MapOverlayScreen):
                     y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll.value
                     surface.blit(name, (self.panel_rect.x + 20, y + 3))
                     surface.blit(detail, (self.panel_rect.x + 20, y + 24))
+                    if index < len(self.release_row_surfaces) - 1:
+                        divider_y = y + self.ROW_HEIGHT - 1
+                        pygame.draw.line(surface, self.ROW_DIVIDER_COLOR,
+                                         (self.panel_rect.left + 20, divider_y), (self.panel_rect.right - 20, divider_y))
         self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.scroll.content_rect.y,
                                  self.scroll.content_rect.height, width=10)
 
