@@ -30,7 +30,7 @@ from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, LITE_RESPO
 from map_logic.ai import ai_handler, ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod, deal_effects
 from map_logic.territory import ownership
-from map_logic.diplomacy.puppet_actions import finalize_create_puppet
+from map_logic.diplomacy.puppet_actions import apply_puppet_release, plan_puppet_release
 
 
 def toggle_diplomacy_action(context, player_name, target_name, action_type, custom_msg="", timer=0, parameters=None):
@@ -1788,21 +1788,21 @@ def _process_claim_queues(context):
 
             for rq in ready_to_release:
                 core_nation = rq["core_nation"]
-                keep_cores = rq.get("keep_cores", False)
                 release_type = rq["release_type"]
-                created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
-                                                country_name, core_nation, context, keep_cores, release_type)
-                if created:
-                    session_state.releases_this_turn[created] = (country_name, core_nation)
+                plan = plan_puppet_release(world_state.map_data, world_state.nation_data, country_name, core_nation,
+                                           release_type, rq.get("keep_cores", False), destination=rq.get("destination"))
+                if plan.action:
+                    country = apply_puppet_release(world_state.map_data, world_state.nation_data,
+                                                   country_name, core_nation, context, release_type, plan)
+                    name = queries.get_country_display_name(country, world_state.nation_data)
+                    session_state.releases_this_turn[country, country_name] = name
                     if country_name == session_state.player_country:
-                        core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
-                        context.show_feedback(f"Created {release_type.lower()} country from {core_name} cores!")
+                        count = len(plan.provinces)
+                        context.show_feedback(f"Transferred {count} {'province' if count == 1 else 'provinces'} to {name}.")
                 else:
                     core_name = queries.get_country_display_name(core_nation, world_state.nation_data, use_library=True)
-                    reason = ("No eligible provinces remained when the release was due."
-                              if release_type in c.PUPPET_RELEASE_TYPES else "The release type was invalid.")
-                    send_release_notice(context, country_name, f"{core_name} was not created. {reason}",
-                                        action=RELEASE_FAILED_ACTION)
+                    text = ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_FAILED"].format(country=core_name, reason=plan.reason)
+                    send_release_notice(context, country_name, text, action=RELEASE_FAILED_ACTION)
 
 
 def report_release_territory_losses(context):
@@ -1814,10 +1814,10 @@ def report_release_territory_losses(context):
     session_state.releases_this_turn = {}
     world = world_for(context)
     living = queries.get_living_nations(world.map_data)
-    for created, (receiver, _) in releases.items():
-        if created in living:
+    for (country, receiver), name in releases.items():
+        if country in living:
             continue
-        content = ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LOST_TERRITORY"].format(country=created)
+        content = ai_prompts.AI_FALLBACK_RESPONSES["RELEASE_LOST_TERRITORY"].format(country=name)
         send_release_notice(context, receiver, content, action=RELEASE_LOST_TERRITORY_ACTION)
 
 

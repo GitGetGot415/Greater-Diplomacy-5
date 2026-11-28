@@ -14,7 +14,7 @@ from ui.widgets.text_utils import fit_text, wrap_text
 
 from data.io import country_io
 from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
-from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
+from map_logic.diplomacy import puppet_actions
 
 
 class Puppets_Screen(Screen):
@@ -333,7 +333,15 @@ class Create_Puppet_Screen(MapOverlayScreen):
     ROW_HEIGHT = 50
     CONTENT_TOP = 160
     CONTENT_BOTTOM_GAP = 30
-    ROW_TEXT_WIDTH = 280
+    ROW_TEXT_WIDTH = 272
+    ROW_BUTTON_SIZE = (120, 23)
+    ROW_BUTTON_GAP = 2
+    ROW_BUTTON_LABELS = {
+        puppet_actions.RELEASE_RESTORE: "Restore",
+        puppet_actions.RELEASE_ADD_LAND: "Add Land",
+        puppet_actions.RELEASE_RETURN_LAND: "Return Land",
+        puppet_actions.RELEASE_CREATE: "Create Separate",
+    }
     QUEUED_TEXT_COLORS = {
         c.PUPPET_TYPE_INTEGRATED: c.COLOR_GOLD_HIGHLIGHT,
         c.PUPPET_TYPE_AUTONOMOUS: c.COLOR_SUCCESS_GREEN,
@@ -397,40 +405,83 @@ class Create_Puppet_Screen(MapOverlayScreen):
         world = self.map_screen.world
         queue = world.nation_data.get(self.releasing_country, {}).get("release_puppet_queue", [])
         queued = {entry["core_nation"]: entry for entry in queue}
-        self.valid_subjects = sorted({core for province in world.map_data.values()
-                                      if province.get("owner") == self.releasing_country
-                                      and not queries.is_water_province(province)
-                                      for core in province.get("cores", [])
-                                      if core != self.releasing_country and core not in c.UNPLAYABLE_NATIONS}
-                                     | set(queued))
-        self.refresh_preview(queue)
+        self.valid_subjects = sorted(queries.puppet_release_candidates(self.releasing_country, world.map_data,
+                                                                       world.nation_data) | set(queued))
+        plans, reserved = puppet_actions.queued_puppet_release_plans(world.map_data, world.nation_data,
+                                                                    self.releasing_country, queue)
+        self.refresh_preview(queue, plans)
         self.scroll.limit = min(0, self.scroll.content_rect.height - len(self.valid_subjects) * self.ROW_HEIGHT)
         self.scroll.value = max(self.scroll.limit, min(0, self.scroll.value))
 
         self.release_row_surfaces = []
         row_font = fonts.get("normal")
+        detail_font = fonts.get("small")
         for index, subject in enumerate(self.valid_subjects):
-            name = queries.get_country_display_name(subject, world.nation_data, use_library=True)
             entry = queued.get(subject)
-            available = entry is not None or bool(queries.get_puppet_release_provinces(
-                self.releasing_country, subject, world.map_data, self.keep_cores, queue))
-            status = f" ({entry['release_type']} queued)" if entry else ""
-            label = fit_text(name + status, row_font, self.ROW_TEXT_WIDTH)
-            color = self.QUEUED_TEXT_COLORS[entry["release_type"]] if entry else c.UI_TEXT_LIGHT
-            self.release_row_surfaces.append(row_font.render(label, True, color))
-            y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll.value
-            button = Button(self.panel_rect.x + 320, y_pos, "small", "red" if entry else "green",
-                            "Cancel" if entry else "Create",
-                            lambda value=subject, cancel=bool(entry): self.cancel_queue(value) if cancel else self.queue_creation(value))
-            button.apply_state(enabled=enabled and available,
-                               color="red" if entry else "green",
-                               text="No Land" if not available else None)
-            button.is_scrollable = True
-            button.click_guard = self.content_hover_guard()
-            button.base_y = y_pos - self.scroll.value
-            self.elements.append(button)
+            release_type = entry["release_type"] if entry else self.release_type
+            plan = plans[subject] if entry else self.plan_release(subject, reserved)
+            name = queries.get_country_display_name(plan.country or subject, world.nation_data, use_library=True)
+            y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT
+            detail = self.release_description(plan, release_type)
+            color = self.QUEUED_TEXT_COLORS[release_type] if entry else c.UI_TEXT_LIGHT
 
-    def refresh_preview(self, queue):
+            if entry:
+                if not plan.action and isinstance(entry.get("destination"), dict):
+                    destination = entry["destination"]
+                    action = self.ROW_BUTTON_LABELS.get(destination.get("action"), "Release")
+                    target = queries.get_country_display_name(destination.get("country") or subject,
+                                                              world.nation_data, use_library=True)
+                    name = f"{action} {target}"
+                self.add_release_button(y + 10, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
+            else:
+                separate = None
+                if plan.provinces and plan.action in (None, puppet_actions.RELEASE_RETURN_LAND):
+                    separate = self.plan_release(subject, reserved, {"action": puppet_actions.RELEASE_CREATE, "country": None})
+                if plan.action:
+                    self.add_release_button(y if separate else y + 10, self.ROW_BUTTON_LABELS[plan.action],
+                                            lambda value=subject, target=plan.destination(): self.queue_creation(value, target),
+                                            enabled)
+                if separate and separate.action:
+                    if not plan.action:
+                        detail = f"{plan.reason} {self.release_count(separate)}."
+                    offset = self.ROW_BUTTON_SIZE[1] + self.ROW_BUTTON_GAP if plan.action else 10
+                    self.add_release_button(y + offset, self.ROW_BUTTON_LABELS[separate.action],
+                                            lambda value=subject, target=separate.destination(): self.queue_creation(value, target),
+                                            enabled)
+                elif not plan.action:
+                    self.add_release_button(y + 10, "No Land", None, False)
+
+            self.release_row_surfaces.append((
+                row_font.render(fit_text(name, row_font, self.ROW_TEXT_WIDTH), True, color),
+                detail_font.render(fit_text(detail, detail_font, self.ROW_TEXT_WIDTH), True, color),
+            ))
+
+    def plan_release(self, subject, reserved, destination=None):
+        world = self.map_screen.world
+        return puppet_actions.plan_puppet_release(world.map_data, world.nation_data, self.releasing_country, subject,
+                                                  self.release_type, self.keep_cores, reserved=reserved, destination=destination)
+
+    def add_release_button(self, y, label, callback, enabled, color="green"):
+        x = self.panel_rect.right - self.ROW_BUTTON_SIZE[0] - 20
+        button = Button(x, y + self.scroll.value, self.ROW_BUTTON_SIZE, color, label, callback, font_preset="button_small")
+        button.apply_state(enabled=enabled, color=color)
+        button.is_scrollable = True
+        button.click_guard = self.content_hover_guard()
+        button.base_y = y
+        self.elements.append(button)
+
+    @staticmethod
+    def release_count(plan):
+        count = len(plan.provinces)
+        return f"{count} {'province' if count == 1 else 'provinces'}"
+
+    def release_description(self, plan, release_type):
+        if not plan.action:
+            return plan.reason
+        kind = f" · {release_type}" if plan.action != puppet_actions.RELEASE_RETURN_LAND else ""
+        return f"{self.ROW_BUTTON_LABELS[plan.action]} · {self.release_count(plan)}{kind}"
+
+    def refresh_preview(self, queue, plans):
         if not queue:
             self._preview_inputs = None
             self.preview_map = None
@@ -443,16 +494,16 @@ class Create_Puppet_Screen(MapOverlayScreen):
         colors = {entry["core_nation"]: palette[index % len(palette)] for index, entry in enumerate(queue)}
         owner_colors = {master: master_color}
         transfers = {}
-        prior = []
-        # Releases due on the same turn transfer shared land in queue order.
-        for entry in sorted(queue, key=lambda item: max(1, item.get("turns_left", 1))):
-            subject = entry["core_nation"]
-            provinces = queries.get_puppet_release_provinces(master, subject, world.map_data,
-                                                            entry.get("keep_cores", False), prior)
-            owner = ("release", subject)
-            owner_colors[owner] = colors[subject]
-            transfers.update((province["id"], owner) for province in provinces)
-            prior.append(entry)
+        for subject, plan in plans.items():
+            if not plan.action:
+                continue
+            owner = plan.country or ("release", subject)
+            owner_colors.setdefault(owner, colors[subject])
+            transfers.update((province["id"], owner) for province in plan.provinces)
+        if not transfers:
+            self._preview_inputs = None
+            self.preview_map = None
+            return
 
         inputs = (self.map_screen.id_map, self.map_screen._presentation_cache_revision, owner_colors, transfers)
         if inputs == self._preview_inputs:
@@ -466,23 +517,24 @@ class Create_Puppet_Screen(MapOverlayScreen):
             if getattr(element, "is_scrollable", False):
                 element.rect.y = element.base_y + self.scroll.value
 
-    def queue_creation(self, subject):
+    def queue_creation(self, subject, destination=None):
         if not self.can_edit_realtime():
             return
         country = self.map_screen.world.nation_data[self.releasing_country]
         queue = country.get("release_puppet_queue", [])
-        requested = queue + [{"core_nation": subject, "keep_cores": self.keep_cores,
-                              "release_type": self.release_type}]
+        order = {"core_nation": subject, "keep_cores": self.keep_cores, "release_type": self.release_type}
+        if destination is not None:
+            order["destination"] = destination
         try:
-            canonical = canonical_puppet_release_queue(self.map_screen.world.map_data, self.map_screen.world.nation_data,
-                                                        self.releasing_country, requested, queue)
+            canonical = puppet_actions.canonical_puppet_release_queue(
+                self.map_screen.world.map_data, self.map_screen.world.nation_data,
+                self.releasing_country, queue + [order], queue)
         except ValueError as error:
             self.map_screen.show_feedback(str(error))
             self.refresh_ui()
             return
         country.setdefault("release_puppet_queue", [])[:] = canonical
-        name = queries.get_country_display_name(subject, self.map_screen.world.nation_data, use_library=True)
-        self.map_screen.show_feedback(f"Creation of {name} ({self.release_type}) queued (1 turn).")
+        self.map_screen.show_feedback("Release queued (1 turn).")
         self.refresh_ui()
 
     def cancel_queue(self, subject):
@@ -507,9 +559,10 @@ class Create_Puppet_Screen(MapOverlayScreen):
         else:
             with ui_bars.clip_scroll_region(surface, self.scroll.content_rect,
                                             draw_top=self.scroll.value != 0, draw_bottom=self.scroll.value > self.scroll.limit):
-                for index, text in enumerate(self.release_row_surfaces):
+                for index, (name, detail) in enumerate(self.release_row_surfaces):
                     y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll.value
-                    surface.blit(text, (self.panel_rect.x + 20, y + 15))
+                    surface.blit(name, (self.panel_rect.x + 20, y + 3))
+                    surface.blit(detail, (self.panel_rect.x + 20, y + 24))
         self.draw_list_scrollbar(surface, self.panel_rect.right - 15, self.scroll.content_rect.y,
                                  self.scroll.content_rect.height, width=10)
 

@@ -278,14 +278,25 @@ def require_realtime_turn_open(context, subject):
     return False
 
 
-def get_puppet_release_provinces(master, core_nation, map_data, keep_cores=False, release_queue=()):
+def _release_cores(province, nation_data):
+    cores = province.get("cores", [])
+    return [core for core in cores if nation_data.get(core, {}).get("release_source") not in cores]
+
+
+def puppet_release_candidates(master, map_data, nation_data):
+    """List release sources on owned land, with copied cores folded into their source."""
+    return {core for province in map_data.values() if province.get("owner") == master and not is_water_province(province)
+            for core in _release_cores(province, nation_data) if core != master and core not in c.UNPLAYABLE_NATIONS}
+
+
+def get_puppet_release_provinces(master, core_nation, map_data, keep_cores=False, release_queue=(), *, nation_data=None):
     """Return eligible land after earlier queued releases take their territory."""
     if (core_nation == master or core_nation in c.UNPLAYABLE_NATIONS
             or master in c.UNPLAYABLE_NATIONS):
         return []
     return [province for province in map_data.values()
             if province.get("owner") == master and not is_water_province(province)
-            and core_nation in province.get("cores", [])
+            and core_nation in _release_cores(province, nation_data or {})
             and not (keep_cores and master in province.get("cores", []))
             and not any(entry["core_nation"] in province.get("cores", [])
                         and not (entry.get("keep_cores", False) and master in province.get("cores", []))

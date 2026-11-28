@@ -1485,6 +1485,20 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
                 validated = MapRealtimeDriver(map_ref).validate_draft("A", [command])[0]
                 self.assertEqual(validated["release_subjects"][0]["release_type"], release_type)
 
+    def test_release_destination_uses_host_state_and_is_sent_with_the_draft(self):
+        map_ref = self.make_map()
+        driver = MapRealtimeDriver(map_ref)
+        command = {"type": "puppet_draft", "puppet_order": ["P"], "release_subjects": [{"core_nation": "P"}]}
+        orders = driver.validate_draft("A", [command])[0]["release_subjects"]
+        destination = orders[0]["destination"]
+        for forged in (None, {"action": "restore", "country": "B"}, dict(destination, country=[])):
+            entry = {"core_nation": "P", "destination": forged}
+            with self.subTest(forged=forged), self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [dict(command, release_subjects=[entry])])
+        map_ref.world.nation_data["A"]["release_puppet_queue"] = orders
+        saved_command = next(cmd for cmd in collect_map_commands(map_ref, "A") if cmd["type"] == "puppet_draft")
+        self.assertEqual(saved_command["release_subjects"][0]["destination"], destination)
+
     def test_puppet_release_rejects_invalid_foreign_and_changed_requests(self):
         map_ref = self.make_map()
         driver = MapRealtimeDriver(map_ref)
