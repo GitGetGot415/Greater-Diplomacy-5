@@ -23,7 +23,7 @@
 | [Amapá](https://commons.wikimedia.org/wiki/File:Bandeira_do_Amap%C3%A1.svg) | Public Domain |
 | American Territory of Canada | neptune2019 |
 | American Union State | Kaiserreich |
-| Amur | TNO |
+| [Amur](https://tno.wiki.gg/wiki/File:All-Russian_Government_of_Amur.png) | TNO |
 | Anarchist Commune of America | Kaiserreich |
 | [Andalusia](https://commons.wikimedia.org/wiki/File:Flag_of_Andalusia.svg) | Public Domain |
 | [Angola](https://commons.wikimedia.org/wiki/File:Flag_of_Angola.svg) | Public Domain |
@@ -72,11 +72,11 @@
 | [Belize](https://commons.wikimedia.org/wiki/File:Flag_of_Belize.svg) | Public Domain |
 | Ben and Jerry's | Public Domain |
 | [Benin](https://commons.wikimedia.org/wiki/File:Flag_of_Benin.svg) | Public Domain |
-| Bharatiya Commune | Kaiserreich |
+| [Bharatiya Commune](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.7.2/gfx/flags/HND.tga) | Kaiserreich |
 | [Bhutan](https://commons.wikimedia.org/wiki/File:Flag_of_Bhutan.svg) | Public Domain |
 | Biscoff Coffee Corner | Public Domain |
 | Blazing Saddles | Public Domain |
-| Bohemia | Kaiserreich |
+| [Bohemia](https://kaiserreich.wiki/File:Kingdom_of_Bohemia.svg) | Kaiserreich |
 | [Bolivia](https://commons.wikimedia.org/wiki/File:Flag_of_Bolivia.svg) | Public Domain |
 | [Bornu](https://commons.wikimedia.org/wiki/File:Flag_of_the_Bornu_Empire.svg) | Public Domain |
 | [Bosnia and Herzegovina](https://commons.wikimedia.org/wiki/File:Flag_of_Bosnia_and_Herzegovina.svg) | Public Domain |
@@ -101,7 +101,7 @@
 | [Bulgaria](https://commons.wikimedia.org/wiki/File:Flag_of_Bulgaria.svg) | Public Domain |
 | [Burkina Faso](https://commons.wikimedia.org/wiki/File:Flag_of_Burkina_Faso.svg) | Public Domain |
 | [Burundi](https://commons.wikimedia.org/wiki/File:Flag_of_Burundi.svg) | Public Domain |
-| Buryatia | TNO |
+| [Buryatia](https://tno.wiki.gg/wiki/File:Tno_buryatia.png) | TNO |
 | Byzantine Empire | Public Domain |
 | [California](https://commons.wikimedia.org/wiki/File:Flag_of_California.svg) | Public Domain |
 | [Cambodia](https://commons.wikimedia.org/wiki/File:Flag_of_Cambodia.svg) | Public Domain |
@@ -129,9 +129,9 @@
 | Clothing Store | Public Domain |
 | [Colombia](https://commons.wikimedia.org/wiki/File:Flag_of_Colombia.svg) | Public Domain |
 | [Colorado](https://commons.wikimedia.org/wiki/File:Flag_of_Colorado.svg) | Public Domain |
-| Combined Syndicates of America | Kaiserreich |
+| [Combined Syndicates of America](https://kaiserreich.wiki/File:CSA_flag.jpg) | Kaiserreich |
 | COMINTERN | misteron |
-| Commune of France | Kaiserreich |
+| [Commune of France](https://kaiserreich.wiki/File:Commune_of_France_flag_new.png) | Kaiserreich |
 | Commune of Japan | Public Domain |
 | Commune of Lemuria | Public Domain |
 | Commune of Spain | Public Domain |
@@ -313,13 +313,13 @@
 | Khoisan | Public Domain |
 | Kingdom of Argentina | Kaiserreich |
 | Kingdom of Armenia | Public Domain |
-| Kingdom of Flanders-Wallonia | Kaiserreich |
+| [Kingdom of Flanders-Wallonia](https://kaiserreich.wiki/File:Flanders-Wallonia.png) | Kaiserreich |
 | Kingdom of France | Public Domain |
-| Kingdom of Lithuania | Kaiserreich |
-| Kingdom of Portugal | Kaiserreich |
-| Kingdom of Russia | Kaiserreich |
-| Kingdom of Sardinia | Kaiserreich |
-| Kingdom of Two Sicilies | Kaiserreich |
+| [Kingdom of Lithuania](https://kaiserreich.wiki/File:Flag_of_the_Kingdom_of_Lithuania.svg) | Kaiserreich |
+| [Kingdom of Portugal](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.0.4/gfx/flags/POR_monarchy.tga) | Kaiserreich |
+| [Kingdom of Russia](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.7.2/gfx/flags/RUS_empire.tga) | Kaiserreich |
+| [Kingdom of Sardinia](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.7.2/gfx/flags/SRD.tga) | Kaiserreich |
+| [Kingdom of Two Sicilies](https://kaiserreich.wiki/File:Two_Sicilies.png) | Kaiserreich |
 | Kokand | Public Domain |
 | Korea | Public Domain |
 | [Kosovo](https://commons.wikimedia.org/wiki/File:Flag_of_Kosovo.svg) | Public Domain |
@@ -332,7 +332,7 @@
 | Lappert's Ice Cream | Public Domain |
 | Las Vegas | Public Domain |
 | [Latvia](https://commons.wikimedia.org/wiki/File:Flag_of_Latvia.svg) | Public Domain |
-| League of Eight Provinces | Kaiserreich |
+| [League of Eight Provinces](https://kaiserreich.wiki/File:Flag_of_the_League_of_Eight_Provinces.svg) | Kaiserreich |
 | [Lebanon](https://commons.wikimedia.org/wiki/File:Flag_of_Lebanon.svg) | Public Domain |
 | [Lesotho](https://commons.wikimedia.org/wiki/File:Flag_of_Lesotho.svg) | Public Domain |
 | Liangguang Clique | Public Domain |
@@ -399,7 +399,7 @@
 | Naples | Public Domain |
 | Napoleonic France | Public Domain |
 | Nathan's Hot Dog Cart | Public Domain |
-| National France | Kaiserreich |
+| [National France](https://kaiserreich.wiki/File:Flag_of_Exile_French_Republic.svg) | Kaiserreich |
 | [Nationalist China](https://commons.wikimedia.org/wiki/File:Flag_of_the_Republic_of_China.svg) | Public Domain |
 | [Nebraska](https://commons.wikimedia.org/wiki/File:Flag_of_Nebraska.svg) | Public Domain |
 | [Nepal](https://commons.wikimedia.org/wiki/File:Flag_of_Nepal.svg) | Public Domain |
@@ -470,7 +470,7 @@
 | Parking Lot 8 | GitGetGot415 |
 | Parking Lot 9 | GitGetGot415 |
 | Parthian Empire | Public Domain |
-| Patagonian Workers Front | Kaiserreich |
+| [Patagonian Workers Front](https://kaiserreich.wiki/File:Flag_of_Socialist_Patagonia.svg) | Kaiserreich |
 | Pearl Factory | Public Domain |
 | [Pennsylvania](https://commons.wikimedia.org/wiki/File:Flag_of_Pennsylvania.svg) | Public Domain |
 | Pepper Paradise Hot Sauce & More | Public Domain |
@@ -516,7 +516,7 @@
 | Pomerania | Public Domain |
 | [Portugal](https://commons.wikimedia.org/wiki/File:Flag_of_Portugal.svg) | Public Domain |
 | Powell Street | Public Domain |
-| Princely Federation | Kaiserreich |
+| [Princely Federation](https://kaiserreich.wiki/File:Princely_Federation_-_Flag_-_Original_1_1.svg) | Kaiserreich |
 | [Protectorate of Bohemia and Moravia](https://commons.wikimedia.org/wiki/File:Flag_of_the_Protectorate_of_Bohemia_and_Moravia.svg) | Public Domain |
 | Proto-Finnish Holy Roman Khaganate | Public Domain |
 | Prussia | Public Domain |
@@ -549,7 +549,7 @@
 | Rojava | Public Domain |
 | [Romania](https://commons.wikimedia.org/wiki/File:Flag_of_Romania.svg) | Public Domain |
 | Rome | Public Domain |
-| Rondon | Public Domain |
+| [Rondon](https://commons.wikimedia.org/wiki/File:Flag_of_England.svg) | Public Domain |
 | [Roraima](https://commons.wikimedia.org/wiki/File:Bandeira_de_Roraima.svg) | Public Domain |
 | [Russia](https://commons.wikimedia.org/wiki/File:Flag_of_Russia.svg) | Public Domain |
 | [Russian Empire](https://commons.wikimedia.org/wiki/File:Flag_of_Russia_%281858%E2%80%931896%29.svg) | Public Domain |
@@ -576,7 +576,7 @@
 | Sea Lions | Public Domain |
 | [Senegal](https://commons.wikimedia.org/wiki/File:Flag_of_Senegal.svg) | Public Domain |
 | [Serbia](https://commons.wikimedia.org/wiki/File:Civil_Flag_of_Serbia.svg) | Public Domain |
-| Shangdong Clique | Kaiserreich |
+| [Shangdong Clique](https://kaiserreich.wiki/File:Shandong.png) | Kaiserreich |
 | Shanghai | Public Domain |
 | Shanxi | TNO |
 | Shirtique & Krazy Kaps | Public Domain |
@@ -603,7 +603,7 @@
 | Skystar Wheel | Public Domain |
 | [Slovakia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovakia.svg) | Public Domain |
 | [Slovenia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovenia.svg) | Public Domain |
-| Socialist Republic of Italy | Kaiserreich |
+| [Socialist Republic of Italy](https://kaiserreich.wiki/File:Flag_of_the_Italian_Socialist_Republic.svg) | Kaiserreich |
 | Sokoto | Public Domain |
 | Sokoto Caliphate | Public Domain |
 | [Solomon Islands](https://commons.wikimedia.org/wiki/File:Flag_of_the_Solomon_Islands.svg) | Public Domain |
@@ -684,7 +684,7 @@
 | [Uganda](https://commons.wikimedia.org/wiki/File:Flag_of_Uganda.svg) | Public Domain |
 | [Ukraine](https://commons.wikimedia.org/wiki/File:Flag_of_Ukraine.svg) | Public Domain |
 | Under the Golden Gate | Public Domain |
-| Union of Britain | Kaiserreich |
+| [Union of Britain](https://kaiserreich.wiki/File:Flag_of_the_Union_of_Britain_%282-3%29.png) | Kaiserreich |
 | [Union of South Africa](https://commons.wikimedia.org/wiki/File:Flag_of_South_Africa_%281928%E2%80%931994%2C_dark_colors%29.svg) | Public Domain |
 | [United Arab Emirates](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_Arab_Emirates.svg) | Public Domain |
 | United Baltic Dutchy | Kaiserreich |
@@ -757,7 +757,7 @@
 | Yucatan | Public Domain |
 | [Yugoslavia](https://commons.wikimedia.org/wiki/File:Flag_of_Yugoslavia_%281918%E2%80%931941%29.svg) | Public Domain |
 | Yunnan | Paradox |
-| Yunnan Clique | Kaiserreich |
+| [Yunnan Clique](https://kaiserreich.wiki/File:Yunnan.png) | Kaiserreich |
 | Zabaykalsky | Public Domain |
 | Zakytaishchyna | Public Domain |
 | [Zambia](https://commons.wikimedia.org/wiki/File:Flag_of_Zambia.svg) | Public Domain |
