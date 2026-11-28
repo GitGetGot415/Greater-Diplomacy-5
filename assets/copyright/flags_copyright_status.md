@@ -3,9 +3,9 @@
 | Flag name | Status |
 | --- | --- |
 | [49ers](https://www.49ers.com/2025visualrefresh "Design reference for the team logo on the game flag") | Public Domain |
-| [Aboriginals](https://commons.wikimedia.org/wiki/File:Australian_Aboriginal_Flag.svg) | Public Domain |
+| [Aboriginals](https://commons.wikimedia.org/wiki/File:Australian_Aboriginal_Flag.svg) | Copyrighted free use |
 | [Abyssonia](https://commons.wikimedia.org/wiki/File:Flag_of_Ethiopia_%28blank%29.svg) | Public Domain |
-| [Achaemenid Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Acahemenid_empire_during_the_battle_of_Cunaxa.png) | Public Domain |
+| [Achaemenid Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Acahemenid_empire_during_the_battle_of_Cunaxa.png) | CC BY-SA 4.0 |
 | Adventure Cat Sailing Charters | Public Domain |
 | [Afghanistan](https://commons.wikimedia.org/wiki/File:Flag_of_Afghanistan_%282013%E2%80%932021%29.svg) | Public Domain |
 | [Afrika Korps](https://commons.wikimedia.org/wiki/File:Afrika_Korps_emblem.svg) | Public Domain |
@@ -19,7 +19,7 @@
 | [Algeria](https://commons.wikimedia.org/wiki/File:Flag_of_Algeria.svg) | Public Domain |
 | [Almaty](https://commons.wikimedia.org/wiki/File:Flag_of_Almaty.svg "Source page lists CC BY-SA 3.0, GFDL, Public domain") | Public Domain |
 | Alsace-Lorraine | Public Domain |
-| [Alto Rio Negro](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_del_R%C3%ADo_Negro.svg "Source page lists CC BY 4.0") | Public Domain |
+| [Alto Rio Negro](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_del_R%C3%ADo_Negro.svg "Source page lists CC BY 4.0") | CC BY 4.0 |
 | [Amapá](https://commons.wikimedia.org/wiki/File:Bandeira_do_Amap%C3%A1.svg) | Public Domain |
 | American Territory of Canada | neptune2019 |
 | [American Union State](https://commons.wikimedia.org/wiki/File:American_Union_State_Flag_from_Kaiserreich.png) | Kaiserreich |
@@ -27,10 +27,10 @@
 | Anarchist Commune of America | Kaiserreich |
 | [Andalusia](https://commons.wikimedia.org/wiki/File:Flag_of_Andalusia.svg) | Public Domain |
 | [Angola](https://commons.wikimedia.org/wiki/File:Flag_of_Angola.svg) | Public Domain |
-| [Ankara](https://www.ankara.bel.tr/kurumsal/dijital-medya/logo-ve-amblem "Design reference for the municipal emblem on the game flag") | Public Domain |
+| [Ankara](https://www.ankara.bel.tr/kurumsal/dijital-medya/logo-ve-amblem "Design reference for the municipal emblem on the game flag") | License unverified |
 | Antalya | Public Domain |
-| [Antofagasta](https://commons.wikimedia.org/wiki/File:Flag_of_Antofagasta_Region,_Chile.svg) | Public Domain |
-| [Apulia](https://commons.wikimedia.org/wiki/File:Flag_of_Apulia.svg) | Public Domain |
+| [Antofagasta](https://commons.wikimedia.org/wiki/File:Flag_of_Antofagasta_Region,_Chile.svg) | CC BY-SA 4.0 |
+| [Apulia](https://commons.wikimedia.org/wiki/File:Flag_of_Apulia.svg) | CC BY-SA 3.0 |
 | Aquarium of the Bay | Public Domain |
 | [Aragon](https://eu4.paradoxwikis.com/File:Aragon.png) | Public Domain |
 | [Argentina](https://commons.wikimedia.org/wiki/File:Flag_of_Argentina.svg) | Public Domain |
@@ -47,7 +47,7 @@
 | [Australia](https://commons.wikimedia.org/wiki/File:Flag_of_Australia.svg) | Public Domain |
 | Australia-Hungary | Public Domain |
 | [Austria](https://commons.wikimedia.org/wiki/File:Flag_of_Austria.svg) | Public Domain |
-| [Austria-Hungary](https://commons.wikimedia.org/wiki/File:Flag_of_Austria-Hungary.svg) | Public Domain |
+| [Austria-Hungary](https://commons.wikimedia.org/wiki/File:Flag_of_Austria-Hungary.svg) | CC BY-SA 3.0 |
 | Ayutthaya Kingdom | Public Domain |
 | Azad Hind | Public Domain |
 | [Azande](https://commons.wikimedia.org/wiki/File:Flag_of_the_Azania_Liberation_Front.svg "Matching flag design from the Azania Liberation Front") | Public Domain |
@@ -58,7 +58,7 @@
 | [Baja California](https://commons.wikimedia.org/wiki/File:Flag_of_Baja_California.svg) | Public Domain |
 | [Bangladesh](https://commons.wikimedia.org/wiki/File:Flag_of_Bangladesh.svg) | Public Domain |
 | [Barotseland](https://commons.wikimedia.org/wiki/File:Flag_of_Barotseland.svg) | Public Domain |
-| [Basque Country](https://commons.wikimedia.org/wiki/File:Flag_of_the_Basque_Country.svg) | Public Domain |
+| [Basque Country](https://commons.wikimedia.org/wiki/File:Flag_of_the_Basque_Country.svg) | CC BY-SA 2.5 |
 | Batavian Commune | Kaiserreich |
 | Bathrooms | Public Domain |
 | [Bavaria](https://commons.wikimedia.org/wiki/File:Flag_of_Bavaria_%28lozengy%29.svg) | Public Domain |
@@ -94,7 +94,7 @@
 | [Brunei](https://commons.wikimedia.org/wiki/File:Flag_of_Brunei.svg) | Public Domain |
 | [Brunswick](https://commons.wikimedia.org/wiki/File:Flagge_Herzogtum_Braunschweig_%281814-1830%29.svg) | Public Domain |
 | Bubba Gump Shrimp Co. | Public Domain |
-| [Buenos Aires](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Buenos_Aires.svg "Source page lists CC BY 4.0, PDM, Public domain") | Public Domain |
+| [Buenos Aires](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Buenos_Aires.svg "Source page lists CC BY 4.0, PDM, Public domain") | CC BY 4.0 |
 | [Buganda](https://commons.wikimedia.org/wiki/File:Flag_of_Buganda.svg) | Public Domain |
 | Build-A-Bear Workshop | Public Domain |
 | [Bukhara](https://commons.wikimedia.org/wiki/File:Flag_of_the_Emirate_of_Bukhara.svg) | Public Domain |
@@ -180,7 +180,7 @@
 | [East Timor](https://commons.wikimedia.org/wiki/File:Flag_of_East_Timor.svg) | Public Domain |
 | [Eastern Sanctuaries](https://commons.wikimedia.org/wiki/File:Flag_of_the_Ottoman_Empire.svg "Same game artwork as Ottoman Empire") | Public Domain |
 | [Ecuador](https://commons.wikimedia.org/wiki/File:Flag_of_Ecuador.svg) | Public Domain |
-| [Edinburgh](https://commons.wikimedia.org/wiki/File:Flag_of_Edinburgh.svg "Source page lists CC BY-SA 2.5, CC BY-SA 3.0, GFDL") | Public Domain |
+| [Edinburgh](https://commons.wikimedia.org/wiki/File:Flag_of_Edinburgh.svg "Source page lists CC BY-SA 2.5, CC BY-SA 3.0, GFDL") | CC BY-SA 3.0 |
 | [Egypt](https://commons.wikimedia.org/wiki/File:Flag_of_Egypt.svg) | Public Domain |
 | [El Salvador](https://commons.wikimedia.org/wiki/File:Flag_of_El_Salvador.svg) | Public Domain |
 | Embarcadero | Public Domain |
@@ -194,10 +194,10 @@
 | Embarcadero 8 | Public Domain |
 | Embarcadero 9 | Public Domain |
 | Emirate of Afghanistan | Public Domain |
-| [Emirate of Bukhara](https://commons.wikimedia.org/wiki/File:Bukhara1920.svg "Design reference for the game flag. Source page lists CC BY-SA 4.0") | Public Domain |
+| [Emirate of Bukhara](https://commons.wikimedia.org/wiki/File:Bukhara1920.svg "Design reference for the game flag. Source page lists CC BY-SA 4.0") | License unverified |
 | [Emirate of Cyrenaica](https://commons.wikimedia.org/wiki/File:Flag_of_Cyrenaica.svg) | Public Domain |
-| [Emirate of Jabal Shammar](https://commons.wikimedia.org/wiki/File:Flag_of_the_Emirate_of_Ha%27il.svg "Source page lists CC BY-SA 2.5, CC BY-SA 3.0, GFDL") | Public Domain |
-| [Emirate of Nedj and Hasa](https://commons.wikimedia.org/wiki/File:Flag_of_the_Emirate_of_Nejd_and_Hasa.svg "Source page lists CC BY-SA 2.5, CC BY-SA 3.0, GFDL") | Public Domain |
+| [Emirate of Jabal Shammar](https://commons.wikimedia.org/wiki/File:Flag_of_the_Emirate_of_Ha%27il.svg "Source page lists CC BY-SA 2.5, CC BY-SA 3.0, GFDL") | CC BY-SA 3.0 |
+| [Emirate of Nedj and Hasa](https://commons.wikimedia.org/wiki/File:Flag_of_the_Emirate_of_Nejd_and_Hasa.svg "Source page lists CC BY-SA 2.5, CC BY-SA 3.0, GFDL") | CC BY-SA 3.0 |
 | [Empire of Brazil](https://commons.wikimedia.org/wiki/File:Flag_of_Brazil_%281822%E2%80%931853%29.svg) | Public Domain |
 | [England](https://commons.wikimedia.org/wiki/File:Flag_of_England.svg) | Public Domain |
 | Enlightenment | Public Domain |
@@ -221,11 +221,11 @@
 | [Free France](https://commons.wikimedia.org/wiki/File:Flag_of_Free_France_%281940-1944%29.svg) | Public Domain |
 | [French Guiana](https://commons.wikimedia.org/wiki/File:Flag_of_French_Guiana.svg) | Public Domain |
 | [French Indochina](https://commons.wikimedia.org/wiki/File:Flag_of_Colonial_Annam.svg) | Public Domain |
-| [French Madagascar](https://www.paxhistoria.co/flags/a918a515-4776-43f2-91d2-7ffe54d6774b "Design reference for the game flag") | Public Domain |
+| [French Madagascar](https://www.paxhistoria.co/flags/a918a515-4776-43f2-91d2-7ffe54d6774b "Design reference for the game flag") | License unverified |
 | [French Polynesia](https://commons.wikimedia.org/wiki/File:Flag_of_French_Polynesia.svg) | Public Domain |
 | [French Sudan](https://commons.wikimedia.org/wiki/File:Flag_of_French_Sudan_%281958%E2%80%931959%29.svg) | Public Domain |
 | Fun Food Factory | Public Domain |
-| [Futa Jallon](https://commons.wikimedia.org/wiki/File:Improved_Flag_of_the_Imamate_of_Futa_Djallon_%281896-1912%29.svg "Source page lists CC BY-SA 4.0") | Public Domain |
+| [Futa Jallon](https://commons.wikimedia.org/wiki/File:Improved_Flag_of_the_Imamate_of_Futa_Djallon_%281896-1912%29.svg "Source page lists CC BY-SA 4.0") | CC BY-SA 4.0 |
 | [Gabon](https://commons.wikimedia.org/wiki/File:Flag_of_Gabon.svg) | Public Domain |
 | [Galicia](https://commons.wikimedia.org/wiki/File:Flag_of_Galicia_%28civil%29.svg) | Public Domain |
 | Gaul | Public Domain |
@@ -235,9 +235,9 @@
 | [Germany](https://www.bundestag.de/en/parliament/symbols/flag) | Public Domain |
 | [Ghana](https://commons.wikimedia.org/wiki/File:Flag_of_Ghana.svg) | Public Domain |
 | [Gigachad](https://commons.wikimedia.org/wiki/File:Flag_of_Chad.svg "Same game artwork as Chad") | Public Domain |
-| [Glasgow](https://commons.wikimedia.org/wiki/File:Flag_of_Glasgow.svg "Design reference for the game flag. Source page lists CC BY-SA 4.0") | Public Domain |
+| [Glasgow](https://commons.wikimedia.org/wiki/File:Flag_of_Glasgow.svg "Design reference for the game flag. Source page lists CC BY-SA 4.0") | License unverified |
 | [Gotia](https://commons.wikimedia.org/wiki/File:Flag_of_Spain.svg) | Public Domain |
-| [Gran Colombia](https://commons.wikimedia.org/wiki/File:Flag_of_Gran_Colombia.svg "Source page lists CC BY-SA 3.0") | Public Domain |
+| [Gran Colombia](https://commons.wikimedia.org/wiki/File:Flag_of_Gran_Colombia.svg "Source page lists CC BY-SA 3.0") | CC BY-SA 3.0 |
 | [Grand Est](https://commons.wikimedia.org/wiki/File:Flag_of_the_Region_of_Grand_Est_%28Variant_2%29.svg "Design reference for the game flag") | Public Domain |
 | Granite | Public Domain |
 | Grass | GitGetGot415 |
@@ -261,7 +261,7 @@
 | [Herero](https://commons.wikimedia.org/wiki/File:Flag_of_Hereroland.svg) | Public Domain |
 | [Hokkaido](https://commons.wikimedia.org/wiki/File:Flag_of_Hokkaido_Prefecture.svg) | Public Domain |
 | Holy Britannian Empire | Public Domain |
-| [Holy Roman Empire](https://commons.wikimedia.org/wiki/File:Banner_of_the_Holy_Roman_Emperor_with_haloes_%281430-1806%29.svg "Source page lists CC BY-SA 3.0") | Public Domain |
+| [Holy Roman Empire](https://commons.wikimedia.org/wiki/File:Banner_of_the_Holy_Roman_Emperor_with_haloes_%281430-1806%29.svg "Source page lists CC BY-SA 3.0") | CC BY-SA 3.0 |
 | [Honduras](https://commons.wikimedia.org/wiki/File:Flag_of_Honduras.svg) | Public Domain |
 | Humble Sea Brewing Co. | Public Domain |
 | Hunan Clique | Public Domain |
@@ -295,7 +295,7 @@
 | Jefferson Street | Public Domain |
 | [Jordan](https://commons.wikimedia.org/wiki/File:Flag_of_Jordan.svg) | Public Domain |
 | [Joseon](https://commons.wikimedia.org/wiki/File:Flag_of_Korea_%281882%E2%80%931910%29.svg "Source page lists GPL, PDM, Public domain") | Public Domain |
-| [Kalat](https://commons.wikimedia.org/wiki/File:KalatFlag.gif "Source page lists CC BY-SA 3.0, GFDL") | Public Domain |
+| [Kalat](https://commons.wikimedia.org/wiki/File:KalatFlag.gif "Source page lists CC BY-SA 3.0, GFDL") | CC BY-SA 3.0 |
 | [Kaliningrad](https://commons.wikimedia.org/wiki/File:Flag_of_Kaliningrad_Oblast.svg) | Public Domain |
 | [Kalmar Union](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kalmar_Union.svg) | Public Domain |
 | [Kamchatka](https://tno.wiki.gg/wiki/File:Pacific_Fleet.png) | TNO |
@@ -314,7 +314,7 @@
 | Kingdom of Argentina | Kaiserreich |
 | [Kingdom of Armenia](https://commons.wikimedia.org/wiki/File:Standard_of_the_Artaxiad_dynasty.svg) | Public Domain |
 | [Kingdom of Flanders-Wallonia](https://kaiserreich.wiki/File:Flanders-Wallonia.png) | Kaiserreich |
-| [Kingdom of France](https://commons.wikimedia.org/wiki/File:Royal_Standard_of_the_King_of_France.svg "Source page lists CC BY-SA 3.0") | Public Domain |
+| [Kingdom of France](https://commons.wikimedia.org/wiki/File:Royal_Standard_of_the_King_of_France.svg "Source page lists CC BY-SA 3.0") | CC BY-SA 3.0 |
 | [Kingdom of Lithuania](https://kaiserreich.wiki/File:Flag_of_the_Kingdom_of_Lithuania.svg) | Kaiserreich |
 | [Kingdom of Portugal](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.0.4/gfx/flags/POR_monarchy.tga) | Kaiserreich |
 | [Kingdom of Russia](https://github.com/Kaiserreich/Kaiserreich-HOI4/blob/1.7.2/gfx/flags/RUS_empire.tga) | Kaiserreich |
@@ -344,7 +344,7 @@
 | [London](https://commons.wikimedia.org/wiki/File:Flag_of_Greater_London.svg) | Public Domain |
 | [Los Angeles](https://commons.wikimedia.org/wiki/File:Flag_of_Los_Angeles%2C_California.svg) | Public Domain |
 | [Louisiana](https://commons.wikimedia.org/wiki/File:Flag_of_Louisiana.svg) | Public Domain |
-| [Luang Phrabang](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kingdom_of_Luang_Phrabang_%281707-1893%29.svg "Source page lists CC BY-SA 4.0") | Public Domain |
+| [Luang Phrabang](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kingdom_of_Luang_Phrabang_%281707-1893%29.svg "Source page lists CC BY-SA 4.0") | CC BY-SA 4.0 |
 | Lunda | Public Domain |
 | [Luxembourg](https://commons.wikimedia.org/wiki/File:Flag_of_Luxembourg.svg) | Public Domain |
 | [Lviv](https://commons.wikimedia.org/wiki/File:Flag_of_Lviv_Oblast.svg) | Public Domain |
@@ -376,12 +376,12 @@
 | Mega City One | Public Domain |
 | Mende | Public Domain |
 | [Mengjiang](https://commons.wikimedia.org/wiki/File:Flag_of_Mengjiang.svg) | Public Domain |
-| [Merina](https://commons.wikimedia.org/wiki/File:Flag_of_the_Merina_Kingdom.svg "Source page lists CC BY 3.0") | Public Domain |
+| [Merina](https://commons.wikimedia.org/wiki/File:Flag_of_the_Merina_Kingdom.svg "Source page lists CC BY 3.0") | CC BY 3.0 |
 | [Mexico](https://commons.wikimedia.org/wiki/File:Flag_of_Mexico.svg) | Public Domain |
 | [Michigan](https://commons.wikimedia.org/wiki/File:Flag_of_Michigan.svg) | Public Domain |
 | [Midway](https://commons.wikimedia.org/wiki/File:Flag_of_the_Midway_Islands_%28local%29.svg) | Public Domain |
 | [Minnesota](https://commons.wikimedia.org/wiki/File:Flag_of_Minnesota.svg) | Public Domain |
-| [Mississippi](https://commons.wikimedia.org/wiki/File:Flag_of_Mississippi.svg) | Public Domain |
+| [Mississippi](https://commons.wikimedia.org/wiki/File:Flag_of_Mississippi.svg) | Copyrighted free use |
 | [Missouri](https://commons.wikimedia.org/wiki/File:Flag_of_Missouri.svg) | Public Domain |
 | [Moldova](https://commons.wikimedia.org/wiki/File:Flag_of_Moldova.svg) | Public Domain |
 | Mongol Empire | Public Domain |
@@ -391,7 +391,7 @@
 | [Morocco](https://commons.wikimedia.org/wiki/File:Flag_of_Morocco.svg) | Public Domain |
 | [Moscow](https://commons.wikimedia.org/wiki/File:Flag_of_Moscow,_Russia.svg) | Public Domain |
 | Moss | Public Domain |
-| [Mountainous Republic of the Northern Caucasus](https://commons.wikimedia.org/wiki/File:Flag_of_the_Mountain_Republic.svg "Design reference for the game flag. Source page lists CC BY-SA 4.0") | Public Domain |
+| [Mountainous Republic of the Northern Caucasus](https://commons.wikimedia.org/wiki/File:Flag_of_the_Mountain_Republic.svg "Design reference for the game flag. Source page lists CC BY-SA 4.0") | License unverified |
 | [Mozambique](https://commons.wikimedia.org/wiki/File:Flag_of_Mozambique.svg) | Public Domain |
 | [Muscogee](https://commons.wikimedia.org/wiki/File:Muscogee_Nation_Seal.png "Seal used on the game flag") | Public Domain |
 | [Myanmar](https://commons.wikimedia.org/wiki/File:Flag_of_Myanmar.svg) | Public Domain |
@@ -439,8 +439,8 @@
 | [Ohio](https://commons.wikimedia.org/wiki/File:Flag_of_Ohio.svg) | Public Domain |
 | [Oklahoma](https://commons.wikimedia.org/wiki/File:Flag_of_Oklahoma.svg) | Public Domain |
 | [Oldegård](https://commons.wikimedia.org/wiki/File:Flag_of_the_Kalmar_Union.svg) | Public Domain |
-| [Oman](https://commons.wikimedia.org/wiki/File:Flag_of_Oman.svg) | Public Domain |
-| [Omani Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Omani_Empire.svg "Source page lists CC BY-SA 4.0") | Public Domain |
+| [Oman](https://commons.wikimedia.org/wiki/File:Flag_of_Oman.svg) | OGL-om 1.0 |
+| [Omani Empire](https://commons.wikimedia.org/wiki/File:Flag_of_the_Omani_Empire.svg "Source page lists CC BY-SA 4.0") | CC BY-SA 4.0 |
 | [Omsk](https://tno.wiki.gg/wiki/File:Siberian_Black_League.png) | TNO |
 | [Ontario](https://commons.wikimedia.org/wiki/File:Flag_of_Ontario.svg) | Public Domain |
 | [Orange Free State](https://commons.wikimedia.org/wiki/File:Flag_of_the_Orange_Free_State.svg) | Public Domain |
@@ -474,7 +474,7 @@
 | Pearl Factory | Public Domain |
 | [Pennsylvania](https://commons.wikimedia.org/wiki/File:Flag_of_Pennsylvania.svg) | Public Domain |
 | Pepper Paradise Hot Sauce & More | Public Domain |
-| [Perth](https://commons.wikimedia.org/wiki/File:Flag_of_Perth.svg "Source page lists CC BY-SA 4.0") | Public Domain |
+| [Perth](https://commons.wikimedia.org/wiki/File:Flag_of_Perth.svg "Source page lists CC BY-SA 4.0") | CC BY-SA 4.0 |
 | [Peru](https://commons.wikimedia.org/wiki/File:Flag_of_Peru_%28state%29.svg) | Public Domain |
 | [Philadelphia](https://commons.wikimedia.org/wiki/File:Flag_of_Philadelphia%2C_Pennsylvania.svg) | Public Domain |
 | [Philippines](https://commons.wikimedia.org/wiki/File:Flag_of_the_Philippines.svg) | Public Domain |
@@ -510,7 +510,7 @@
 | Plaza de California | Public Domain |
 | Pocatello | Public Domain |
 | [Poland](https://commons.wikimedia.org/wiki/File:Flag_of_Poland.svg) | Public Domain |
-| [Polish-Lithuanian Commonwealth](https://commons.wikimedia.org/wiki/File:Flaga_Rzeczypospolitej_Obojga_Narodow_ogolna.svg "Source page lists CC BY-SA 1.0, 2.0, and 2.5") | Public Domain |
+| [Polish-Lithuanian Commonwealth](https://commons.wikimedia.org/wiki/File:Flaga_Rzeczypospolitej_Obojga_Narodow_ogolna.svg "Source page lists CC BY-SA 1.0, 2.0, and 2.5") | CC BY-SA 2.5 |
 | Pollo Campero | Public Domain |
 | Polynesian SSR | Exodus |
 | [Pomerania](https://commons.wikimedia.org/wiki/File:POL_wojew%C3%B3dztwo_pomorskie_flag.svg "Source page lists CC BY-SA 2.5, Public domain") | Public Domain |
@@ -519,10 +519,10 @@
 | [Princely Federation](https://kaiserreich.wiki/File:Princely_Federation_-_Flag_-_Original_1_1.svg) | Kaiserreich |
 | [Protectorate of Bohemia and Moravia](https://commons.wikimedia.org/wiki/File:Flag_of_the_Protectorate_of_Bohemia_and_Moravia.svg) | Public Domain |
 | Proto-Finnish Holy Roman Khaganate | Public Domain |
-| [Prussia](https://commons.wikimedia.org/wiki/File:Flag_of_Prussia_%281892-1918%29.svg "Source page lists an attribution license") | Public Domain |
+| [Prussia](https://commons.wikimedia.org/wiki/File:Flag_of_Prussia_%281892-1918%29.svg "Source page lists an attribution license") | Attribution (David Liuzzo) |
 | Ptolemaic Empire | Public Domain |
 | [Puerto Rico](https://commons.wikimedia.org/wiki/File:Flag_of_Puerto_Rico.svg) | Public Domain |
-| [Punjab](https://commons.wikimedia.org/wiki/File:Flag_of_Punjab.svg "Source page lists CC BY-SA 3.0 and GFDL") | Public Domain |
+| [Punjab](https://commons.wikimedia.org/wiki/File:Flag_of_Punjab.svg "Source page lists CC BY-SA 3.0 and GFDL") | CC BY-SA 3.0 |
 | [Puntland](https://commons.wikimedia.org/wiki/File:Flag_of_Puntland.svg) | Public Domain |
 | [Qatar](https://commons.wikimedia.org/wiki/File:Flag_of_Qatar.svg) | Public Domain |
 | [Qing Dynasty](https://commons.wikimedia.org/wiki/File:Flag_of_China_%281889%E2%80%931912%29.svg) | Public Domain |
@@ -544,7 +544,7 @@
 | [Rhineland](https://commons.wikimedia.org/wiki/File:Flag_of_Rhineland-Palatinate.svg) | Public Domain |
 | [Rhodesia](https://commons.wikimedia.org/wiki/File:Flag_of_Rhodesia_%281968%E2%80%931979%29.svg) | Public Domain |
 | [Rio de Janeiro](https://commons.wikimedia.org/wiki/File:Bandeira_do_estado_do_Rio_de_Janeiro.svg "Source page lists CC BY 2.5, Public domain") | Public Domain |
-| [Rio Grande](https://commons.wikimedia.org/wiki/File:Blue_flag_of_the_Republic_of_the_Rio_Grande.svg) | Public Domain |
+| [Rio Grande](https://commons.wikimedia.org/wiki/File:Blue_flag_of_the_Republic_of_the_Rio_Grande.svg) | CC BY-SA 4.0 |
 | Ripley's Marvelous Mirror Maze | Public Domain |
 | [Rojava](https://commons.wikimedia.org/wiki/File:Flag_of_Rojava.svg) | Public Domain |
 | [Romania](https://commons.wikimedia.org/wiki/File:Flag_of_Romania.svg) | Public Domain |
@@ -557,14 +557,14 @@
 | [Safavid Empire](https://commons.wikimedia.org/wiki/File:Safavid_Flag.svg) | Public Domain |
 | [Sakha](https://commons.wikimedia.org/wiki/File:Flag_of_Sakha.svg) | Public Domain |
 | [Sakhalin](https://commons.wikimedia.org/wiki/File:Flag_of_Sakhalin_Oblast.svg) | Public Domain |
-| [Salta](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Salta.svg "Source page lists CC BY 4.0") | Public Domain |
+| [Salta](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Salta.svg "Source page lists CC BY 4.0") | CC BY 4.0 |
 | [Sámi](https://commons.wikimedia.org/wiki/File:Sami_flag.svg) | Public Domain |
 | [San Francisco](https://commons.wikimedia.org/wiki/File:Flag_of_San_Francisco,_California.svg) | Public Domain |
 | San Francisco Carousel | Public Domain |
 | San Francisco Cruises | Public Domain |
 | [Santiago](https://commons.wikimedia.org/wiki/File:Flag_of_Santiago_de_Chile.svg "Design reference for the game flag. Source page lists CC BY-SA 3.0, Public domain") | Public Domain |
-| [Sarawak](https://commons.wikimedia.org/wiki/File:Flag_of_Sarawak.svg "Source page lists CC BY-SA 3.0, GFDL") | Public Domain |
-| [Sardinia](https://commons.wikimedia.org/wiki/File:Flag_of_Sardinia.svg "Source page lists CC BY-SA 3.0, GFDL") | Public Domain |
+| [Sarawak](https://commons.wikimedia.org/wiki/File:Flag_of_Sarawak.svg "Source page lists CC BY-SA 3.0, GFDL") | CC BY-SA 3.0 |
+| [Sardinia](https://commons.wikimedia.org/wiki/File:Flag_of_Sardinia.svg "Source page lists CC BY-SA 3.0, GFDL") | CC BY-SA 3.0 |
 | [Saskatchewan](https://commons.wikimedia.org/wiki/File:Flag_of_Saskatchewan.svg) | Public Domain |
 | [Saudi Arabia](https://commons.wikimedia.org/wiki/File:Flag_of_Saudi_Arabia.svg) | Public Domain |
 | [Saxony](https://commons.wikimedia.org/wiki/File:Flag_of_Saxony.svg) | Public Domain |
@@ -595,7 +595,7 @@
 | Sidewalk 8 | GitGetGot415 |
 | Sidewalk 9 | GitGetGot415 |
 | [Sierra Leone](https://commons.wikimedia.org/wiki/File:Flag_of_Sierra_Leone.svg) | Public Domain |
-| [Sikh Empire](https://commons.wikimedia.org/wiki/File:Sikh_Empire_flag.svg "Source page lists CC BY-SA 4.0") | Public Domain |
+| [Sikh Empire](https://commons.wikimedia.org/wiki/File:Sikh_Empire_flag.svg "Source page lists CC BY-SA 4.0") | CC BY-SA 4.0 |
 | [Silesia](https://commons.wikimedia.org/wiki/File:Flag_of_Silesia.svg) | Public Domain |
 | [Sinaloa](https://commons.wikimedia.org/wiki/File:Flag_of_Sinaloa.svg "Source page lists CC BY-SA 3.0, GFDL, Public domain") | Public Domain |
 | Sinaloa Cartel | Public Domain |
@@ -604,7 +604,7 @@
 | [Slovakia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovakia.svg) | Public Domain |
 | [Slovenia](https://commons.wikimedia.org/wiki/File:Flag_of_Slovenia.svg) | Public Domain |
 | [Socialist Republic of Italy](https://kaiserreich.wiki/File:Flag_of_the_Italian_Socialist_Republic.svg) | Kaiserreich |
-| [Sokoto](https://tno.wiki.gg/wiki/File:Sokoto.png) | Public Domain |
+| [Sokoto](https://tno.wiki.gg/wiki/File:Sokoto.png) | TNO (license unverified) |
 | Sokoto Caliphate | Public Domain |
 | [Solomon Islands](https://commons.wikimedia.org/wiki/File:Flag_of_the_Solomon_Islands.svg) | Public Domain |
 | [Somalia](https://commons.wikimedia.org/wiki/File:Flag_of_Somalia.svg) | Public Domain |
@@ -619,7 +619,7 @@
 | [Soviet Union](https://commons.wikimedia.org/wiki/File:Flag_of_the_Soviet_Union.svg) | Public Domain |
 | [Spain](https://commons.wikimedia.org/wiki/File:Flag_of_Spain.svg) | Public Domain |
 | [Spanish Empire](https://commons.wikimedia.org/wiki/File:Flag_of_Cross_of_Burgundy.svg) | Public Domain |
-| [Sparta](https://commons.wikimedia.org/wiki/File:Fictional_flag_of_Sparta.png "Design reference for the game flag. Source page lists CC BY-SA 4.0") | Public Domain |
+| [Sparta](https://commons.wikimedia.org/wiki/File:Fictional_flag_of_Sparta.png "Design reference for the game flag. Source page lists CC BY-SA 4.0") | License unverified |
 | Spectator | GitGetGot415 |
 | [Sri Lanka](https://commons.wikimedia.org/wiki/File:Flag_of_Sri_Lanka.svg) | Public Domain |
 | SS Jeremiah O'Brien | Public Domain |
@@ -645,7 +645,7 @@
 | [Tasmania](https://commons.wikimedia.org/wiki/File:Flag_of_Tasmania.svg) | Public Domain |
 | [Tatar Khanate](https://commons.wikimedia.org/wiki/File:Flag_of_Tartary.svg "Source page lists CC BY-SA 3.0, GFDL, Public domain") | Public Domain |
 | [Tatarstan](https://commons.wikimedia.org/wiki/File:Flag_of_Tatarstan.svg) | Public Domain |
-| [Telangana](https://www.telangana.gov.in/emblem-photos/ "State emblem used on the game flag") | Public Domain |
+| [Telangana](https://www.telangana.gov.in/emblem-photos/ "State emblem used on the game flag") | License unverified |
 | [Tennessee](https://commons.wikimedia.org/wiki/File:Flag_of_Tennessee.svg) | Public Domain |
 | [Teutonic Order](https://commons.wikimedia.org/wiki/File:Flag_of_the_State_of_the_Teutonic_Order.svg "Source page lists CC BY-SA 4.0 and Public domain") | Public Domain |
 | [Texas](https://commons.wikimedia.org/wiki/File:Flag_of_Texas.svg) | Public Domain |
@@ -663,7 +663,7 @@
 | [Thirteen Colonies](https://commons.wikimedia.org/wiki/File:Flag_of_the_United_States_%281776%E2%80%931777%29.svg) | Public Domain |
 | [Tibet](https://commons.wikimedia.org/wiki/File:Flag_of_Tibet.svg) | Public Domain |
 | [Tierra del Fuego](https://commons.wikimedia.org/wiki/File:Bandera_de_la_Provincia_de_Tierra_del_Fuego.svg) | Public Domain |
-| [Timbuktu](https://eu4.paradoxwikis.com/index.php?title=File:Timbuktu.png) | Public Domain |
+| [Timbuktu](https://eu4.paradoxwikis.com/index.php?title=File:Timbuktu.png) | Paradox (license unverified) |
 | [Togo](https://commons.wikimedia.org/wiki/File:Flag_of_Togo.svg) | Public Domain |
 | [Tomsk](https://tno.wiki.gg/wiki/File:Central_Siberian_Republic.png) | TNO |
 | Toronto | Public Domain |
@@ -701,7 +701,7 @@
 | [Vanuatu](https://commons.wikimedia.org/wiki/File:Flag_of_Vanuatu.svg) | Public Domain |
 | [Vatican](https://commons.wikimedia.org/wiki/File:Flag_of_Vatican_City_%282023%E2%80%93present%29.svg "Design reference for the game flag") | Public Domain |
 | [Venezuela](https://commons.wikimedia.org/wiki/File:Flag_of_Venezuela.svg) | Public Domain |
-| [Venice](https://commons.wikimedia.org/wiki/File:Flag_of_the_Serene_Republic_of_Venice.svg "Design reference for the game flag. Source page lists CC BY-SA 3.0") | Public Domain |
+| [Venice](https://commons.wikimedia.org/wiki/File:Flag_of_the_Serene_Republic_of_Venice.svg "Design reference for the game flag. Source page lists CC BY-SA 3.0") | License unverified |
 | [Vermont](https://commons.wikimedia.org/wiki/File:Flag_of_Vermont.svg) | Public Domain |
 | [Vichy France](https://commons.wikimedia.org/wiki/File:Flag_of_Philippe_P%C3%A9tain,_Chief_of_State_of_Vichy_France.svg) | Public Domain |
 | [Victoria](https://commons.wikimedia.org/wiki/File:Flag_of_Victoria_%28Australia%29.svg) | Public Domain |
@@ -752,7 +752,7 @@
 | Xinjiang Clique | TNO |
 | [Yakutia](https://tno.wiki.gg/wiki/File:Yakut_Autonomous_Soviet_Socialist_Republic.png) | TNO |
 | [Yemen](https://commons.wikimedia.org/wiki/File:Flag_of_Yemen.svg) | Public Domain |
-| [York](https://commons.wikimedia.org/wiki/File:Flag_of_York.svg "Source page lists CC BY 3.0") | Public Domain |
+| [York](https://commons.wikimedia.org/wiki/File:Flag_of_York.svg "Source page lists CC BY 3.0") | CC BY 3.0 |
 | Yuan | Public Domain |
 | [Yucatan](https://commons.wikimedia.org/wiki/File:Flag_of_the_Republic_of_Yucatan.svg "Source page lists CC BY-SA 3.0, GFDL, Public domain") | Public Domain |
 | [Yugoslavia](https://commons.wikimedia.org/wiki/File:Flag_of_Yugoslavia_%281918%E2%80%931941%29.svg) | Public Domain |
@@ -768,4 +768,4 @@
 | Zilkhstan | Public Domain |
 | [Zimbabwe](https://commons.wikimedia.org/wiki/File:Flag_of_Zimbabwe.svg) | Public Domain |
 | [Zlatoust](https://tno.wiki.gg/wiki/File:Flag_of_Zlatoust.png) | TNO |
-| [Zulu](https://commons.wikimedia.org/wiki/File:Flag_of_Zulu.png) | Public Domain |
+| [Zulu](https://commons.wikimedia.org/wiki/File:Flag_of_Zulu.png) | CC BY-SA 4.0 |
