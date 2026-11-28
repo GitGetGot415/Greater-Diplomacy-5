@@ -102,7 +102,7 @@ def prepare_action(context, country_id, province, unit, order):
     if unit.get("owner") != country_id:
         raise ValueError("Players may only order their own units.")
     existing = unit.get("order")
-    if isinstance(existing, dict) and isinstance(order, dict):
+    if isinstance(existing, dict) and isinstance(order, dict) and order:
         kind = order.get("type")
         if not isinstance(kind, str):
             raise ValueError("Invalid unit order type.")

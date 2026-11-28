@@ -54,6 +54,37 @@ class LocalEndTurnCheckTests(unittest.TestCase):
         trigger.assert_called_once_with(context)
         self.assertEqual(feedback, [])
 
+    def test_an_idle_unit_with_an_empty_order_does_not_block_a_move(self):
+        context, feedback = self.context()
+        origin = context.world.id_to_province[1]
+        destination = dict(origin, id=2, json_key="2", neighbors=[1], units=[])
+        context.world.map_data["2"] = destination
+        context.world.id_to_province[2] = destination
+        origin["neighbors"] = [2]
+        idle = {"unit_id": "idle", "owner": "A", "type": "Fixture Infantry", "order": {}}
+        moving = {"unit_id": "moving", "owner": "A", "type": "Fixture Infantry", "order": {"type": "MOVE", "path": [2]}}
+        origin["units"] = [idle, moving]
+
+        with mock.patch.object(turn_manager, "trigger_ai_thread") as trigger:
+            turn_manager.advance_time(context)
+
+        trigger.assert_called_once_with(context)
+        self.assertEqual(feedback, [])
+        self.assertEqual(moving["order"], {"type": "MOVE", "path": [2]})
+
+    def test_a_nonempty_order_still_requires_a_valid_type(self):
+        for order in ({"path": [2]}, {"type": []}):
+            with self.subTest(order=order):
+                context, feedback = self.context()
+                context.world.id_to_province[1]["units"] = [
+                    {"unit_id": "invalid", "owner": "A", "type": "Fixture Infantry", "order": order}]
+
+                with mock.patch.object(turn_manager, "trigger_ai_thread") as trigger:
+                    turn_manager.advance_time(context)
+
+                trigger.assert_not_called()
+                self.assertTrue(feedback)
+
     def test_networked_tactical_and_countryless_turns_skip_the_local_check(self):
         for session in ({"mode": TOURNAMENT}, {"mode": REALTIME}, {"tactical_mode": True},
                         {"player_country": "Spectator"}, {"player_country": "The Rot"}):
