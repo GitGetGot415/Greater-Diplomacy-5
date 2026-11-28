@@ -335,9 +335,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
     CONTENT_TOP = 160
     CONTENT_BOTTOM_GAP = 30
     ROW_TEXT_WIDTH = 272
-    ROW_BUTTON_SIZE = (120, 23)
-    ROW_BUTTON_GAP = 2
-    ROW_BUTTON_LABELS = {
+    ROW_BUTTON_SIZE = (64, 42)
+    ROW_BUTTON_GAP = 4
+    ROW_ACTION_LABELS = {
         puppet_actions.RELEASE_RESTORE: "Restore",
         puppet_actions.RELEASE_ADD_LAND: "Add Land",
         puppet_actions.RELEASE_RETURN_LAND: "Return Land",
@@ -417,6 +417,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.release_row_surfaces = []
         row_font = fonts.get("normal")
         detail_font = fonts.get("small")
+        button_width, button_height = self.ROW_BUTTON_SIZE
+        create_x = self.panel_rect.right - button_width - 20
+        primary_x = create_x - button_width - self.ROW_BUTTON_GAP
         for index, subject in enumerate(self.valid_subjects):
             entry = queued.get(subject)
             release_type = entry["release_type"] if entry else self.release_type
@@ -424,7 +427,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             choose_recipient = not entry and len(plan.matching_subjects) > 1
             display_country = subject if choose_recipient else plan.country or subject
             name = queries.get_country_display_name(display_country, world.nation_data, use_library=True)
-            y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT
+            y = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + (self.ROW_HEIGHT - button_height) // 2
             detail = self.release_description(plan, release_type)
             color = self.QUEUED_TEXT_COLORS[release_type] if entry else c.UI_TEXT_LIGHT
             separate = None
@@ -432,27 +435,25 @@ class Create_Puppet_Screen(MapOverlayScreen):
             if entry:
                 if not plan.action and isinstance(entry.get("destination"), dict):
                     destination = entry["destination"]
-                    action = self.ROW_BUTTON_LABELS.get(destination.get("action"), "Release")
+                    action = self.ROW_ACTION_LABELS.get(destination.get("action"), "Release")
                     target = queries.get_country_display_name(destination.get("country") or subject,
                                                               world.nation_data, use_library=True)
                     name = f"{action} {target}"
-                self.add_release_button(y, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
+                self.add_release_button(primary_x, y, "Cancel", lambda value=subject: self.cancel_queue(value), enabled, "red")
             else:
                 separate = plan.separate_destination()
-                label = self.ROW_BUTTON_LABELS.get(plan.action or plan.blocked_action, "Release")
+                label = self.ROW_ACTION_LABELS.get(plan.action or plan.blocked_action, "Release").replace(" Land", "\nLand")
                 callback = None
                 if choose_recipient:
                     callback = lambda value=subject, options=plan: self.choose_release_recipient(value, options)
                 elif plan.action:
                     callback = lambda value=subject, target=plan.destination(): self.queue_creation(value, target)
-                self.add_release_button(y, label, callback, enabled and callback is not None)
+                self.add_release_button(primary_x, y, label, callback, enabled and callback is not None)
                 if separate and not plan.action:
                     detail = f"{plan.reason} {self.release_count(plan)}."
 
-            separate_y = y + self.ROW_BUTTON_SIZE[1] + self.ROW_BUTTON_GAP
             separate_callback = (lambda value=subject, target=separate: self.queue_creation(value, target)) if separate else None
-            self.add_release_button(separate_y, self.ROW_BUTTON_LABELS[puppet_actions.RELEASE_CREATE],
-                                    separate_callback, enabled and separate_callback is not None)
+            self.add_release_button(create_x, y, "Create", separate_callback, enabled and separate_callback is not None)
 
             self.release_row_surfaces.append((
                 row_font.render(fit_text(name, row_font, self.ROW_TEXT_WIDTH), True, color),
@@ -474,8 +475,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         items = queries.country_picker_items(plan.matching_subjects, self.map_screen.world.nation_data)
         pickers.open_listbox_selector(self, "Add Land", f"Transfer {self.release_count(plan)}. Select the recipient.", items, selected)
 
-    def add_release_button(self, y, label, callback, enabled, color="green"):
-        x = self.panel_rect.right - self.ROW_BUTTON_SIZE[0] - 20
+    def add_release_button(self, x, y, label, callback, enabled, color="green"):
         button = Button(x, y + self.scroll.value, self.ROW_BUTTON_SIZE, color, label, callback, font_preset="button_small")
         button.apply_state(enabled=enabled, color=color)
         button.is_scrollable = True
@@ -492,7 +492,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         if not plan.action:
             return plan.reason
         kind = f" · {release_type}" if plan.action != puppet_actions.RELEASE_RETURN_LAND else ""
-        return f"{self.ROW_BUTTON_LABELS[plan.action]} · {self.release_count(plan)}{kind}"
+        return f"{self.ROW_ACTION_LABELS[plan.action]} · {self.release_count(plan)}{kind}"
 
     def refresh_preview(self, queue, plans):
         if not queue:
